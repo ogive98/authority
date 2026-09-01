@@ -1,10 +1,14 @@
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
+import * as argon2 from 'argon2';
 import { PrismaClient } from '@prisma/client';
 
 config({ path: resolve(__dirname, '../../../.env') });
 
 const prisma = new PrismaClient();
+
+const DEMO_USER_EMAIL = 'demo@authority.local';
+const DEMO_USER_PASSWORD = 'DemoPass123!';
 
 async function main() {
   if (process.env.NODE_ENV === 'production') {
@@ -67,7 +71,41 @@ async function main() {
     });
   }
 
-  console.log(`Seed OK — company ${company.code} (${company.id})`);
+  const passwordHash = await argon2.hash(DEMO_USER_PASSWORD, {
+    type: argon2.argon2id,
+  });
+
+  const demoUser = await prisma.iamUser.upsert({
+    where: { email: DEMO_USER_EMAIL },
+    update: {
+      passwordHash,
+      status: 'ACTIVE',
+      displayName: 'Demo Operator',
+    },
+    create: {
+      email: DEMO_USER_EMAIL,
+      displayName: 'Demo Operator',
+      status: 'ACTIVE',
+      passwordHash,
+    },
+  });
+
+  await prisma.orgUserAssignment.upsert({
+    where: {
+      companyId_userId: {
+        companyId: company.id,
+        userId: demoUser.id,
+      },
+    },
+    update: {},
+    create: {
+      companyId: company.id,
+      userId: demoUser.id,
+      roleCode: 'operator',
+    },
+  });
+
+  console.log(`Seed OK — company ${company.code}, user ${DEMO_USER_EMAIL}`);
 }
 
 main()

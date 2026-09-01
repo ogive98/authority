@@ -52,6 +52,14 @@ npm run test:e2e
 - `GET http://localhost:3001/health/live`
 - `GET http://localhost:3001/health/ready`
 
+## Identity (SOC-03)
+
+- `POST http://localhost:3001/api/v1/identity/auth/login`
+- `GET http://localhost:3001/api/v1/identity/me`
+- `DELETE http://localhost:3001/api/v1/identity/sessions/:id`
+
+Demo (seed dev) : `demo@authority.local` / `DemoPass123!`
+
 ## Git
 
 Commit + push à chaque finalisation de lot SOC/THU/UI.
@@ -60,4 +68,5 @@ Commit + push à chaque finalisation de lot SOC/THU/UI.
 
 - [x] SOC-01 skeleton
 - [x] SOC-02 database / Prisma kernel
-- [ ] SOC-03 identity
+- [x] SOC-03 identity (login, /me, sessions, lockout)
+- [ ] SOC-04 tenancy
