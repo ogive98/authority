@@ -10,3 +10,4 @@ Thumbs.db
 apps/*/node_modules/
 apps/*/.next/
 apps/*/dist/
+*.tsbuildinfo
