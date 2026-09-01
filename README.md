@@ -62,4 +62,5 @@ Commit + push à chaque finalisation de lot SOC/THU/UI.
 ## État
 
 - [x] SOC-01 skeleton
-- [ ] SOC-02 database / Prisma
+- [x] SOC-02 database / Prisma kernel
+- [ ] SOC-03 identity

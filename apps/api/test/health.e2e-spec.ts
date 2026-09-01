@@ -1,3 +1,4 @@
+import '../src/load-env';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -11,11 +12,16 @@ interface HealthLiveResponse {
 
 interface HealthReadyResponse {
   status: string;
-  checks: { api: string };
+  checks: {
+    api: string;
+    postgres: string;
+    redis: string;
+  };
 }
 
 describe('Health (e2e)', () => {
   let app: INestApplication<App>;
+  const hasDatabase = Boolean(process.env.DATABASE_URL);
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -41,12 +47,17 @@ describe('Health (e2e)', () => {
   });
 
   it('/health/ready (GET)', async () => {
-    const res = await request(app.getHttpServer())
-      .get('/health/ready')
-      .expect(200);
+    const res = await request(app.getHttpServer()).get('/health/ready');
 
+    if (!hasDatabase) {
+      expect(res.status).toBe(503);
+      return;
+    }
+
+    expect(res.status).toBe(200);
     const body = res.body as HealthReadyResponse;
-    expect(body.status).toBe('ok');
     expect(body.checks.api).toBe('ok');
+    expect(body.checks.postgres).toBe('ok');
+    expect(['ok', 'error']).toContain(body.checks.redis);
   });
 });

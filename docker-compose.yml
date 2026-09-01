@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: authority
       POSTGRES_DB: authority
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - authority_pg_data:/var/lib/postgresql/data
     healthcheck:

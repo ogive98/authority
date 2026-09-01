@@ -13,7 +13,10 @@
     "test": "npm run test -w api",
     "test:e2e": "npm run test:e2e -w api",
     "dev:api": "npm run start:dev -w api",
-    "dev:web": "npm run dev -w web"
+    "dev:web": "npm run dev -w web",
+    "db:migrate": "npm run prisma:migrate -w api",
+    "db:seed": "npm run prisma:seed -w api",
+    "db:deploy": "npm run prisma:deploy -w api"
   },
   "engines": {
     "node": ">=20"

@@ -1,0 +1,420 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- core_* platform kernel ---
+
+model CoreOutbox {
+  id              String    @id @default(uuid()) @db.Uuid
+  companyId       String?   @map("company_id") @db.Uuid
+  aggregateType   String    @map("aggregate_type")
+  aggregateId     String    @map("aggregate_id") @db.Uuid
+  eventType       String    @map("event_type")
+  eventVersion    Int       @default(1) @map("event_version")
+  payloadJson     Json      @map("payload_json")
+  headers         Json?
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  publishedAt     DateTime? @map("published_at") @db.Timestamptz(6)
+  publishAttempts Int       @default(0) @map("publish_attempts")
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([publishedAt])
+  @@map("core_outbox")
+}
+
+model CoreProcessedEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  consumer    String
+  eventId     String   @map("event_id") @db.Uuid
+  processedAt DateTime @default(now()) @map("processed_at") @db.Timestamptz(6)
+
+  @@unique([consumer, eventId])
+  @@map("core_processed_event")
+}
+
+model CoreNumberingSeries {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  siteId    String?   @map("site_id") @db.Uuid
+  docType   String    @map("doc_type")
+  year      Int
+  prefix    String
+  nextValue Int       @default(1) @map("next_value")
+  padding   Int       @default(6)
+  version   Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, siteId, docType, year])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("core_numbering_series")
+}
+
+model CoreFile {
+  id         String    @id @default(uuid()) @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  bucket     String
+  key        String
+  mime       String
+  size       BigInt
+  checksum   String?
+  virusScan  String?   @map("virus_scan")
+  version    Int       @default(0)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("core_file")
+}
+
+model CoreSearchIndex {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id") @db.Uuid
+  content    String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([companyId, entityType])
+  @@map("core_search_index")
+}
+
+// --- iam_* identity kernel ---
+
+enum IamUserStatus {
+  INVITED
+  ACTIVE
+  LOCKED
+  DISABLED
+}
+
+enum IamLifecycleStatus {
+  ACTIVE
+  REVOKED
+}
+
+model IamUser {
+  id          String        @id @default(uuid()) @db.Uuid
+  email       String        @unique
+  displayName String        @map("display_name")
+  status      IamUserStatus @default(INVITED)
+  locale      String        @default("fr-TN")
+  timezone    String        @default("Africa/Tunis")
+  mfaEnabled  Boolean       @default(false) @map("mfa_enabled")
+  version     Int           @default(0)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?     @map("deleted_at") @db.Timestamptz(6)
+
+  sessions     IamSession[]
+  mfaDevices   IamMfaDevice[]
+  devices      IamDevice[]
+  loginAttempts IamLoginAttempt[]
+  assignments  OrgUserAssignment[]
+
+  @@map("iam_user")
+}
+
+model IamSession {
+  id          String             @id @default(uuid()) @db.Uuid
+  userId      String             @map("user_id") @db.Uuid
+  env         String
+  ip          String?
+  userAgent   String?            @map("user_agent")
+  expiresAt   DateTime           @map("expires_at") @db.Timestamptz(6)
+  refreshHash String?            @map("refresh_hash")
+  status      IamLifecycleStatus @default(ACTIVE)
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user IamUser @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("iam_session")
+}
+
+model IamMfaDevice {
+  id         String             @id @default(uuid()) @db.Uuid
+  userId     String             @map("user_id") @db.Uuid
+  secretEnc  String             @map("secret_enc")
+  lastUsedAt DateTime?          @map("last_used_at") @db.Timestamptz(6)
+  status     IamLifecycleStatus @default(ACTIVE)
+  createdAt  DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user IamUser @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("iam_mfa_device")
+}
+
+model IamDevice {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  name      String?
+  fingerprint String?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  user IamUser @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("iam_device")
+}
+
+model IamLoginAttempt {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  email     String?
+  ip        String?
+  success   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user IamUser? @relation(fields: [userId], references: [id])
+
+  @@index([email, createdAt(sort: Desc)])
+  @@map("iam_login_attempt")
+}
+
+// --- org_* organization kernel ---
+
+enum OrgCompanyStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum OrgSiteType {
+  USINE
+  DEPOT
+  BUREAU
+}
+
+enum OrgWarehouseType {
+  FROID
+  SEC
+  QUAI
+}
+
+model OrgCompany {
+  id        String           @id @default(uuid()) @db.Uuid
+  code      String           @unique
+  legalName String           @map("legal_name")
+  country   String           @default("TN")
+  currency  String           @default("TND")
+  timezone  String           @default("Africa/Tunis")
+  vatNumber String?          @map("vat_number")
+  status    OrgCompanyStatus @default(ACTIVE)
+  version   Int              @default(0)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime?        @map("deleted_at") @db.Timestamptz(6)
+
+  sites       OrgSite[]
+  assignments OrgUserAssignment[]
+
+  @@map("org_company")
+}
+
+model OrgSite {
+  id        String         @id @default(uuid()) @db.Uuid
+  companyId String         @map("company_id") @db.Uuid
+  code      String
+  type      OrgSiteType
+  timezone  String         @default("Africa/Tunis")
+  status    OrgCompanyStatus @default(ACTIVE)
+  version   Int            @default(0)
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  company    OrgCompany    @relation(fields: [companyId], references: [id])
+  warehouses OrgWarehouse[]
+
+  @@unique([companyId, code])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("org_site")
+}
+
+model OrgWarehouse {
+  id         String           @id @default(uuid()) @db.Uuid
+  companyId  String           @map("company_id") @db.Uuid
+  siteId     String           @map("site_id") @db.Uuid
+  code       String
+  type       OrgWarehouseType
+  tempMinMax String?          @map("temp_min_max")
+  status     OrgCompanyStatus @default(ACTIVE)
+  version    Int              @default(0)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime?        @map("deleted_at") @db.Timestamptz(6)
+
+  site OrgSite @relation(fields: [siteId], references: [id])
+
+  @@unique([companyId, code])
+  @@index([companyId, siteId])
+  @@map("org_warehouse")
+}
+
+model OrgDepartment {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  code      String
+  name      String
+  version   Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, code])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("org_department")
+}
+
+model OrgTeam {
+  id           String    @id @default(uuid()) @db.Uuid
+  companyId    String    @map("company_id") @db.Uuid
+  departmentId String?   @map("department_id") @db.Uuid
+  code         String
+  name         String
+  version      Int       @default(0)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, code])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("org_team")
+}
+
+model OrgUserAssignment {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  siteId    String?   @map("site_id") @db.Uuid
+  roleCode  String?   @map("role_code")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  company OrgCompany @relation(fields: [companyId], references: [id])
+  user    IamUser    @relation(fields: [userId], references: [id])
+
+  @@unique([companyId, userId])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("org_user_assignment")
+}
+
+// --- mod_* module registry ---
+
+enum ModModuleStatus {
+  ENABLED
+  DISABLED
+}
+
+model ModModuleState {
+  id        String          @id @default(uuid()) @db.Uuid
+  companyId String          @map("company_id") @db.Uuid
+  moduleKey String          @map("module_key")
+  status    ModModuleStatus @default(DISABLED)
+  version   Int             @default(0)
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, moduleKey])
+  @@index([companyId])
+  @@map("mod_module_state")
+}
+
+model ModFlag {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  flagKey   String   @map("flag_key")
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, flagKey])
+  @@index([companyId])
+  @@map("mod_flag")
+}
+
+// --- aud_* immutable audit ---
+
+model AudEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String?  @map("company_id") @db.Uuid
+  siteId        String?  @map("site_id") @db.Uuid
+  actorUserId   String?  @map("actor_user_id") @db.Uuid
+  action        String
+  entityType    String?  @map("entity_type")
+  entityId      String?  @map("entity_id") @db.Uuid
+  beforeJson    Json?    @map("before_json")
+  afterJson     Json?    @map("after_json")
+  ip            String?
+  device        String?
+  correlationId String?  @map("correlation_id")
+  mode          String?
+  occurredAt    DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  @@index([companyId, occurredAt(sort: Desc)])
+  @@map("aud_event")
+}
+
+// --- thunder_* orchestration stubs ---
+
+enum ThunderJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ThunderWorkflowStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model ThunderJob {
+  id          String           @id @default(uuid()) @db.Uuid
+  companyId   String?          @map("company_id") @db.Uuid
+  jobType     String           @map("job_type")
+  payloadRef  String?          @map("payload_ref")
+  status      ThunderJobStatus @default(PENDING)
+  attempts    Int              @default(0)
+  scheduledAt DateTime?        @map("scheduled_at") @db.Timestamptz(6)
+  startedAt   DateTime?        @map("started_at") @db.Timestamptz(6)
+  finishedAt  DateTime?        @map("finished_at") @db.Timestamptz(6)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@map("thunder_job")
+}
+
+model ThunderWorkflowInstance {
+  id           String                @id @default(uuid()) @db.Uuid
+  companyId    String                @map("company_id") @db.Uuid
+  definitionId String                @map("definition_id")
+  version      Int                   @default(1)
+  status       ThunderWorkflowStatus @default(PENDING)
+  cursorStep   String?               @map("cursor_step")
+  dataJson     Json?                 @map("data_json")
+  createdAt    DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@map("thunder_workflow_instance")
+}

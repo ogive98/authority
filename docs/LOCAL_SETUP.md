@@ -30,7 +30,7 @@ Services :
 
 | Service  | Port | Usage SOC-01+ |
 |----------|------|----------------|
-| postgres | 5432 | SOC-02 Prisma  |
+| postgres | **5433** (host) → 5432 (container) | SOC-02 Prisma  |
 | redis    | 6379 | SOC-02+ jobs   |
 | minio    | 9000 / 9001 (console) | SOC-09 files |
 

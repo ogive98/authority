@@ -1,7 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
+import { HealthService } from './health.service';
 
 @Controller('health')
 export class HealthController {
+  constructor(private readonly healthService: HealthService) {}
+
   @Get('live')
   live() {
     return {
@@ -12,14 +15,13 @@ export class HealthController {
   }
 
   @Get('ready')
-  ready() {
-    // SOC-01: infrastructure checks added in SOC-02 (postgres, redis)
-    return {
-      status: 'ok',
-      checks: {
-        api: 'ok',
-      },
-      timestamp: new Date().toISOString(),
-    };
+  async ready() {
+    const result = await this.healthService.ready();
+
+    if (result.status === 'error') {
+      throw new HttpException(result, HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    return result;
   }
 }
