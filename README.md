@@ -68,6 +68,17 @@ Demo (seed dev) : `demo@authority.local` / `DemoPass123!`
 
 Headers optionnels : `X-Authority-Company-Id`, `X-Authority-Site-Id`
 
+## Postman
+
+Importe les fichiers du dossier `postman/` :
+
+1. **Import** → `AUTHORITY.api.postman_collection.json`
+2. **Import** → `AUTHORITY.local.postman_environment.json`
+3. Sélectionne l'environnement **AUTHORITY — Local** (coin haut droit)
+4. Lance **Collection Runner** sur `AUTHORITY API` (Login avant Me)
+
+Les cookies de session sont gérés automatiquement après **Identity → Login**.
+
 ## Git
 
 Commit + push à chaque finalisation de lot SOC/THU/UI.
