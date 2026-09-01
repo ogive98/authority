@@ -32,7 +32,8 @@ docker compose up -d postgres redis
 Copy-Item .env.example .env
 
 npm install
-npm run dev:api    # terminal 1
+npm run stop:api -w api   # libère le port si instance précédente
+npm run dev:api           # terminal 1
 npm run dev:web    # terminal 2
 ```
 

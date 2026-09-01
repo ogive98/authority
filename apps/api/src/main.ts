@@ -4,7 +4,25 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
+
   const port = Number(process.env.API_PORT ?? 3001);
-  await app.listen(port);
+
+  try {
+    await app.listen(port);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      error.code === 'EADDRINUSE'
+    ) {
+      throw new Error(
+        `Port ${port} déjà utilisé. Arrêtez l'autre instance (npm run stop:api) ou changez API_PORT dans .env.`,
+        { cause: error },
+      );
+    }
+    throw error;
+  }
 }
+
 void bootstrap();

@@ -16,7 +16,7 @@ for (const envPath of envCandidates) {
   }
 }
 
-if (!process.env.DATABASE_URL) {
+if (!process.env.DATABASE_URL && process.env.NODE_ENV !== 'test') {
   throw new Error(
     'DATABASE_URL manquante. Copiez .env.example vers .env à la racine du monorepo, puis relancez.',
   );

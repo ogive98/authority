@@ -12,6 +12,7 @@
     "typecheck": "npm run typecheck -w api && npm run typecheck -w web",
     "test": "npm run test -w api",
     "test:e2e": "npm run test:e2e -w api",
+    "test:all": "npm run typecheck && npm run lint && npm run test && npm run build && npm run test:e2e",
     "dev:api": "npm run start:dev -w api",
     "dev:web": "npm run dev -w web",
     "db:migrate": "npm run prisma:migrate -w api",

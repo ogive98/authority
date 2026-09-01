@@ -11,7 +11,8 @@
     "start": "dotenv -e ../../.env -- nest start",
     "start:dev": "dotenv -e ../../.env -- nest start --watch",
     "start:debug": "dotenv -e ../../.env -- nest start --debug --watch",
-    "start:prod": "dotenv -e ../../.env -- node dist/src/main",
+    "start:prod": "dotenv -e ../../.env -- node dist/main",
+    "stop:api": "node scripts/stop-api.mjs",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "jest",
@@ -19,6 +20,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "prestart:dev": "npm run stop:api",
     "prisma:generate": "dotenv -e ../../.env -- prisma generate",
     "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev",
     "prisma:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
@@ -79,6 +81,7 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "setupFiles": ["<rootDir>/../test/setup-env.ts"]
   }
 }
