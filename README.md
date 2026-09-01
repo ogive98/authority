@@ -56,6 +56,7 @@ npm run test:e2e
 
 - `POST http://localhost:3001/api/v1/identity/auth/login`
 - `GET http://localhost:3001/api/v1/identity/me`
+- `PATCH http://localhost:3001/api/v1/identity/me` (audit + outbox, même transaction)
 - `DELETE http://localhost:3001/api/v1/identity/sessions/:id`
 
 Demo (seed dev) : `demo@authority.local` / `DemoPass123!`  
@@ -117,4 +118,5 @@ Commit + push à chaque finalisation de lot SOC/THU/UI.
 - [x] SOC-05 super-admin auth (distinct realm, TOTP, gate 401)
 - [x] SOC-06 permission engine (grants, guard, matrix `platform.*` / `identity.*`)
 - [x] SOC-07 module registry + flags (DISABLED → 403, flag OFF masque API)
-- [ ] SOC-08 audit + outbox
+- [x] SOC-08 audit + outbox (write user → aud_event + core_outbox same tx)
+- [ ] SOC-09 numbering + files

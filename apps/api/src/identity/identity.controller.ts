@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Req,
   Res,
@@ -22,6 +23,11 @@ import type { SessionWithUser } from './session.service';
 import { PermissionGuard } from '../permissions/permission.guard';
 import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
+import { UpdateMeDto } from './update-me.dto';
+import {
+  TENANCY_COOKIES,
+  TENANCY_HEADERS,
+} from '../organization/organization.constants';
 
 @Controller('api/v1/identity')
 export class IdentityController {
@@ -62,6 +68,37 @@ export class IdentityController {
   @RequirePermission(PERMISSION_KEYS.identitySelfRead)
   me(@CurrentUser() user: IamUser) {
     return this.authService.toMeResponse(user);
+  }
+
+  @Patch('me')
+  @UseGuards(SessionGuard, PermissionGuard)
+  @RequirePermission(PERMISSION_KEYS.identitySelfRead)
+  async updateMe(
+    @CurrentUser() user: IamUser,
+    @Body() dto: UpdateMeDto,
+    @Req() req: Request,
+  ) {
+    const cookies = (req.cookies ?? {}) as Record<string, string | undefined>;
+    const companyHeader = req.headers[TENANCY_HEADERS.companyId];
+    const siteHeader = req.headers[TENANCY_HEADERS.siteId];
+    const correlation =
+      req.headers['x-authority-correlation-id'] ??
+      req.headers['x-correlation-id'];
+
+    return this.authService.updateProfile({
+      userId: user.id,
+      displayName: dto.displayName,
+      locale: dto.locale,
+      companyId:
+        (typeof companyHeader === 'string' ? companyHeader : undefined) ??
+        cookies[TENANCY_COOKIES.companyId],
+      siteId:
+        (typeof siteHeader === 'string' ? siteHeader : undefined) ??
+        cookies[TENANCY_COOKIES.siteId],
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: typeof correlation === 'string' ? correlation : undefined,
+    });
   }
 
   @Delete('sessions/:id')

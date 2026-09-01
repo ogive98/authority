@@ -1,5 +1,12 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { IamSessionRealm, IamUser, IamUserStatus } from '@prisma/client';
+import {
+  AUDIT_ACTIONS,
+  AUDIT_ENTITY_TYPES,
+  OUTBOX_EVENT_TYPES,
+} from '../audit/audit.constants';
+import { AuditService } from '../audit/audit.service';
+import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { IDENTITY_DEFAULTS, IDENTITY_ERROR_CODES } from './identity.constants';
 import { IdentityException } from './identity.exception';
@@ -26,6 +33,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly passwordService: PasswordService,
     private readonly sessionService: SessionService,
+    private readonly auditService: AuditService,
+    private readonly outboxService: OutboxService,
   ) {}
 
   async login(params: {
@@ -119,6 +128,79 @@ export class AuthService {
       timezone: user.timezone,
       mfaEnabled: user.mfaEnabled,
     };
+  }
+
+  async updateProfile(params: {
+    userId: string;
+    displayName?: string;
+    locale?: string;
+    companyId?: string;
+    siteId?: string;
+    ip?: string;
+    userAgent?: string;
+    correlationId?: string;
+  }): Promise<ReturnType<AuthService['toMeResponse']>> {
+    if (!params.displayName && !params.locale) {
+      throw new IdentityException(
+        IDENTITY_ERROR_CODES.VALIDATION,
+        'Provide displayName and/or locale.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const before = await tx.iamUser.findUniqueOrThrow({
+        where: { id: params.userId },
+      });
+
+      const after = await tx.iamUser.update({
+        where: { id: params.userId },
+        data: {
+          ...(params.displayName !== undefined
+            ? { displayName: params.displayName }
+            : {}),
+          ...(params.locale !== undefined ? { locale: params.locale } : {}),
+          version: { increment: 1 },
+        },
+      });
+
+      const snapshot = (user: IamUser) => this.toMeResponse(user);
+
+      await this.auditService.append(tx, {
+        companyId: params.companyId,
+        siteId: params.siteId,
+        actorUserId: params.userId,
+        action: AUDIT_ACTIONS.identityUserUpdate,
+        entityType: AUDIT_ENTITY_TYPES.iamUser,
+        entityId: params.userId,
+        beforeJson: snapshot(before),
+        afterJson: snapshot(after),
+        ip: params.ip,
+        device: params.userAgent,
+        correlationId: params.correlationId,
+      });
+
+      await this.outboxService.enqueue(tx, {
+        companyId: params.companyId,
+        aggregateType: AUDIT_ENTITY_TYPES.iamUser,
+        aggregateId: params.userId,
+        eventType: OUTBOX_EVENT_TYPES.identityUserUpdated,
+        payloadJson: {
+          eventType: OUTBOX_EVENT_TYPES.identityUserUpdated,
+          eventVersion: 1,
+          source: 'identity',
+          actorId: params.userId,
+          companyId: params.companyId ?? null,
+          siteId: params.siteId ?? null,
+          correlationId: params.correlationId ?? null,
+          payload: snapshot(after),
+        },
+      });
+
+      return after;
+    });
+
+    return this.toMeResponse(updated);
   }
 
   private invalidCredentials(): IdentityException {

@@ -57,6 +57,8 @@ describe('AuthService', () => {
       prisma as never,
       passwordService as unknown as PasswordService,
       sessionService as unknown as SessionService,
+      { append: jest.fn() } as never,
+      { enqueue: jest.fn() } as never,
     );
   });
 

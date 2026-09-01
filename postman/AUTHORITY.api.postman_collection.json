@@ -87,6 +87,23 @@
           }
         },
         {
+          "name": "Update me (creates audit + outbox)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Demo Operator\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/identity/me"
+          }
+        },
+        {
           "name": "Permissions catalog",
           "request": {
             "method": "GET",
