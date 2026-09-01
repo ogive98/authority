@@ -60,6 +60,14 @@ npm run test:e2e
 
 Demo (seed dev) : `demo@authority.local` / `DemoPass123!`
 
+## Organization (SOC-04)
+
+- `GET http://localhost:3001/api/v1/organization/companies`
+- `PUT http://localhost:3001/api/v1/organization/me/context`
+- `GET http://localhost:3001/api/v1/organization/companies/:id/sites`
+
+Headers optionnels : `X-Authority-Company-Id`, `X-Authority-Site-Id`
+
 ## Git
 
 Commit + push à chaque finalisation de lot SOC/THU/UI.
@@ -69,4 +77,5 @@ Commit + push à chaque finalisation de lot SOC/THU/UI.
 - [x] SOC-01 skeleton
 - [x] SOC-02 database / Prisma kernel
 - [x] SOC-03 identity (login, /me, sessions, lockout)
-- [ ] SOC-04 tenancy
+- [x] SOC-04 tenancy (company/site context, IDOR)
+- [ ] SOC-05 super-admin auth

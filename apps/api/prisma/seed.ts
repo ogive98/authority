@@ -29,7 +29,7 @@ async function main() {
     },
   });
 
-  await prisma.orgSite.upsert({
+  const demoSite = await prisma.orgSite.upsert({
     where: {
       companyId_code: {
         companyId: company.id,
@@ -41,6 +41,36 @@ async function main() {
       companyId: company.id,
       code: 'SFX',
       type: 'USINE',
+      timezone: 'Africa/Tunis',
+      status: 'ACTIVE',
+    },
+  });
+
+  const otherCompany = await prisma.orgCompany.upsert({
+    where: { code: 'OTHER' },
+    update: {},
+    create: {
+      code: 'OTHER',
+      legalName: 'Autre Fromagerie (IDOR test)',
+      country: 'TN',
+      currency: 'TND',
+      timezone: 'Africa/Tunis',
+      status: 'ACTIVE',
+    },
+  });
+
+  await prisma.orgSite.upsert({
+    where: {
+      companyId_code: {
+        companyId: otherCompany.id,
+        code: 'OTH',
+      },
+    },
+    update: {},
+    create: {
+      companyId: otherCompany.id,
+      code: 'OTH',
+      type: 'DEPOT',
       timezone: 'Africa/Tunis',
       status: 'ACTIVE',
     },
@@ -105,7 +135,9 @@ async function main() {
     },
   });
 
-  console.log(`Seed OK — company ${company.code}, user ${DEMO_USER_EMAIL}`);
+  console.log(
+    `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}`,
+  );
 }
 
 main()
