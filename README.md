@@ -24,21 +24,17 @@ Voir [docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md) pour Docker + PostgreSQL déjà 
 
 ## Démarrage
 
-```bash
-# Infra (postgres, redis, minio)
-docker compose up -d
+```powershell
+# Infra (postgres, redis) — Docker Desktop ouvert
+docker compose up -d postgres redis
 
-# Dépendances (racine)
+# Variables d'environnement (obligatoire, une seule fois)
+Copy-Item .env.example .env
+
 npm install
-
-# API
-npm run dev:api
-
-# Web (autre terminal)
-npm run dev:web
+npm run dev:api    # terminal 1
+npm run dev:web    # terminal 2
 ```
-
-Copier `.env.example` → `.env` si besoin.
 
 ## Qualité (gate SOC-01)
 
