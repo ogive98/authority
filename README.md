@@ -18,7 +18,9 @@ docker-compose.yml   postgres, redis, minio
 
 ## Prérequis
 
-Node ≥ 20, Docker (pour l’infra locale).
+Node ≥ 20, PostgreSQL 16+, Redis 7 (Docker **ou** install local).
+
+Voir [docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md) pour Docker + PostgreSQL déjà installé.
 
 ## Démarrage
 
@@ -55,7 +57,7 @@ npm run test:e2e
 
 ## Git
 
-Commit après validation. **Push seulement** avec autorisation explicite.
+Commit + push à chaque finalisation de lot SOC/THU/UI.
 
 ## État
 
