@@ -87,6 +87,12 @@ Realm distinct du métier (cookie `authority_super_admin_session`, sessions `SUP
 Seed (dev) : `superadmin@authority.local` / `SuperAdminPass123!`  
 TOTP enforced in production; opt-in via `AUTHORITY_SUPER_ADMIN_MFA_ENFORCED=true`. Membership table `iam_super_admin_membership` — never `is_super_admin`.
 
+## Modules + flags (SOC-07)
+
+- `GET http://localhost:3001/api/v1/modules`
+- `GET http://localhost:3001/api/v1/sales/ping` → 403 `MOD.DISABLED` (métier seed DISABLED)
+- `GET http://localhost:3001/api/v1/platform/search` → 403 `MOD.FLAG_OFF` (`platform.search` seed OFF)
+
 ## Postman
 
 Importe les fichiers du dossier `postman/` :
@@ -110,4 +116,5 @@ Commit + push à chaque finalisation de lot SOC/THU/UI.
 - [x] SOC-04 tenancy (company/site context, IDOR)
 - [x] SOC-05 super-admin auth (distinct realm, TOTP, gate 401)
 - [x] SOC-06 permission engine (grants, guard, matrix `platform.*` / `identity.*`)
-- [ ] SOC-07 module registry + flags
+- [x] SOC-07 module registry + flags (DISABLED → 403, flag OFF masque API)
+- [ ] SOC-08 audit + outbox

@@ -110,6 +110,47 @@ async function main() {
     });
   }
 
+  const businessModules = [
+    'sales',
+    'inventory',
+    'production',
+    'payroll',
+    'customers',
+    'master_data',
+  ] as const;
+
+  for (const moduleKey of businessModules) {
+    await prisma.modModuleState.upsert({
+      where: {
+        companyId_moduleKey: {
+          companyId: company.id,
+          moduleKey,
+        },
+      },
+      update: { status: 'DISABLED' },
+      create: {
+        companyId: company.id,
+        moduleKey,
+        status: 'DISABLED',
+      },
+    });
+  }
+
+  await prisma.modFlag.upsert({
+    where: {
+      companyId_flagKey: {
+        companyId: company.id,
+        flagKey: 'platform.search',
+      },
+    },
+    update: { enabled: false },
+    create: {
+      companyId: company.id,
+      flagKey: 'platform.search',
+      enabled: false,
+    },
+  });
+
   const passwordHash = await argon2.hash(DEMO_USER_PASSWORD, {
     type: argon2.argon2id,
   });

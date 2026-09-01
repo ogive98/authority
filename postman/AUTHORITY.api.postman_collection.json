@@ -60,7 +60,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{demoEmail}}\",\n  \"password\": \"{{demoPassword}}\"\n}"
+              "raw": "{\n  \"email\": \"demo@authority.local\",\n  \"password\": \"DemoPass123!\"\n}"
             },
             "url": "{{baseUrl}}/api/v1/identity/auth/login"
           }
@@ -236,6 +236,61 @@
       ]
     },
     {
+      "name": "Modules",
+      "item": [
+        {
+          "name": "List module states",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/modules"
+          }
+        },
+        {
+          "name": "Sales ping (expect 403 DISABLED)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Sales module off', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/sales/ping"
+          }
+        },
+        {
+          "name": "Platform search (expect 403 FLAG_OFF)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Search flag off', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/platform/search"
+          }
+        }
+      ]
+    },
+    {
       "name": "Super Admin",
       "item": [
         {
@@ -263,7 +318,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{superAdminEmail}}\",\n  \"password\": \"{{superAdminPassword}}\"\n}"
+              "raw": "{\n  \"email\": \"superadmin@authority.local\",\n  \"password\": \"SuperAdminPass123!\"\n}"
             },
             "url": "{{baseUrl}}/api/super-admin/v1/auth/login"
           }
