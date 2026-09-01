@@ -1,0 +1,21 @@
+{
+  "name": "authority",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AUTHORITY ERP — modular industrial monolith",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w api && npm run build -w web",
+    "lint": "npm run lint -w api && npm run lint -w web",
+    "typecheck": "npm run typecheck -w api && npm run typecheck -w web",
+    "test": "npm run test -w api",
+    "test:e2e": "npm run test:e2e -w api",
+    "dev:api": "npm run start:dev -w api",
+    "dev:web": "npm run dev -w web"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
