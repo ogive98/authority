@@ -7,7 +7,7 @@ config({ path: resolve(__dirname, '../../../.env') });
 
 const prisma = new PrismaClient();
 
-import { IamLifecycleStatus, IamMfaPurpose } from '@prisma/client';
+import { IamGrantEffect, IamGrantSubject, IamLifecycleStatus, IamMfaPurpose } from '@prisma/client';
 import { encryptMfaSecret } from '../src/super-admin/mfa-crypto';
 
 const DEMO_USER_EMAIL = 'demo@authority.local';
@@ -16,6 +16,8 @@ const SUPER_ADMIN_EMAIL = 'superadmin@authority.local';
 const SUPER_ADMIN_PASSWORD = 'SuperAdminPass123!';
 /** Dev/test TOTP seed only — never use in production. */
 const SUPER_ADMIN_TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
+const LIMITED_USER_EMAIL = 'limited@authority.local';
+const LIMITED_USER_PASSWORD = 'LimitedPass123!';
 
 async function main() {
   if (process.env.NODE_ENV === 'production') {
@@ -142,6 +144,57 @@ async function main() {
     },
   });
 
+  const limitedPasswordHash = await argon2.hash(LIMITED_USER_PASSWORD, {
+    type: argon2.argon2id,
+  });
+
+  const limitedUser = await prisma.iamUser.upsert({
+    where: { email: LIMITED_USER_EMAIL },
+    update: {
+      passwordHash: limitedPasswordHash,
+      status: 'ACTIVE',
+      displayName: 'Limited Operator',
+    },
+    create: {
+      email: LIMITED_USER_EMAIL,
+      displayName: 'Limited Operator',
+      status: 'ACTIVE',
+      passwordHash: limitedPasswordHash,
+    },
+  });
+
+  await prisma.orgUserAssignment.upsert({
+    where: {
+      companyId_userId: {
+        companyId: company.id,
+        userId: limitedUser.id,
+      },
+    },
+    update: { roleCode: 'operator' },
+    create: {
+      companyId: company.id,
+      userId: limitedUser.id,
+      roleCode: 'operator',
+    },
+  });
+
+  await upsertGrant({
+    permissionKey: 'identity.self.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+  });
+  await upsertGrant({
+    permissionKey: 'identity.session.revoke',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+  });
+  await upsertGrant({
+    permissionKey: 'platform.search.use',
+    subjectType: IamGrantSubject.ROLE,
+    subjectId: 'operator',
+    companyId: company.id,
+  });
+
   const superAdminPasswordHash = await argon2.hash(SUPER_ADMIN_PASSWORD, {
     type: argon2.argon2id,
   });
@@ -200,8 +253,45 @@ async function main() {
   }
 
   console.log(
-    `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}`,
+    `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, limited ${LIMITED_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}`,
   );
+}
+
+async function upsertGrant(params: {
+  permissionKey: string;
+  subjectType: IamGrantSubject;
+  subjectId: string;
+  companyId?: string;
+  effect?: IamGrantEffect;
+}) {
+  const existing = await prisma.iamGrant.findFirst({
+    where: {
+      permissionKey: params.permissionKey,
+      subjectType: params.subjectType,
+      subjectId: params.subjectId,
+      companyId: params.companyId ?? null,
+      effect: params.effect ?? IamGrantEffect.ALLOW,
+    },
+  });
+
+  if (existing) {
+    await prisma.iamGrant.update({
+      where: { id: existing.id },
+      data: { status: IamLifecycleStatus.ACTIVE },
+    });
+    return;
+  }
+
+  await prisma.iamGrant.create({
+    data: {
+      permissionKey: params.permissionKey,
+      subjectType: params.subjectType,
+      subjectId: params.subjectId,
+      companyId: params.companyId,
+      effect: params.effect ?? IamGrantEffect.ALLOW,
+      status: IamLifecycleStatus.ACTIVE,
+    },
+  });
 }
 
 main()

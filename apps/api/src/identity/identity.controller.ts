@@ -19,6 +19,9 @@ import { LoginDto } from './login.dto';
 import { SessionGuard } from './session.guard';
 import { SessionService } from './session.service';
 import type { SessionWithUser } from './session.service';
+import { PermissionGuard } from '../permissions/permission.guard';
+import { RequirePermission } from '../permissions/permission.decorators';
+import { PERMISSION_KEYS } from '../permissions/permission.constants';
 
 @Controller('api/v1/identity')
 export class IdentityController {
@@ -55,14 +58,16 @@ export class IdentityController {
   }
 
   @Get('me')
-  @UseGuards(SessionGuard)
+  @UseGuards(SessionGuard, PermissionGuard)
+  @RequirePermission(PERMISSION_KEYS.identitySelfRead)
   me(@CurrentUser() user: IamUser) {
     return this.authService.toMeResponse(user);
   }
 
   @Delete('sessions/:id')
   @HttpCode(204)
-  @UseGuards(SessionGuard)
+  @UseGuards(SessionGuard, PermissionGuard)
+  @RequirePermission(PERMISSION_KEYS.identitySessionRevoke)
   async revokeSession(
     @Param('id') sessionId: string,
     @CurrentSession() session: SessionWithUser,

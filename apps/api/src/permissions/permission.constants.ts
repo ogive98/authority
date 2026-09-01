@@ -1,0 +1,33 @@
+export const PERMISSION_CATALOGUE = [
+  'platform.file.read',
+  'platform.file.write',
+  'platform.search.use',
+  'identity.self.read',
+  'identity.user.manage',
+  'identity.session.revoke',
+] as const;
+
+export type PermissionKey = (typeof PERMISSION_CATALOGUE)[number];
+
+export const PERMISSION_KEYS = {
+  platformFileRead: 'platform.file.read',
+  platformFileWrite: 'platform.file.write',
+  platformSearchUse: 'platform.search.use',
+  identitySelfRead: 'identity.self.read',
+  identityUserManage: 'identity.user.manage',
+  identitySessionRevoke: 'identity.session.revoke',
+} as const satisfies Record<string, PermissionKey>;
+
+export const PERMISSION_METADATA_KEY = 'authority:permission';
+
+export const PERMISSION_ERROR_CODES = {
+  FORBIDDEN: 'IAM.FORBIDDEN',
+} as const;
+
+export function isCataloguedPermission(key: string): key is PermissionKey {
+  return (PERMISSION_CATALOGUE as readonly string[]).includes(key);
+}
+
+export function isWildcardPermission(key: string): boolean {
+  return key.includes('*');
+}

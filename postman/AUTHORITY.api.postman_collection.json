@@ -87,6 +87,31 @@
           }
         },
         {
+          "name": "Permissions catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/identity/permissions/catalog"
+          }
+        },
+        {
+          "name": "Check permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissionKey\": \"identity.self.read\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/identity/permissions/check"
+          }
+        },
+        {
           "name": "Revoke session",
           "request": {
             "method": "DELETE",

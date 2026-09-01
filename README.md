@@ -58,7 +58,15 @@ npm run test:e2e
 - `GET http://localhost:3001/api/v1/identity/me`
 - `DELETE http://localhost:3001/api/v1/identity/sessions/:id`
 
-Demo (seed dev) : `demo@authority.local` / `DemoPass123!`
+Demo (seed dev) : `demo@authority.local` / `DemoPass123!`  
+Limited (seed, no `identity.self.read`) : `limited@authority.local` / `LimitedPass123!`
+
+## Permissions (SOC-06)
+
+Évaluation serveur uniquement. Pas de `permission: *`. SPECTRE n’ajoute aucun grant.
+
+- `GET http://localhost:3001/api/v1/identity/permissions/catalog`
+- `POST http://localhost:3001/api/v1/identity/permissions/check`
 
 ## Organization (SOC-04)
 
@@ -90,8 +98,6 @@ Importe les fichiers du dossier `postman/` :
 
 Les cookies de session métier sont gérés après **Identity → Login**. Le realm Super Admin utilise un cookie distinct (`authority_super_admin_session`) — lancer **Super Admin → Login** avant **Super Admin → Health**.
 
-Les cookies de session sont gérés automatiquement après **Identity → Login**.
-
 ## Git
 
 Commit + push à chaque finalisation de lot SOC/THU/UI.
@@ -103,4 +109,5 @@ Commit + push à chaque finalisation de lot SOC/THU/UI.
 - [x] SOC-03 identity (login, /me, sessions, lockout)
 - [x] SOC-04 tenancy (company/site context, IDOR)
 - [x] SOC-05 super-admin auth (distinct realm, TOTP, gate 401)
-- [ ] SOC-06 permission engine
+- [x] SOC-06 permission engine (grants, guard, matrix `platform.*` / `identity.*`)
+- [ ] SOC-07 module registry + flags

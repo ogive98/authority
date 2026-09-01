@@ -212,6 +212,34 @@ model IamLoginAttempt {
   @@map("iam_login_attempt")
 }
 
+enum IamGrantEffect {
+  ALLOW
+  DENY
+}
+
+enum IamGrantSubject {
+  USER
+  ROLE
+}
+
+model IamGrant {
+  id            String             @id @default(uuid()) @db.Uuid
+  permissionKey String             @map("permission_key")
+  effect        IamGrantEffect     @default(ALLOW)
+  subjectType   IamGrantSubject    @map("subject_type")
+  subjectId     String             @map("subject_id")
+  companyId     String?            @map("company_id") @db.Uuid
+  siteId        String?            @map("site_id") @db.Uuid
+  warehouseId   String?            @map("warehouse_id") @db.Uuid
+  status        IamLifecycleStatus @default(ACTIVE)
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([subjectType, subjectId, permissionKey])
+  @@index([companyId, permissionKey])
+  @@map("iam_grant")
+}
+
 // --- org_* organization kernel ---
 
 enum OrgCompanyStatus {
