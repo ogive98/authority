@@ -4,6 +4,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { IamSessionRealm } from '@prisma/client';
 import { Request } from 'express';
 import {
   IDENTITY_COOKIE_NAME,
@@ -31,7 +32,10 @@ export class SessionGuard implements CanActivate {
       });
     }
 
-    const session = await this.sessionService.findActiveSession(token);
+    const session = await this.sessionService.findActiveSession(
+      token,
+      IamSessionRealm.BUSINESS,
+    );
     if (!session) {
       throw new UnauthorizedException({
         code: IDENTITY_ERROR_CODES.UNAUTHORIZED,

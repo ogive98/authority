@@ -4,8 +4,15 @@ import { HealthModule } from './health/health.module';
 import { IdentityModule } from './identity/identity.module';
 import { OrganizationModule } from './organization/organization.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SuperAdminModule } from './super-admin/super-admin.module';
 
 @Module({
-  imports: [PrismaModule, HealthModule, IdentityModule, OrganizationModule],
+  imports: [
+    PrismaModule,
+    HealthModule,
+    IdentityModule,
+    OrganizationModule,
+    SuperAdminModule,
+  ],
 })
 export class AppModule {}

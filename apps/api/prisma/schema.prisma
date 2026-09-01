@@ -101,6 +101,16 @@ enum IamLifecycleStatus {
   REVOKED
 }
 
+enum IamSessionRealm {
+  BUSINESS
+  SUPER_ADMIN
+}
+
+enum IamMfaPurpose {
+  BUSINESS
+  SUPER_ADMIN
+}
+
 model IamUser {
   id          String        @id @default(uuid()) @db.Uuid
   email       String        @unique
@@ -115,11 +125,12 @@ model IamUser {
   updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime?     @map("deleted_at") @db.Timestamptz(6)
 
-  sessions     IamSession[]
-  mfaDevices   IamMfaDevice[]
-  devices      IamDevice[]
-  loginAttempts IamLoginAttempt[]
-  assignments  OrgUserAssignment[]
+  sessions               IamSession[]
+  mfaDevices             IamMfaDevice[]
+  devices                IamDevice[]
+  loginAttempts          IamLoginAttempt[]
+  assignments            OrgUserAssignment[]
+  superAdminMembership   IamSuperAdminMembership?
 
   @@map("iam_user")
 }
@@ -132,6 +143,7 @@ model IamSession {
   userAgent   String?            @map("user_agent")
   expiresAt   DateTime           @map("expires_at") @db.Timestamptz(6)
   refreshHash String?            @map("refresh_hash")
+  realm       IamSessionRealm    @default(BUSINESS)
   status      IamLifecycleStatus @default(ACTIVE)
   createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -139,12 +151,14 @@ model IamSession {
   user IamUser @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt(sort: Desc)])
+  @@index([refreshHash])
   @@map("iam_session")
 }
 
 model IamMfaDevice {
   id         String             @id @default(uuid()) @db.Uuid
   userId     String             @map("user_id") @db.Uuid
+  purpose    IamMfaPurpose      @default(BUSINESS)
   secretEnc  String             @map("secret_enc")
   lastUsedAt DateTime?          @map("last_used_at") @db.Timestamptz(6)
   status     IamLifecycleStatus @default(ACTIVE)
@@ -153,8 +167,20 @@ model IamMfaDevice {
 
   user IamUser @relation(fields: [userId], references: [id])
 
-  @@index([userId])
+  @@index([userId, purpose])
   @@map("iam_mfa_device")
+}
+
+model IamSuperAdminMembership {
+  id        String             @id @default(uuid()) @db.Uuid
+  userId    String             @unique @map("user_id") @db.Uuid
+  status    IamLifecycleStatus @default(ACTIVE)
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user IamUser @relation(fields: [userId], references: [id])
+
+  @@map("iam_super_admin_membership")
 }
 
 model IamDevice {

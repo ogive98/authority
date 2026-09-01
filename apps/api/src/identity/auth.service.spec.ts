@@ -71,7 +71,12 @@ describe('AuthService', () => {
 
     expect(result.user.email).toBe('demo@authority.local');
     expect(result.token).toBe('token-abc');
-    expect(sessionService.createSession).toHaveBeenCalled();
+    expect(sessionService.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        realm: 'BUSINESS',
+      }),
+    );
   });
 
   it('rejects invalid credentials without revealing user existence', async () => {

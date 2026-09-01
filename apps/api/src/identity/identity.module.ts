@@ -8,6 +8,6 @@ import { SessionService } from './session.service';
 @Module({
   controllers: [IdentityController],
   providers: [AuthService, PasswordService, SessionService, SessionGuard],
-  exports: [SessionService, SessionGuard],
+  exports: [AuthService, PasswordService, SessionService, SessionGuard],
 })
 export class IdentityModule {}

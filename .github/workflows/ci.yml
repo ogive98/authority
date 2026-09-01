@@ -36,6 +36,7 @@ jobs:
       DATABASE_URL: postgresql://authority:authority@localhost:5433/authority
       REDIS_URL: redis://localhost:6379
       AUTHORITY_ENV: development
+      AUTHORITY_MFA_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     steps:
       - uses: actions/checkout@v4
 

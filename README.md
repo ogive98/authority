@@ -68,6 +68,17 @@ Demo (seed dev) : `demo@authority.local` / `DemoPass123!`
 
 Headers optionnels : `X-Authority-Company-Id`, `X-Authority-Site-Id`
 
+## Super Admin (SOC-05)
+
+Realm distinct du métier (cookie `authority_super_admin_session`, sessions `SUPER_ADMIN`).
+
+- `POST http://localhost:3001/api/super-admin/v1/auth/login`
+- `POST http://localhost:3001/api/super-admin/v1/auth/mfa/verify`
+- `GET http://localhost:3001/api/super-admin/v1/health`
+
+Seed (dev) : `superadmin@authority.local` / `SuperAdminPass123!`  
+TOTP enforced in production; opt-in via `AUTHORITY_SUPER_ADMIN_MFA_ENFORCED=true`. Membership table `iam_super_admin_membership` — never `is_super_admin`.
+
 ## Postman
 
 Importe les fichiers du dossier `postman/` :
@@ -76,6 +87,8 @@ Importe les fichiers du dossier `postman/` :
 2. **Import** → `AUTHORITY.local.postman_environment.json`
 3. Sélectionne l'environnement **AUTHORITY — Local** (coin haut droit)
 4. Lance **Collection Runner** sur `AUTHORITY API` (Login avant Me)
+
+Les cookies de session métier sont gérés après **Identity → Login**. Le realm Super Admin utilise un cookie distinct (`authority_super_admin_session`) — lancer **Super Admin → Login** avant **Super Admin → Health**.
 
 Les cookies de session sont gérés automatiquement après **Identity → Login**.
 
@@ -89,4 +102,5 @@ Commit + push à chaque finalisation de lot SOC/THU/UI.
 - [x] SOC-02 database / Prisma kernel
 - [x] SOC-03 identity (login, /me, sessions, lockout)
 - [x] SOC-04 tenancy (company/site context, IDOR)
-- [ ] SOC-05 super-admin auth
+- [x] SOC-05 super-admin auth (distinct realm, TOTP, gate 401)
+- [ ] SOC-06 permission engine

@@ -1,9 +1,9 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import type { IdentityErrorCode } from './identity.constants';
+import type { SuperAdminErrorCode } from './super-admin.constants';
 
-export class IdentityException extends HttpException {
+export class SuperAdminException extends HttpException {
   constructor(
-    public readonly code: IdentityErrorCode,
+    public readonly code: SuperAdminErrorCode,
     message: string,
     status: HttpStatus,
     extras?: Record<string, unknown>,

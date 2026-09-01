@@ -1,6 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import { IamLifecycleStatus, IamUser, IamSession } from '@prisma/client';
+import {
+  IamLifecycleStatus,
+  IamSession,
+  IamSessionRealm,
+  IamUser,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   getAuthorityEnv,
@@ -19,12 +24,15 @@ export class SessionService {
     userId: string;
     ip?: string;
     userAgent?: string;
+    realm?: IamSessionRealm;
+    ttlMs?: number;
   }): Promise<{ session: IamSession; token: string }> {
     const token = randomBytes(32).toString('base64url');
     const refreshHash = this.hashToken(token);
-    const expiresAt = new Date(
-      Date.now() + IDENTITY_DEFAULTS.sessionTtlHours * 60 * 60 * 1000,
-    );
+    const ttlMs =
+      params.ttlMs ?? IDENTITY_DEFAULTS.sessionTtlHours * 60 * 60 * 1000;
+    const expiresAt = new Date(Date.now() + ttlMs);
+    const realm = params.realm ?? IamSessionRealm.BUSINESS;
 
     const session = await this.prisma.iamSession.create({
       data: {
@@ -34,6 +42,7 @@ export class SessionService {
         userAgent: params.userAgent,
         expiresAt,
         refreshHash,
+        realm,
         status: IamLifecycleStatus.ACTIVE,
       },
     });
@@ -41,11 +50,15 @@ export class SessionService {
     return { session, token };
   }
 
-  async findActiveSession(token: string): Promise<SessionWithUser | null> {
+  async findActiveSession(
+    token: string,
+    realm: IamSessionRealm = IamSessionRealm.BUSINESS,
+  ): Promise<SessionWithUser | null> {
     const refreshHash = this.hashToken(token);
     const session = await this.prisma.iamSession.findFirst({
       where: {
         refreshHash,
+        realm,
         status: IamLifecycleStatus.ACTIVE,
         expiresAt: { gt: new Date() },
       },

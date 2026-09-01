@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { IamUserStatus } from '@prisma/client';
+import { IamSessionRealm, IamUser, IamUserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { IDENTITY_DEFAULTS, IDENTITY_ERROR_CODES } from './identity.constants';
 import { IdentityException } from './identity.exception';
@@ -34,6 +34,44 @@ export class AuthService {
     ip?: string;
     userAgent?: string;
   }): Promise<LoginResult> {
+    const user = await this.authenticatePassword(params);
+
+    await this.prisma.iamLoginAttempt.create({
+      data: {
+        userId: user.id,
+        email: user.email,
+        ip: params.ip,
+        success: true,
+      },
+    });
+
+    const { session, token } = await this.sessionService.createSession({
+      userId: user.id,
+      ip: params.ip,
+      userAgent: params.userAgent,
+      realm: IamSessionRealm.BUSINESS,
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        status: user.status,
+        locale: user.locale,
+        timezone: user.timezone,
+        mfaEnabled: user.mfaEnabled,
+      },
+      session: { id: session.id, expiresAt: session.expiresAt },
+      token,
+    };
+  }
+
+  async authenticatePassword(params: {
+    email: string;
+    password: string;
+    ip?: string;
+  }): Promise<IamUser> {
     const email = params.email.trim().toLowerCase();
     const user = await this.prisma.iamUser.findUnique({ where: { email } });
 
@@ -60,34 +98,7 @@ export class AuthService {
       throw this.invalidCredentials();
     }
 
-    await this.prisma.iamLoginAttempt.create({
-      data: {
-        userId: user.id,
-        email,
-        ip: params.ip,
-        success: true,
-      },
-    });
-
-    const { session, token } = await this.sessionService.createSession({
-      userId: user.id,
-      ip: params.ip,
-      userAgent: params.userAgent,
-    });
-
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        status: user.status,
-        locale: user.locale,
-        timezone: user.timezone,
-        mfaEnabled: user.mfaEnabled,
-      },
-      session: { id: session.id, expiresAt: session.expiresAt },
-      token,
-    };
+    return user;
   }
 
   toMeResponse(user: {

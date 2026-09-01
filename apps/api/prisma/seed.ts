@@ -7,8 +7,15 @@ config({ path: resolve(__dirname, '../../../.env') });
 
 const prisma = new PrismaClient();
 
+import { IamLifecycleStatus, IamMfaPurpose } from '@prisma/client';
+import { encryptMfaSecret } from '../src/super-admin/mfa-crypto';
+
 const DEMO_USER_EMAIL = 'demo@authority.local';
 const DEMO_USER_PASSWORD = 'DemoPass123!';
+const SUPER_ADMIN_EMAIL = 'superadmin@authority.local';
+const SUPER_ADMIN_PASSWORD = 'SuperAdminPass123!';
+/** Dev/test TOTP seed only — never use in production. */
+const SUPER_ADMIN_TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
 
 async function main() {
   if (process.env.NODE_ENV === 'production') {
@@ -135,8 +142,65 @@ async function main() {
     },
   });
 
+  const superAdminPasswordHash = await argon2.hash(SUPER_ADMIN_PASSWORD, {
+    type: argon2.argon2id,
+  });
+
+  const superAdmin = await prisma.iamUser.upsert({
+    where: { email: SUPER_ADMIN_EMAIL },
+    update: {
+      passwordHash: superAdminPasswordHash,
+      status: 'ACTIVE',
+      displayName: 'Super Admin',
+      mfaEnabled: true,
+    },
+    create: {
+      email: SUPER_ADMIN_EMAIL,
+      displayName: 'Super Admin',
+      status: 'ACTIVE',
+      passwordHash: superAdminPasswordHash,
+      mfaEnabled: true,
+    },
+  });
+
+  await prisma.iamSuperAdminMembership.upsert({
+    where: { userId: superAdmin.id },
+    update: { status: IamLifecycleStatus.ACTIVE },
+    create: {
+      userId: superAdmin.id,
+      status: IamLifecycleStatus.ACTIVE,
+    },
+  });
+
+  const existingSaMfa = await prisma.iamMfaDevice.findFirst({
+    where: {
+      userId: superAdmin.id,
+      purpose: IamMfaPurpose.SUPER_ADMIN,
+      status: IamLifecycleStatus.ACTIVE,
+    },
+  });
+
+  if (!existingSaMfa) {
+    await prisma.iamMfaDevice.create({
+      data: {
+        userId: superAdmin.id,
+        purpose: IamMfaPurpose.SUPER_ADMIN,
+        secretEnc: encryptMfaSecret(SUPER_ADMIN_TOTP_SECRET),
+        status: IamLifecycleStatus.ACTIVE,
+      },
+    });
+  } else {
+    await prisma.iamMfaDevice.update({
+      where: { id: existingSaMfa.id },
+      data: {
+        secretEnc: encryptMfaSecret(SUPER_ADMIN_TOTP_SECRET),
+        status: IamLifecycleStatus.ACTIVE,
+      },
+    });
+  }
+
   console.log(
-    `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}`,
+    `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}`,
   );
 }
 
