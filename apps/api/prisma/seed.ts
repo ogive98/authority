@@ -10,7 +10,9 @@ const prisma = new PrismaClient();
 import { IamGrantEffect, IamGrantSubject, IamLifecycleStatus, IamMfaPurpose, Prisma } from '@prisma/client';
 import { signLicensePayload } from '../src/license/license-crypto';
 import type { LicensePayload } from '../src/license/license.constants';
+import { LICENSE_CACHE_KEY } from '../src/license/license.constants';
 import { encryptMfaSecret } from '../src/super-admin/mfa-crypto';
+import Redis from 'ioredis';
 
 const DEMO_USER_EMAIL = 'demo@authority.local';
 const DEMO_USER_PASSWORD = 'DemoPass123!';
@@ -54,6 +56,13 @@ async function main() {
       type: 'USINE',
       timezone: 'Africa/Tunis',
       status: 'ACTIVE',
+    },
+  });
+
+  await prisma.orgSite.deleteMany({
+    where: {
+      companyId: company.id,
+      code: { not: 'SFX' },
     },
   });
 
@@ -306,6 +315,8 @@ async function main() {
     });
   }
 
+  await clearLicenseCache();
+
   const superAdminPasswordHash = await argon2.hash(SUPER_ADMIN_PASSWORD, {
     type: argon2.argon2id,
   });
@@ -363,6 +374,8 @@ async function main() {
     });
   }
 
+  await clearLicenseCache();
+
   console.log(
     `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, limited ${LIMITED_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}`,
   );
@@ -403,6 +416,20 @@ async function upsertGrant(params: {
       status: IamLifecycleStatus.ACTIVE,
     },
   });
+}
+
+async function clearLicenseCache(): Promise<void> {
+  const url = process.env.REDIS_URL;
+  if (!url) {
+    return;
+  }
+
+  const redis = new Redis(url);
+  try {
+    await redis.del(LICENSE_CACHE_KEY);
+  } finally {
+    await redis.quit();
+  }
 }
 
 main()

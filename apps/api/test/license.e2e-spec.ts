@@ -1,11 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { LICENSE_ERROR_CODES, LICENSE_CACHE_KEY } from '../src/license/license.constants';
+import {
+  LICENSE_ERROR_CODES,
+  LICENSE_CACHE_KEY,
+} from '../src/license/license.constants';
 import { signLicensePayload } from '../src/license/license-crypto';
 import type { LicensePayload } from '../src/license/license.constants';
 import { RedisService } from '../src/infrastructure/redis.service';
@@ -77,11 +81,16 @@ describe('License stub (e2e)', () => {
       issuedAt: '2026-01-01T00:00:00.000Z',
     };
     const signature = signLicensePayload(payload);
-    const row = await db.licCurrent.findFirst({ orderBy: { createdAt: 'asc' } });
+    const row = await db.licCurrent.findFirst({
+      orderBy: { createdAt: 'asc' },
+    });
     if (row) {
       await db.licCurrent.update({
         where: { id: row.id },
-        data: { payloadJson: payload, signature },
+        data: {
+          payloadJson: payload as unknown as Prisma.InputJsonValue,
+          signature,
+        },
       });
     }
     await redis.del(LICENSE_CACHE_KEY);
@@ -168,7 +177,8 @@ describe('License stub (e2e)', () => {
       .post('/api/v1/license/activate')
       .send({
         payload,
-        signature: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        signature:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       })
       .expect(400);
     expect((res.body as ErrorResponse).code).toBe(LICENSE_ERROR_CODES.INVALID);
