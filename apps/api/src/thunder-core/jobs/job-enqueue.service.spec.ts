@@ -16,6 +16,12 @@ describe('JobEnqueueService', () => {
   };
   let redis: { createBullConnection: jest.Mock };
   let registry: JobRegistryService;
+  let circuitBreaker: {
+    checkAdmission: jest.Mock;
+    recordSuccess: jest.Mock;
+    recordFailure: jest.Mock;
+  };
+  let planCRegistry: { execute: jest.Mock };
   let service: JobEnqueueService;
   let queueAdd: jest.Mock;
 
@@ -38,8 +44,31 @@ describe('JobEnqueueService', () => {
       createBullConnection: jest.fn().mockReturnValue({}),
     };
 
+    circuitBreaker = {
+      checkAdmission: jest.fn().mockResolvedValue({
+        allowed: true,
+        state: 'CLOSED',
+        dependencyKey: 'external_api_stub',
+      }),
+      recordSuccess: jest.fn(),
+      recordFailure: jest.fn(),
+    };
+
+    planCRegistry = {
+      execute: jest.fn().mockResolvedValue({
+        mode: 'plan_c',
+        dependencyKey: 'external_api_stub',
+      }),
+    };
+
     registry = new JobRegistryService();
-    service = new JobEnqueueService(prisma as never, redis as never, registry);
+    service = new JobEnqueueService(
+      prisma as never,
+      redis as never,
+      registry,
+      circuitBreaker as never,
+      planCRegistry as never,
+    );
 
     jest
       .spyOn(
@@ -72,6 +101,32 @@ describe('JobEnqueueService', () => {
     });
     expect(prisma.thunderJob.create).not.toHaveBeenCalled();
     expect(queueAdd).not.toHaveBeenCalled();
+  });
+
+  it('returns Plan C without enqueueing when the breaker is open', async () => {
+    circuitBreaker.checkAdmission.mockResolvedValue({
+      allowed: false,
+      state: 'OPEN',
+      dependencyKey: 'external_api_stub',
+    });
+
+    const result = await service.enqueue({
+      jobType: THUNDER_JOB_TYPES.breakerGuarded,
+      companyId,
+      queue: 'ops',
+      idempotencyKey: 'breaker-open',
+      payload: {},
+    });
+
+    expect(result).toMatchObject({
+      status: 'PLAN_C',
+      replayed: false,
+      planC: true,
+      dependencyKey: 'external_api_stub',
+    });
+    expect(prisma.thunderJob.create).not.toHaveBeenCalled();
+    expect(queueAdd).not.toHaveBeenCalled();
+    expect(planCRegistry.execute).toHaveBeenCalled();
   });
 
   it('rejects the same idempotency key with a different payload', async () => {
@@ -110,10 +165,18 @@ describe('JobEnqueueService idempotency conflict status', () => {
       },
     };
     const redis = { createBullConnection: jest.fn() };
+    const circuitBreaker = {
+      checkAdmission: jest
+        .fn()
+        .mockResolvedValue({ allowed: true, state: 'CLOSED' }),
+    };
+    const planCRegistry = { execute: jest.fn() };
     const service = new JobEnqueueService(
       prisma as never,
       redis as never,
       new JobRegistryService(),
+      circuitBreaker as never,
+      planCRegistry as never,
     );
 
     try {

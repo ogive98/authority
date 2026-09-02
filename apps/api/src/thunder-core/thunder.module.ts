@@ -15,6 +15,8 @@ import { JobEnqueueService } from './jobs/job-enqueue.service';
 import { JobProcessorHost } from './jobs/job-processor.host';
 import { JobQueryService } from './jobs/job-query.service';
 import { JobRegistryService } from './jobs/job-registry.service';
+import { CircuitBreakerService } from './resilience/circuit-breaker.service';
+import { PlanCRegistryService } from './resilience/plan-c-registry.service';
 import { ThunderController } from './thunder.controller';
 
 @Module({
@@ -38,6 +40,8 @@ import { ThunderController } from './thunder.controller';
     OutboxPublisherWorker,
     EventConsumerHost,
     EventConsumerWorker,
+    CircuitBreakerService,
+    PlanCRegistryService,
   ],
   exports: [
     JobEnqueueService,
@@ -47,6 +51,8 @@ import { ThunderController } from './thunder.controller';
     OutboxPublisherService,
     EventConsumerHost,
     ProcessedEventService,
+    CircuitBreakerService,
+    PlanCRegistryService,
   ],
 })
 export class ThunderModule {}

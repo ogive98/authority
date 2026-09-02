@@ -11,6 +11,7 @@ import { RedisService } from '../../infrastructure/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { ThunderContext } from '../context/thunder-context';
 import { thunderQueueName, thunderWorkersEnabled } from '../thunder.constants';
+import { CircuitBreakerService } from '../resilience/circuit-breaker.service';
 import { DlqService } from './dlq/dlq.service';
 import type { ThunderQueueJobData } from './job.types';
 import { JobRegistryService } from './job-registry.service';
@@ -32,6 +33,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     private readonly redis: RedisService,
     private readonly registry: JobRegistryService,
     private readonly dlqService: DlqService,
+    private readonly circuitBreaker: CircuitBreakerService,
   ) {}
 
   onModuleInit(): void {
@@ -117,6 +119,8 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
       },
     });
 
+    const dependencyKey = registration.dependencyKey;
+
     try {
       const result = await this.runWithTimeout(
         registration.handler({
@@ -130,6 +134,10 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
         timeoutMs,
       );
 
+      if (dependencyKey) {
+        await this.circuitBreaker.recordSuccess(dependencyKey);
+      }
+
       await this.prisma.thunderJob.update({
         where: { id: row.id },
         data: {
@@ -142,6 +150,10 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Thunder job failed';
+
+      if (dependencyKey) {
+        await this.circuitBreaker.recordFailure(dependencyKey);
+      }
 
       await this.prisma.thunderJob.update({
         where: { id: row.id },

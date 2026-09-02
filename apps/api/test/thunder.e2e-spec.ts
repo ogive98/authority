@@ -8,7 +8,10 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { JobProcessorHost } from '../src/thunder-core/jobs/job-processor.host';
 import { EventConsumerHost } from '../src/thunder-core/events/event-consumer.host';
 import { OutboxPublisherService } from '../src/thunder-core/events/outbox-publisher.service';
-import { THUNDER_ERROR_CODES } from '../src/thunder-core/thunder.constants';
+import {
+  THUNDER_DEPENDENCY_KEYS,
+  THUNDER_ERROR_CODES,
+} from '../src/thunder-core/thunder.constants';
 
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
@@ -16,9 +19,16 @@ const SA_EMAIL = 'superadmin@authority.local';
 const SA_PASSWORD = 'SuperAdminPass123!';
 
 interface HelloJobResponse {
-  jobId: string;
+  jobId?: string;
   status: string;
   replayed: boolean;
+  planC?: boolean;
+  dependencyKey?: string;
+  planCResult?: {
+    mode?: string;
+    dependencyKey?: string;
+    message?: string;
+  };
 }
 
 interface JobStatusResponse {
@@ -153,7 +163,7 @@ describe('Thunder jobs (e2e)', () => {
     expect(secondBody.replayed).toBe(true);
     expect(secondBody.jobId).toBe(firstBody.jobId);
 
-    const completed = await waitForJobCompletion(agent, firstBody.jobId);
+    const completed = await waitForJobCompletion(agent, firstBody.jobId!);
     expect(completed.status).toBe('COMPLETED');
     expect(completed.resultJson?.executionCount).toBe(1);
 
@@ -239,7 +249,8 @@ describe('Thunder jobs (e2e)', () => {
       .expect(202);
 
     const jobId = (enqueued.body as HelloJobResponse).jobId;
-    const failed = await waitForJobStatus(agent, jobId, ['FAILED']);
+    expect(jobId).toBeTruthy();
+    const failed = await waitForJobStatus(agent, jobId!, ['FAILED']);
     expect(failed.status).toBe('FAILED');
 
     const row = await prisma.thunderJob.findUnique({ where: { id: jobId } });
@@ -272,7 +283,8 @@ describe('Thunder jobs (e2e)', () => {
       .expect(202);
 
     const jobId = (enqueued.body as HelloJobResponse).jobId;
-    const completed = await waitForJobStatus(agent, jobId, ['COMPLETED']);
+    expect(jobId).toBeTruthy();
+    const completed = await waitForJobStatus(agent, jobId!, ['COMPLETED']);
     expect(completed.status).toBe('COMPLETED');
     expect(completed.resultJson).toMatchObject({ recovered: true });
 
@@ -352,5 +364,58 @@ describe('Thunder jobs (e2e)', () => {
       where: { eventId: outbox.id },
     });
     expect(processedAfterReplay).toHaveLength(2);
+  });
+
+  it('fails fast with Plan C when the circuit breaker is open', async () => {
+    if (!hasDatabase || !hasRedis) {
+      return;
+    }
+
+    const { agent } = await loginWithDemoContext();
+    const saAgent = await loginSuperAdmin();
+    const dependencyKey = THUNDER_DEPENDENCY_KEYS.externalApiStub;
+    const idempotencyKey = `breaker-plan-c-${Date.now()}`;
+
+    await saAgent
+      .post(`/api/super-admin/v1/thunder/breakers/${dependencyKey}/open`)
+      .expect(200);
+
+    const degraded = await agent
+      .post('/api/v1/thunder/jobs/breaker-guarded')
+      .send({ idempotencyKey })
+      .expect(202);
+
+    const body = degraded.body as HelloJobResponse;
+    expect(body.planC).toBe(true);
+    expect(body.status).toBe('PLAN_C');
+    expect(body.jobId).toBeUndefined();
+    expect(body.planCResult).toMatchObject({
+      mode: 'plan_c',
+      dependencyKey,
+    });
+
+    const rows = await prisma.thunderJob.findMany({
+      where: { idempotencyKey },
+    });
+    expect(rows).toHaveLength(0);
+
+    await saAgent
+      .post(`/api/super-admin/v1/thunder/breakers/${dependencyKey}/reset`)
+      .expect(200);
+
+    const enqueued = await agent
+      .post('/api/v1/thunder/jobs/breaker-guarded')
+      .send({ idempotencyKey: `breaker-normal-${Date.now()}` })
+      .expect(202);
+
+    const jobId = (enqueued.body as HelloJobResponse).jobId;
+    expect(jobId).toBeTruthy();
+
+    const completed = await waitForJobCompletion(agent, jobId!);
+    expect(completed.status).toBe('COMPLETED');
+    expect(completed.resultJson).toMatchObject({
+      ok: true,
+      dependency: dependencyKey,
+    });
   });
 });

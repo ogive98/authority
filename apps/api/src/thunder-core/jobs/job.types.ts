@@ -22,10 +22,14 @@ export type JobHandler = (
 export interface RegisteredJobHandler {
   queue: ThunderQueueFamily;
   handler: JobHandler;
+  dependencyKey?: string;
 }
 
 export interface JobEnqueueResult {
-  jobId: string;
+  jobId?: string;
   status: string;
   replayed: boolean;
+  planC?: boolean;
+  dependencyKey?: string;
+  planCResult?: Prisma.InputJsonValue;
 }

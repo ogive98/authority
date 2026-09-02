@@ -16,6 +16,8 @@ import type { JobEnqueueResult } from './job.types';
 import { JobRegistryService } from './job-registry.service';
 import { hashJobPayload } from './payload-hash';
 import { getJobAttemptsForType } from './retry/retry-policy';
+import { CircuitBreakerService } from '../resilience/circuit-breaker.service';
+import { PlanCRegistryService } from '../resilience/plan-c-registry.service';
 
 export interface EnqueueJobInput {
   jobType: string;
@@ -36,6 +38,8 @@ export class JobEnqueueService implements OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly registry: JobRegistryService,
+    private readonly circuitBreaker: CircuitBreakerService,
+    private readonly planCRegistry: PlanCRegistryService,
   ) {}
 
   async enqueueHello(params: {
@@ -67,6 +71,24 @@ export class JobEnqueueService implements OnModuleDestroy {
   }): Promise<JobEnqueueResult> {
     return this.enqueue({
       jobType: THUNDER_JOB_TYPES.failRetryable,
+      companyId: params.companyId,
+      queue: 'ops',
+      priority: 2,
+      idempotencyKey: params.idempotencyKey,
+      payload: {},
+      userId: params.userId,
+      correlationId: params.correlationId,
+    });
+  }
+
+  async enqueueBreakerGuarded(params: {
+    companyId: string;
+    userId?: string;
+    idempotencyKey: string;
+    correlationId?: string;
+  }): Promise<JobEnqueueResult> {
+    return this.enqueue({
+      jobType: THUNDER_JOB_TYPES.breakerGuarded,
       companyId: params.companyId,
       queue: 'ops',
       priority: 2,
@@ -127,6 +149,31 @@ export class JobEnqueueService implements OnModuleDestroy {
         status: existing.status,
         replayed: true,
       };
+    }
+
+    if (registration.dependencyKey) {
+      const admission = await this.circuitBreaker.checkAdmission(
+        registration.dependencyKey,
+      );
+      if (!admission.allowed) {
+        const planCResult = await this.planCRegistry.execute(
+          registration.dependencyKey,
+          {
+            dependencyKey: registration.dependencyKey,
+            jobType: input.jobType,
+            companyId: input.companyId,
+            correlationId: input.correlationId,
+          },
+        );
+
+        return {
+          status: 'PLAN_C',
+          replayed: false,
+          planC: true,
+          dependencyKey: registration.dependencyKey,
+          planCResult: planCResult as Prisma.InputJsonValue,
+        };
+      }
     }
 
     const context = createThunderContext({

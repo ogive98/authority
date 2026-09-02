@@ -68,6 +68,23 @@ export class ThunderController {
     });
   }
 
+  @Post('jobs/breaker-guarded')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @RequirePermission(PERMISSION_KEYS.thunderJobEnqueue)
+  async enqueueBreakerGuarded(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() body: EnqueueTestJobDto,
+    @Headers('x-correlation-id') correlationHeader?: string,
+  ) {
+    return this.jobEnqueueService.enqueueBreakerGuarded({
+      companyId: tenancy.companyId,
+      userId: user.id,
+      idempotencyKey: body.idempotencyKey,
+      correlationId: correlationHeader ?? randomUUID(),
+    });
+  }
+
   @Post('jobs/fail-fatal')
   @HttpCode(HttpStatus.ACCEPTED)
   @RequirePermission(PERMISSION_KEYS.thunderJobEnqueue)
