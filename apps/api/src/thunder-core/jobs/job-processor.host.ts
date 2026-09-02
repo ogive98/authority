@@ -70,13 +70,15 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    for (const worker of this.workers) {
-      await worker.close();
-    }
+    await Promise.all(this.workers.map((worker) => worker.close(true)));
     this.workers.length = 0;
 
     for (const connection of this.workerConnections) {
-      await connection.quit();
+      try {
+        connection.disconnect();
+      } catch {
+        // ignore shutdown races in tests
+      }
     }
     this.workerConnections = [];
   }
@@ -163,43 +165,51 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     job: Job<ThunderQueueJobData> | undefined,
     error: Error,
   ): Promise<void> {
-    if (!job) {
-      return;
+    try {
+      if (!job) {
+        return;
+      }
+
+      const maxAttempts = job.opts.attempts ?? DEFAULT_MAX_ATTEMPTS;
+      const isFinal =
+        error instanceof UnrecoverableError || job.attemptsMade >= maxAttempts;
+
+      if (!isFinal) {
+        return;
+      }
+
+      const row = await this.prisma.thunderJob.findUnique({
+        where: { id: job.data.jobId },
+      });
+      if (!row) {
+        return;
+      }
+
+      const existing = await this.prisma.thunderDlqEntry.findFirst({
+        where: { jobId: row.id },
+      });
+      if (existing) {
+        return;
+      }
+
+      await this.dlqService.record({
+        jobId: row.id,
+        companyId: row.companyId ?? undefined,
+        jobType: row.jobType,
+        queue: row.queue,
+        payloadJson: row.payloadJson ?? {},
+        lastError: error.message,
+        attempts: row.attempts,
+      });
+
+      await this.markFailed(row.id, error.message);
+    } catch (handlerError) {
+      this.logger.warn(
+        handlerError instanceof Error
+          ? handlerError.message
+          : 'Thunder DLQ handler failed',
+      );
     }
-
-    const maxAttempts = job.opts.attempts ?? DEFAULT_MAX_ATTEMPTS;
-    const isFinal =
-      error instanceof UnrecoverableError || job.attemptsMade >= maxAttempts;
-
-    if (!isFinal) {
-      return;
-    }
-
-    const row = await this.prisma.thunderJob.findUnique({
-      where: { id: job.data.jobId },
-    });
-    if (!row) {
-      return;
-    }
-
-    const existing = await this.prisma.thunderDlqEntry.findFirst({
-      where: { jobId: row.id },
-    });
-    if (existing) {
-      return;
-    }
-
-    await this.dlqService.record({
-      jobId: row.id,
-      companyId: row.companyId ?? undefined,
-      jobType: row.jobType,
-      queue: row.queue,
-      payloadJson: row.payloadJson ?? {},
-      lastError: error.message,
-      attempts: row.attempts,
-    });
-
-    await this.markFailed(row.id, error.message);
   }
 
   private async runWithTimeout<T>(

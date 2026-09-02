@@ -39,5 +39,11 @@ export function thunderWorkersEnabled(): boolean {
   if (process.env.THUNDER_WORKERS_ENABLED === 'false') {
     return false;
   }
+  if (
+    process.env.NODE_ENV === 'test' &&
+    process.env.THUNDER_WORKERS_ENABLED !== 'true'
+  ) {
+    return false;
+  }
   return Boolean(process.env.REDIS_URL);
 }

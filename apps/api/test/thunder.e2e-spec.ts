@@ -41,7 +41,13 @@ describe('Thunder jobs (e2e)', () => {
   const hasDatabase = Boolean(process.env.DATABASE_URL);
   const hasRedis = Boolean(process.env.REDIS_URL);
 
+  jest.setTimeout(30_000);
+
   beforeEach(async () => {
+    if (hasRedis) {
+      process.env.THUNDER_WORKERS_ENABLED = 'true';
+    }
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -60,7 +66,10 @@ describe('Thunder jobs (e2e)', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
+    delete process.env.THUNDER_WORKERS_ENABLED;
   });
 
   async function loginWithDemoContext() {

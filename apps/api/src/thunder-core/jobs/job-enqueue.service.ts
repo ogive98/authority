@@ -238,9 +238,7 @@ export class JobEnqueueService implements OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    for (const queue of this.queues.values()) {
-      await queue.close();
-    }
+    await Promise.all([...this.queues.values()].map((queue) => queue.close()));
     this.queues.clear();
   }
 }
