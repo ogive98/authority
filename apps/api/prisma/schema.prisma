@@ -550,3 +550,19 @@ model ThunderWorkflowInstance {
   @@index([companyId, status, createdAt(sort: Desc)])
   @@map("thunder_workflow_instance")
 }
+
+model ThunderDlqEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  jobId       String   @map("job_id") @db.Uuid
+  companyId   String?  @map("company_id") @db.Uuid
+  jobType     String   @map("job_type")
+  queue       String
+  payloadJson Json     @map("payload_json")
+  lastError   String   @map("last_error")
+  attempts    Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([jobId])
+  @@map("thunder_dlq")
+}

@@ -10,6 +10,8 @@ import { THUNDER_ERROR_CODES } from '../src/thunder-core/thunder.constants';
 
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
+const SA_EMAIL = 'superadmin@authority.local';
+const SA_PASSWORD = 'SuperAdminPass123!';
 
 interface HelloJobResponse {
   jobId: string;
@@ -83,16 +85,33 @@ describe('Thunder jobs (e2e)', () => {
     agent: ReturnType<typeof request.agent>,
     jobId: string,
   ): Promise<JobStatusResponse> {
-    for (let attempt = 0; attempt < 30; attempt += 1) {
+    return waitForJobStatus(agent, jobId, ['COMPLETED', 'FAILED']);
+  }
+
+  async function waitForJobStatus(
+    agent: ReturnType<typeof request.agent>,
+    jobId: string,
+    statuses: string[],
+  ): Promise<JobStatusResponse> {
+    for (let attempt = 0; attempt < 40; attempt += 1) {
       const res = await agent.get(`/api/v1/thunder/jobs/${jobId}`).expect(200);
       const body = res.body as JobStatusResponse;
-      if (body.status === 'COMPLETED' || body.status === 'FAILED') {
+      if (statuses.includes(body.status)) {
         return body;
       }
       await sleep(200);
     }
 
-    throw new Error(`Job ${jobId} did not complete in time`);
+    throw new Error(`Job ${jobId} did not reach ${statuses.join('|')} in time`);
+  }
+
+  async function loginSuperAdmin() {
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/api/super-admin/v1/auth/login')
+      .send({ email: SA_EMAIL, password: SA_PASSWORD })
+      .expect(200);
+    return agent;
   }
 
   it('enqueues thunder.hello.v1 with idempotent replay', async () => {
@@ -191,5 +210,65 @@ describe('Thunder jobs (e2e)', () => {
     });
     expect(updated?.status).toBe('COMPLETED');
     expect(updated?.resultJson).toMatchObject({ executionCount: 1 });
+  });
+
+  it('does not retry fatal validation jobs and records DLQ', async () => {
+    if (!hasDatabase || !hasRedis) {
+      return;
+    }
+
+    const { agent } = await loginWithDemoContext();
+    const idempotencyKey = `fatal-${Date.now()}`;
+
+    const enqueued = await agent
+      .post('/api/v1/thunder/jobs/fail-fatal')
+      .send({ idempotencyKey })
+      .expect(202);
+
+    const jobId = (enqueued.body as HelloJobResponse).jobId;
+    const failed = await waitForJobStatus(agent, jobId, ['FAILED']);
+    expect(failed.status).toBe('FAILED');
+
+    const row = await prisma.thunderJob.findUnique({ where: { id: jobId } });
+    expect(row?.attempts).toBe(1);
+
+    const dlq = await prisma.thunderDlqEntry.findFirst({
+      where: { jobId },
+    });
+    expect(dlq).not.toBeNull();
+
+    const saAgent = await loginSuperAdmin();
+    const list = await saAgent
+      .get('/api/super-admin/v1/thunder/dlq')
+      .expect(200);
+    const items = (list.body as { items: Array<{ jobId: string }> }).items;
+    expect(items.some((entry) => entry.jobId === jobId)).toBe(true);
+  });
+
+  it('retries retryable jobs then completes without DLQ', async () => {
+    if (!hasDatabase || !hasRedis) {
+      return;
+    }
+
+    const { agent } = await loginWithDemoContext();
+    const idempotencyKey = `retry-${Date.now()}`;
+
+    const enqueued = await agent
+      .post('/api/v1/thunder/jobs/fail-retryable')
+      .send({ idempotencyKey })
+      .expect(202);
+
+    const jobId = (enqueued.body as HelloJobResponse).jobId;
+    const completed = await waitForJobStatus(agent, jobId, ['COMPLETED']);
+    expect(completed.status).toBe('COMPLETED');
+    expect(completed.resultJson).toMatchObject({ recovered: true });
+
+    const row = await prisma.thunderJob.findUnique({ where: { id: jobId } });
+    expect(row?.attempts).toBe(3);
+
+    const dlq = await prisma.thunderDlqEntry.findFirst({
+      where: { jobId },
+    });
+    expect(dlq).toBeNull();
   });
 });

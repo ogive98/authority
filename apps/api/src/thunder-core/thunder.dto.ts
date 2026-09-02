@@ -11,3 +11,10 @@ export class EnqueueHelloJobDto {
   @MaxLength(256)
   message?: string;
 }
+
+export class EnqueueTestJobDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  idempotencyKey!: string;
+}

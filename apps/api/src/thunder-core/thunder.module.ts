@@ -8,6 +8,7 @@ import { JobEnqueueService } from './jobs/job-enqueue.service';
 import { JobProcessorHost } from './jobs/job-processor.host';
 import { JobQueryService } from './jobs/job-query.service';
 import { JobRegistryService } from './jobs/job-registry.service';
+import { DlqService } from './jobs/dlq/dlq.service';
 import { ThunderController } from './thunder.controller';
 
 @Module({
@@ -24,7 +25,8 @@ import { ThunderController } from './thunder.controller';
     JobEnqueueService,
     JobProcessorHost,
     JobQueryService,
+    DlqService,
   ],
-  exports: [JobEnqueueService, JobProcessorHost, JobQueryService],
+  exports: [JobEnqueueService, JobProcessorHost, JobQueryService, DlqService],
 })
 export class ThunderModule {}

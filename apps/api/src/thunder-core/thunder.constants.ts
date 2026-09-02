@@ -1,5 +1,7 @@
 export const THUNDER_JOB_TYPES = {
   hello: 'thunder.hello.v1',
+  failRetryable: 'thunder.fail.retryable.v1',
+  failFatal: 'thunder.fail.fatal.v1',
 } as const;
 
 export type ThunderJobType =

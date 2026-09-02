@@ -15,6 +15,7 @@ import { ThunderException } from '../thunder.exception';
 import type { JobEnqueueResult } from './job.types';
 import { JobRegistryService } from './job-registry.service';
 import { hashJobPayload } from './payload-hash';
+import { getJobAttemptsForType } from './retry/retry-policy';
 
 export interface EnqueueJobInput {
   jobType: string;
@@ -53,6 +54,42 @@ export class JobEnqueueService implements OnModuleDestroy {
       payload: {
         message: params.message ?? 'hello',
       },
+      userId: params.userId,
+      correlationId: params.correlationId,
+    });
+  }
+
+  async enqueueFailRetryable(params: {
+    companyId: string;
+    userId?: string;
+    idempotencyKey: string;
+    correlationId?: string;
+  }): Promise<JobEnqueueResult> {
+    return this.enqueue({
+      jobType: THUNDER_JOB_TYPES.failRetryable,
+      companyId: params.companyId,
+      queue: 'ops',
+      priority: 2,
+      idempotencyKey: params.idempotencyKey,
+      payload: {},
+      userId: params.userId,
+      correlationId: params.correlationId,
+    });
+  }
+
+  async enqueueFailFatal(params: {
+    companyId: string;
+    userId?: string;
+    idempotencyKey: string;
+    correlationId?: string;
+  }): Promise<JobEnqueueResult> {
+    return this.enqueue({
+      jobType: THUNDER_JOB_TYPES.failFatal,
+      companyId: params.companyId,
+      queue: 'ops',
+      priority: 2,
+      idempotencyKey: params.idempotencyKey,
+      payload: {},
       userId: params.userId,
       correlationId: params.correlationId,
     });
@@ -150,12 +187,15 @@ export class JobEnqueueService implements OnModuleDestroy {
     }
 
     const queue = this.getQueue(input.queue);
+    const attempts = getJobAttemptsForType(input.jobType);
     const bullJob = await queue.add(
       input.jobType,
       { jobId: jobRow.id },
       {
         jobId: jobRow.id,
         priority: input.priority ?? 2,
+        attempts,
+        backoff: { type: 'custom' },
         removeOnComplete: 100,
         removeOnFail: 100,
       },

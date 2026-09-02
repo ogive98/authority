@@ -5,14 +5,21 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Job, Worker } from 'bullmq';
+import { Job, UnrecoverableError, Worker } from 'bullmq';
 import type Redis from 'ioredis';
 import { RedisService } from '../../infrastructure/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { ThunderContext } from '../context/thunder-context';
 import { thunderQueueName, thunderWorkersEnabled } from '../thunder.constants';
+import { DlqService } from './dlq/dlq.service';
 import type { ThunderQueueJobData } from './job.types';
 import { JobRegistryService } from './job-registry.service';
+import { isRetryableJobError } from './retry/job-errors';
+import {
+  computeBackoffDelayMs,
+  DEFAULT_MAX_ATTEMPTS,
+  getJobTimeoutMsForType,
+} from './retry/retry-policy';
 
 @Injectable()
 export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
@@ -24,6 +31,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly registry: JobRegistryService,
+    private readonly dlqService: DlqService,
   ) {}
 
   onModuleInit(): void {
@@ -42,13 +50,18 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
       const worker = new Worker<ThunderQueueJobData>(
         thunderQueueName(queueFamily),
         async (job) => this.processJob(job),
-        { connection, concurrency: 2 },
+        {
+          connection,
+          concurrency: 2,
+          settings: {
+            backoffStrategy: (attemptsMade) =>
+              computeBackoffDelayMs(attemptsMade),
+          },
+        },
       );
 
       worker.on('failed', (job, error) => {
-        this.logger.warn(
-          `Job ${job?.id ?? 'unknown'} failed: ${error.message}`,
-        );
+        void this.handleFinalFailure(job, error);
       });
 
       this.workers.push(worker);
@@ -91,6 +104,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
 
     const payload = (row.payloadJson ?? {}) as Prisma.JsonObject;
     const context = this.readContext(payload);
+    const timeoutMs = getJobTimeoutMsForType(row.jobType);
 
     await this.prisma.thunderJob.update({
       where: { id: row.id },
@@ -102,14 +116,17 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     });
 
     try {
-      const result = await registration.handler({
-        jobId: row.id,
-        jobType: row.jobType,
-        companyId: row.companyId ?? undefined,
-        payload,
-        context,
-        attempt: job.attemptsMade + 1,
-      });
+      const result = await this.runWithTimeout(
+        registration.handler({
+          jobId: row.id,
+          jobType: row.jobType,
+          companyId: row.companyId ?? undefined,
+          payload,
+          context,
+          attempt: job.attemptsMade + 1,
+        }),
+        timeoutMs,
+      );
 
       await this.prisma.thunderJob.update({
         where: { id: row.id },
@@ -123,8 +140,91 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Thunder job failed';
-      await this.markFailed(row.id, message);
+
+      await this.prisma.thunderJob.update({
+        where: { id: row.id },
+        data: {
+          errorJson: {
+            message,
+            attempt: job.attemptsMade + 1,
+          },
+        },
+      });
+
+      if (!isRetryableJobError(error)) {
+        throw new UnrecoverableError(message);
+      }
+
       throw error;
+    }
+  }
+
+  private async handleFinalFailure(
+    job: Job<ThunderQueueJobData> | undefined,
+    error: Error,
+  ): Promise<void> {
+    if (!job) {
+      return;
+    }
+
+    const maxAttempts = job.opts.attempts ?? DEFAULT_MAX_ATTEMPTS;
+    const isFinal =
+      error instanceof UnrecoverableError || job.attemptsMade >= maxAttempts;
+
+    if (!isFinal) {
+      return;
+    }
+
+    const row = await this.prisma.thunderJob.findUnique({
+      where: { id: job.data.jobId },
+    });
+    if (!row) {
+      return;
+    }
+
+    const existing = await this.prisma.thunderDlqEntry.findFirst({
+      where: { jobId: row.id },
+    });
+    if (existing) {
+      return;
+    }
+
+    await this.dlqService.record({
+      jobId: row.id,
+      companyId: row.companyId ?? undefined,
+      jobType: row.jobType,
+      queue: row.queue,
+      payloadJson: row.payloadJson ?? {},
+      lastError: error.message,
+      attempts: row.attempts,
+    });
+
+    await this.markFailed(row.id, error.message);
+  }
+
+  private async runWithTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+  ): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          timer = setTimeout(() => {
+            const timeoutError = new Error(
+              `Job attempt timed out after ${timeoutMs}ms`,
+            );
+            timeoutError.name = 'TimeoutError';
+            reject(timeoutError);
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
     }
   }
 
@@ -166,6 +266,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
       id: row.bullJobId ?? row.id,
       data: { jobId: row.id },
       attemptsMade: row.attempts,
+      opts: { attempts: DEFAULT_MAX_ATTEMPTS },
     } as Job<ThunderQueueJobData>);
   }
 }

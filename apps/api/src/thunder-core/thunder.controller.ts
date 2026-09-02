@@ -21,7 +21,7 @@ import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import { JobEnqueueService } from './jobs/job-enqueue.service';
 import { JobQueryService } from './jobs/job-query.service';
-import { EnqueueHelloJobDto } from './thunder.dto';
+import { EnqueueHelloJobDto, EnqueueTestJobDto } from './thunder.dto';
 
 @Controller('api/v1/thunder')
 @UseGuards(SessionGuard, TenancyGuard, PermissionGuard)
@@ -49,6 +49,40 @@ export class ThunderController {
     });
 
     return result;
+  }
+
+  @Post('jobs/fail-retryable')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @RequirePermission(PERMISSION_KEYS.thunderJobEnqueue)
+  async enqueueFailRetryable(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() body: EnqueueTestJobDto,
+    @Headers('x-correlation-id') correlationHeader?: string,
+  ) {
+    return this.jobEnqueueService.enqueueFailRetryable({
+      companyId: tenancy.companyId,
+      userId: user.id,
+      idempotencyKey: body.idempotencyKey,
+      correlationId: correlationHeader ?? randomUUID(),
+    });
+  }
+
+  @Post('jobs/fail-fatal')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @RequirePermission(PERMISSION_KEYS.thunderJobEnqueue)
+  async enqueueFailFatal(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() body: EnqueueTestJobDto,
+    @Headers('x-correlation-id') correlationHeader?: string,
+  ) {
+    return this.jobEnqueueService.enqueueFailFatal({
+      companyId: tenancy.companyId,
+      userId: user.id,
+      idempotencyKey: body.idempotencyKey,
+      correlationId: correlationHeader ?? randomUUID(),
+    });
   }
 
   @Get('jobs/:id')

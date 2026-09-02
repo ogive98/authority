@@ -5,6 +5,10 @@ import {
   type ThunderQueueFamily,
 } from '../thunder.constants';
 import type { JobHandler, RegisteredJobHandler } from './job.types';
+import {
+  executeFailFatalJob,
+  executeFailRetryableJob,
+} from './processors/fail.processor';
 import { executeHelloJob } from './processors/hello.processor';
 
 @Injectable()
@@ -13,6 +17,12 @@ export class JobRegistryService {
 
   constructor() {
     this.register(THUNDER_JOB_TYPES.hello, 'ops', executeHelloJob);
+    this.register(
+      THUNDER_JOB_TYPES.failRetryable,
+      'ops',
+      executeFailRetryableJob,
+    );
+    this.register(THUNDER_JOB_TYPES.failFatal, 'ops', executeFailFatalJob);
   }
 
   register(
