@@ -293,6 +293,23 @@
           }
         },
         {
+          "name": "Create site (SOC-10)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"DEP1\",\n  \"type\": \"DEPOT\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/organization/companies/{{companyId}}/sites"
+          }
+        },
+        {
           "name": "IDOR — other company (expect 403)",
           "event": [
             {
@@ -311,6 +328,19 @@
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/api/v1/organization/companies/00000000-0000-4000-8000-000000000099"
+          }
+        }
+      ]
+    },
+    {
+      "name": "License",
+      "item": [
+        {
+          "name": "Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/license/status"
           }
         }
       ]

@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
+  Post,
   Put,
   Req,
   Res,
@@ -15,6 +17,7 @@ import { CurrentTenancy } from './organization.decorators';
 import { ORG_ERROR_CODES, TENANCY_COOKIES } from './organization.constants';
 import { OrganizationException } from './organization.exception';
 import { SetContextDto } from './set-context.dto';
+import { CreateSiteDto } from './create-site.dto';
 import { TenancyGuard } from './tenancy.guard';
 import { TenancyService } from './tenancy.service';
 
@@ -79,6 +82,31 @@ export class OrganizationController {
       type: site.type,
       status: site.status,
     }));
+  }
+
+  @Post('companies/:companyId/sites')
+  @HttpCode(201)
+  @UseGuards(SessionGuard, TenancyGuard)
+  async createSite(
+    @Param('companyId') companyId: string,
+    @CurrentUser() user: { id: string },
+    @CurrentTenancy() tenancy: { companyId: string },
+    @Body() dto: CreateSiteDto,
+  ) {
+    if (tenancy.companyId !== companyId) {
+      throw new OrganizationException(
+        ORG_ERROR_CODES.CONTEXT_FORBIDDEN,
+        'Company context mismatch.',
+      );
+    }
+
+    const site = await this.tenancyService.createSite(user.id, companyId, dto);
+    return {
+      id: site.id,
+      code: site.code,
+      type: site.type,
+      status: site.status,
+    };
   }
 
   @Put('me/context')

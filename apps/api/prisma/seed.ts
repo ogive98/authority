@@ -7,7 +7,9 @@ config({ path: resolve(__dirname, '../../../.env') });
 
 const prisma = new PrismaClient();
 
-import { IamGrantEffect, IamGrantSubject, IamLifecycleStatus, IamMfaPurpose } from '@prisma/client';
+import { IamGrantEffect, IamGrantSubject, IamLifecycleStatus, IamMfaPurpose, Prisma } from '@prisma/client';
+import { signLicensePayload } from '../src/license/license-crypto';
+import type { LicensePayload } from '../src/license/license.constants';
 import { encryptMfaSecret } from '../src/super-admin/mfa-crypto';
 
 const DEMO_USER_EMAIL = 'demo@authority.local';
@@ -269,6 +271,37 @@ async function main() {
         prefix: 'INV-',
         nextValue: 1,
         padding: 6,
+      },
+    });
+  }
+
+  const licensePayload: LicensePayload = {
+    plan: 'demo',
+    maxSites: 2,
+    maxUsers: 50,
+    expiresAt: '2027-12-31T23:59:59.000Z',
+    issuedAt: new Date().toISOString(),
+  };
+  const licenseSignature = signLicensePayload(licensePayload);
+  const existingLicense = await prisma.licCurrent.findFirst({
+    orderBy: { createdAt: 'asc' },
+  });
+
+  if (existingLicense) {
+    await prisma.licCurrent.update({
+      where: { id: existingLicense.id },
+      data: {
+        payloadJson: licensePayload as unknown as Prisma.InputJsonValue,
+        signature: licenseSignature,
+        lastOnlineAt: new Date(),
+      },
+    });
+  } else {
+    await prisma.licCurrent.create({
+      data: {
+        payloadJson: licensePayload as unknown as Prisma.InputJsonValue,
+        signature: licenseSignature,
+        lastOnlineAt: new Date(),
       },
     });
   }

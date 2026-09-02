@@ -6,7 +6,12 @@ describe('TenancyService', () => {
   let service: TenancyService;
   let prisma: {
     orgUserAssignment: { findMany: jest.Mock; findFirst: jest.Mock };
-    orgSite: { findFirst: jest.Mock; findMany: jest.Mock };
+    orgSite: {
+      findFirst: jest.Mock;
+      findMany: jest.Mock;
+      count: jest.Mock;
+      create: jest.Mock;
+    };
   };
 
   beforeEach(() => {
@@ -18,10 +23,16 @@ describe('TenancyService', () => {
       orgSite: {
         findFirst: jest.fn(),
         findMany: jest.fn(),
+        count: jest.fn(),
+        create: jest.fn(),
       },
     };
 
-    service = new TenancyService(prisma as never);
+    const licenseService = {
+      assertCanAddSite: jest.fn().mockResolvedValue(undefined),
+    };
+
+    service = new TenancyService(prisma as never, licenseService as never);
   });
 
   it('denies access to unassigned company', async () => {

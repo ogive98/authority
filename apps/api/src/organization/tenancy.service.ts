@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { OrgCompany, OrgSite } from '@prisma/client';
+import { OrgCompany, OrgSite, OrgSiteType } from '@prisma/client';
+import { LicenseService } from '../license/license.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ORG_ERROR_CODES,
@@ -14,7 +15,10 @@ type CookieBag = Record<string, string | undefined>;
 
 @Injectable()
 export class TenancyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly licenseService: LicenseService,
+  ) {}
 
   async listAssignedCompanies(userId: string): Promise<OrgCompany[]> {
     const assignments = await this.prisma.orgUserAssignment.findMany({
@@ -50,6 +54,39 @@ export class TenancyService {
     return this.prisma.orgSite.findMany({
       where: { companyId, deletedAt: null },
       orderBy: { code: 'asc' },
+    });
+  }
+
+  async createSite(
+    userId: string,
+    companyId: string,
+    input: { code: string; type: OrgSiteType },
+  ): Promise<OrgSite> {
+    await this.assertCompanyAccess(userId, companyId);
+    await this.licenseService.assertCanAddSite(companyId);
+
+    const duplicate = await this.prisma.orgSite.findFirst({
+      where: {
+        companyId,
+        code: input.code,
+        deletedAt: null,
+      },
+    });
+
+    if (duplicate) {
+      throw new OrganizationException(
+        ORG_ERROR_CODES.SITE_CODE_EXISTS,
+        'Site code already exists for this company.',
+        409,
+      );
+    }
+
+    return this.prisma.orgSite.create({
+      data: {
+        companyId,
+        code: input.code,
+        type: input.type,
+      },
     });
   }
 

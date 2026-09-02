@@ -424,6 +424,31 @@ model AudEvent {
   @@map("aud_event")
 }
 
+// --- lic_* hybrid license stub (SOC-10) ---
+
+model LicCurrent {
+  id           String    @id @default(uuid()) @db.Uuid
+  payloadJson  Json      @map("payload_json")
+  signature    String
+  cachedUntil  DateTime? @map("cached_until") @db.Timestamptz(6)
+  lastOnlineAt DateTime? @map("last_online_at") @db.Timestamptz(6)
+  version      Int       @default(0)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("lic_current")
+}
+
+model LicHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  payloadJson Json     @map("payload_json")
+  signature   String
+  activatedAt DateTime @default(now()) @map("activated_at") @db.Timestamptz(6)
+
+  @@index([activatedAt(sort: Desc)])
+  @@map("lic_history")
+}
+
 // --- thunder_* orchestration stubs ---
 
 enum ThunderJobStatus {

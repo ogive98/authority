@@ -37,4 +37,57 @@ export class RedisService implements OnModuleDestroy {
       return false;
     }
   }
+
+  async getJson<T>(key: string): Promise<T | null> {
+    if (!this.client) {
+      return null;
+    }
+
+    try {
+      if (this.client.status === 'wait') {
+        await this.client.connect();
+      }
+      const raw = await this.client.get(key);
+      if (!raw) {
+        return null;
+      }
+      return JSON.parse(raw) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  async setJson(
+    key: string,
+    value: unknown,
+    ttlSeconds: number,
+  ): Promise<void> {
+    if (!this.client) {
+      return;
+    }
+
+    try {
+      if (this.client.status === 'wait') {
+        await this.client.connect();
+      }
+      await this.client.set(key, JSON.stringify(value), 'EX', ttlSeconds);
+    } catch {
+      // cache is optional — license still works from DB
+    }
+  }
+
+  async del(key: string): Promise<void> {
+    if (!this.client) {
+      return;
+    }
+
+    try {
+      if (this.client.status === 'wait') {
+        await this.client.connect();
+      }
+      await this.client.del(key);
+    } catch {
+      // ignore
+    }
+  }
 }

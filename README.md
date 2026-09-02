@@ -119,4 +119,4 @@ Commit + push à chaque finalisation de lot SOC/THU/UI.
 - [x] SOC-06 permission engine (grants, guard, matrix `platform.*` / `identity.*`)
 - [x] SOC-07 module registry + flags (DISABLED → 403, flag OFF masque API)
 - [x] SOC-08 audit + outbox (write user → aud_event + core_outbox same tx)
-- [x] SOC-09 numbering + files
+- [x] SOC-10 license stub (signed, Redis cache, site limits)

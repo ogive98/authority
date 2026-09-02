@@ -8,6 +8,7 @@ import { SuperAdminModule } from './super-admin/super-admin.module';
 import { ModulesRegistryModule } from './modules-registry/modules-registry.module';
 import { AuditModule } from './audit/audit.module';
 import { PlatformModule } from './platform/platform.module';
+import { LicenseModule } from './license/license.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PlatformModule } from './platform/platform.module';
     SuperAdminModule,
     ModulesRegistryModule,
     PlatformModule,
+    LicenseModule,
   ],
 })
 export class AppModule {}
