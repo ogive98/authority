@@ -235,6 +235,47 @@ describe('Thunder jobs (e2e)', () => {
     expect(updated?.resultJson).toMatchObject({ executionCount: 1 });
   });
 
+  it('fails timeout jobs without retrying', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const processor = app.get(JobProcessorHost);
+    const company = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+
+    const row = await prisma.thunderJob.create({
+      data: {
+        companyId: company!.id,
+        jobType: 'thunder.fail.timeout.v1',
+        queue: 'ops',
+        idempotencyKey: `timeout-${Date.now()}`,
+        payloadHash: 'test',
+        payloadJson: {
+          _context: {
+            correlationId: 'corr-timeout',
+            requestId: 'req-timeout',
+            source: 'system',
+            occurredAt: new Date().toISOString(),
+          },
+        },
+        status: 'PENDING',
+      },
+    });
+
+    await expect(processor.processById(row.id)).rejects.toThrow(
+      /timed out after 50ms/,
+    );
+
+    const updated = await prisma.thunderJob.findUnique({
+      where: { id: row.id },
+    });
+    expect(updated?.attempts).toBe(1);
+    const errorJson = updated?.errorJson as { message?: string } | null;
+    expect(errorJson?.message).toContain('timed out');
+  });
+
   it('does not retry fatal validation jobs and records DLQ', async () => {
     if (!hasDatabase || !hasRedis) {
       return;

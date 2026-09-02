@@ -9,6 +9,7 @@ import type { JobHandler, RegisteredJobHandler } from './job.types';
 import {
   executeFailFatalJob,
   executeFailRetryableJob,
+  executeFailTimeoutJob,
 } from './processors/fail.processor';
 import { executeBreakerGuardedJob } from './processors/breaker-guarded.processor';
 import { executeHelloJob } from './processors/hello.processor';
@@ -25,6 +26,7 @@ export class JobRegistryService {
       executeFailRetryableJob,
     );
     this.register(THUNDER_JOB_TYPES.failFatal, 'ops', executeFailFatalJob);
+    this.register(THUNDER_JOB_TYPES.failTimeout, 'ops', executeFailTimeoutJob);
     this.register(
       THUNDER_JOB_TYPES.breakerGuarded,
       'ops',

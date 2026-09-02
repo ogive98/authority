@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import type Redis from 'ioredis';
 import { RedisService } from '../../infrastructure/redis.service';
 import {
@@ -18,7 +18,7 @@ function initialSnapshot(): CircuitBreakerSnapshot {
 }
 
 @Injectable()
-export class CircuitBreakerService {
+export class CircuitBreakerService implements OnModuleDestroy {
   private readonly memory = new Map<string, CircuitBreakerSnapshot>();
   private redis: Redis | null = null;
 

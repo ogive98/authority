@@ -28,3 +28,11 @@ export function executeFailFatalJob(): Promise<Prisma.InputJsonValue> {
     new ThunderFatalJobError('Simulated validation failure (non-retryable)'),
   );
 }
+
+export function executeFailTimeoutJob(): Promise<Prisma.InputJsonValue> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({ timedOut: false });
+    }, 200);
+  });
+}

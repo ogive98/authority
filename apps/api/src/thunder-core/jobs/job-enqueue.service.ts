@@ -1,4 +1,9 @@
-import { HttpStatus, Injectable, OnModuleDestroy } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import type Redis from 'ioredis';
@@ -9,6 +14,7 @@ import {
   THUNDER_ERROR_CODES,
   THUNDER_JOB_TYPES,
   thunderQueueName,
+  thunderWorkersEnabled,
   type ThunderQueueFamily,
 } from '../thunder.constants';
 import { ThunderException } from '../thunder.exception';
@@ -31,7 +37,7 @@ export interface EnqueueJobInput {
 }
 
 @Injectable()
-export class JobEnqueueService implements OnModuleDestroy {
+export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
   private readonly queues = new Map<ThunderQueueFamily, Queue>();
 
   constructor(
@@ -115,6 +121,68 @@ export class JobEnqueueService implements OnModuleDestroy {
       userId: params.userId,
       correlationId: params.correlationId,
     });
+  }
+
+  async enqueueFailTimeout(params: {
+    companyId: string;
+    userId?: string;
+    idempotencyKey: string;
+    correlationId?: string;
+  }): Promise<JobEnqueueResult> {
+    return this.enqueue({
+      jobType: THUNDER_JOB_TYPES.failTimeout,
+      companyId: params.companyId,
+      queue: 'ops',
+      priority: 2,
+      idempotencyKey: params.idempotencyKey,
+      payload: {},
+      userId: params.userId,
+      correlationId: params.correlationId,
+    });
+  }
+
+  async reconcileOrphanedPendingJobs(limit = 20): Promise<number> {
+    if (!this.redis.isConfigured()) {
+      return 0;
+    }
+
+    const rows = await this.prisma.thunderJob.findMany({
+      where: {
+        status: 'PENDING',
+        bullJobId: null,
+      },
+      orderBy: { createdAt: 'asc' },
+      take: limit,
+    });
+
+    let reconciled = 0;
+    for (const row of rows) {
+      const queueFamily = row.queue as ThunderQueueFamily;
+      if (!this.registry.get(row.jobType)) {
+        continue;
+      }
+
+      try {
+        await this.addJobToQueue({
+          jobId: row.id,
+          jobType: row.jobType,
+          queue: queueFamily,
+          priority: row.priority,
+        });
+        reconciled += 1;
+      } catch {
+        // leave row pending for a later reconciliation pass
+      }
+    }
+
+    return reconciled;
+  }
+
+  onModuleInit(): void {
+    if (!thunderWorkersEnabled()) {
+      return;
+    }
+    void this.reconcileOrphanedPendingJobs();
   }
 
   async enqueue(input: EnqueueJobInput): Promise<JobEnqueueResult> {
@@ -233,14 +301,52 @@ export class JobEnqueueService implements OnModuleDestroy {
       throw error;
     }
 
-    const queue = this.getQueue(input.queue);
-    const attempts = getJobAttemptsForType(input.jobType);
-    const bullJob = await queue.add(
-      input.jobType,
-      { jobId: jobRow.id },
-      {
+    try {
+      await this.addJobToQueue({
         jobId: jobRow.id,
+        jobType: input.jobType,
+        queue: input.queue,
         priority: input.priority ?? 2,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to enqueue BullMQ job';
+      await this.prisma.thunderJob.update({
+        where: { id: jobRow.id },
+        data: {
+          status: 'FAILED',
+          finishedAt: new Date(),
+          errorJson: { message, phase: 'enqueue' },
+        },
+      });
+      throw new ThunderException(
+        THUNDER_ERROR_CODES.REDIS_UNAVAILABLE,
+        message,
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    return {
+      jobId: jobRow.id,
+      status: jobRow.status,
+      replayed: false,
+    };
+  }
+
+  private async addJobToQueue(params: {
+    jobId: string;
+    jobType: string;
+    queue: ThunderQueueFamily;
+    priority: number;
+  }): Promise<void> {
+    const queue = this.getQueue(params.queue);
+    const attempts = getJobAttemptsForType(params.jobType);
+    const bullJob = await queue.add(
+      params.jobType,
+      { jobId: params.jobId },
+      {
+        jobId: params.jobId,
+        priority: params.priority,
         attempts,
         backoff: { type: 'custom' },
         removeOnComplete: 100,
@@ -249,15 +355,9 @@ export class JobEnqueueService implements OnModuleDestroy {
     );
 
     await this.prisma.thunderJob.update({
-      where: { id: jobRow.id },
+      where: { id: params.jobId },
       data: { bullJobId: bullJob.id },
     });
-
-    return {
-      jobId: jobRow.id,
-      status: jobRow.status,
-      replayed: false,
-    };
   }
 
   private getQueue(family: ThunderQueueFamily): Queue {

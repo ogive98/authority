@@ -18,6 +18,7 @@ import { JobRegistryService } from './jobs/job-registry.service';
 import { CircuitBreakerService } from './resilience/circuit-breaker.service';
 import { PlanCRegistryService } from './resilience/plan-c-registry.service';
 import { ThunderController } from './thunder.controller';
+import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ThunderController } from './thunder.controller';
   ],
   controllers: [ThunderController],
   providers: [
+    ThunderDevOnlyGuard,
     JobRegistryService,
     JobEnqueueService,
     JobProcessorHost,

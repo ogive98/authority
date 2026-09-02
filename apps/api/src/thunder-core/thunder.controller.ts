@@ -22,6 +22,7 @@ import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import { JobEnqueueService } from './jobs/job-enqueue.service';
 import { JobQueryService } from './jobs/job-query.service';
 import { EnqueueHelloJobDto, EnqueueTestJobDto } from './thunder.dto';
+import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
 
 @Controller('api/v1/thunder')
 @UseGuards(SessionGuard, TenancyGuard, PermissionGuard)
@@ -53,6 +54,7 @@ export class ThunderController {
 
   @Post('jobs/fail-retryable')
   @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(ThunderDevOnlyGuard)
   @RequirePermission(PERMISSION_KEYS.thunderJobEnqueue)
   async enqueueFailRetryable(
     @CurrentUser() user: IamUser,
@@ -70,6 +72,7 @@ export class ThunderController {
 
   @Post('jobs/breaker-guarded')
   @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(ThunderDevOnlyGuard)
   @RequirePermission(PERMISSION_KEYS.thunderJobEnqueue)
   async enqueueBreakerGuarded(
     @CurrentUser() user: IamUser,
@@ -85,8 +88,27 @@ export class ThunderController {
     });
   }
 
+  @Post('jobs/fail-timeout')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(ThunderDevOnlyGuard)
+  @RequirePermission(PERMISSION_KEYS.thunderJobEnqueue)
+  async enqueueFailTimeout(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() body: EnqueueTestJobDto,
+    @Headers('x-correlation-id') correlationHeader?: string,
+  ) {
+    return this.jobEnqueueService.enqueueFailTimeout({
+      companyId: tenancy.companyId,
+      userId: user.id,
+      idempotencyKey: body.idempotencyKey,
+      correlationId: correlationHeader ?? randomUUID(),
+    });
+  }
+
   @Post('jobs/fail-fatal')
   @HttpCode(HttpStatus.ACCEPTED)
+  @UseGuards(ThunderDevOnlyGuard)
   @RequirePermission(PERMISSION_KEYS.thunderJobEnqueue)
   async enqueueFailFatal(
     @CurrentUser() user: IamUser,
