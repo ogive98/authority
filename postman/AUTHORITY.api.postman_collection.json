@@ -161,7 +161,7 @@
       "name": "Organization",
       "item": [
         {
-          "name": "List companies",
+          "name": "0 — List companies (remplit companyId)",
           "event": [
             {
               "listen": "test",
@@ -175,6 +175,7 @@
                   "  const demo = companies.find(function (c) { return c.code === 'DEMO'; });",
                   "  if (demo) {",
                   "    pm.environment.set('companyId', demo.id);",
+                  "    console.log('companyId = ' + demo.id);",
                   "  }",
                   "}"
                 ],
@@ -189,7 +190,20 @@
           }
         },
         {
-          "name": "Set context",
+          "name": "1 — Set context (company only)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.environment.get('companyId')) {",
+                  "  throw new Error('companyId vide : faites 0 — List companies avant');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -206,23 +220,7 @@
           }
         },
         {
-          "name": "Get context",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/v1/organization/me/context"
-          }
-        },
-        {
-          "name": "Get company DEMO",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/v1/organization/companies/{{companyId}}"
-          }
-        },
-        {
-          "name": "List sites",
+          "name": "2 — List sites (remplit siteId)",
           "event": [
             {
               "listen": "test",
@@ -246,6 +244,52 @@
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/api/v1/organization/companies/{{companyId}}/sites"
+          }
+        },
+        {
+          "name": "3 — Set context (company + site) SOC-09",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.environment.get('siteId')) {",
+                  "  console.warn('siteId vide : faites 1 puis 2 avant cette requete');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyId\": \"{{companyId}}\",\n  \"siteId\": \"{{siteId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/organization/me/context"
+          }
+        },
+        {
+          "name": "Get context",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/organization/me/context"
+          }
+        },
+        {
+          "name": "Get company DEMO",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/organization/companies/{{companyId}}"
           }
         },
         {
