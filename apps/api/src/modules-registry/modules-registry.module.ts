@@ -5,12 +5,11 @@ import { FlagGuard } from './flag.guard';
 import { ModuleGuard } from './module.guard';
 import { ModuleRegistryService } from './module-registry.service';
 import { ModulesController } from './modules.controller';
-import { PlatformController } from './platform.controller';
 import { SalesSurfaceController } from './sales-surface.controller';
 
 @Module({
   imports: [IdentityModule],
-  controllers: [ModulesController, PlatformController, SalesSurfaceController],
+  controllers: [ModulesController, SalesSurfaceController],
   providers: [
     ModuleRegistryService,
     FeatureFlagService,

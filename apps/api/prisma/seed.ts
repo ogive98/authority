@@ -235,6 +235,41 @@ async function main() {
     subjectId: 'operator',
     companyId: company.id,
   });
+  await upsertGrant({
+    permissionKey: 'platform.file.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+  });
+  await upsertGrant({
+    permissionKey: 'platform.file.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+  });
+
+  const numberingYear = new Date().getFullYear();
+  await prisma.coreNumberingSeries.upsert({
+    where: {
+      companyId_siteId_docType_year: {
+        companyId: company.id,
+        siteId: demoSite.id,
+        docType: 'INVOICE',
+        year: numberingYear,
+      },
+    },
+    update: {
+      prefix: 'INV-',
+      padding: 6,
+    },
+    create: {
+      companyId: company.id,
+      siteId: demoSite.id,
+      docType: 'INVOICE',
+      year: numberingYear,
+      prefix: 'INV-',
+      nextValue: 1,
+      padding: 6,
+    },
+  });
 
   const superAdminPasswordHash = await argon2.hash(SUPER_ADMIN_PASSWORD, {
     type: argon2.argon2id,

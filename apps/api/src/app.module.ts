@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { SuperAdminModule } from './super-admin/super-admin.module';
 import { ModulesRegistryModule } from './modules-registry/modules-registry.module';
 import { AuditModule } from './audit/audit.module';
+import { PlatformModule } from './platform/platform.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuditModule } from './audit/audit.module';
     OrganizationModule,
     SuperAdminModule,
     ModulesRegistryModule,
+    PlatformModule,
   ],
 })
 export class AppModule {}
