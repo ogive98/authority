@@ -286,6 +286,12 @@ async function main() {
     subjectId: demoUser.id,
     companyId: company.id,
   });
+  await upsertGrant({
+    permissionKey: 'thunder.job.enqueue',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
 
   await seedSettingsDefinitions(company.id, demoUser.id);
 

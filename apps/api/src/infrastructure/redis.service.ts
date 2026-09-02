@@ -90,4 +90,20 @@ export class RedisService implements OnModuleDestroy {
       // ignore
     }
   }
+
+  duplicateClient(): Redis | null {
+    if (!this.client) {
+      return null;
+    }
+    return this.client.duplicate();
+  }
+
+  /** BullMQ requires maxRetriesPerRequest: null on dedicated connections. */
+  createBullConnection(): Redis | null {
+    const url = process.env.REDIS_URL;
+    if (!url) {
+      return null;
+    }
+    return new Redis(url, { maxRetriesPerRequest: null });
+  }
 }

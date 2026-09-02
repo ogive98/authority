@@ -1,0 +1,195 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
+import request from 'supertest';
+import { App } from 'supertest/types';
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { JobProcessorHost } from '../src/thunder-core/jobs/job-processor.host';
+import { THUNDER_ERROR_CODES } from '../src/thunder-core/thunder.constants';
+
+const DEMO_EMAIL = 'demo@authority.local';
+const DEMO_PASSWORD = 'DemoPass123!';
+
+interface HelloJobResponse {
+  jobId: string;
+  status: string;
+  replayed: boolean;
+}
+
+interface JobStatusResponse {
+  id: string;
+  status: string;
+  resultJson?: {
+    executionCount?: number;
+  };
+}
+
+interface ErrorResponse {
+  code: string;
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+describe('Thunder jobs (e2e)', () => {
+  let app: INestApplication<App>;
+  let prisma: PrismaService;
+  const hasDatabase = Boolean(process.env.DATABASE_URL);
+  const hasRedis = Boolean(process.env.REDIS_URL);
+
+  beforeEach(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    app.use(cookieParser());
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+    await app.init();
+    prisma = app.get(PrismaService);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  async function loginWithDemoContext() {
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/api/v1/identity/auth/login')
+      .send({ email: DEMO_EMAIL, password: DEMO_PASSWORD })
+      .expect(200);
+
+    const demo = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+    await agent
+      .put('/api/v1/organization/me/context')
+      .send({ companyId: demo!.id })
+      .expect(200);
+
+    return { agent, companyId: demo!.id };
+  }
+
+  async function waitForJobCompletion(
+    agent: ReturnType<typeof request.agent>,
+    jobId: string,
+  ): Promise<JobStatusResponse> {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const res = await agent.get(`/api/v1/thunder/jobs/${jobId}`).expect(200);
+      const body = res.body as JobStatusResponse;
+      if (body.status === 'COMPLETED' || body.status === 'FAILED') {
+        return body;
+      }
+      await sleep(200);
+    }
+
+    throw new Error(`Job ${jobId} did not complete in time`);
+  }
+
+  it('enqueues thunder.hello.v1 with idempotent replay', async () => {
+    if (!hasDatabase || !hasRedis) {
+      return;
+    }
+
+    const { agent } = await loginWithDemoContext();
+    const idempotencyKey = `hello-${Date.now()}`;
+
+    const first = await agent
+      .post('/api/v1/thunder/jobs/hello')
+      .send({ idempotencyKey, message: 'authority' })
+      .expect(202);
+
+    const firstBody = first.body as HelloJobResponse;
+    expect(firstBody.replayed).toBe(false);
+    expect(firstBody.jobId).toBeTruthy();
+
+    const second = await agent
+      .post('/api/v1/thunder/jobs/hello')
+      .send({ idempotencyKey, message: 'authority' })
+      .expect(202);
+
+    const secondBody = second.body as HelloJobResponse;
+    expect(secondBody.replayed).toBe(true);
+    expect(secondBody.jobId).toBe(firstBody.jobId);
+
+    const completed = await waitForJobCompletion(agent, firstBody.jobId);
+    expect(completed.status).toBe('COMPLETED');
+    expect(completed.resultJson?.executionCount).toBe(1);
+
+    const rows = await prisma.thunderJob.findMany({
+      where: { idempotencyKey },
+    });
+    expect(rows).toHaveLength(1);
+  });
+
+  it('rejects the same idempotency key with a different payload', async () => {
+    if (!hasDatabase || !hasRedis) {
+      return;
+    }
+
+    const { agent } = await loginWithDemoContext();
+    const idempotencyKey = `conflict-${Date.now()}`;
+
+    await agent
+      .post('/api/v1/thunder/jobs/hello')
+      .send({ idempotencyKey, message: 'first' })
+      .expect(202);
+
+    const conflict = await agent
+      .post('/api/v1/thunder/jobs/hello')
+      .send({ idempotencyKey, message: 'second' })
+      .expect(409);
+
+    expect((conflict.body as ErrorResponse).code).toBe(
+      THUNDER_ERROR_CODES.IDEMPOTENCY_CONFLICT,
+    );
+  });
+
+  it('processes hello job inline via processor host', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const processor = app.get(JobProcessorHost);
+    const company = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+
+    const row = await prisma.thunderJob.create({
+      data: {
+        companyId: company!.id,
+        jobType: 'thunder.hello.v1',
+        queue: 'ops',
+        idempotencyKey: `inline-${Date.now()}`,
+        payloadHash: 'test',
+        payloadJson: {
+          message: 'inline',
+          _context: {
+            correlationId: 'corr-1',
+            requestId: 'req-1',
+            source: 'system',
+            occurredAt: new Date().toISOString(),
+          },
+        },
+        status: 'PENDING',
+      },
+    });
+
+    await processor.processById(row.id);
+
+    const updated = await prisma.thunderJob.findUnique({
+      where: { id: row.id },
+    });
+    expect(updated?.status).toBe('COMPLETED');
+    expect(updated?.resultJson).toMatchObject({ executionCount: 1 });
+  });
+});

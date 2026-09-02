@@ -10,6 +10,7 @@ import { AuditModule } from './audit/audit.module';
 import { PlatformModule } from './platform/platform.module';
 import { LicenseModule } from './license/license.module';
 import { SettingsModule } from './settings/settings.module';
+import { ThunderModule } from './thunder-core/thunder.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { SettingsModule } from './settings/settings.module';
     PlatformModule,
     LicenseModule,
     SettingsModule,
+    ThunderModule,
   ],
 })
 export class AppModule {}

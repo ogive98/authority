@@ -10,6 +10,7 @@ export const PERMISSION_CATALOGUE = [
   'license.manage',
   'settings.self',
   'settings.company.write',
+  'thunder.job.enqueue',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_CATALOGUE)[number];
@@ -26,6 +27,7 @@ export const PERMISSION_KEYS = {
   licenseManage: 'license.manage',
   settingsSelf: 'settings.self',
   settingsCompanyWrite: 'settings.company.write',
+  thunderJobEnqueue: 'thunder.job.enqueue',
 } as const satisfies Record<string, PermissionKey>;
 
 export const PERMISSION_METADATA_KEY = 'authority:permission';
