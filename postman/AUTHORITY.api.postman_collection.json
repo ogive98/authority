@@ -88,6 +88,25 @@
         },
         {
           "name": "Update me (creates audit + outbox)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Update me OK (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "if (pm.response.code === 401) {",
+                  "  console.warn('401 : faites Login avant cette requete.');",
+                  "}",
+                  "if (pm.response.code >= 500) {",
+                  "  console.warn('500 : l API est peut-etre arretee. npm run dev:api');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "header": [

@@ -17,7 +17,8 @@
     "dev:web": "npm run dev -w web",
     "db:migrate": "npm run prisma:migrate -w api",
     "db:seed": "npm run prisma:seed -w api",
-    "db:deploy": "npm run prisma:deploy -w api"
+    "db:deploy": "npm run prisma:deploy -w api",
+    "verify:soc08": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-soc08-patch.ps1"
   },
   "engines": {
     "node": ">=20"
