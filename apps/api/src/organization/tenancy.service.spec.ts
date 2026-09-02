@@ -31,8 +31,15 @@ describe('TenancyService', () => {
     const licenseService = {
       assertCanAddSite: jest.fn().mockResolvedValue(undefined),
     };
+    const auditService = { append: jest.fn().mockResolvedValue(undefined) };
+    const outboxService = { enqueue: jest.fn().mockResolvedValue(undefined) };
 
-    service = new TenancyService(prisma as never, licenseService as never);
+    service = new TenancyService(
+      prisma as never,
+      licenseService as never,
+      auditService as never,
+      outboxService as never,
+    );
   });
 
   it('denies access to unassigned company', async () => {

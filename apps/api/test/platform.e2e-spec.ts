@@ -8,9 +8,12 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { OUTBOX_EVENT_TYPES } from '../src/audit/audit.constants';
 import { MinioService } from '../src/platform/minio.service';
 import { PLATFORM_ERROR_CODES } from '../src/platform/platform.constants';
+import { PERMISSION_ERROR_CODES } from '../src/permissions/permission.constants';
 
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
+const LIMITED_EMAIL = 'limited@authority.local';
+const LIMITED_PASSWORD = 'LimitedPass123!';
 
 interface AllocateResponse {
   allocatedValue: number;
@@ -189,5 +192,38 @@ describe('Platform numbering + files (e2e)', () => {
       },
     });
     expect(outbox).not.toBeNull();
+  });
+
+  it('refuses numbering allocation without platform.numbering.allocate', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const demo = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+    const site = await prisma.orgSite.findFirst({
+      where: { companyId: demo!.id, code: 'SFX' },
+    });
+
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/api/v1/identity/auth/login')
+      .send({ email: LIMITED_EMAIL, password: LIMITED_PASSWORD })
+      .expect(200);
+
+    await agent
+      .put('/api/v1/organization/me/context')
+      .send({ companyId: demo!.id, siteId: site!.id })
+      .expect(200);
+
+    const res = await agent
+      .post('/api/v1/platform/numbering/allocate')
+      .send({ docType: 'INVOICE', year: new Date().getFullYear() })
+      .expect(403);
+
+    expect((res.body as ErrorResponse).code).toBe(
+      PERMISSION_ERROR_CODES.FORBIDDEN,
+    );
   });
 });

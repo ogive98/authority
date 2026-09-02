@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { OrgCompany, OrgSite, OrgSiteType } from '@prisma/client';
+import {
+  AUDIT_ACTIONS,
+  AUDIT_ENTITY_TYPES,
+  OUTBOX_EVENT_TYPES,
+} from '../audit/audit.constants';
+import { AuditService } from '../audit/audit.service';
+import { OutboxService } from '../audit/outbox.service';
 import { LicenseService } from '../license/license.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -18,6 +25,8 @@ export class TenancyService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly licenseService: LicenseService,
+    private readonly auditService: AuditService,
+    private readonly outboxService: OutboxService,
   ) {}
 
   async listAssignedCompanies(userId: string): Promise<OrgCompany[]> {
@@ -57,11 +66,15 @@ export class TenancyService {
     });
   }
 
-  async createSite(
-    userId: string,
-    companyId: string,
-    input: { code: string; type: OrgSiteType },
-  ): Promise<OrgSite> {
+  async createSite(params: {
+    userId: string;
+    companyId: string;
+    input: { code: string; type: OrgSiteType };
+    correlationId?: string;
+    ip?: string;
+    userAgent?: string;
+  }): Promise<OrgSite> {
+    const { userId, companyId, input, correlationId, ip, userAgent } = params;
     await this.assertCompanyAccess(userId, companyId);
     await this.licenseService.assertCanAddSite(companyId);
 
@@ -81,12 +94,52 @@ export class TenancyService {
       );
     }
 
-    return this.prisma.orgSite.create({
-      data: {
+    return this.prisma.$transaction(async (tx) => {
+      const site = await tx.orgSite.create({
+        data: {
+          companyId,
+          code: input.code,
+          type: input.type,
+        },
+      });
+
+      const snapshot = {
+        id: site.id,
+        companyId: site.companyId,
+        code: site.code,
+        type: site.type,
+        status: site.status,
+      };
+
+      await this.auditService.append(tx, {
         companyId,
-        code: input.code,
-        type: input.type,
-      },
+        actorUserId: userId,
+        action: AUDIT_ACTIONS.organizationSiteCreate,
+        entityType: AUDIT_ENTITY_TYPES.orgSite,
+        entityId: site.id,
+        afterJson: snapshot,
+        ip,
+        device: userAgent,
+        correlationId,
+      });
+
+      await this.outboxService.enqueue(tx, {
+        companyId,
+        aggregateType: AUDIT_ENTITY_TYPES.orgSite,
+        aggregateId: site.id,
+        eventType: OUTBOX_EVENT_TYPES.organizationSiteCreated,
+        payloadJson: {
+          eventType: OUTBOX_EVENT_TYPES.organizationSiteCreated,
+          eventVersion: 1,
+          source: 'organization',
+          actorId: userId,
+          companyId,
+          correlationId: correlationId ?? null,
+          payload: snapshot,
+        },
+      });
+
+      return site;
     });
   }
 

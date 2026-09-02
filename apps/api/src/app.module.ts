@@ -9,6 +9,7 @@ import { ModulesRegistryModule } from './modules-registry/modules-registry.modul
 import { AuditModule } from './audit/audit.module';
 import { PlatformModule } from './platform/platform.module';
 import { LicenseModule } from './license/license.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { LicenseModule } from './license/license.module';
     ModulesRegistryModule,
     PlatformModule,
     LicenseModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

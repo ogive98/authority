@@ -13,9 +13,13 @@ import {
 import { signLicensePayload } from '../src/license/license-crypto';
 import type { LicensePayload } from '../src/license/license.constants';
 import { RedisService } from '../src/infrastructure/redis.service';
+import { UserProvisioningService } from '../src/license/user-provisioning.service';
+import { PERMISSION_ERROR_CODES } from '../src/permissions/permission.constants';
 
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
+const LIMITED_EMAIL = 'limited@authority.local';
+const LIMITED_PASSWORD = 'LimitedPass123!';
 
 interface ErrorResponse {
   code: string;
@@ -25,6 +29,7 @@ interface LicenseStatusResponse {
   status: string;
   limits: { maxSites: number };
   usage: { sites: number };
+  companyId: string | null;
 }
 
 interface SiteResponse {
@@ -128,6 +133,41 @@ describe('License stub (e2e)', () => {
     const body = res.body as LicenseStatusResponse;
     expect(body.status).toBe('active');
     expect(body.limits.maxSites).toBe(2);
+    expect(body.companyId).toBeTruthy();
+    expect(body.usage.sites).toBe(1);
+  });
+
+  it('scopes site usage to the active company context', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/api/v1/identity/auth/login')
+      .send({ email: DEMO_EMAIL, password: DEMO_PASSWORD })
+      .expect(200);
+
+    const withoutContext = await agent
+      .get('/api/v1/license/status')
+      .expect(200);
+    const globalBody = withoutContext.body as LicenseStatusResponse;
+    expect(globalBody.companyId).toBeNull();
+    expect(globalBody.usage.sites).toBeGreaterThanOrEqual(2);
+
+    const demo = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+    await agent
+      .put('/api/v1/organization/me/context')
+      .send({ companyId: demo!.id })
+      .expect(200);
+
+    const scoped = await agent.get('/api/v1/license/status').expect(200);
+    const scopedBody = scoped.body as LicenseStatusResponse;
+    expect(scopedBody.companyId).toBe(demo!.id);
+    expect(scopedBody.usage.sites).toBe(1);
+    expect(scopedBody.usage.sites).toBeLessThan(globalBody.usage.sites);
   });
 
   it('refuses site creation when the license site limit is reached', async () => {
@@ -209,5 +249,85 @@ describe('License stub (e2e)', () => {
       orderBy: { activatedAt: 'desc' },
     });
     expect(history).not.toBeNull();
+  });
+
+  it('refuses activation without license.manage', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/api/v1/identity/auth/login')
+      .send({ email: LIMITED_EMAIL, password: LIMITED_PASSWORD })
+      .expect(200);
+
+    const payload: LicensePayload = {
+      plan: 'blocked',
+      maxSites: 1,
+      maxUsers: 1,
+      expiresAt: '2027-12-31T23:59:59.000Z',
+      issuedAt: new Date().toISOString(),
+    };
+
+    const res = await agent
+      .post('/api/v1/license/activate')
+      .send({ payload, signature: signLicensePayload(payload) })
+      .expect(403);
+
+    expect((res.body as ErrorResponse).code).toBe(
+      PERMISSION_ERROR_CODES.FORBIDDEN,
+    );
+  });
+
+  it('refuses user provisioning when the license user limit is reached', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const provisioning = app.get(UserProvisioningService);
+    const activeUsers = await prisma.iamUser.count({
+      where: { deletedAt: null, status: { not: 'DISABLED' } },
+    });
+
+    const payload: LicensePayload = {
+      plan: 'demo-tight',
+      maxSites: 2,
+      maxUsers: activeUsers,
+      expiresAt: '2027-12-31T23:59:59.000Z',
+      issuedAt: new Date().toISOString(),
+    };
+    const signature = signLicensePayload(payload);
+    const row = await prisma.licCurrent.findFirst({
+      orderBy: { createdAt: 'asc' },
+    });
+    expect(row).not.toBeNull();
+
+    const previousPayload = row!.payloadJson as unknown as LicensePayload;
+    const previousSignature = row!.signature;
+
+    await prisma.licCurrent.update({
+      where: { id: row!.id },
+      data: {
+        payloadJson: payload as unknown as Prisma.InputJsonValue,
+        signature,
+      },
+    });
+    await app.get(RedisService).del(LICENSE_CACHE_KEY);
+
+    try {
+      await expect(provisioning.assertCanCreateUser()).rejects.toMatchObject({
+        code: LICENSE_ERROR_CODES.LIMIT_USERS,
+      });
+    } finally {
+      await prisma.licCurrent.update({
+        where: { id: row!.id },
+        data: {
+          payloadJson: previousPayload as unknown as Prisma.InputJsonValue,
+          signature: previousSignature,
+        },
+      });
+      await app.get(RedisService).del(LICENSE_CACHE_KEY);
+    }
   });
 });

@@ -26,6 +26,7 @@ export interface LicenseStatusResponse {
   usage: { sites: number; users: number };
   expiresAt: string;
   cached: boolean;
+  companyId: string | null;
 }
 
 @Injectable()
@@ -54,6 +55,7 @@ export class LicenseService {
       usage,
       expiresAt: verified.payload.expiresAt,
       cached: verified.fromCache,
+      companyId: companyId ?? null,
     };
   }
 

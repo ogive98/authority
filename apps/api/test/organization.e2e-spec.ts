@@ -6,11 +6,19 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { ORG_ERROR_CODES } from '../src/organization/organization.constants';
+import { PERMISSION_ERROR_CODES } from '../src/permissions/permission.constants';
+import {
+  AUDIT_ACTIONS,
+  AUDIT_ENTITY_TYPES,
+  OUTBOX_EVENT_TYPES,
+} from '../src/audit/audit.constants';
 
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
+const LIMITED_EMAIL = 'limited@authority.local';
+const LIMITED_PASSWORD = 'LimitedPass123!';
 
-interface CompanySummary {
+interface SiteSummary {
   id: string;
   code: string;
 }
@@ -62,7 +70,7 @@ describe('Organization tenancy (e2e)', () => {
 
     const agent = await loginAgent(app);
     const res = await agent.get('/api/v1/organization/companies').expect(200);
-    const companies = res.body as CompanySummary[];
+    const companies = res.body as SiteSummary[];
 
     expect(companies.some((c) => c.code === 'DEMO')).toBe(true);
     expect(companies.some((c) => c.code === 'OTHER')).toBe(false);
@@ -109,7 +117,7 @@ describe('Organization tenancy (e2e)', () => {
       .expect(200);
 
     expect(Array.isArray(sites.body)).toBe(true);
-    expect((sites.body as CompanySummary[])[0]?.code).toBe('SFX');
+    expect((sites.body as SiteSummary[])[0]?.code).toBe('SFX');
   });
 
   it('rejects sites when URL company differs from tenancy context', async () => {
@@ -139,5 +147,83 @@ describe('Organization tenancy (e2e)', () => {
     expect((res.body as ErrorResponse).code).toBe(
       ORG_ERROR_CODES.CONTEXT_FORBIDDEN,
     );
+  });
+
+  it('refuses site creation without org.site.write', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const demo = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+    expect(demo).not.toBeNull();
+
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/api/v1/identity/auth/login')
+      .send({ email: LIMITED_EMAIL, password: LIMITED_PASSWORD })
+      .expect(200);
+
+    await agent
+      .put('/api/v1/organization/me/context')
+      .send({ companyId: demo!.id })
+      .expect(200);
+
+    const res = await agent
+      .post(`/api/v1/organization/companies/${demo!.id}/sites`)
+      .send({ code: `L${Date.now()}`, type: 'DEPOT' })
+      .expect(403);
+
+    expect((res.body as ErrorResponse).code).toBe(
+      PERMISSION_ERROR_CODES.FORBIDDEN,
+    );
+  });
+
+  it('writes aud_event and core_outbox when creating a site', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const demo = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+    expect(demo).not.toBeNull();
+
+    const agent = await loginAgent(app);
+    await agent
+      .put('/api/v1/organization/me/context')
+      .send({ companyId: demo!.id })
+      .expect(200);
+
+    const code = `A${Date.now()}`;
+    const created = await agent
+      .post(`/api/v1/organization/companies/${demo!.id}/sites`)
+      .send({ code, type: 'DEPOT' })
+      .expect(201);
+    const siteId = (created.body as SiteSummary).id;
+
+    try {
+      const audit = await prisma.audEvent.findFirst({
+        where: {
+          action: AUDIT_ACTIONS.organizationSiteCreate,
+          entityType: AUDIT_ENTITY_TYPES.orgSite,
+          entityId: siteId,
+        },
+        orderBy: { occurredAt: 'desc' },
+      });
+      expect(audit).not.toBeNull();
+
+      const outbox = await prisma.coreOutbox.findFirst({
+        where: {
+          aggregateId: siteId,
+          eventType: OUTBOX_EVENT_TYPES.organizationSiteCreated,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(outbox).not.toBeNull();
+    } finally {
+      await prisma.orgSite.deleteMany({ where: { id: siteId } });
+    }
   });
 });

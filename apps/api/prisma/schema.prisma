@@ -402,6 +402,49 @@ model ModFlag {
   @@map("mod_flag")
 }
 
+// --- set_* settings hierarchy (SOC-11) ---
+
+enum SetLevel {
+  SYSTEM
+  COMPANY
+  ROLE
+  USER
+}
+
+model SetDef {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  valueType   String   @map("value_type")
+  defaultJson Json     @map("default_json")
+  description String?
+  isPrefOnly  Boolean  @default(true) @map("is_pref_only")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  values SetValue[]
+
+  @@map("set_def")
+}
+
+model SetValue {
+  id        String    @id @default(uuid()) @db.Uuid
+  defKey    String    @map("def_key")
+  level     SetLevel
+  scopeKey  String    @map("scope_key")
+  companyId String?   @map("company_id") @db.Uuid
+  valueJson Json      @map("value_json")
+  version   Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  def SetDef @relation(fields: [defKey], references: [key])
+
+  @@unique([defKey, scopeKey])
+  @@index([companyId, level])
+  @@map("set_value")
+}
+
 // --- aud_* immutable audit ---
 
 model AudEvent {

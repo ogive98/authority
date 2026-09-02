@@ -72,6 +72,11 @@ describe('Permissions (e2e)', () => {
       expect.arrayContaining([
         PERMISSION_KEYS.identitySelfRead,
         PERMISSION_KEYS.platformFileRead,
+        PERMISSION_KEYS.orgSiteWrite,
+        PERMISSION_KEYS.licenseManage,
+        PERMISSION_KEYS.platformNumberingAllocate,
+        PERMISSION_KEYS.settingsSelf,
+        PERMISSION_KEYS.settingsCompanyWrite,
       ]),
     );
     expect(body.permissions.some((key) => key.includes('*'))).toBe(false);

@@ -2,9 +2,14 @@ export const PERMISSION_CATALOGUE = [
   'platform.file.read',
   'platform.file.write',
   'platform.search.use',
+  'platform.numbering.allocate',
   'identity.self.read',
   'identity.user.manage',
   'identity.session.revoke',
+  'org.site.write',
+  'license.manage',
+  'settings.self',
+  'settings.company.write',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_CATALOGUE)[number];
@@ -13,9 +18,14 @@ export const PERMISSION_KEYS = {
   platformFileRead: 'platform.file.read',
   platformFileWrite: 'platform.file.write',
   platformSearchUse: 'platform.search.use',
+  platformNumberingAllocate: 'platform.numbering.allocate',
   identitySelfRead: 'identity.self.read',
   identityUserManage: 'identity.user.manage',
   identitySessionRevoke: 'identity.session.revoke',
+  orgSiteWrite: 'org.site.write',
+  licenseManage: 'license.manage',
+  settingsSelf: 'settings.self',
+  settingsCompanyWrite: 'settings.company.write',
 } as const satisfies Record<string, PermissionKey>;
 
 export const PERMISSION_METADATA_KEY = 'authority:permission';

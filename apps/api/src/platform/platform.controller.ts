@@ -59,7 +59,8 @@ export class PlatformController {
 
   @Post('numbering/allocate')
   @HttpCode(200)
-  @UseGuards(TenancyGuard)
+  @UseGuards(TenancyGuard, PermissionGuard)
+  @RequirePermission(PERMISSION_KEYS.platformNumberingAllocate)
   async allocateNumber(
     @CurrentUser() user: IamUser,
     @CurrentTenancy() tenancy: TenancyContext,

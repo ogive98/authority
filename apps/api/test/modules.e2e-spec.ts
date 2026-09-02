@@ -71,6 +71,9 @@ describe('Modules registry (e2e)', () => {
     expect(body.modules.find((m) => m.key === 'sales')?.status).toBe(
       'DISABLED',
     );
+    expect(body.modules.find((m) => m.key === 'settings')?.status).toBe(
+      'ENABLED',
+    );
     expect(
       body.flags.find((f) => f.key === FLAG_KEYS.platformSearch)?.enabled,
     ).toBe(false);

@@ -7,7 +7,8 @@ config({ path: resolve(__dirname, '../../../.env') });
 
 const prisma = new PrismaClient();
 
-import { IamGrantEffect, IamGrantSubject, IamLifecycleStatus, IamMfaPurpose, Prisma } from '@prisma/client';
+import { IamGrantEffect, IamGrantSubject, IamLifecycleStatus, IamMfaPurpose, Prisma, SetLevel } from '@prisma/client';
+import { buildScopeKey } from '../src/settings/settings.constants';
 import { signLicensePayload } from '../src/license/license-crypto';
 import type { LicensePayload } from '../src/license/license.constants';
 import { LICENSE_CACHE_KEY } from '../src/license/license.constants';
@@ -256,6 +257,37 @@ async function main() {
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
   });
+  await upsertGrant({
+    permissionKey: 'org.site.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'license.manage',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+  });
+  await upsertGrant({
+    permissionKey: 'platform.numbering.allocate',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'settings.self',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'settings.company.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+
+  await seedSettingsDefinitions(company.id, demoUser.id);
 
   const currentYear = new Date().getFullYear();
   for (const year of [currentYear - 1, currentYear, currentYear + 1]) {
@@ -379,6 +411,110 @@ async function main() {
   console.log(
     `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, limited ${LIMITED_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}`,
   );
+}
+
+async function seedSettingsDefinitions(
+  companyId: string,
+  demoUserId: string,
+): Promise<void> {
+  const definitions = [
+    {
+      key: 'ui.locale',
+      valueType: 'enum',
+      defaultJson: 'fr-TN',
+      description: 'Interface language',
+    },
+    {
+      key: 'ui.theme',
+      valueType: 'enum',
+      defaultJson: 'system',
+      description: 'Color theme',
+    },
+    {
+      key: 'ui.density',
+      valueType: 'enum',
+      defaultJson: 'comfortable',
+      description: 'UI density',
+    },
+  ] as const;
+
+  for (const definition of definitions) {
+    await prisma.setDef.upsert({
+      where: { key: definition.key },
+      update: {
+        valueType: definition.valueType,
+        defaultJson: definition.defaultJson,
+        description: definition.description,
+        isPrefOnly: true,
+      },
+      create: {
+        key: definition.key,
+        valueType: definition.valueType,
+        defaultJson: definition.defaultJson,
+        description: definition.description,
+        isPrefOnly: true,
+      },
+    });
+  }
+
+  await upsertSettingValue({
+    defKey: 'ui.theme',
+    level: SetLevel.COMPANY,
+    companyId,
+    subjectId: companyId,
+    valueJson: 'dark',
+  });
+
+  await upsertSettingValue({
+    defKey: 'ui.density',
+    level: SetLevel.ROLE,
+    companyId,
+    subjectId: 'operator',
+    valueJson: 'compact',
+  });
+
+  await upsertSettingValue({
+    defKey: 'ui.theme',
+    level: SetLevel.USER,
+    companyId,
+    subjectId: demoUserId,
+    valueJson: 'light',
+  });
+}
+
+async function upsertSettingValue(params: {
+  defKey: string;
+  level: SetLevel;
+  companyId: string;
+  subjectId: string;
+  valueJson: string;
+}): Promise<void> {
+  const scopeKey = buildScopeKey(params.level, {
+    companyId: params.companyId,
+    subjectId: params.subjectId,
+  });
+
+  await prisma.setValue.upsert({
+    where: {
+      defKey_scopeKey: {
+        defKey: params.defKey,
+        scopeKey,
+      },
+    },
+    update: {
+      valueJson: params.valueJson,
+      deletedAt: null,
+      level: params.level,
+      companyId: params.companyId,
+    },
+    create: {
+      defKey: params.defKey,
+      level: params.level,
+      scopeKey,
+      companyId: params.companyId,
+      valueJson: params.valueJson,
+    },
+  });
 }
 
 async function upsertGrant(params: {

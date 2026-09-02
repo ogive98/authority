@@ -13,6 +13,9 @@ import {
 import type { Request, Response } from 'express';
 import { CurrentUser } from '../identity/identity.decorators';
 import { SessionGuard } from '../identity/session.guard';
+import { PermissionGuard } from '../permissions/permission.guard';
+import { RequirePermission } from '../permissions/permission.decorators';
+import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import { CurrentTenancy } from './organization.decorators';
 import { ORG_ERROR_CODES, TENANCY_COOKIES } from './organization.constants';
 import { OrganizationException } from './organization.exception';
@@ -86,12 +89,14 @@ export class OrganizationController {
 
   @Post('companies/:companyId/sites')
   @HttpCode(201)
-  @UseGuards(SessionGuard, TenancyGuard)
+  @UseGuards(SessionGuard, TenancyGuard, PermissionGuard)
+  @RequirePermission(PERMISSION_KEYS.orgSiteWrite)
   async createSite(
     @Param('companyId') companyId: string,
     @CurrentUser() user: { id: string },
     @CurrentTenancy() tenancy: { companyId: string },
     @Body() dto: CreateSiteDto,
+    @Req() req: Request,
   ) {
     if (tenancy.companyId !== companyId) {
       throw new OrganizationException(
@@ -100,7 +105,18 @@ export class OrganizationController {
       );
     }
 
-    const site = await this.tenancyService.createSite(user.id, companyId, dto);
+    const correlation =
+      req.headers['x-authority-correlation-id'] ??
+      req.headers['x-correlation-id'];
+
+    const site = await this.tenancyService.createSite({
+      userId: user.id,
+      companyId,
+      input: dto,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: typeof correlation === 'string' ? correlation : undefined,
+    });
     return {
       id: site.id,
       code: site.code,
