@@ -34,26 +34,4 @@ export class OutboxService {
     });
     return row;
   }
-
-  /** Stub publisher: marks rows published. Real bus = Thunder Core. */
-  async publishDue(limit = 20): Promise<number> {
-    const rows = await this.prisma.coreOutbox.findMany({
-      where: { publishedAt: null },
-      orderBy: { createdAt: 'asc' },
-      take: limit,
-      select: { id: true },
-    });
-
-    for (const row of rows) {
-      await this.prisma.coreOutbox.update({
-        where: { id: row.id },
-        data: {
-          publishedAt: new Date(),
-          publishAttempts: { increment: 1 },
-        },
-      });
-    }
-
-    return rows.length;
-  }
 }

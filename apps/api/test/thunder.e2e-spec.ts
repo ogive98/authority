@@ -6,6 +6,8 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { JobProcessorHost } from '../src/thunder-core/jobs/job-processor.host';
+import { EventConsumerHost } from '../src/thunder-core/events/event-consumer.host';
+import { OutboxPublisherService } from '../src/thunder-core/events/outbox-publisher.service';
 import { THUNDER_ERROR_CODES } from '../src/thunder-core/thunder.constants';
 
 const DEMO_EMAIL = 'demo@authority.local';
@@ -46,6 +48,7 @@ describe('Thunder jobs (e2e)', () => {
   beforeEach(async () => {
     if (hasRedis) {
       process.env.THUNDER_WORKERS_ENABLED = 'true';
+      process.env.THUNDER_EVENTS_ENABLED = 'true';
     }
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -70,6 +73,7 @@ describe('Thunder jobs (e2e)', () => {
       await app.close();
     }
     delete process.env.THUNDER_WORKERS_ENABLED;
+    delete process.env.THUNDER_EVENTS_ENABLED;
   });
 
   async function loginWithDemoContext() {
@@ -279,5 +283,74 @@ describe('Thunder jobs (e2e)', () => {
       where: { jobId },
     });
     expect(dlq).toBeNull();
+  });
+
+  it('publishes outbox events and consumes them idempotently', async () => {
+    if (!hasDatabase || !hasRedis) {
+      return;
+    }
+
+    const publisher = app.get(OutboxPublisherService);
+    const consumerHost = app.get(EventConsumerHost);
+    const company = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+
+    const outbox = await prisma.coreOutbox.create({
+      data: {
+        companyId: company!.id,
+        aggregateType: 'thunder_test',
+        aggregateId: company!.id,
+        eventType: 'thunder.test.event.v1',
+        eventVersion: 1,
+        payloadJson: {
+          source: 'thunder',
+          correlationId: `corr-${Date.now()}`,
+          payload: { hello: 'event-bus' },
+        },
+      },
+    });
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await publisher.publishDue(50);
+      const row = await prisma.coreOutbox.findUnique({
+        where: { id: outbox.id },
+      });
+      if (row?.publishedAt) {
+        break;
+      }
+      await sleep(100);
+    }
+
+    const publishedRow = await prisma.coreOutbox.findUnique({
+      where: { id: outbox.id },
+    });
+    expect(publishedRow?.publishedAt).not.toBeNull();
+
+    let processed: Array<{ consumer: string }> = [];
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await consumerHost.pollOnce();
+      processed = await prisma.coreProcessedEvent.findMany({
+        where: { eventId: outbox.id },
+        select: { consumer: true },
+      });
+      if (processed.length >= 2) {
+        break;
+      }
+      await sleep(100);
+    }
+
+    expect(processed.map((row) => row.consumer).sort()).toEqual([
+      'audit.tap',
+      'thunder.echo',
+    ]);
+
+    const secondPass = await consumerHost.pollOnce();
+    expect(secondPass).toBe(0);
+
+    const processedAfterReplay = await prisma.coreProcessedEvent.findMany({
+      where: { eventId: outbox.id },
+    });
+    expect(processedAfterReplay).toHaveLength(2);
   });
 });

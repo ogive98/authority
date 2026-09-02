@@ -35,20 +35,3 @@ describe('Audit + outbox same transaction', () => {
     expect(tx.coreOutbox.create).toHaveBeenCalled();
   });
 });
-
-describe('OutboxService.publishDue', () => {
-  it('marks unpublished rows as published (worker stub)', async () => {
-    const prisma = {
-      coreOutbox: {
-        findMany: jest.fn().mockResolvedValue([{ id: 'ob-1' }]),
-        update: jest.fn().mockResolvedValue({}),
-      },
-    };
-    const outbox = new OutboxService(prisma as never);
-    const count = await outbox.publishDue();
-    expect(count).toBe(1);
-    expect(prisma.coreOutbox.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'ob-1' } }),
-    );
-  });
-});

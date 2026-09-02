@@ -47,3 +47,26 @@ export function thunderWorkersEnabled(): boolean {
   }
   return Boolean(process.env.REDIS_URL);
 }
+
+export function thunderEventStreamKey(): string {
+  const env =
+    process.env.AUTHORITY_ENV ?? process.env.NODE_ENV ?? 'development';
+  return `authority.${env}.events.main`;
+}
+
+export function thunderEventPublisherEnabled(): boolean {
+  if (process.env.THUNDER_EVENTS_ENABLED === 'false') {
+    return false;
+  }
+  if (
+    process.env.NODE_ENV === 'test' &&
+    process.env.THUNDER_EVENTS_ENABLED !== 'true'
+  ) {
+    return false;
+  }
+  return Boolean(process.env.REDIS_URL);
+}
+
+export function thunderConsumersEnabled(): boolean {
+  return thunderEventPublisherEnabled();
+}
