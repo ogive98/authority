@@ -12,8 +12,23 @@ const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
 
 interface ModulesResponse {
-  modules: { key: string; status: string }[];
+  modules: {
+    key: string;
+    status: string;
+    name?: string;
+    version?: string;
+    apiVersion?: string;
+    capabilityCount?: number;
+  }[];
   flags: { key: string; enabled: boolean }[];
+}
+
+interface CapabilitiesResponse {
+  capabilities: {
+    key: string;
+    moduleId: string;
+    version: string;
+  }[];
 }
 
 interface ErrorResponse {
@@ -77,6 +92,81 @@ describe('Modules registry (e2e)', () => {
     expect(
       body.flags.find((f) => f.key === FLAG_KEYS.platformSearch)?.enabled,
     ).toBe(false);
+
+    // CAP-01 additive metadata — contract { key, status } preserved
+    const identity = body.modules.find((m) => m.key === 'identity');
+    expect(identity?.name).toBe('Identity & Security');
+    expect(identity?.version).toBe('1.0.0');
+    expect(identity?.apiVersion).toBe('1');
+    expect(identity?.capabilityCount).toBeGreaterThan(0);
+  });
+
+  it('lists effective capabilities without disabled module caps', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const agent = await loginAgent();
+    const res = await agent.get('/api/v1/capabilities').expect(200);
+    const body = res.body as CapabilitiesResponse;
+    const keys = body.capabilities.map((c) => c.key);
+
+    expect(keys).toContain('platform.modules.read');
+    expect(keys).toContain('identity.session.read');
+    expect(keys).not.toContain('sales.ping');
+    expect(keys).not.toContain('inventory.job.gated');
+  });
+
+  it('exposes sales.ping only after ModModuleState ENABLED', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const company = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+    expect(company).not.toBeNull();
+
+    const agent = await loginAgent();
+    const before = await agent.get('/api/v1/capabilities').expect(200);
+    expect(
+      (before.body as CapabilitiesResponse).capabilities.find(
+        (c) => c.key === 'sales.ping',
+      ),
+    ).toBeUndefined();
+
+    await prisma.modModuleState.update({
+      where: {
+        companyId_moduleKey: {
+          companyId: company!.id,
+          moduleKey: 'sales',
+        },
+      },
+      data: { status: 'ENABLED' },
+    });
+
+    try {
+      const after = await agent.get('/api/v1/capabilities').expect(200);
+      expect(
+        (after.body as CapabilitiesResponse).capabilities.find(
+          (c) => c.key === 'sales.ping',
+        )?.moduleId,
+      ).toBe('sales');
+      // CAP-01 is read-only for mutations via API — sales surface still gated by state
+      await agent.get('/api/v1/sales/ping').expect(200);
+    } finally {
+      await prisma.modModuleState.update({
+        where: {
+          companyId_moduleKey: {
+            companyId: company!.id,
+            moduleKey: 'sales',
+          },
+        },
+        data: { status: 'DISABLED' },
+      });
+    }
+
+    await agent.get('/api/v1/sales/ping').expect(403);
   });
 
   it('returns 403 MOD.DISABLED for a métier module API', async () => {
