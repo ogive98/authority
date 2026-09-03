@@ -34,10 +34,9 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 
 ## Prochaine implémentation code
 
-1. **THU-07** monitor snapshot  
-2. **THU-08** rules sandbox  
-3. Capability/manifest registry (pack V2 phase 3)  
-4. Track UI registries  
-5. Entitlements engine (Pack 3)  
+1. **THU-08** rules sandbox  
+2. Capability/manifest registry (pack V2 phase 3)  
+3. Track UI registries  
+4. Entitlements engine (Pack 3)  
 
 Ne pas exécuter les prompts Cursor des packs ZIP **tels quels**.

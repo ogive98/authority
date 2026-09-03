@@ -24,6 +24,7 @@ import { PlanCRegistryService } from './resilience/plan-c-registry.service';
 import { ResourceManagerService } from './resources/resource-manager.service';
 import { WatchdogService } from './resources/watchdog.service';
 import { WatchdogWorker } from './resources/watchdog.worker';
+import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
 import { ThunderController } from './thunder.controller';
 import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
 
@@ -58,6 +59,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     WatchdogService,
     WatchdogWorker,
     AdmissionOrchestratorService,
+    MonitorSnapshotService,
   ],
   exports: [
     JobEnqueueService,
@@ -74,6 +76,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     WatchdogService,
     JobRegistryService,
     AdmissionOrchestratorService,
+    MonitorSnapshotService,
   ],
 })
 export class ThunderModule {}

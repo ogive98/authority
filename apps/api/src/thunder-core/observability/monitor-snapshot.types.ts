@@ -1,0 +1,64 @@
+/**
+ * Thunder monitor snapshot — schema for ResourceMonitor widget (THU-07).
+ * Documented in AUTHORITY-DOCUMENTATION `03_THUNDER_CORE/OBSERVABILITY.md`.
+ */
+export interface ThunderMonitorSnapshot {
+  schemaVersion: 1;
+  asOf: string;
+  cpu: {
+    usageRatio: number | null;
+    loadAvg1: number | null;
+    cores: number;
+  };
+  ram: {
+    usedBytes: number;
+    totalBytes: number;
+    usageRatio: number;
+    processRssBytes: number;
+  };
+  workers: {
+    enabled: boolean;
+    queues: Array<{
+      family: string;
+      concurrency: number;
+    }>;
+  };
+  queues: Array<{
+    family: string;
+    pending: number;
+    running: number;
+    failed: number;
+    pausedByModule: number;
+  }>;
+  jobs: {
+    pending: number;
+    running: number;
+    failed: number;
+    completed: number;
+    cancelled: number;
+    pausedByModule: number;
+    dlq: number;
+  };
+  events: {
+    outboxLag: number;
+    publishedLastMinute: number;
+    eventsPerSecondEstimate: number;
+  };
+  db: {
+    ok: boolean;
+    poolUsageRatio: number | null;
+  };
+  redis: {
+    configured: boolean;
+    ok: boolean;
+    usedMemoryBytes: number | null;
+  };
+  api: {
+    p95Ms: number | null;
+  };
+  pressure: {
+    shedP4: boolean;
+    reason?: string;
+  };
+  systemMode: string;
+}

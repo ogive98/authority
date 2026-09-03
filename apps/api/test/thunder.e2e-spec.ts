@@ -707,4 +707,63 @@ describe('Thunder jobs (e2e)', () => {
       delete process.env.THUNDER_STALL_MS;
     }
   });
+
+  it('returns a ResourceMonitor snapshot for authorized users', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const { agent, companyId } = await loginWithDemoContext();
+    const demoUser = await prisma.iamUser.findUnique({
+      where: { email: DEMO_EMAIL },
+    });
+    const existingGrant = await prisma.iamGrant.findFirst({
+      where: {
+        permissionKey: 'system_monitoring.view',
+        subjectType: 'USER',
+        subjectId: demoUser!.id,
+        companyId,
+      },
+    });
+    if (!existingGrant) {
+      await prisma.iamGrant.create({
+        data: {
+          permissionKey: 'system_monitoring.view',
+          subjectType: 'USER',
+          subjectId: demoUser!.id,
+          companyId,
+          effect: 'ALLOW',
+        },
+      });
+    }
+
+    const res = await agent.get('/api/v1/thunder/monitor/snapshot').expect(200);
+    const body = res.body as {
+      schemaVersion: number;
+      asOf: string;
+      jobs: { pending: number };
+      ram: { totalBytes: number };
+      events: { outboxLag: number };
+    };
+
+    expect(body.schemaVersion).toBe(1);
+    expect(typeof body.asOf).toBe('string');
+    expect(typeof body.jobs.pending).toBe('number');
+    expect(body.ram.totalBytes).toBeGreaterThan(0);
+    expect(typeof body.events.outboxLag).toBe('number');
+  });
+
+  it('exposes monitor snapshot to Super Admin', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const saAgent = await loginSuperAdmin();
+    const res = await saAgent
+      .get('/api/super-admin/v1/thunder/monitor/snapshot')
+      .expect(200);
+    const body = res.body as { schemaVersion: number; workers: unknown };
+    expect(body.schemaVersion).toBe(1);
+    expect(body.workers).toBeDefined();
+  });
 });

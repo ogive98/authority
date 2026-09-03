@@ -112,6 +112,23 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  async getUsedMemoryBytes(): Promise<number | null> {
+    if (!this.client) {
+      return null;
+    }
+
+    try {
+      if (this.client.status === 'wait') {
+        await this.client.connect();
+      }
+      const info = await this.client.info('memory');
+      const match = /used_memory:(\d+)/.exec(info);
+      return match ? Number(match[1]) : null;
+    } catch {
+      return null;
+    }
+  }
+
   duplicateClient(): Redis | null {
     if (!this.client) {
       return null;

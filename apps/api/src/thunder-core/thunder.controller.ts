@@ -7,10 +7,12 @@ import {
   HttpStatus,
   Param,
   Post,
+  Sse,
   UseGuards,
 } from '@nestjs/common';
 import type { IamUser } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import { Observable, from, interval, map, switchMap } from 'rxjs';
 import { CurrentUser } from '../identity/identity.decorators';
 import { SessionGuard } from '../identity/session.guard';
 import { CurrentTenancy } from '../organization/organization.decorators';
@@ -21,8 +23,12 @@ import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import { JobEnqueueService } from './jobs/job-enqueue.service';
 import { JobQueryService } from './jobs/job-query.service';
+import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
+import type { ThunderMonitorSnapshot } from './observability/monitor-snapshot.types';
 import { EnqueueHelloJobDto, EnqueueTestJobDto } from './thunder.dto';
 import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
+
+const MONITOR_SSE_MS = 2_000;
 
 @Controller('api/v1/thunder')
 @UseGuards(SessionGuard, TenancyGuard, PermissionGuard)
@@ -30,7 +36,23 @@ export class ThunderController {
   constructor(
     private readonly jobEnqueueService: JobEnqueueService,
     private readonly jobQueryService: JobQueryService,
+    private readonly monitorSnapshot: MonitorSnapshotService,
   ) {}
+
+  @Get('monitor/snapshot')
+  @RequirePermission(PERMISSION_KEYS.systemMonitoringView)
+  getMonitorSnapshot() {
+    return this.monitorSnapshot.snapshot();
+  }
+
+  @Sse('monitor/stream')
+  @RequirePermission(PERMISSION_KEYS.systemMonitoringView)
+  streamMonitor(): Observable<{ data: ThunderMonitorSnapshot }> {
+    return interval(MONITOR_SSE_MS).pipe(
+      switchMap(() => from(this.monitorSnapshot.snapshot())),
+      map((data) => ({ data })),
+    );
+  }
 
   @Post('jobs/hello')
   @HttpCode(HttpStatus.ACCEPTED)
