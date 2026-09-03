@@ -78,6 +78,14 @@ export default function HomePage() {
                 /dev/palette
               </Link>
             </li>
+            <li>
+              <Link
+                href="/dev/notifications"
+                className="text-a-accent hover:underline"
+              >
+                /dev/notifications
+              </Link>
+            </li>
           </ul>
         </article>
         <article className="a-card p-[var(--a-space-4)]">
@@ -85,8 +93,14 @@ export default function HomePage() {
             Notifications
           </h2>
           <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
-            L’icône cloche = alertes / événements (SSE plus tard, UI-09). Pas
-            un décor.
+            Cloche = centre d’activité (SSE). Coupure → bannière. Gate{" "}
+            <Link
+              href="/dev/notifications"
+              className="text-a-accent hover:underline"
+            >
+              /dev/notifications
+            </Link>
+            .
           </p>
         </article>
       </div>

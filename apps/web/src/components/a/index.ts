@@ -25,3 +25,4 @@ export {
   type DynamicFieldDef,
 } from "./a-dynamic-form";
 export { ACommandPalette } from "./a-command-palette";
+export { AActivityCenter } from "./a-activity-center";

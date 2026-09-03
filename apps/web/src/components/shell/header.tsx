@@ -8,6 +8,8 @@ import {
   Menu,
   Search,
 } from "lucide-react";
+import { useNotificationsStore } from "@/stores/notifications-store";
+import { unreadCount } from "@/lib/notifications";
 import { useShellStore } from "@/stores/shell-store";
 import {
   ModeSwitch,
@@ -15,15 +17,18 @@ import {
   SpectreIcon,
   ThemeModeSwitch,
 } from "./mode-switch";
+import { cn } from "@/lib/utils";
 
 function IconBtn({
   label,
   children,
   onClick,
+  className,
 }: {
   label: string;
   children: ReactNode;
   onClick?: () => void;
+  className?: string;
 }) {
   return (
     <button
@@ -31,7 +36,10 @@ function IconBtn({
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-md)] text-a-fg-muted transition-colors hover:bg-a-surface-3 hover:text-a-fg"
+      className={cn(
+        "inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-md)] text-a-fg-muted transition-colors hover:bg-a-surface-3 hover:text-a-fg",
+        className,
+      )}
     >
       {children}
     </button>
@@ -46,6 +54,9 @@ export function ShellHeader() {
   const patchEnabled = useShellStore((s) => s.patchEnabled);
   const setSpectreEnabled = useShellStore((s) => s.setSpectreEnabled);
   const setPatchEnabled = useShellStore((s) => s.setPatchEnabled);
+  const setInboxOpen = useNotificationsStore((s) => s.setInboxOpen);
+  const items = useNotificationsStore((s) => s.items);
+  const unread = unreadCount(items);
 
   useEffect(() => {
     const current =
@@ -94,8 +105,24 @@ export function ShellHeader() {
       </div>
 
       <div className="flex items-center justify-end gap-2 sm:gap-3">
-        <IconBtn label="Notifications — alertes et événements (stub)">
+        <IconBtn
+          label={
+            unread > 0
+              ? `Notifications — ${unread} non lu${unread > 1 ? "s" : ""}`
+              : "Notifications — centre d’activité"
+          }
+          onClick={() => setInboxOpen(true)}
+          className="relative"
+        >
           <Bell className="h-4 w-4" strokeWidth={1.75} />
+          {unread > 0 ? (
+            <span
+              className="absolute top-1 right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-a-accent px-0.5 text-[9px] font-medium text-a-accent-fg"
+              aria-hidden
+            >
+              {unread > 9 ? "9+" : unread}
+            </span>
+          ) : null}
         </IconBtn>
 
         <div
