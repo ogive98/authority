@@ -15,11 +15,9 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 - Audit : `15_MEMORY/PACK_V2_AUDIT_2026-09-03.md`
 - Track CAP : `17_IMPLEMENTATION/13_TRACK_CAPABILITY.md`
 - Copie : `18_PACK_ABSORPTION/packs/AUTHORITY_THUNDER_CORE_CURSOR_PACK_V2/`
-- **C15 LOCKED** : THU-07→08 ✅ ; pack V2 phase 3 = CAP lots
-- **CAP-01 ✅** — static catalog + `GET /api/v1/capabilities` (read-only)
-- **CAP-02 ✅** — `CapabilityResolver` + `CapabilityGuard` (`sales.ping`)
-- **CAP-03 ✅** — lifecycle + company health
-- **Next :** CAP-04 — Super Admin ENABLE/DISABLE
+- **C15 LOCKED** : THU-07→08 ✅
+- **Pack V2 phase 3 ✅** — CAP-01→04
+- **Next :** Track UI shell dynamique
 - CQRS / Command-Query bus : **C12 DEFER**
 - AI réelle : **C06 OPEN** (stub only)
 
@@ -41,9 +39,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 
 ## Prochaine implémentation code
 
-1. CAP-02 capability resolve + guard  
-2. CAP-03 lifecycle runtime ; CAP-04 Super Admin enable/disable  
-3. Track UI registries  
-4. Entitlements engine (Pack 3)  
+1. Track UI registries / shell dynamique  
+2. Entitlements engine (Pack 3)  
+3. Pack V2 phases 4–8 seulement si C06/C12 rouvertes  
 
 Ne pas exécuter les prompts Cursor des packs ZIP **tels quels**.
