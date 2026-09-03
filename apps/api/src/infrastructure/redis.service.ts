@@ -91,6 +91,27 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /** SET key value EX ttl NX — returns true when the lock was acquired. */
+  async setNx(
+    key: string,
+    value: string,
+    ttlSeconds: number,
+  ): Promise<boolean> {
+    if (!this.client) {
+      return true;
+    }
+
+    try {
+      if (this.client.status === 'wait') {
+        await this.client.connect();
+      }
+      const result = await this.client.set(key, value, 'EX', ttlSeconds, 'NX');
+      return result === 'OK';
+    } catch {
+      return true;
+    }
+  }
+
   duplicateClient(): Redis | null {
     if (!this.client) {
       return null;

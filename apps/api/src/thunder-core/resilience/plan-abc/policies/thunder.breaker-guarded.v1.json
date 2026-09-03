@@ -1,0 +1,25 @@
+{
+  "jobType": "thunder.breaker-guarded.v1",
+  "timeoutMs": 30000,
+  "planA": { "worker": "BreakerGuardedProcessor" },
+  "planB": {
+    "maxAttempts": 5,
+    "backoffBaseMs": 1000,
+    "backoffMaxMs": 16000,
+    "jitter": true
+  },
+  "planC": {
+    "action": "plan_c_registry",
+    "degrade": "external_api_stub"
+  },
+  "safeState": {
+    "alertSeverity": "high",
+    "audit": true
+  },
+  "idempotency": {
+    "keyTemplate": "thunder.breaker-guarded.v1:{companyId}:{idempotencyKey}"
+  },
+  "circuitBreaker": {
+    "dependencyKey": "external_api_stub"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "jobType": "thunder.critical.ping.v1",
+  "timeoutMs": 5000,
+  "planA": { "worker": "CriticalPingProcessor" },
+  "planB": {
+    "maxAttempts": 3,
+    "backoffBaseMs": 500,
+    "backoffMaxMs": 4000,
+    "jitter": true
+  },
+  "planC": {
+    "action": "fail_fast"
+  },
+  "safeState": {
+    "alertSeverity": "critical",
+    "audit": true
+  },
+  "idempotency": {
+    "keyTemplate": "thunder.critical.ping.v1:{companyId}:{idempotencyKey}"
+  }
+}

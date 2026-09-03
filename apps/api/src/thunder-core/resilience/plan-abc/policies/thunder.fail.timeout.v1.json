@@ -1,0 +1,22 @@
+{
+  "jobType": "thunder.fail.timeout.v1",
+  "timeoutMs": 50,
+  "planA": { "worker": "FailTimeoutProcessor" },
+  "planB": {
+    "maxAttempts": 1,
+    "backoffBaseMs": 1000,
+    "backoffMaxMs": 16000,
+    "jitter": false
+  },
+  "planC": {
+    "action": "fail_fast",
+    "degrade": "surface_timeout"
+  },
+  "safeState": {
+    "alertSeverity": "medium",
+    "audit": true
+  },
+  "idempotency": {
+    "keyTemplate": "thunder.fail.timeout.v1:{companyId}:{idempotencyKey}"
+  }
+}

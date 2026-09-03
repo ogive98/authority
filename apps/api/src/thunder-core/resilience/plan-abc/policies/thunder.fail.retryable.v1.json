@@ -1,0 +1,22 @@
+{
+  "jobType": "thunder.fail.retryable.v1",
+  "timeoutMs": 30000,
+  "planA": { "worker": "FailRetryableProcessor" },
+  "planB": {
+    "maxAttempts": 3,
+    "backoffBaseMs": 1000,
+    "backoffMaxMs": 16000,
+    "jitter": true
+  },
+  "planC": {
+    "action": "dlq",
+    "degrade": "surface_error"
+  },
+  "safeState": {
+    "alertSeverity": "medium",
+    "audit": true
+  },
+  "idempotency": {
+    "keyTemplate": "thunder.fail.retryable.v1:{companyId}:{idempotencyKey}"
+  }
+}

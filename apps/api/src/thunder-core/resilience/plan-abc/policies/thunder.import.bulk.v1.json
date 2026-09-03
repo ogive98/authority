@@ -1,0 +1,22 @@
+{
+  "jobType": "thunder.import.bulk.v1",
+  "timeoutMs": 120000,
+  "planA": { "worker": "ImportBulkProcessor" },
+  "planB": {
+    "maxAttempts": 3,
+    "backoffBaseMs": 2000,
+    "backoffMaxMs": 30000,
+    "jitter": true
+  },
+  "planC": {
+    "action": "stop_report_progress",
+    "degrade": "shed_under_pressure"
+  },
+  "safeState": {
+    "alertSeverity": "medium",
+    "audit": true
+  },
+  "idempotency": {
+    "keyTemplate": "thunder.import.bulk.v1:{companyId}:{idempotencyKey}"
+  }
+}

@@ -12,6 +12,7 @@ import { ModuleRegistryService } from '../../modules-registry/module-registry.se
 import { PrismaService } from '../../prisma/prisma.service';
 import type { ThunderContext } from '../context/thunder-context';
 import { ResourceManagerService } from '../resources/resource-manager.service';
+import { PlanAbcPolicyService } from '../resilience/plan-abc/plan-abc-policy.service';
 import { thunderQueueName, thunderWorkersEnabled } from '../thunder.constants';
 import { CircuitBreakerService } from '../resilience/circuit-breaker.service';
 import { DlqService } from './dlq/dlq.service';
@@ -21,7 +22,6 @@ import { isRetryableJobError } from './retry/job-errors';
 import {
   computeBackoffDelayMs,
   DEFAULT_MAX_ATTEMPTS,
-  getJobTimeoutMsForType,
 } from './retry/retry-policy';
 
 @Injectable()
@@ -38,6 +38,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     private readonly circuitBreaker: CircuitBreakerService,
     private readonly modules: ModuleRegistryService,
     private readonly resources: ResourceManagerService,
+    private readonly policies: PlanAbcPolicyService,
   ) {}
 
   onModuleInit(): void {
@@ -144,7 +145,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
 
     const payload = (row.payloadJson ?? {}) as Prisma.JsonObject;
     const context = this.readContext(payload);
-    const timeoutMs = getJobTimeoutMsForType(row.jobType);
+    const timeoutMs = this.policies.getOrDefault(row.jobType).timeoutMs;
     const now = new Date();
 
     await this.prisma.thunderJob.update({

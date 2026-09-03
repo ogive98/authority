@@ -4,6 +4,7 @@ import { JobRegistryService } from './job-registry.service';
 import { hashJobPayload } from './payload-hash';
 import { THUNDER_ERROR_CODES, THUNDER_JOB_TYPES } from '../thunder.constants';
 import { ThunderException } from '../thunder.exception';
+import { defaultPlanAbcPolicy } from '../resilience/plan-abc/plan-abc.types';
 
 describe('JobEnqueueService', () => {
   const companyId = '11111111-1111-1111-1111-111111111111';
@@ -16,17 +17,14 @@ describe('JobEnqueueService', () => {
   };
   let redis: { createBullConnection: jest.Mock };
   let registry: JobRegistryService;
-  let circuitBreaker: {
-    checkAdmission: jest.Mock;
-    recordSuccess: jest.Mock;
-    recordFailure: jest.Mock;
-  };
   let planCRegistry: { execute: jest.Mock };
-  let modules: { isEnabled: jest.Mock };
-  let resources: {
-    shouldAdmitEnqueue: jest.Mock;
-    defaultPriority: jest.Mock;
+  let resources: { defaultPriority: jest.Mock };
+  let admission: {
+    admitEnqueue: jest.Mock;
+    tryAcquireInflightLock: jest.Mock;
+    releaseInflightLock: jest.Mock;
   };
+  let policies: { getOrDefault: jest.Mock };
   let service: JobEnqueueService;
   let queueAdd: jest.Mock;
 
@@ -49,16 +47,6 @@ describe('JobEnqueueService', () => {
       createBullConnection: jest.fn().mockReturnValue({}),
     };
 
-    circuitBreaker = {
-      checkAdmission: jest.fn().mockResolvedValue({
-        allowed: true,
-        state: 'CLOSED',
-        dependencyKey: 'external_api_stub',
-      }),
-      recordSuccess: jest.fn(),
-      recordFailure: jest.fn(),
-    };
-
     planCRegistry = {
       execute: jest.fn().mockResolvedValue({
         mode: 'plan_c',
@@ -66,13 +54,26 @@ describe('JobEnqueueService', () => {
       }),
     };
 
-    modules = {
-      isEnabled: jest.fn().mockResolvedValue(true),
+    resources = {
+      defaultPriority: jest.fn().mockReturnValue(2),
     };
 
-    resources = {
-      shouldAdmitEnqueue: jest.fn().mockReturnValue({ allowed: true }),
-      defaultPriority: jest.fn().mockReturnValue(2),
+    admission = {
+      admitEnqueue: jest.fn().mockResolvedValue({
+        allowed: true,
+        policy: defaultPlanAbcPolicy(THUNDER_JOB_TYPES.hello),
+        correlationId: 'corr-1',
+      }),
+      tryAcquireInflightLock: jest
+        .fn()
+        .mockResolvedValue({ acquired: true, key: 'lock-1' }),
+      releaseInflightLock: jest.fn().mockResolvedValue(undefined),
+    };
+
+    policies = {
+      getOrDefault: jest
+        .fn()
+        .mockImplementation((jobType: string) => defaultPlanAbcPolicy(jobType)),
     };
 
     registry = new JobRegistryService();
@@ -80,10 +81,10 @@ describe('JobEnqueueService', () => {
       prisma as never,
       redis as never,
       registry,
-      circuitBreaker as never,
       planCRegistry as never,
-      modules as never,
       resources as never,
+      admission as never,
+      policies as never,
     );
 
     jest
@@ -119,11 +120,13 @@ describe('JobEnqueueService', () => {
     expect(queueAdd).not.toHaveBeenCalled();
   });
 
-  it('returns Plan C without enqueueing when the breaker is open', async () => {
-    circuitBreaker.checkAdmission.mockResolvedValue({
+  it('returns Plan C without enqueueing when admission returns plan_c', async () => {
+    admission.admitEnqueue.mockResolvedValue({
       allowed: false,
-      state: 'OPEN',
+      kind: 'plan_c',
+      policy: defaultPlanAbcPolicy(THUNDER_JOB_TYPES.breakerGuarded),
       dependencyKey: 'external_api_stub',
+      correlationId: 'corr-pc',
     });
 
     const result = await service.enqueue({
@@ -165,8 +168,15 @@ describe('JobEnqueueService', () => {
     });
   });
 
-  it('rejects enqueue when module is disabled', async () => {
-    modules.isEnabled.mockResolvedValue(false);
+  it('rejects enqueue when admission rejects module disabled', async () => {
+    admission.admitEnqueue.mockResolvedValue({
+      allowed: false,
+      kind: 'reject',
+      code: THUNDER_ERROR_CODES.MODULE_DISABLED,
+      message: 'Module disabled: inventory',
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      correlationId: 'corr-mod',
+    });
 
     await expect(
       service.enqueue({
@@ -182,10 +192,14 @@ describe('JobEnqueueService', () => {
     expect(prisma.thunderJob.create).not.toHaveBeenCalled();
   });
 
-  it('rejects sheddable enqueue under P4 pressure', async () => {
-    resources.shouldAdmitEnqueue.mockReturnValue({
+  it('rejects sheddable enqueue when admission returns shed', async () => {
+    admission.admitEnqueue.mockResolvedValue({
       allowed: false,
-      reason: 'shed_p4',
+      kind: 'reject',
+      code: THUNDER_ERROR_CODES.SHED_P4,
+      message: 'shed_p4',
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      correlationId: 'corr-shed',
     });
 
     await expect(
@@ -217,25 +231,30 @@ describe('JobEnqueueService idempotency conflict status', () => {
       },
     };
     const redis = { createBullConnection: jest.fn() };
-    const circuitBreaker = {
-      checkAdmission: jest
-        .fn()
-        .mockResolvedValue({ allowed: true, state: 'CLOSED' }),
-    };
     const planCRegistry = { execute: jest.fn() };
-    const modules = { isEnabled: jest.fn().mockResolvedValue(true) };
-    const resources = {
-      shouldAdmitEnqueue: jest.fn().mockReturnValue({ allowed: true }),
-      defaultPriority: jest.fn().mockReturnValue(2),
+    const resources = { defaultPriority: jest.fn().mockReturnValue(2) };
+    const admission = {
+      admitEnqueue: jest.fn().mockResolvedValue({
+        allowed: true,
+        policy: defaultPlanAbcPolicy(THUNDER_JOB_TYPES.hello),
+        correlationId: 'corr-1',
+      }),
+      tryAcquireInflightLock: jest.fn().mockResolvedValue({ acquired: true }),
+      releaseInflightLock: jest.fn(),
+    };
+    const policies = {
+      getOrDefault: jest
+        .fn()
+        .mockImplementation((jobType: string) => defaultPlanAbcPolicy(jobType)),
     };
     const service = new JobEnqueueService(
       prisma as never,
       redis as never,
       new JobRegistryService(),
-      circuitBreaker as never,
       planCRegistry as never,
-      modules as never,
       resources as never,
+      admission as never,
+      policies as never,
     );
 
     try {

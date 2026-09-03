@@ -16,6 +16,7 @@ import {
   THUNDER_ERROR_CODES,
   THUNDER_JOB_TYPES,
 } from '../src/thunder-core/thunder.constants';
+import { PlanAbcPolicyService } from '../src/thunder-core/resilience/plan-abc/plan-abc-policy.service';
 
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
@@ -88,6 +89,7 @@ describe('Thunder jobs (e2e)', () => {
     }
     delete process.env.THUNDER_WORKERS_ENABLED;
     delete process.env.THUNDER_EVENTS_ENABLED;
+    delete process.env.AUTHORITY_SYSTEM_MODE;
   });
 
   async function loginWithDemoContext() {
@@ -462,6 +464,44 @@ describe('Thunder jobs (e2e)', () => {
       ok: true,
       dependency: dependencyKey,
     });
+  });
+
+  it('blocks enqueue when system mode is MAINTENANCE', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    process.env.AUTHORITY_SYSTEM_MODE = 'MAINTENANCE';
+    try {
+      const enqueue = app.get(JobEnqueueService);
+      const company = await prisma.orgCompany.findUnique({
+        where: { code: 'DEMO' },
+      });
+
+      await expect(
+        enqueue.enqueue({
+          jobType: THUNDER_JOB_TYPES.hello,
+          companyId: company!.id,
+          queue: 'ops',
+          idempotencyKey: `maint-${Date.now()}`,
+          payload: { message: 'blocked' },
+        }),
+      ).rejects.toMatchObject({
+        code: THUNDER_ERROR_CODES.SYSTEM_MODE_BLOCKS,
+      });
+    } finally {
+      delete process.env.AUTHORITY_SYSTEM_MODE;
+    }
+  });
+
+  it('loads Plan A/B/C policies for core job types', () => {
+    const policies = app.get(PlanAbcPolicyService);
+    expect(policies.get('thunder.hello.v1')?.planA.worker).toBe(
+      'HelloProcessor',
+    );
+    expect(
+      policies.getOrDefault('thunder.fail.retryable.v1').planB.maxAttempts,
+    ).toBe(3);
   });
 
   it('pauses module-gated jobs when the module is disabled', async () => {

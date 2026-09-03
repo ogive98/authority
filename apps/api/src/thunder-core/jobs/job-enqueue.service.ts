@@ -8,10 +8,12 @@ import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import type Redis from 'ioredis';
 import { RedisService } from '../../infrastructure/redis.service';
-import { ModuleRegistryService } from '../../modules-registry/module-registry.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AdmissionOrchestratorService } from '../admission/admission-orchestrator.service';
 import { createThunderContext } from '../context/thunder-context';
 import { ResourceManagerService } from '../resources/resource-manager.service';
+import { PlanAbcPolicyService } from '../resilience/plan-abc/plan-abc-policy.service';
+import { PlanCRegistryService } from '../resilience/plan-c-registry.service';
 import {
   THUNDER_ERROR_CODES,
   THUNDER_JOB_TYPES,
@@ -23,9 +25,7 @@ import { ThunderException } from '../thunder.exception';
 import type { JobEnqueueResult } from './job.types';
 import { JobRegistryService } from './job-registry.service';
 import { hashJobPayload } from './payload-hash';
-import { getJobAttemptsForType } from './retry/retry-policy';
-import { CircuitBreakerService } from '../resilience/circuit-breaker.service';
-import { PlanCRegistryService } from '../resilience/plan-c-registry.service';
+import { DEFAULT_MAX_ATTEMPTS } from './retry/retry-policy';
 
 export interface EnqueueJobInput {
   jobType: string;
@@ -46,10 +46,10 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly registry: JobRegistryService,
-    private readonly circuitBreaker: CircuitBreakerService,
     private readonly planCRegistry: PlanCRegistryService,
-    private readonly modules: ModuleRegistryService,
     private readonly resources: ResourceManagerService,
+    private readonly admission: AdmissionOrchestratorService,
+    private readonly policies: PlanAbcPolicyService,
   ) {}
 
   async enqueueHello(params: {
@@ -182,7 +182,6 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
     return reconciled;
   }
 
-  /** Watchdog / ops: put an existing PENDING row back onto BullMQ. */
   async requeueExisting(params: {
     jobId: string;
     jobType: string;
@@ -209,33 +208,41 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    if (registration.moduleKey) {
-      const enabled = await this.modules.isEnabled(
-        input.companyId,
-        registration.moduleKey,
-      );
-      if (!enabled) {
-        throw new ThunderException(
-          THUNDER_ERROR_CODES.MODULE_DISABLED,
-          `Module disabled: ${registration.moduleKey}`,
-          HttpStatus.SERVICE_UNAVAILABLE,
-        );
-      }
-    }
+    const decision = await this.admission.admitEnqueue({
+      jobType: input.jobType,
+      companyId: input.companyId,
+      queue: input.queue,
+      idempotencyKey: input.idempotencyKey,
+      correlationId: input.correlationId,
+      registryModuleKey: registration.moduleKey,
+      registryDependencyKey: registration.dependencyKey,
+    });
 
-    const admission = this.resources.shouldAdmitEnqueue(
-      input.queue,
-      input.companyId,
-    );
-    if (!admission.allowed) {
-      const code =
-        admission.reason === 'fairness_throttle'
-          ? THUNDER_ERROR_CODES.FAIRNESS_THROTTLE
-          : THUNDER_ERROR_CODES.SHED_P4;
+    if (!decision.allowed) {
+      if (decision.kind === 'plan_c') {
+        const planCResult = await this.planCRegistry.execute(
+          decision.dependencyKey,
+          {
+            dependencyKey: decision.dependencyKey,
+            jobType: input.jobType,
+            companyId: input.companyId,
+            correlationId: decision.correlationId,
+          },
+        );
+
+        return {
+          status: 'PLAN_C',
+          replayed: false,
+          planC: true,
+          dependencyKey: decision.dependencyKey,
+          planCResult: planCResult as Prisma.InputJsonValue,
+        };
+      }
+
       throw new ThunderException(
-        code,
-        admission.reason ?? 'Resource admission denied',
-        HttpStatus.SERVICE_UNAVAILABLE,
+        decision.code,
+        decision.message,
+        decision.status,
       );
     }
 
@@ -263,36 +270,37 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
       };
     }
 
-    if (registration.dependencyKey) {
-      const breakerAdmission = await this.circuitBreaker.checkAdmission(
-        registration.dependencyKey,
-      );
-      if (!breakerAdmission.allowed) {
-        const planCResult = await this.planCRegistry.execute(
-          registration.dependencyKey,
-          {
-            dependencyKey: registration.dependencyKey,
-            jobType: input.jobType,
-            companyId: input.companyId,
-            correlationId: input.correlationId,
-          },
-        );
-
+    const lock = await this.admission.tryAcquireInflightLock(
+      input.companyId,
+      input.idempotencyKey,
+      decision.correlationId,
+    );
+    if (!lock.acquired) {
+      const raced = await this.prisma.thunderJob.findFirst({
+        where: {
+          companyId: input.companyId,
+          idempotencyKey: input.idempotencyKey,
+        },
+      });
+      if (raced) {
         return {
-          status: 'PLAN_C',
-          replayed: false,
-          planC: true,
-          dependencyKey: registration.dependencyKey,
-          planCResult: planCResult as Prisma.InputJsonValue,
+          jobId: raced.id,
+          status: raced.status,
+          replayed: true,
         };
       }
+      throw new ThunderException(
+        THUNDER_ERROR_CODES.IN_FLIGHT_LOCK,
+        'Duplicate in-flight enqueue for idempotency key',
+        HttpStatus.CONFLICT,
+      );
     }
 
     const context = createThunderContext({
       source: 'http',
       companyId: input.companyId,
       userId: input.userId,
-      correlationId: input.correlationId,
+      correlationId: decision.correlationId,
       idempotencyKey: input.idempotencyKey,
     });
 
@@ -319,6 +327,7 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
         select: { id: true, status: true },
       });
     } catch (error) {
+      await this.admission.releaseInflightLock(lock.key);
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
@@ -354,8 +363,10 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
         jobType: input.jobType,
         queue: input.queue,
         priority,
+        maxAttempts: decision.policy.planB.maxAttempts,
       });
     } catch (error) {
+      await this.admission.releaseInflightLock(lock.key);
       const message =
         error instanceof Error ? error.message : 'Failed to enqueue BullMQ job';
       await this.prisma.thunderJob.update({
@@ -373,6 +384,8 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    await this.admission.releaseInflightLock(lock.key);
+
     return {
       jobId: jobRow.id,
       status: jobRow.status,
@@ -385,9 +398,13 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
     jobType: string;
     queue: ThunderQueueFamily;
     priority: number;
+    maxAttempts?: number;
   }): Promise<void> {
     const queue = this.getQueue(params.queue);
-    const attempts = getJobAttemptsForType(params.jobType);
+    const attempts =
+      params.maxAttempts ??
+      this.policies.getOrDefault(params.jobType).planB.maxAttempts ??
+      DEFAULT_MAX_ATTEMPTS;
     const bullJob = await queue.add(
       params.jobType,
       { jobId: params.jobId },

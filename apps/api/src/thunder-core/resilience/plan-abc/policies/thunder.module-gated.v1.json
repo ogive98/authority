@@ -1,0 +1,22 @@
+{
+  "jobType": "thunder.module-gated.v1",
+  "timeoutMs": 30000,
+  "planA": { "worker": "ModuleGatedProcessor" },
+  "planB": {
+    "maxAttempts": 3,
+    "backoffBaseMs": 1000,
+    "backoffMaxMs": 16000,
+    "jitter": true
+  },
+  "planC": {
+    "action": "pause_by_module"
+  },
+  "safeState": {
+    "alertSeverity": "low",
+    "audit": true
+  },
+  "idempotency": {
+    "keyTemplate": "thunder.module-gated.v1:{companyId}:{idempotencyKey}"
+  },
+  "moduleKey": "inventory"
+}

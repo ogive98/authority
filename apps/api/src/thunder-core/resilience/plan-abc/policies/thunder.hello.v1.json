@@ -1,0 +1,22 @@
+{
+  "jobType": "thunder.hello.v1",
+  "timeoutMs": 30000,
+  "planA": { "worker": "HelloProcessor" },
+  "planB": {
+    "maxAttempts": 5,
+    "backoffBaseMs": 1000,
+    "backoffMaxMs": 16000,
+    "jitter": true
+  },
+  "planC": {
+    "action": "fail_fast",
+    "degrade": "reject_enqueue"
+  },
+  "safeState": {
+    "alertSeverity": "low",
+    "audit": true
+  },
+  "idempotency": {
+    "keyTemplate": "thunder.hello.v1:{companyId}:{idempotencyKey}"
+  }
+}

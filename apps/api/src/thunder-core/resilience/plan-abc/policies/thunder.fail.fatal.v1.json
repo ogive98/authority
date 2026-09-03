@@ -1,0 +1,22 @@
+{
+  "jobType": "thunder.fail.fatal.v1",
+  "timeoutMs": 30000,
+  "planA": { "worker": "FailFatalProcessor" },
+  "planB": {
+    "maxAttempts": 1,
+    "backoffBaseMs": 1000,
+    "backoffMaxMs": 16000,
+    "jitter": false
+  },
+  "planC": {
+    "action": "dlq",
+    "degrade": "surface_error"
+  },
+  "safeState": {
+    "alertSeverity": "high",
+    "audit": true
+  },
+  "idempotency": {
+    "keyTemplate": "thunder.fail.fatal.v1:{companyId}:{idempotencyKey}"
+  }
+}
