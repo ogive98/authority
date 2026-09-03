@@ -17,6 +17,8 @@ import {
   THUNDER_JOB_TYPES,
 } from '../src/thunder-core/thunder.constants';
 import { PlanAbcPolicyService } from '../src/thunder-core/resilience/plan-abc/plan-abc-policy.service';
+import { RedisService } from '../src/infrastructure/redis.service';
+import { resetThunderEventStream } from './thunder-event-stream.util';
 
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
@@ -81,6 +83,16 @@ describe('Thunder jobs (e2e)', () => {
     );
     await app.init();
     prisma = app.get(PrismaService);
+    if (hasRedis) {
+      const redis = app.get(RedisService).createBullConnection();
+      if (redis) {
+        try {
+          await resetThunderEventStream(redis);
+        } finally {
+          redis.disconnect();
+        }
+      }
+    }
   });
 
   afterEach(async () => {
@@ -393,7 +405,7 @@ describe('Thunder jobs (e2e)', () => {
         where: { eventId: outbox.id },
         select: { consumer: true },
       });
-      if (processed.length >= 2) {
+      if (processed.length >= 3) {
         break;
       }
       await sleep(100);
@@ -402,6 +414,7 @@ describe('Thunder jobs (e2e)', () => {
     expect(processed.map((row) => row.consumer).sort()).toEqual([
       'audit.tap',
       'thunder.echo',
+      'thunder.rules',
     ]);
 
     const secondPass = await consumerHost.pollOnce();
@@ -410,7 +423,7 @@ describe('Thunder jobs (e2e)', () => {
     const processedAfterReplay = await prisma.coreProcessedEvent.findMany({
       where: { eventId: outbox.id },
     });
-    expect(processedAfterReplay).toHaveLength(2);
+    expect(processedAfterReplay).toHaveLength(3);
   });
 
   it('fails fast with Plan C when the circuit breaker is open', async () => {

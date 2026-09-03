@@ -18,13 +18,16 @@ import { JobEnqueueService } from './jobs/job-enqueue.service';
 import { JobProcessorHost } from './jobs/job-processor.host';
 import { JobQueryService } from './jobs/job-query.service';
 import { JobRegistryService } from './jobs/job-registry.service';
+import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
 import { CircuitBreakerService } from './resilience/circuit-breaker.service';
 import { PlanAbcPolicyService } from './resilience/plan-abc/plan-abc-policy.service';
 import { PlanCRegistryService } from './resilience/plan-c-registry.service';
 import { ResourceManagerService } from './resources/resource-manager.service';
 import { WatchdogService } from './resources/watchdog.service';
 import { WatchdogWorker } from './resources/watchdog.worker';
-import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
+import { RuleDefService } from './rules/rule-def.service';
+import { RuleEngineService } from './rules/rule-engine.service';
+import { ThunderRulesRegistrar } from './rules/thunder-rules.registrar';
 import { ThunderController } from './thunder.controller';
 import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
 
@@ -60,6 +63,9 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     WatchdogWorker,
     AdmissionOrchestratorService,
     MonitorSnapshotService,
+    RuleDefService,
+    RuleEngineService,
+    ThunderRulesRegistrar,
   ],
   exports: [
     JobEnqueueService,
@@ -77,6 +83,8 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     JobRegistryService,
     AdmissionOrchestratorService,
     MonitorSnapshotService,
+    RuleDefService,
+    RuleEngineService,
   ],
 })
 export class ThunderModule {}

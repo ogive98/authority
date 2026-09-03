@@ -568,3 +568,22 @@ model ThunderDlqEntry {
   @@index([jobId])
   @@map("thunder_dlq")
 }
+
+model ThunderRuleDef {
+  id              String   @id @default(uuid()) @db.Uuid
+  companyId       String?  @map("company_id") @db.Uuid
+  moduleKey       String   @map("module_key")
+  name            String
+  enabled         Boolean  @default(true)
+  priority        Int      @default(100)
+  eventPattern    String   @map("event_pattern")
+  conditionsJson  Json     @map("conditions_json")
+  actionsJson     Json     @map("actions_json")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([enabled, priority])
+  @@index([companyId, moduleKey])
+  @@index([eventPattern])
+  @@map("thunder_rule_def")
+}

@@ -24,6 +24,8 @@ import {
 import { JobEnqueueService } from '../src/thunder-core/jobs/job-enqueue.service';
 import { JobProcessorHost } from '../src/thunder-core/jobs/job-processor.host';
 import { JobRegistryService } from '../src/thunder-core/jobs/job-registry.service';
+import { RedisService } from '../src/infrastructure/redis.service';
+import { resetThunderEventStream } from './thunder-event-stream.util';
 
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
@@ -64,6 +66,17 @@ describe('Thunder module simulation (e2e)', () => {
     );
     await app.init();
     prisma = app.get(PrismaService);
+
+    if (hasRedis) {
+      const redis = app.get(RedisService).createBullConnection();
+      if (redis) {
+        try {
+          await resetThunderEventStream(redis);
+        } finally {
+          redis.disconnect();
+        }
+      }
+    }
 
     registerSimulatedModules({
       prisma,
