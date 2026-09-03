@@ -19,15 +19,18 @@ import {
 function IconBtn({
   label,
   children,
+  onClick,
 }: {
   label: string;
   children: ReactNode;
+  onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       title={label}
       aria-label={label}
+      onClick={onClick}
       className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-md)] text-a-fg-muted transition-colors hover:bg-a-surface-3 hover:text-a-fg"
     >
       {children}
@@ -38,6 +41,7 @@ function IconBtn({
 export function ShellHeader() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
+  const setPaletteOpen = useShellStore((s) => s.setPaletteOpen);
   const spectreEnabled = useShellStore((s) => s.spectreEnabled);
   const patchEnabled = useShellStore((s) => s.patchEnabled);
   const setSpectreEnabled = useShellStore((s) => s.setSpectreEnabled);
@@ -75,10 +79,16 @@ export function ShellHeader() {
       </div>
 
       <div className="hidden items-center justify-center gap-1 md:flex">
-        <IconBtn label="Recherche globale (stub)">
+        <IconBtn
+          label="Recherche / palette (Ctrl+K)"
+          onClick={() => setPaletteOpen(true)}
+        >
           <Search className="h-4 w-4" strokeWidth={1.75} />
         </IconBtn>
-        <IconBtn label="Palette de commandes (stub)">
+        <IconBtn
+          label="Palette de commandes (Ctrl+K)"
+          onClick={() => setPaletteOpen(true)}
+        >
           <Command className="h-4 w-4" strokeWidth={1.75} />
         </IconBtn>
       </div>
@@ -88,7 +98,10 @@ export function ShellHeader() {
           <Bell className="h-4 w-4" strokeWidth={1.75} />
         </IconBtn>
 
-        <div className="hidden h-5 w-px bg-a-border-subtle sm:block" aria-hidden />
+        <div
+          className="hidden h-5 w-px bg-a-border-subtle sm:block"
+          aria-hidden
+        />
 
         <ModeSwitch
           className="hidden sm:inline-flex"

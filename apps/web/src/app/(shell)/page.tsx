@@ -70,6 +70,14 @@ export default function HomePage() {
                 /dev/forms
               </Link>
             </li>
+            <li>
+              <Link
+                href="/dev/palette"
+                className="text-a-accent hover:underline"
+              >
+                /dev/palette
+              </Link>
+            </li>
           </ul>
         </article>
         <article className="a-card p-[var(--a-space-4)]">

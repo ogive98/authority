@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CommandPaletteHost } from "./command-palette-host";
 import { ShellBreadcrumbs } from "./breadcrumbs";
 import { FeatureMenu } from "./feature-menu";
 import { ShellHeader } from "./header";
@@ -11,6 +12,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-a-surface-1 text-a-fg">
       <SyncModuleFromRoute />
+      <CommandPaletteHost />
       <a
         href="#main"
         className="sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[var(--a-z-toast)] focus:block focus:bg-a-accent focus:px-3 focus:py-2 focus:text-a-accent-fg"
