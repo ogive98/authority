@@ -152,8 +152,13 @@ describe('Modules registry (e2e)', () => {
           (c) => c.key === 'sales.ping',
         )?.moduleId,
       ).toBe('sales');
-      // CAP-01 is read-only for mutations via API — sales surface still gated by state
-      await agent.get('/api/v1/sales/ping').expect(200);
+      // CAP-02: CapabilityGuard + sales.ping after module ENABLED
+      const ping = await agent.get('/api/v1/sales/ping').expect(200);
+      expect(ping.body).toEqual({
+        status: 'ok',
+        module: 'sales',
+        capability: 'sales.ping',
+      });
     } finally {
       await prisma.modModuleState.update({
         where: {

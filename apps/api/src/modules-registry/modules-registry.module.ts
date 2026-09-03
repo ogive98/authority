@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { IdentityModule } from '../identity/identity.module';
+import { PermissionsModule } from '../permissions/permissions.module';
+import { CapabilityGuard } from './capability.guard';
+import { CapabilityResolverService } from './catalog/capability-resolver.service';
 import { ModuleCatalogService } from './catalog/module-catalog.service';
 import { CapabilitiesController } from './capabilities.controller';
 import { FeatureFlagService } from './feature-flag.service';
@@ -10,7 +13,7 @@ import { ModulesController } from './modules.controller';
 import { SalesSurfaceController } from './sales-surface.controller';
 
 @Module({
-  imports: [IdentityModule],
+  imports: [IdentityModule, PermissionsModule],
   controllers: [
     ModulesController,
     CapabilitiesController,
@@ -19,16 +22,20 @@ import { SalesSurfaceController } from './sales-surface.controller';
   providers: [
     ModuleRegistryService,
     ModuleCatalogService,
+    CapabilityResolverService,
     FeatureFlagService,
     ModuleGuard,
     FlagGuard,
+    CapabilityGuard,
   ],
   exports: [
     ModuleRegistryService,
     ModuleCatalogService,
+    CapabilityResolverService,
     FeatureFlagService,
     ModuleGuard,
     FlagGuard,
+    CapabilityGuard,
   ],
 })
 export class ModulesRegistryModule {}

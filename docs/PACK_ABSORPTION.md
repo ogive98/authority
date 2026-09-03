@@ -17,7 +17,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 - Copie : `18_PACK_ABSORPTION/packs/AUTHORITY_THUNDER_CORE_CURSOR_PACK_V2/`
 - **C15 LOCKED** : THU-07→08 ✅ ; pack V2 phase 3 = CAP lots
 - **CAP-01 ✅** — static catalog + `GET /api/v1/capabilities` (read-only)
-- **Next :** CAP-02 — `resolve` + `CapabilityGuard`
+- **CAP-02 ✅** — `CapabilityResolver` + `CapabilityGuard` (`sales.ping`)
+- **Next :** CAP-03 — lifecycle runtime + dependencies
 - CQRS / Command-Query bus : **C12 DEFER**
 - AI réelle : **C06 OPEN** (stub only)
 
