@@ -22,7 +22,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 - **UI-03 ✅** — App shell rail/hover + ASwitch modes
 - **UI-04 ✅** — `GET /api/v1/me/registry` + shell nav
 - **UI-05 ✅** — states gate `/dev/states`
-- **Next :** UI-06 DataTable + filters
+- **UI-06 ✅** — DataTable `/dev/datatable`
+- **Next :** UI-07 Forms + overlays
 - CQRS / Command-Query bus : **C12 DEFER**
 - AI réelle : **C06 OPEN** (stub only)
 
@@ -44,8 +45,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 
 ## Prochaine implémentation code
 
-1. UI-06 DataTable + filters (cursor pagination, 1000 rows mock)  
-2. UI-07+ forms / overlays  
+1. UI-07 Forms + overlays (DynamicForm, confirm danger, drawer)  
+2. UI-08+ command palette / notifications  
 3. Entitlements engine (Pack 3)  
 4. Pack V2 phases 4–8 seulement si C06/C12 rouvertes  
 

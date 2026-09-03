@@ -14,3 +14,4 @@ export {
   AMaintenanceBanner,
 } from "./a-status-banner";
 export { ADemoWatermark } from "./a-demo-watermark";
+export { ADataTableLots } from "./a-data-table-lots";

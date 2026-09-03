@@ -37,8 +37,9 @@
   --a-success-fg: #ecfdf5;
   --a-warning: #d97706;
   --a-warning-fg: #fffbeb;
-  --a-danger: #dc2626;
-  --a-danger-fg: #fef2f2;
+  /* Rouge sobre — même « poids » que teal accent (#0d9488) */
+  --a-danger: #e11d48;
+  --a-danger-fg: #fff1f2;
   --a-info: #0284c7;
   --a-info-fg: #f0f9ff;
 
@@ -118,8 +119,8 @@
   --a-success-fg: #ecfdf5;
   --a-warning: #d97706;
   --a-warning-fg: #fffbeb;
-  --a-danger: #dc2626;
-  --a-danger-fg: #fef2f2;
+  --a-danger: #e11d48;
+  --a-danger-fg: #fff1f2;
   --a-info: #0284c7;
   --a-info-fg: #f0f9ff;
 
@@ -210,6 +211,13 @@
 
   .a-mono {
     font-family: var(--a-font-mono);
+  }
+
+  .a-checkbox {
+    accent-color: var(--a-accent);
+    width: 0.875rem;
+    height: 0.875rem;
+    cursor: pointer;
   }
 
   .a-card {

@@ -56,10 +56,10 @@ export default function HomePage() {
             </li>
             <li>
               <Link
-                href="/dev/registry"
+                href="/dev/datatable"
                 className="text-a-accent hover:underline"
               >
-                /dev/registry
+                /dev/datatable
               </Link>
             </li>
           </ul>
