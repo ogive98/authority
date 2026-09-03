@@ -24,7 +24,7 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 
 ## Prochaine implémentation code
 
-1. Finir THU-05 → THU-08  
+1. Finir THU-06 → THU-08
 2. UI registries (track UI)  
 3. Entitlements engine (Pack 3)  
 4. Modules métier plugins  

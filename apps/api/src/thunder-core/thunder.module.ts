@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { IdentityModule } from '../identity/identity.module';
 import { InfrastructureModule } from '../infrastructure/infrastructure.module';
+import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -17,6 +18,9 @@ import { JobQueryService } from './jobs/job-query.service';
 import { JobRegistryService } from './jobs/job-registry.service';
 import { CircuitBreakerService } from './resilience/circuit-breaker.service';
 import { PlanCRegistryService } from './resilience/plan-c-registry.service';
+import { ResourceManagerService } from './resources/resource-manager.service';
+import { WatchdogService } from './resources/watchdog.service';
+import { WatchdogWorker } from './resources/watchdog.worker';
 import { ThunderController } from './thunder.controller';
 import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
 
@@ -27,6 +31,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     IdentityModule,
     OrganizationModule,
     PermissionsModule,
+    ModulesRegistryModule,
   ],
   controllers: [ThunderController],
   providers: [
@@ -44,6 +49,9 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     EventConsumerWorker,
     CircuitBreakerService,
     PlanCRegistryService,
+    ResourceManagerService,
+    WatchdogService,
+    WatchdogWorker,
   ],
   exports: [
     JobEnqueueService,
@@ -55,6 +63,9 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     ProcessedEventService,
     CircuitBreakerService,
     PlanCRegistryService,
+    ResourceManagerService,
+    WatchdogService,
+    JobRegistryService,
   ],
 })
 export class ThunderModule {}

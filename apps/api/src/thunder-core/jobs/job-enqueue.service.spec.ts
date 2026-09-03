@@ -22,6 +22,11 @@ describe('JobEnqueueService', () => {
     recordFailure: jest.Mock;
   };
   let planCRegistry: { execute: jest.Mock };
+  let modules: { isEnabled: jest.Mock };
+  let resources: {
+    shouldAdmitEnqueue: jest.Mock;
+    defaultPriority: jest.Mock;
+  };
   let service: JobEnqueueService;
   let queueAdd: jest.Mock;
 
@@ -61,6 +66,15 @@ describe('JobEnqueueService', () => {
       }),
     };
 
+    modules = {
+      isEnabled: jest.fn().mockResolvedValue(true),
+    };
+
+    resources = {
+      shouldAdmitEnqueue: jest.fn().mockReturnValue({ allowed: true }),
+      defaultPriority: jest.fn().mockReturnValue(2),
+    };
+
     registry = new JobRegistryService();
     service = new JobEnqueueService(
       prisma as never,
@@ -68,6 +82,8 @@ describe('JobEnqueueService', () => {
       registry,
       circuitBreaker as never,
       planCRegistry as never,
+      modules as never,
+      resources as never,
     );
 
     jest
@@ -148,6 +164,42 @@ describe('JobEnqueueService', () => {
       code: THUNDER_ERROR_CODES.IDEMPOTENCY_CONFLICT,
     });
   });
+
+  it('rejects enqueue when module is disabled', async () => {
+    modules.isEnabled.mockResolvedValue(false);
+
+    await expect(
+      service.enqueue({
+        jobType: THUNDER_JOB_TYPES.moduleGated,
+        companyId,
+        queue: 'ops',
+        idempotencyKey: 'mod-off',
+        payload: {},
+      }),
+    ).rejects.toMatchObject({
+      code: THUNDER_ERROR_CODES.MODULE_DISABLED,
+    });
+    expect(prisma.thunderJob.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects sheddable enqueue under P4 pressure', async () => {
+    resources.shouldAdmitEnqueue.mockReturnValue({
+      allowed: false,
+      reason: 'shed_p4',
+    });
+
+    await expect(
+      service.enqueue({
+        jobType: THUNDER_JOB_TYPES.importBulk,
+        companyId,
+        queue: 'import',
+        idempotencyKey: 'import-shed',
+        payload: {},
+      }),
+    ).rejects.toMatchObject({
+      code: THUNDER_ERROR_CODES.SHED_P4,
+    });
+  });
 });
 
 describe('JobEnqueueService idempotency conflict status', () => {
@@ -171,12 +223,19 @@ describe('JobEnqueueService idempotency conflict status', () => {
         .mockResolvedValue({ allowed: true, state: 'CLOSED' }),
     };
     const planCRegistry = { execute: jest.fn() };
+    const modules = { isEnabled: jest.fn().mockResolvedValue(true) };
+    const resources = {
+      shouldAdmitEnqueue: jest.fn().mockReturnValue({ allowed: true }),
+      defaultPriority: jest.fn().mockReturnValue(2),
+    };
     const service = new JobEnqueueService(
       prisma as never,
       redis as never,
       new JobRegistryService(),
       circuitBreaker as never,
       planCRegistry as never,
+      modules as never,
+      resources as never,
     );
 
     try {

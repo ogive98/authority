@@ -6,11 +6,15 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { JobProcessorHost } from '../src/thunder-core/jobs/job-processor.host';
+import { JobEnqueueService } from '../src/thunder-core/jobs/job-enqueue.service';
 import { EventConsumerHost } from '../src/thunder-core/events/event-consumer.host';
 import { OutboxPublisherService } from '../src/thunder-core/events/outbox-publisher.service';
+import { ResourceManagerService } from '../src/thunder-core/resources/resource-manager.service';
+import { WatchdogService } from '../src/thunder-core/resources/watchdog.service';
 import {
   THUNDER_DEPENDENCY_KEYS,
   THUNDER_ERROR_CODES,
+  THUNDER_JOB_TYPES,
 } from '../src/thunder-core/thunder.constants';
 
 const DEMO_EMAIL = 'demo@authority.local';
@@ -458,5 +462,209 @@ describe('Thunder jobs (e2e)', () => {
       ok: true,
       dependency: dependencyKey,
     });
+  });
+
+  it('pauses module-gated jobs when the module is disabled', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const processor = app.get(JobProcessorHost);
+    const enqueue = app.get(JobEnqueueService);
+    const company = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+
+    await prisma.modModuleState.upsert({
+      where: {
+        companyId_moduleKey: {
+          companyId: company!.id,
+          moduleKey: 'inventory',
+        },
+      },
+      update: { status: 'DISABLED' },
+      create: {
+        companyId: company!.id,
+        moduleKey: 'inventory',
+        status: 'DISABLED',
+      },
+    });
+
+    await expect(
+      enqueue.enqueue({
+        jobType: THUNDER_JOB_TYPES.moduleGated,
+        companyId: company!.id,
+        queue: 'ops',
+        idempotencyKey: `mod-off-enq-${Date.now()}`,
+        payload: {},
+      }),
+    ).rejects.toMatchObject({
+      code: THUNDER_ERROR_CODES.MODULE_DISABLED,
+    });
+
+    const row = await prisma.thunderJob.create({
+      data: {
+        companyId: company!.id,
+        jobType: THUNDER_JOB_TYPES.moduleGated,
+        queue: 'ops',
+        idempotencyKey: `mod-off-proc-${Date.now()}`,
+        payloadHash: 'test',
+        payloadJson: {
+          _context: {
+            correlationId: 'corr-mod',
+            requestId: 'req-mod',
+            source: 'system',
+            occurredAt: new Date().toISOString(),
+          },
+        },
+        status: 'PENDING',
+      },
+    });
+
+    await processor.processById(row.id);
+
+    const updated = await prisma.thunderJob.findUnique({
+      where: { id: row.id },
+    });
+    expect(updated?.status).toBe('PAUSED_BY_MODULE');
+  });
+
+  it('admits critical jobs while shedding import under P4 pressure', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const enqueue = app.get(JobEnqueueService);
+    const resources = app.get(ResourceManagerService);
+    const company = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+
+    resources.setShedP4(true, 'e2e');
+
+    try {
+      await expect(
+        enqueue.enqueue({
+          jobType: THUNDER_JOB_TYPES.importBulk,
+          companyId: company!.id,
+          queue: 'import',
+          idempotencyKey: `import-shed-${Date.now()}`,
+          payload: {},
+        }),
+      ).rejects.toMatchObject({
+        code: THUNDER_ERROR_CODES.SHED_P4,
+      });
+
+      if (hasRedis) {
+        const { agent } = await loginWithDemoContext();
+        const critical = await enqueue.enqueue({
+          jobType: THUNDER_JOB_TYPES.criticalPing,
+          companyId: company!.id,
+          queue: 'critical',
+          idempotencyKey: `critical-ok-${Date.now()}`,
+          payload: {},
+        });
+        expect(critical.jobId).toBeTruthy();
+        const completed = await waitForJobCompletion(agent, critical.jobId!);
+        expect(completed.status).toBe('COMPLETED');
+      } else {
+        const processor = app.get(JobProcessorHost);
+        const row = await prisma.thunderJob.create({
+          data: {
+            companyId: company!.id,
+            jobType: THUNDER_JOB_TYPES.criticalPing,
+            queue: 'critical',
+            priority: 0,
+            idempotencyKey: `critical-inline-${Date.now()}`,
+            payloadHash: 'test',
+            payloadJson: {
+              _context: {
+                correlationId: 'corr-crit',
+                requestId: 'req-crit',
+                source: 'system',
+                occurredAt: new Date().toISOString(),
+              },
+            },
+            status: 'PENDING',
+          },
+        });
+        await processor.processById(row.id);
+        const updated = await prisma.thunderJob.findUnique({
+          where: { id: row.id },
+        });
+        expect(updated?.status).toBe('COMPLETED');
+      }
+    } finally {
+      resources.setShedP4(false);
+    }
+  });
+
+  it('watchdog requeues stalled idempotent jobs', async () => {
+    if (!hasDatabase) {
+      return;
+    }
+
+    const watchdog = app.get(WatchdogService);
+    const enqueue = app.get(JobEnqueueService);
+    const company = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+    const stale = new Date(Date.now() - 120_000);
+
+    const row = await prisma.thunderJob.create({
+      data: {
+        companyId: company!.id,
+        jobType: THUNDER_JOB_TYPES.hello,
+        queue: 'ops',
+        priority: 2,
+        idempotencyKey: `watchdog-${Date.now()}`,
+        payloadHash: 'test',
+        payloadJson: {
+          message: 'stalled',
+          _context: {
+            correlationId: 'corr-wd',
+            requestId: 'req-wd',
+            source: 'system',
+            occurredAt: new Date().toISOString(),
+          },
+        },
+        status: 'RUNNING',
+        startedAt: stale,
+        heartbeatAt: stale,
+        attempts: 1,
+        bullJobId: 'stale-bull',
+      },
+    });
+
+    process.env.THUNDER_STALL_MS = '1000';
+
+    try {
+      if (!hasRedis) {
+        const requeue = jest
+          .spyOn(enqueue, 'requeueExisting')
+          .mockResolvedValue(undefined);
+        const handled = await watchdog.scanOnce();
+        expect(handled).toBeGreaterThanOrEqual(1);
+        expect(requeue).toHaveBeenCalledWith(
+          expect.objectContaining({ jobId: row.id }),
+        );
+        requeue.mockRestore();
+        const updated = await prisma.thunderJob.findUnique({
+          where: { id: row.id },
+        });
+        expect(updated?.status).toBe('PENDING');
+      } else {
+        const handled = await watchdog.scanOnce();
+        expect(handled).toBeGreaterThanOrEqual(1);
+        const updated = await prisma.thunderJob.findUnique({
+          where: { id: row.id },
+        });
+        // Worker may claim the requeued job immediately.
+        expect(['PENDING', 'RUNNING', 'COMPLETED']).toContain(updated?.status);
+        expect(updated?.bullJobId).not.toBe('stale-bull');
+      }
+    } finally {
+      delete process.env.THUNDER_STALL_MS;
+    }
   });
 });

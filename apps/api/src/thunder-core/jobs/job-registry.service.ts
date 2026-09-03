@@ -5,7 +5,11 @@ import {
   THUNDER_QUEUE_FAMILIES,
   type ThunderQueueFamily,
 } from '../thunder.constants';
-import type { JobHandler, RegisteredJobHandler } from './job.types';
+import type {
+  JobHandler,
+  JobRegisterOptions,
+  RegisteredJobHandler,
+} from './job.types';
 import {
   executeFailFatalJob,
   executeFailRetryableJob,
@@ -13,6 +17,11 @@ import {
 } from './processors/fail.processor';
 import { executeBreakerGuardedJob } from './processors/breaker-guarded.processor';
 import { executeHelloJob } from './processors/hello.processor';
+import {
+  executeCriticalPingJob,
+  executeImportBulkJob,
+  executeModuleGatedJob,
+} from './processors/resource.processor';
 
 @Injectable()
 export class JobRegistryService {
@@ -31,17 +40,33 @@ export class JobRegistryService {
       THUNDER_JOB_TYPES.breakerGuarded,
       'ops',
       executeBreakerGuardedJob,
-      THUNDER_DEPENDENCY_KEYS.externalApiStub,
+      { dependencyKey: THUNDER_DEPENDENCY_KEYS.externalApiStub },
     );
+    this.register(
+      THUNDER_JOB_TYPES.criticalPing,
+      'critical',
+      executeCriticalPingJob,
+    );
+    this.register(THUNDER_JOB_TYPES.importBulk, 'import', executeImportBulkJob);
+    this.register(THUNDER_JOB_TYPES.moduleGated, 'ops', executeModuleGatedJob, {
+      moduleKey: 'inventory',
+    });
   }
 
   register(
     jobType: string,
     queue: ThunderQueueFamily,
     handler: JobHandler,
-    dependencyKey?: string,
+    opts?: JobRegisterOptions | string,
   ): void {
-    this.handlers.set(jobType, { queue, handler, dependencyKey });
+    const normalized: JobRegisterOptions =
+      typeof opts === 'string' ? { dependencyKey: opts } : (opts ?? {});
+    this.handlers.set(jobType, {
+      queue,
+      handler,
+      dependencyKey: normalized.dependencyKey,
+      moduleKey: normalized.moduleKey,
+    });
   }
 
   get(jobType: string): RegisteredJobHandler | undefined {

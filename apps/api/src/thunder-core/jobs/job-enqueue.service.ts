@@ -8,8 +8,10 @@ import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import type Redis from 'ioredis';
 import { RedisService } from '../../infrastructure/redis.service';
+import { ModuleRegistryService } from '../../modules-registry/module-registry.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { createThunderContext } from '../context/thunder-context';
+import { ResourceManagerService } from '../resources/resource-manager.service';
 import {
   THUNDER_ERROR_CODES,
   THUNDER_JOB_TYPES,
@@ -46,6 +48,8 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
     private readonly registry: JobRegistryService,
     private readonly circuitBreaker: CircuitBreakerService,
     private readonly planCRegistry: PlanCRegistryService,
+    private readonly modules: ModuleRegistryService,
+    private readonly resources: ResourceManagerService,
   ) {}
 
   async enqueueHello(params: {
@@ -178,6 +182,16 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
     return reconciled;
   }
 
+  /** Watchdog / ops: put an existing PENDING row back onto BullMQ. */
+  async requeueExisting(params: {
+    jobId: string;
+    jobType: string;
+    queue: ThunderQueueFamily;
+    priority: number;
+  }): Promise<void> {
+    await this.addJobToQueue(params);
+  }
+
   onModuleInit(): void {
     if (!thunderWorkersEnabled()) {
       return;
@@ -192,6 +206,36 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
         THUNDER_ERROR_CODES.UNKNOWN_JOB_TYPE,
         `Unknown job type: ${input.jobType}`,
         HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (registration.moduleKey) {
+      const enabled = await this.modules.isEnabled(
+        input.companyId,
+        registration.moduleKey,
+      );
+      if (!enabled) {
+        throw new ThunderException(
+          THUNDER_ERROR_CODES.MODULE_DISABLED,
+          `Module disabled: ${registration.moduleKey}`,
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+    }
+
+    const admission = this.resources.shouldAdmitEnqueue(
+      input.queue,
+      input.companyId,
+    );
+    if (!admission.allowed) {
+      const code =
+        admission.reason === 'fairness_throttle'
+          ? THUNDER_ERROR_CODES.FAIRNESS_THROTTLE
+          : THUNDER_ERROR_CODES.SHED_P4;
+      throw new ThunderException(
+        code,
+        admission.reason ?? 'Resource admission denied',
+        HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
 
@@ -220,10 +264,10 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (registration.dependencyKey) {
-      const admission = await this.circuitBreaker.checkAdmission(
+      const breakerAdmission = await this.circuitBreaker.checkAdmission(
         registration.dependencyKey,
       );
-      if (!admission.allowed) {
+      if (!breakerAdmission.allowed) {
         const planCResult = await this.planCRegistry.execute(
           registration.dependencyKey,
           {
@@ -252,6 +296,9 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
       idempotencyKey: input.idempotencyKey,
     });
 
+    const priority =
+      input.priority ?? this.resources.defaultPriority(input.queue);
+
     let jobRow: { id: string; status: string };
 
     try {
@@ -260,7 +307,7 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
           companyId: input.companyId,
           jobType: input.jobType,
           queue: input.queue,
-          priority: input.priority ?? 2,
+          priority,
           idempotencyKey: input.idempotencyKey,
           payloadHash,
           payloadJson: {
@@ -306,7 +353,7 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
         jobId: jobRow.id,
         jobType: input.jobType,
         queue: input.queue,
-        priority: input.priority ?? 2,
+        priority,
       });
     } catch (error) {
       const message =

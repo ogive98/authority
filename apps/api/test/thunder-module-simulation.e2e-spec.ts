@@ -72,6 +72,26 @@ describe('Thunder module simulation (e2e)', () => {
       jobEnqueue: app.get(JobEnqueueService),
     });
 
+    const demo = await prisma.orgCompany.findUnique({
+      where: { code: 'DEMO' },
+    });
+    if (demo) {
+      await prisma.modModuleState.upsert({
+        where: {
+          companyId_moduleKey: {
+            companyId: demo.id,
+            moduleKey: 'inventory',
+          },
+        },
+        update: { status: 'ENABLED' },
+        create: {
+          companyId: demo.id,
+          moduleKey: 'inventory',
+          status: 'ENABLED',
+        },
+      });
+    }
+
     await prisma.thunderJob.deleteMany({
       where: { jobType: SIMULATED_MODULE_JOBS.inventoryReserve },
     });
@@ -83,6 +103,17 @@ describe('Thunder module simulation (e2e)', () => {
         jobRegistry: moduleFixture.get(JobRegistryService),
         consumerRegistry: moduleFixture.get(ConsumerRegistryService),
       });
+    }
+    if (prisma) {
+      const demo = await prisma.orgCompany.findUnique({
+        where: { code: 'DEMO' },
+      });
+      if (demo) {
+        await prisma.modModuleState.updateMany({
+          where: { companyId: demo.id, moduleKey: 'inventory' },
+          data: { status: 'DISABLED' },
+        });
+      }
     }
     if (app) {
       await app.close();

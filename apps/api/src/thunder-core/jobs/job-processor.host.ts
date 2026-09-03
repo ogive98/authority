@@ -8,8 +8,10 @@ import { Prisma } from '@prisma/client';
 import { Job, UnrecoverableError, Worker } from 'bullmq';
 import type Redis from 'ioredis';
 import { RedisService } from '../../infrastructure/redis.service';
+import { ModuleRegistryService } from '../../modules-registry/module-registry.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { ThunderContext } from '../context/thunder-context';
+import { ResourceManagerService } from '../resources/resource-manager.service';
 import { thunderQueueName, thunderWorkersEnabled } from '../thunder.constants';
 import { CircuitBreakerService } from '../resilience/circuit-breaker.service';
 import { DlqService } from './dlq/dlq.service';
@@ -34,6 +36,8 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     private readonly registry: JobRegistryService,
     private readonly dlqService: DlqService,
     private readonly circuitBreaker: CircuitBreakerService,
+    private readonly modules: ModuleRegistryService,
+    private readonly resources: ResourceManagerService,
   ) {}
 
   onModuleInit(): void {
@@ -42,6 +46,14 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     }
 
     for (const queueFamily of this.registry.getQueuesInUse()) {
+      const concurrency = this.resources.getConcurrency(queueFamily);
+      if (concurrency <= 0) {
+        this.logger.log(
+          `Thunder worker skipped for ${queueFamily} (concurrency=0 / shed)`,
+        );
+        continue;
+      }
+
       const connection = this.redis.createBullConnection();
       if (!connection) {
         this.logger.warn('Thunder workers skipped — Redis unavailable');
@@ -54,7 +66,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
         async (job) => this.processJob(job),
         {
           connection,
-          concurrency: 2,
+          concurrency,
           settings: {
             backoffStrategy: (attemptsMade) =>
               computeBackoffDelayMs(attemptsMade),
@@ -67,7 +79,9 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
       });
 
       this.workers.push(worker);
-      this.logger.log(`Thunder worker listening on ${queueFamily}`);
+      this.logger.log(
+        `Thunder worker listening on ${queueFamily} (concurrency=${concurrency})`,
+      );
     }
   }
 
@@ -106,15 +120,39 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    if (registration.moduleKey && row.companyId) {
+      const enabled = await this.modules.isEnabled(
+        row.companyId,
+        registration.moduleKey,
+      );
+      if (!enabled) {
+        await this.prisma.thunderJob.update({
+          where: { id: row.id },
+          data: {
+            status: 'PAUSED_BY_MODULE',
+            bullJobId: null,
+            errorJson: {
+              message: `Module disabled: ${registration.moduleKey}`,
+              phase: 'processor',
+              moduleKey: registration.moduleKey,
+            },
+          },
+        });
+        return;
+      }
+    }
+
     const payload = (row.payloadJson ?? {}) as Prisma.JsonObject;
     const context = this.readContext(payload);
     const timeoutMs = getJobTimeoutMsForType(row.jobType);
+    const now = new Date();
 
     await this.prisma.thunderJob.update({
       where: { id: row.id },
       data: {
         status: 'RUNNING',
-        startedAt: row.startedAt ?? new Date(),
+        startedAt: row.startedAt ?? now,
+        heartbeatAt: now,
         attempts: { increment: 1 },
       },
     });
@@ -144,6 +182,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
           status: 'COMPLETED',
           resultJson: result,
           finishedAt: new Date(),
+          heartbeatAt: new Date(),
           errorJson: Prisma.DbNull,
         },
       });

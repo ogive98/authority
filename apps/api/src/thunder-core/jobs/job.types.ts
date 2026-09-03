@@ -23,6 +23,13 @@ export interface RegisteredJobHandler {
   queue: ThunderQueueFamily;
   handler: JobHandler;
   dependencyKey?: string;
+  /** When set, enqueue/process require this module ENABLED for the company. */
+  moduleKey?: string;
+}
+
+export interface JobRegisterOptions {
+  dependencyKey?: string;
+  moduleKey?: string;
 }
 
 export interface JobEnqueueResult {

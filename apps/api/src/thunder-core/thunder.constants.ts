@@ -4,6 +4,9 @@ export const THUNDER_JOB_TYPES = {
   failFatal: 'thunder.fail.fatal.v1',
   failTimeout: 'thunder.fail.timeout.v1',
   breakerGuarded: 'thunder.breaker-guarded.v1',
+  criticalPing: 'thunder.critical.ping.v1',
+  importBulk: 'thunder.import.bulk.v1',
+  moduleGated: 'thunder.module-gated.v1',
 } as const;
 
 export const THUNDER_DEPENDENCY_KEYS = {
@@ -30,6 +33,9 @@ export const THUNDER_ERROR_CODES = {
   IDEMPOTENCY_CONFLICT: 'THUNDER.IDEMPOTENCY_CONFLICT',
   UNKNOWN_JOB_TYPE: 'THUNDER.UNKNOWN_JOB_TYPE',
   PROCESSOR_UNAVAILABLE: 'THUNDER.PROCESSOR_UNAVAILABLE',
+  MODULE_DISABLED: 'THUNDER.MODULE_DISABLED',
+  SHED_P4: 'THUNDER.SHED_P4',
+  FAIRNESS_THROTTLE: 'THUNDER.FAIRNESS_THROTTLE',
 } as const;
 
 export type ThunderErrorCode =

@@ -17,6 +17,7 @@ export function registerSimulatedModules(deps: {
     SIMULATED_MODULE_JOBS.inventoryReserve,
     'ops',
     createInventoryReserveProcessor({ prisma: deps.prisma }),
+    { moduleKey: 'inventory' },
   );
   deps.consumerRegistry.register(
     SIMULATED_MODULE_CONSUMERS.inventoryReserveFromOrder,
