@@ -15,10 +15,10 @@
 
   /* canvas → card → raised → hover → highest */
   --a-surface-1: #0b0c10;
-  --a-surface-2: #12141a;
-  --a-surface-3: #1a1d27;
-  --a-surface-4: #222632;
-  --a-surface-5: #2c3140;
+  --a-surface-2: #171a22;
+  --a-surface-3: #1f2430;
+  --a-surface-4: #282e3c;
+  --a-surface-5: #323948;
 
   --a-fg: #f4f4f5;
   --a-fg-muted: #a1a1aa;
@@ -37,9 +37,9 @@
   --a-success-fg: #ecfdf5;
   --a-warning: #d97706;
   --a-warning-fg: #fffbeb;
-  /* Rouge sobre — même « poids » que teal accent (#0d9488) */
-  --a-danger: #e11d48;
-  --a-danger-fg: #fff1f2;
+  /* Rouge atténué — même sobriété que teal, pas rose néon */
+  --a-danger: #b85c63;
+  --a-danger-fg: #fce8ea;
   --a-info: #0284c7;
   --a-info-fg: #f0f9ff;
 
@@ -119,8 +119,8 @@
   --a-success-fg: #ecfdf5;
   --a-warning: #d97706;
   --a-warning-fg: #fffbeb;
-  --a-danger: #e11d48;
-  --a-danger-fg: #fff1f2;
+  --a-danger: #a84850;
+  --a-danger-fg: #fce8ea;
   --a-info: #0284c7;
   --a-info-fg: #f0f9ff;
 

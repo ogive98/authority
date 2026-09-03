@@ -62,6 +62,14 @@ export default function HomePage() {
                 /dev/datatable
               </Link>
             </li>
+            <li>
+              <Link
+                href="/dev/forms"
+                className="text-a-accent hover:underline"
+              >
+                /dev/forms
+              </Link>
+            </li>
           </ul>
         </article>
         <article className="a-card p-[var(--a-space-4)]">
