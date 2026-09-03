@@ -18,7 +18,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 - **C15 LOCKED** : THU-07→08 ✅
 - **Pack V2 phase 3 ✅** — CAP-01→04
 - **UI-01 ✅** — tokens Plex + teal sobre + `/dev/tokens`
-- **Next :** UI-02 primitives
+- **UI-02 ✅** — primitives A* + `/dev/primitives`
+- **Next :** UI-03 App shell
 - CQRS / Command-Query bus : **C12 DEFER**
 - AI réelle : **C06 OPEN** (stub only)
 
@@ -40,8 +41,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 
 ## Prochaine implémentation code
 
-1. UI-02 primitives (`AButton`, `AInput`, `ADecimalField`, `ABadge`, …)  
-2. UI-03+ shell / registry  
+1. UI-03 App shell (sidebar, header, breadcrumbs, ResourceMonitor stub)  
+2. UI-04+ registry / states  
 3. Entitlements engine (Pack 3)  
 4. Pack V2 phases 4–8 seulement si C06/C12 rouvertes  
 
