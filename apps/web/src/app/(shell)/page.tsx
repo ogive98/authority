@@ -46,6 +46,22 @@ export default function HomePage() {
                 /dev/primitives
               </Link>
             </li>
+            <li>
+              <Link
+                href="/dev/states"
+                className="text-a-accent hover:underline"
+              >
+                /dev/states
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/dev/registry"
+                className="text-a-accent hover:underline"
+              >
+                /dev/registry
+              </Link>
+            </li>
           </ul>
         </article>
         <article className="a-card p-[var(--a-space-4)]">
