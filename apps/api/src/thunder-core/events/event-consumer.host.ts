@@ -77,17 +77,21 @@ export class EventConsumerHost implements OnModuleDestroy {
       for (const [messageId, fields] of messages) {
         try {
           const envelope = parseEventEnvelopeFromStreamFields(fields);
-          const status = await this.processedEvents.markProcessed(
+          const alreadyProcessed = await this.processedEvents.isProcessed(
             consumerGroup,
             envelope.eventId,
           );
 
-          if (status === 'duplicate') {
+          if (alreadyProcessed) {
             await connection.xack(streamKey, consumerGroup, messageId);
             continue;
           }
 
           await registration.handler(envelope);
+          await this.processedEvents.markProcessed(
+            consumerGroup,
+            envelope.eventId,
+          );
           await connection.xack(streamKey, consumerGroup, messageId);
           handled += 1;
         } catch (error) {

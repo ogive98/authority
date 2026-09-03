@@ -6,6 +6,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class ProcessedEventService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async isProcessed(consumer: string, eventId: string): Promise<boolean> {
+    const row = await this.prisma.coreProcessedEvent.findFirst({
+      where: { consumer, eventId },
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
   async markProcessed(
     consumer: string,
     eventId: string,

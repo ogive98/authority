@@ -48,6 +48,10 @@ export class JobRegistryService {
     return this.handlers.get(jobType);
   }
 
+  unregister(jobType: string): void {
+    this.handlers.delete(jobType);
+  }
+
   getQueuesInUse(): ThunderQueueFamily[] {
     const queues = new Set<ThunderQueueFamily>();
     for (const entry of this.handlers.values()) {

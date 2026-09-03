@@ -5,7 +5,8 @@ Monorepo **SOC-01** — NestJS API + Next.js web + Docker infra.
 ## Constitution
 
 Specs : `C:\Users\admin\Downloads\AUTHORITY-DOCUMENTATION`  
-Implémentation : `17_IMPLEMENTATION/04_TRACK_SOCLE.md`
+Implémentation : `17_IMPLEMENTATION/04_TRACK_SOCLE.md`  
+Packs absorbés (règles code) : [docs/PACK_ABSORPTION.md](docs/PACK_ABSORPTION.md)
 
 ## Structure
 

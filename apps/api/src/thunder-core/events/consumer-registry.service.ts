@@ -26,4 +26,8 @@ export class ConsumerRegistryService {
   get(consumerId: string): RegisteredEventConsumer | undefined {
     return this.consumers.get(consumerId);
   }
+
+  unregister(consumerId: string): void {
+    this.consumers.delete(consumerId);
+  }
 }

@@ -32,4 +32,17 @@ describe('ProcessedEventService', () => {
       'new',
     );
   });
+
+  it('detects already processed events', async () => {
+    const prisma = {
+      coreProcessedEvent: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'processed-1' }),
+      },
+    };
+
+    const service = new ProcessedEventService(prisma as never);
+    await expect(service.isProcessed('audit.tap', 'event-1')).resolves.toBe(
+      true,
+    );
+  });
 });
