@@ -2,22 +2,20 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useShellStore } from "@/stores/shell-store";
-import { visibleModules } from "./nav-stub";
+import { iconForModule } from "./module-icons";
 
-/**
- * Icon rail — collapsed by default; expands on hover (desktop).
- * Click module → features in FeatureMenu.
- */
 export function ShellSidebar() {
   const [hovered, setHovered] = useState(false);
   const mobileOpen = useShellStore((s) => s.mobileNavOpen);
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
   const selectedModuleId = useShellStore((s) => s.selectedModuleId);
   const setSelectedModuleId = useShellStore((s) => s.setSelectedModuleId);
+  const { data: registry } = useMeRegistry();
 
   const expanded = mobileOpen || hovered;
-  const modules = visibleModules();
+  const modules = registry?.modules ?? [];
 
   return (
     <>
@@ -75,15 +73,15 @@ export function ShellSidebar() {
         >
           <ul className="space-y-0.5 px-1.5">
             {modules.map((mod) => {
-              const Icon = mod.icon;
-              const active = selectedModuleId === mod.id;
+              const Icon = iconForModule(mod.key);
+              const active = selectedModuleId === mod.key;
               return (
-                <li key={mod.id}>
+                <li key={mod.key}>
                   <button
                     type="button"
-                    title={mod.label}
+                    title={mod.name}
                     onClick={() => {
-                      setSelectedModuleId(mod.id);
+                      setSelectedModuleId(mod.key);
                       setMobileNavOpen(false);
                     }}
                     className={cn(
@@ -102,10 +100,12 @@ export function ShellSidebar() {
                     <span
                       className={cn(
                         "truncate transition-opacity duration-200",
-                        expanded ? "opacity-100" : "w-0 overflow-hidden opacity-0",
+                        expanded
+                          ? "opacity-100"
+                          : "w-0 overflow-hidden opacity-0",
                       )}
                     >
-                      {mod.label}
+                      {mod.name}
                     </span>
                   </button>
                 </li>

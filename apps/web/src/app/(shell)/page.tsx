@@ -11,8 +11,12 @@ export default function HomePage() {
           Tableau de bord
         </h1>
         <p className="mt-1 max-w-xl text-[length:var(--a-text-sm)] text-a-fg-muted">
-          Rail modules à gauche (survol = noms). Clic = fonctionnalités au
-          centre. Switches iOS : thème, SPECTRE, PATCH.
+          Nav depuis <span className="a-mono">/api/v1/me/registry</span> —
+          modules ENABLED seulement. Gate flag :{" "}
+          <Link href="/dev/registry" className="text-a-accent hover:underline">
+            /dev/registry
+          </Link>
+          .
         </p>
       </div>
 

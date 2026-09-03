@@ -20,7 +20,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 - **UI-01 ✅** — tokens Plex + teal sobre + `/dev/tokens`
 - **UI-02 ✅** — primitives A* + `/dev/primitives`
 - **UI-03 ✅** — App shell rail/hover + ASwitch modes
-- **Next :** UI-04 Navigation registry
+- **UI-04 ✅** — `GET /api/v1/me/registry` + shell nav
+- **Next :** UI-05 States
 - CQRS / Command-Query bus : **C12 DEFER**
 - AI réelle : **C06 OPEN** (stub only)
 
@@ -42,8 +43,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 
 ## Prochaine implémentation code
 
-1. UI-04 Navigation registry (fetch flags ; module DISABLED absent)  
-2. UI-05+ states / DataTable  
+1. UI-05 States (empty, skeleton, error+correlationId, 403, offline, …)  
+2. UI-06+ DataTable / forms  
 3. Entitlements engine (Pack 3)  
 4. Pack V2 phases 4–8 seulement si C06/C12 rouvertes  
 

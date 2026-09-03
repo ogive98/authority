@@ -3,17 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useShellStore } from "@/stores/shell-store";
-import { getModule } from "./nav-stub";
 
-/**
- * Main feature menu — appears when a module is selected.
- * Lists functionalities of that module (stub until registry).
- */
 export function FeatureMenu() {
   const pathname = usePathname();
   const selectedModuleId = useShellStore((s) => s.selectedModuleId);
-  const mod = getModule(selectedModuleId);
+  const { data: registry } = useMeRegistry();
+  const mod = registry?.modules.find((m) => m.key === selectedModuleId);
 
   if (!mod || mod.features.length === 0) {
     return null;
@@ -22,20 +19,22 @@ export function FeatureMenu() {
   return (
     <aside
       className="flex w-48 shrink-0 flex-col border-r border-a-border-subtle bg-a-surface-2"
-      aria-label={`Fonctionnalités — ${mod.label}`}
+      aria-label={`Fonctionnalités — ${mod.name}`}
     >
       <div className="flex h-12 items-center border-b border-a-border-subtle px-3">
         <p className="truncate text-[length:var(--a-text-sm)] font-medium">
-          {mod.label}
+          {mod.name}
         </p>
       </div>
       <nav className="flex-1 overflow-y-auto p-2">
         <ul className="space-y-0.5">
           {mod.features.map((f) => {
+            const pathOnly = f.href.split("#")[0] || "/";
             const active =
-              f.href === "/"
+              pathOnly === "/"
                 ? pathname === "/"
-                : pathname === f.href || pathname.startsWith(f.href + "/");
+                : pathname === pathOnly ||
+                  pathname.startsWith(pathOnly + "/");
             return (
               <li key={f.id}>
                 <Link

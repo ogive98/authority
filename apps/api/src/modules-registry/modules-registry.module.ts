@@ -10,6 +10,8 @@ import { ModuleLifecycleService } from './catalog/module-lifecycle.service';
 import { CapabilitiesController } from './capabilities.controller';
 import { FeatureFlagService } from './feature-flag.service';
 import { FlagGuard } from './flag.guard';
+import { MeRegistryController } from './me-registry.controller';
+import { MeRegistryService } from './me-registry.service';
 import { ModuleActivationService } from './module-activation.service';
 import { ModuleGuard } from './module.guard';
 import { ModuleRegistryService } from './module-registry.service';
@@ -22,6 +24,7 @@ import { SalesSurfaceController } from './sales-surface.controller';
     ModulesController,
     CapabilitiesController,
     SalesSurfaceController,
+    MeRegistryController,
   ],
   providers: [
     ModuleRegistryService,
@@ -30,6 +33,7 @@ import { SalesSurfaceController } from './sales-surface.controller';
     ModuleActivationService,
     CapabilityResolverService,
     FeatureFlagService,
+    MeRegistryService,
     ModuleGuard,
     FlagGuard,
     CapabilityGuard,
@@ -41,6 +45,7 @@ import { SalesSurfaceController } from './sales-surface.controller';
     ModuleActivationService,
     CapabilityResolverService,
     FeatureFlagService,
+    MeRegistryService,
     ModuleGuard,
     FlagGuard,
     CapabilityGuard,

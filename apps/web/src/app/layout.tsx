@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
 const plexSans = IBM_Plex_Sans({
@@ -33,7 +34,9 @@ export default function RootLayout({
       className={`${plexSans.variable} ${plexMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        <QueryProvider>{children}</QueryProvider>
+      </body>
     </html>
   );
 }
