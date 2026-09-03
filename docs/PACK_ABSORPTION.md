@@ -18,7 +18,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 - **C15 LOCKED** : THU-07→08 ✅ ; pack V2 phase 3 = CAP lots
 - **CAP-01 ✅** — static catalog + `GET /api/v1/capabilities` (read-only)
 - **CAP-02 ✅** — `CapabilityResolver` + `CapabilityGuard` (`sales.ping`)
-- **Next :** CAP-03 — lifecycle runtime + dependencies
+- **CAP-03 ✅** — lifecycle + company health
+- **Next :** CAP-04 — Super Admin ENABLE/DISABLE
 - CQRS / Command-Query bus : **C12 DEFER**
 - AI réelle : **C06 OPEN** (stub only)
 

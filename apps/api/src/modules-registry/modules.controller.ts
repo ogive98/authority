@@ -3,6 +3,7 @@ import type { Request } from 'express';
 import { CurrentUser } from '../identity/identity.decorators';
 import { SessionGuard } from '../identity/session.guard';
 import { ModuleCatalogService } from './catalog/module-catalog.service';
+import { ModuleLifecycleService } from './catalog/module-lifecycle.service';
 import { FeatureFlagService } from './feature-flag.service';
 import { ModuleGuard } from './module.guard';
 import { ModuleRegistryService } from './module-registry.service';
@@ -16,6 +17,7 @@ export class ModulesController {
     private readonly moduleRegistry: ModuleRegistryService,
     private readonly flags: FeatureFlagService,
     private readonly catalog: ModuleCatalogService,
+    private readonly lifecycle: ModuleLifecycleService,
   ) {}
 
   @Get()
@@ -34,9 +36,14 @@ export class ModulesController {
       this.flags.listFlags(companyId),
     ]);
 
-    return {
-      modules: modules.map((row) => {
+    const enriched = await Promise.all(
+      modules.map(async (row) => {
         const manifest = this.catalog.getByKey(row.moduleKey);
+        const process = this.lifecycle.getProcessState(row.moduleKey);
+        const health = await this.lifecycle.evaluateCompanyHealth(
+          companyId,
+          row.moduleKey,
+        );
         return {
           key: row.moduleKey,
           status: row.status,
@@ -48,8 +55,19 @@ export class ModulesController {
                 capabilityCount: manifest.capabilities.length,
               }
             : {}),
+          ...(process
+            ? {
+                lifecycle: process.state,
+              }
+            : {}),
+          health: health.health,
+          missingRequiredDependencies: health.missingRequiredDependencies,
         };
       }),
+    );
+
+    return {
+      modules: enriched,
       flags: flags.map((row) => ({
         key: row.flagKey,
         enabled: row.enabled,
