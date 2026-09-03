@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ABadge, AButton, ADecimalField, AInput } from "@/components/a";
-import { ThemeToggle } from "../tokens/theme-toggle";
+import { ThemeToggle } from "@/components/shell";
 
 export const metadata = {
   title: "Primitives — AUTHORITY UI-02",

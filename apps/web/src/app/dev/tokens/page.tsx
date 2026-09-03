@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ThemeToggle } from "./theme-toggle";
+import { ThemeToggle } from "@/components/shell";
 
 export const metadata = {
   title: "Tokens — AUTHORITY UI-01",

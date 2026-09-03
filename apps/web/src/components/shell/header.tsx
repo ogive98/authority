@@ -1,0 +1,121 @@
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  Bell,
+  Building2,
+  Command,
+  Menu,
+  Search,
+} from "lucide-react";
+import { useShellStore } from "@/stores/shell-store";
+import {
+  ModeSwitch,
+  PatchIcon,
+  SpectreIcon,
+  ThemeModeSwitch,
+} from "./mode-switch";
+
+function IconBtn({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-md)] text-a-fg-muted transition-colors hover:bg-a-surface-3 hover:text-a-fg"
+    >
+      {children}
+    </button>
+  );
+}
+
+export function ShellHeader() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
+  const spectreEnabled = useShellStore((s) => s.spectreEnabled);
+  const patchEnabled = useShellStore((s) => s.patchEnabled);
+  const setSpectreEnabled = useShellStore((s) => s.setSpectreEnabled);
+  const setPatchEnabled = useShellStore((s) => s.setPatchEnabled);
+
+  useEffect(() => {
+    const current =
+      (document.documentElement.getAttribute("data-theme") as
+        | "dark"
+        | "light"
+        | null) ?? "dark";
+    setTheme(current);
+  }, []);
+
+  function applyTheme(next: "dark" | "light") {
+    document.documentElement.setAttribute("data-theme", next);
+    setTheme(next);
+  }
+
+  return (
+    <header className="grid h-12 shrink-0 grid-cols-[1fr_auto] items-center gap-2 border-b border-a-border-subtle bg-a-surface-1 px-3 md:grid-cols-[auto_1fr_auto] md:px-4">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-md)] text-a-fg-muted hover:bg-a-surface-3 md:hidden"
+          aria-label="Ouvrir les modules"
+          aria-controls="shell-sidebar"
+          onClick={() => setMobileNavOpen(true)}
+        >
+          <Menu className="h-4 w-4" strokeWidth={1.75} />
+        </button>
+        <IconBtn label="Contexte société / site (stub)">
+          <Building2 className="h-4 w-4" strokeWidth={1.75} />
+        </IconBtn>
+      </div>
+
+      <div className="hidden items-center justify-center gap-1 md:flex">
+        <IconBtn label="Recherche globale (stub)">
+          <Search className="h-4 w-4" strokeWidth={1.75} />
+        </IconBtn>
+        <IconBtn label="Palette de commandes (stub)">
+          <Command className="h-4 w-4" strokeWidth={1.75} />
+        </IconBtn>
+      </div>
+
+      <div className="flex items-center justify-end gap-2 sm:gap-3">
+        <IconBtn label="Notifications — alertes et événements (stub)">
+          <Bell className="h-4 w-4" strokeWidth={1.75} />
+        </IconBtn>
+
+        <div className="hidden h-5 w-px bg-a-border-subtle sm:block" aria-hidden />
+
+        <ModeSwitch
+          className="hidden sm:inline-flex"
+          label="SPECTRE MODE"
+          icon={SpectreIcon}
+          checked={spectreEnabled}
+          onCheckedChange={setSpectreEnabled}
+        />
+        <ModeSwitch
+          className="hidden lg:inline-flex"
+          label="PATCH MODE"
+          icon={PatchIcon}
+          checked={patchEnabled}
+          onCheckedChange={setPatchEnabled}
+        />
+
+        <ThemeModeSwitch theme={theme} onThemeChange={applyTheme} />
+
+        <button
+          type="button"
+          title="Profil (stub)"
+          aria-label="Profil"
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-a-border-subtle bg-a-surface-2 text-[length:var(--a-text-xs)] font-medium text-a-fg-muted"
+        >
+          U
+        </button>
+      </div>
+    </header>
+  );
+}

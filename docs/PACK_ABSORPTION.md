@@ -19,7 +19,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 - **Pack V2 phase 3 ✅** — CAP-01→04
 - **UI-01 ✅** — tokens Plex + teal sobre + `/dev/tokens`
 - **UI-02 ✅** — primitives A* + `/dev/primitives`
-- **Next :** UI-03 App shell
+- **UI-03 ✅** — App shell rail/hover + ASwitch modes
+- **Next :** UI-04 Navigation registry
 - CQRS / Command-Query bus : **C12 DEFER**
 - AI réelle : **C06 OPEN** (stub only)
 
@@ -41,8 +42,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 
 ## Prochaine implémentation code
 
-1. UI-03 App shell (sidebar, header, breadcrumbs, ResourceMonitor stub)  
-2. UI-04+ registry / states  
+1. UI-04 Navigation registry (fetch flags ; module DISABLED absent)  
+2. UI-05+ states / DataTable  
 3. Entitlements engine (Pack 3)  
 4. Pack V2 phases 4–8 seulement si C06/C12 rouvertes  
 
