@@ -1,26 +1,237 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  AUTHORITY design tokens — UI-01
+  Source of truth: --a-* variables.
+  Light and dark are designed separately (not auto-inverted).
+  Accent: bright teal on dark (D016). Fonts: IBM Plex (D015).
+  Surface treatment token: lightning (not "Ghost").
+  Comfort: deep canvas + clear card step + larger radius (NEXUS-inspired layout).
+*/
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* canvas → card → raised → hover → highest */
+  --a-surface-1: #0b0c10;
+  --a-surface-2: #12141a;
+  --a-surface-3: #1a1d27;
+  --a-surface-4: #222632;
+  --a-surface-5: #2c3140;
+
+  --a-fg: #f4f4f5;
+  --a-fg-muted: #a1a1aa;
+  --a-fg-subtle: #71717a;
+
+  --a-border-subtle: rgba(255, 255, 255, 0.07);
+  --a-border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Teal clair mais sobre — pas néon */
+  --a-accent: #0d9488;
+  --a-accent-hover: #14b8a6;
+  --a-accent-muted: rgba(13, 148, 136, 0.12);
+  --a-accent-fg: #f0fdfa;
+
+  --a-success: #22a06b;
+  --a-success-fg: #ecfdf5;
+  --a-warning: #d97706;
+  --a-warning-fg: #fffbeb;
+  --a-danger: #dc2626;
+  --a-danger-fg: #fef2f2;
+  --a-info: #0284c7;
+  --a-info-fg: #f0f9ff;
+
+  /* SPECTRE ops tint — cool slate, not neon */
+  --a-spectre: #7c8a9a;
+  --a-spectre-fg: #e8eef4;
+  --a-spectre-muted: rgba(124, 138, 154, 0.12);
+  --a-spectre-overlay: color-mix(in srgb, #7c8a9a 12%, transparent);
+
+  --a-lightning-bg: color-mix(in srgb, #0d9488 7%, var(--a-surface-2));
+  --a-lightning-border: color-mix(in srgb, #0d9488 22%, transparent);
+  --a-lightning-blur: 6px;
+
+  --a-focus-ring: #14b8a6;
+  --a-focus-ring-offset: var(--a-surface-1);
+
+  --a-space-1: 0.25rem;
+  --a-space-2: 0.5rem;
+  --a-space-3: 0.75rem;
+  --a-space-4: 1rem;
+  --a-space-5: 1.25rem;
+  --a-space-6: 1.5rem;
+  --a-space-7: 2rem;
+  --a-space-8: 3rem;
+
+  /* Minimal radii — peu d’arrondi */
+  --a-radius-sm: 0.125rem;
+  --a-radius-md: 0.25rem;
+  --a-radius-lg: 0.375rem;
+
+  --a-z-base: 0;
+  --a-z-sticky: 100;
+  --a-z-dropdown: 200;
+  --a-z-modal: 300;
+  --a-z-spectre: 400;
+  --a-z-toast: 500;
+
+  --a-text-xs: 0.75rem;
+  --a-text-sm: 0.875rem;
+  --a-text-md: 0.9375rem;
+  --a-text-lg: 1.0625rem;
+  --a-text-xl: 1.25rem;
+  --a-text-2xl: 1.625rem;
+
+  --a-leading-tight: 1.25;
+  --a-leading-normal: 1.55;
+  --a-tracking-title: -0.02em;
+
+  --a-font-sans: var(--font-sans), "IBM Plex Sans", system-ui, sans-serif;
+  --a-font-mono: var(--font-mono), "IBM Plex Mono", ui-monospace, monospace;
+
+  --a-sidebar-width: 15.5rem;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --a-surface-1: #f0f2f5;
+  --a-surface-2: #ffffff;
+  --a-surface-3: #e8ecf1;
+  --a-surface-4: #dde3ea;
+  --a-surface-5: #cfd8e3;
+
+  --a-fg: #18181b;
+  --a-fg-muted: #52525b;
+  --a-fg-subtle: #71717a;
+
+  --a-border-subtle: rgba(24, 24, 27, 0.08);
+  --a-border-strong: rgba(24, 24, 27, 0.16);
+
+  --a-accent: #0d9488;
+  --a-accent-hover: #0f766e;
+  --a-accent-muted: #ccfbf1;
+  --a-accent-fg: #f0fdfa;
+
+  --a-success: #059669;
+  --a-success-fg: #ecfdf5;
+  --a-warning: #d97706;
+  --a-warning-fg: #fffbeb;
+  --a-danger: #dc2626;
+  --a-danger-fg: #fef2f2;
+  --a-info: #0284c7;
+  --a-info-fg: #f0f9ff;
+
+  --a-spectre: #64748b;
+  --a-spectre-fg: #f8fafc;
+  --a-spectre-muted: #e2e8f0;
+  --a-spectre-overlay: color-mix(in srgb, #64748b 10%, transparent);
+
+  --a-lightning-bg: color-mix(in srgb, #0d9488 8%, var(--a-surface-2));
+  --a-lightning-border: color-mix(in srgb, #0d9488 28%, var(--a-border-subtle));
+
+  --a-focus-ring: #0d9488;
+  --a-focus-ring-offset: var(--a-surface-2);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+  --color-a-surface-1: var(--a-surface-1);
+  --color-a-surface-2: var(--a-surface-2);
+  --color-a-surface-3: var(--a-surface-3);
+  --color-a-surface-4: var(--a-surface-4);
+  --color-a-surface-5: var(--a-surface-5);
+  --color-a-fg: var(--a-fg);
+  --color-a-fg-muted: var(--a-fg-muted);
+  --color-a-fg-subtle: var(--a-fg-subtle);
+  --color-a-border-subtle: var(--a-border-subtle);
+  --color-a-border-strong: var(--a-border-strong);
+  --color-a-accent: var(--a-accent);
+  --color-a-accent-hover: var(--a-accent-hover);
+  --color-a-accent-muted: var(--a-accent-muted);
+  --color-a-accent-fg: var(--a-accent-fg);
+  --color-a-success: var(--a-success);
+  --color-a-success-fg: var(--a-success-fg);
+  --color-a-warning: var(--a-warning);
+  --color-a-warning-fg: var(--a-warning-fg);
+  --color-a-danger: var(--a-danger);
+  --color-a-danger-fg: var(--a-danger-fg);
+  --color-a-info: var(--a-info);
+  --color-a-info-fg: var(--a-info-fg);
+  --color-a-spectre: var(--a-spectre);
+  --color-a-spectre-fg: var(--a-spectre-fg);
+  --color-a-spectre-muted: var(--a-spectre-muted);
+  --color-a-focus-ring: var(--a-focus-ring);
+  --color-a-lightning-bg: var(--a-lightning-bg);
+  --color-a-lightning-border: var(--a-lightning-border);
+
+  --font-sans: var(--a-font-sans);
+  --font-mono: var(--a-font-mono);
+
+  --radius-sm: var(--a-radius-sm);
+  --radius-md: var(--a-radius-md);
+  --radius-lg: var(--a-radius-lg);
+
+  --spacing-a-1: var(--a-space-1);
+  --spacing-a-2: var(--a-space-2);
+  --spacing-a-3: var(--a-space-3);
+  --spacing-a-4: var(--a-space-4);
+  --spacing-a-5: var(--a-space-5);
+  --spacing-a-6: var(--a-space-6);
+  --spacing-a-7: var(--a-space-7);
+  --spacing-a-8: var(--a-space-8);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    background-color: var(--a-surface-1);
+    color: var(--a-fg);
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    min-height: 100vh;
+    background-color: var(--a-surface-1);
+    color: var(--a-fg);
+    font-family: var(--a-font-sans);
+    font-size: var(--a-text-md);
+    line-height: var(--a-leading-normal);
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--a-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .a-tabular {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  .a-mono {
+    font-family: var(--a-font-mono);
+  }
+
+  .a-card {
+    background: var(--a-surface-2);
+    border: 1px solid var(--a-border-subtle);
+    border-radius: var(--a-radius-lg);
+  }
+
+  .a-lightning {
+    background: var(--a-lightning-bg);
+    border: 1px solid var(--a-lightning-border);
+    backdrop-filter: blur(var(--a-lightning-blur));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

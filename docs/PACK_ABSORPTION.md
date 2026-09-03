@@ -17,7 +17,8 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 - Copie : `18_PACK_ABSORPTION/packs/AUTHORITY_THUNDER_CORE_CURSOR_PACK_V2/`
 - **C15 LOCKED** : THU-07→08 ✅
 - **Pack V2 phase 3 ✅** — CAP-01→04
-- **Next :** Track UI shell dynamique
+- **UI-01 ✅** — tokens Plex + teal sobre + `/dev/tokens`
+- **Next :** UI-02 primitives
 - CQRS / Command-Query bus : **C12 DEFER**
 - AI réelle : **C06 OPEN** (stub only)
 
@@ -39,8 +40,9 @@ Voir `18_PACK_ABSORPTION/README.md` et `CONTRADICTIONS.md`.
 
 ## Prochaine implémentation code
 
-1. Track UI registries / shell dynamique  
-2. Entitlements engine (Pack 3)  
-3. Pack V2 phases 4–8 seulement si C06/C12 rouvertes  
+1. UI-02 primitives (`AButton`, `AInput`, `ADecimalField`, `ABadge`, …)  
+2. UI-03+ shell / registry  
+3. Entitlements engine (Pack 3)  
+4. Pack V2 phases 4–8 seulement si C06/C12 rouvertes  
 
 Ne pas exécuter les prompts Cursor des packs ZIP **tels quels**.
