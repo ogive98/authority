@@ -5,14 +5,19 @@ describe('MeRegistryService', () => {
     companyId: string | null;
     states: { moduleKey: string; status: string }[];
     flags: { flagKey: string; enabled: boolean }[];
-    manifests?: Record<string, { name: string; navigationEntries?: Record<string, unknown>[] }>;
+    manifests?: Record<
+      string,
+      { name: string; navigationEntries?: Record<string, unknown>[] }
+    >;
   }) {
     const moduleRegistry = {
       resolveCompanyId: jest.fn().mockResolvedValue(opts.companyId),
       listStates: jest.fn().mockResolvedValue(opts.states),
     };
     const catalog = {
-      getByKey: jest.fn((key: string) => opts.manifests?.[key] ?? { name: key }),
+      getByKey: jest.fn(
+        (key: string) => opts.manifests?.[key] ?? { name: key },
+      ),
     };
     const flags = {
       listFlags: jest.fn().mockResolvedValue(opts.flags),
@@ -48,7 +53,9 @@ describe('MeRegistryService', () => {
 
     const res = await svc.buildForUser('u1', {}, {});
     const platform = res.modules.find((m) => m.key === 'platform');
-    expect(platform?.features.map((f) => f.id)).not.toContain('platform-search');
+    expect(platform?.features.map((f) => f.id)).not.toContain(
+      'platform-search',
+    );
   });
 
   it('shows flag-gated feature when flag is on', async () => {

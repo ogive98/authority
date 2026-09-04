@@ -14,13 +14,10 @@ export class MeRegistryController {
   constructor(private readonly registry: MeRegistryService) {}
 
   @Get('registry')
-  async getRegistry(
-    @CurrentUser() user: { id: string },
-    @Req() req: Request,
-  ) {
+  async getRegistry(@CurrentUser() user: { id: string }, @Req() req: Request) {
     return this.registry.buildForUser(
       user.id,
-      req.headers as Record<string, string | string[] | undefined>,
+      req.headers,
       (req.cookies ?? {}) as Record<string, string | undefined>,
     );
   }

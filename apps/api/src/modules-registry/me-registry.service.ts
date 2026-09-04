@@ -71,11 +71,14 @@ export class MeRegistryService {
       }
 
       const manifest = this.catalog.getByKey(row.moduleKey);
-      const features = buildFeatures(row.moduleKey, manifest?.name ?? row.moduleKey, manifest?.navigationEntries)
-        .filter((f) => {
-          if (!f.flagKey) return true;
-          return flagMap.get(f.flagKey) === true;
-        });
+      const features = buildFeatures(
+        row.moduleKey,
+        manifest?.name ?? row.moduleKey,
+        manifest?.navigationEntries,
+      ).filter((f) => {
+        if (!f.flagKey) return true;
+        return flagMap.get(f.flagKey) === true;
+      });
 
       if (features.length === 0) {
         continue;
@@ -159,7 +162,6 @@ function parseNavEntry(raw: Record<string, unknown>): RegistryFeature | null {
   const label = typeof raw.label === 'string' ? raw.label : null;
   const href = typeof raw.href === 'string' ? raw.href : null;
   if (!id || !label || !href) return null;
-  const flagKey =
-    typeof raw.flagKey === 'string' ? raw.flagKey : undefined;
+  const flagKey = typeof raw.flagKey === 'string' ? raw.flagKey : undefined;
   return { id, label, href, flagKey };
 }

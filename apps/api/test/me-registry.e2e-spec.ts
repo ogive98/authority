@@ -113,9 +113,9 @@ describe('Me registry (e2e)', () => {
     const on = (await agent.get('/api/v1/me/registry').expect(200))
       .body as RegistryResponse;
     const platformOn = on.modules.find((m) => m.key === 'platform');
-    expect(
-      platformOn?.features.some((f) => f.id === 'platform-search'),
-    ).toBe(true);
+    expect(platformOn?.features.some((f) => f.id === 'platform-search')).toBe(
+      true,
+    );
 
     // restore seed default
     await prisma.modFlag.update({
