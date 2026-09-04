@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { ThemeToggle } from "@/components/shell";
+import { AButton } from "@/components/a/a-button";
+import { ADevGateActions } from "@/components/a/a-dev-page";
+import { AScreenHeader } from "@/components/a/a-screen-header";
 
 export const metadata = {
   title: "Tokens — AUTHORITY UI-01",
@@ -164,32 +166,24 @@ export default function DevTokensPage() {
 
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-[var(--a-z-sticky)] flex items-center justify-between gap-4 border-b border-a-border-subtle bg-a-surface-1/90 px-[var(--a-space-6)] py-[var(--a-space-4)] backdrop-blur-md">
-          <div>
-            <h1
-              className="text-[length:var(--a-text-xl)] font-semibold"
-              style={{ letterSpacing: "var(--a-tracking-title)" }}
-            >
-              Design tokens
-            </h1>
-            <p className="mt-0.5 text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Plex · teal sobre · minimal · gate Dark / Light
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <button
-              type="button"
-              className="hidden rounded-[var(--a-radius-md)] px-4 py-2 text-[length:var(--a-text-sm)] font-medium sm:inline-flex"
-              style={{
-                background: "var(--a-accent)",
-                color: "var(--a-accent-fg)",
-              }}
-            >
-              Valider UI-01
-            </button>
-          </div>
-        </header>
+        <AScreenHeader
+          title="Design tokens"
+          description="Plex · teal sobre · minimal · gate Dark / Light"
+          sticky
+          actions={
+            <ADevGateActions
+              extra={
+                <AButton
+                  type="button"
+                  size="sm"
+                  className="hidden sm:inline-flex"
+                >
+                  Valider UI-01
+                </AButton>
+              }
+            />
+          }
+        />
 
         <main className="flex-1 space-y-[var(--a-space-6)] px-[var(--a-space-6)] py-[var(--a-space-6)]">
           {/* KPI strip — comfort sample */}

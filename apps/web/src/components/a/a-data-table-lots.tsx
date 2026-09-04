@@ -42,9 +42,10 @@ function saveViews(views: SavedView[]) {
 export type ADataTableLotsProps = {
   /** Full dataset stays in memory; UI only pages via cursor. */
   rows: LotRow[];
+  onRowClick?: (row: LotRow) => void;
 };
 
-export function ADataTableLots({ rows }: ADataTableLotsProps) {
+export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
   const [filter, setFilter] = useState<LotFilter>({ status: "all", q: "" });
   const [columns, setColumns] = useState<LotColumnId[]>(
     LOT_COLUMNS.map((c) => c.id),
@@ -278,9 +279,13 @@ export function ADataTableLots({ rows }: ADataTableLotsProps) {
               {page.items.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-t border-a-border-subtle hover:bg-a-surface-3/60"
+                  className={cn(
+                    "border-t border-a-border-subtle hover:bg-a-surface-3/60",
+                    onRowClick && "cursor-pointer",
+                  )}
+                  onClick={() => onRowClick?.(row)}
                 >
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       className="a-checkbox"

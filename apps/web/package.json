@@ -8,8 +8,9 @@
     "dev:clean": "node scripts/stop-web.mjs && node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "selftest": "npx --yes tsx src/lib/widget-catalog.selftest.ts",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

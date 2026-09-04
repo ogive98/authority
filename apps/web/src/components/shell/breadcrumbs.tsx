@@ -7,6 +7,9 @@ const LABELS: Record<string, string> = {
   "": "Accueil",
   settings: "Paramètres",
   preferences: "Préférences",
+  preview: "Aperçu",
+  lots: "Lots",
+  commandes: "Commandes",
 };
 
 export function ShellBreadcrumbs() {

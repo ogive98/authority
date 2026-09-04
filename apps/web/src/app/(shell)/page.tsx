@@ -1,109 +1,81 @@
+"use client";
+
 import Link from "next/link";
+import {
+  AButton,
+  AKpiCard,
+  AScreenHeader,
+} from "@/components/a";
+import { AWidgetHost } from "@/components/a/a-widget-host";
 
 export default function HomePage() {
   return (
-    <div className="space-y-[var(--a-space-6)] p-[var(--a-space-6)]">
-      <div>
-        <h1
-          className="text-[length:var(--a-text-2xl)] font-semibold"
-          style={{ letterSpacing: "var(--a-tracking-title)" }}
-        >
-          Tableau de bord
-        </h1>
-        <p className="mt-1 max-w-xl text-[length:var(--a-text-sm)] text-a-fg-muted">
-          Nav depuis <span className="a-mono">/api/v1/me/registry</span> —
-          modules ENABLED seulement. Gate flag :{" "}
-          <Link href="/dev/registry" className="text-a-accent hover:underline">
-            /dev/registry
-          </Link>
-          .
-        </p>
-      </div>
+    <>
+      <AScreenHeader
+        title="Tableau de bord"
+        description="Fromagerie ADV · site Sfax"
+        actions={
+          <AButton asChild size="sm">
+            <Link href="/preview/lots">Nouveau lot</Link>
+          </AButton>
+        }
+      />
+      <div className="space-y-[var(--a-space-6)] p-[var(--a-space-6)]">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <AKpiCard
+            label="Chiffre d’affaires"
+            value="124 560,00 TND"
+            delta="+12,4 %"
+            deltaTone="success"
+          />
+          <AKpiCard
+            label="Stock fromage"
+            value="12 450,000 kg"
+            delta="−2,1 %"
+            deltaTone="warning"
+          />
+          <AKpiCard
+            label="Lots ouverts"
+            value="42"
+            delta="+3"
+            deltaTone="success"
+          />
+          <AKpiCard
+            label="DLC < 7 j"
+            value="8"
+            delta="critique"
+            deltaTone="danger"
+          />
+        </section>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <article className="a-card p-[var(--a-space-4)]">
-          <h2 className="text-[length:var(--a-text-md)] font-medium">
-            Navigation
-          </h2>
-          <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
-            Icônes seules → survol étend le label → clic ouvre le menu
-            fonctionnalités.
-          </p>
-        </article>
-        <article className="a-card p-[var(--a-space-4)]">
-          <h2 className="text-[length:var(--a-text-md)] font-medium">Gates</h2>
-          <ul className="mt-2 space-y-1 text-[length:var(--a-text-sm)]">
-            <li>
-              <Link href="/dev/tokens" className="text-a-accent hover:underline">
-                /dev/tokens
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/dev/primitives"
-                className="text-a-accent hover:underline"
-              >
-                /dev/primitives
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/dev/states"
-                className="text-a-accent hover:underline"
-              >
-                /dev/states
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/dev/datatable"
-                className="text-a-accent hover:underline"
-              >
-                /dev/datatable
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/dev/forms"
-                className="text-a-accent hover:underline"
-              >
-                /dev/forms
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/dev/palette"
-                className="text-a-accent hover:underline"
-              >
-                /dev/palette
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/dev/notifications"
-                className="text-a-accent hover:underline"
-              >
-                /dev/notifications
-              </Link>
-            </li>
-          </ul>
-        </article>
-        <article className="a-card p-[var(--a-space-4)]">
-          <h2 className="text-[length:var(--a-text-md)] font-medium">
-            Notifications
-          </h2>
-          <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
-            Cloche = centre d’activité (SSE). Coupure → bannière. Gate{" "}
+        <AWidgetHost includeBoom={false} />
+
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[length:var(--a-text-sm)]">
+          <li>
+            <Link href="/preview" className="text-a-accent hover:underline">
+              Écrans aperçu
+            </Link>
+          </li>
+          <li>
+            <Link href="/preview/lots" className="text-a-accent hover:underline">
+              Lots
+            </Link>
+          </li>
+          <li>
             <Link
-              href="/dev/notifications"
+              href="/preview/commandes"
               className="text-a-accent hover:underline"
             >
-              /dev/notifications
+              Commandes
             </Link>
-            .
-          </p>
-        </article>
+          </li>
+          <li>
+            <Link href="/settings" className="text-a-accent hover:underline">
+              Préférences
+            </Link>
+          </li>
+        </ul>
       </div>
-    </div>
+    </>
   );
 }

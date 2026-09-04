@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect } from "react";
-import { AButton } from "@/components/a";
+import { AButton, ADevPage } from "@/components/a";
 import { ACommandPalette } from "@/components/a/a-command-palette";
-import { ThemeToggle } from "@/components/shell";
 import {
   COMMAND_CATALOG,
   DEMO_ENABLED_MODULES,
@@ -39,37 +37,18 @@ export default function DevPalettePage() {
   );
 
   return (
-    <div className="min-h-screen bg-a-surface-1 text-a-fg">
-      <ACommandPalette open={open} onOpenChange={setPaletteOpen} />
-
-      <header className="flex items-center justify-between gap-4 border-b border-a-border-subtle px-[var(--a-space-6)] py-[var(--a-space-4)]">
-        <div>
-          <p className="a-mono text-[length:var(--a-text-xs)] uppercase tracking-widest text-a-fg-subtle">
-            UI-08 · Command palette
-          </p>
-          <h1 className="mt-1 text-[length:var(--a-text-xl)] font-semibold">
-            Palette + recherche
-          </h1>
-          <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
-            Gate clavier : Ctrl+K · ↑↓ · Entrée · Esc — raccourcis affichés à
-            droite de chaque commande
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <AButton type="button" size="sm" onClick={() => setPaletteOpen(true)}>
-            Ouvrir (ou Ctrl+K)
-          </AButton>
-          <Link
-            href="/"
-            className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-accent"
-          >
-            Shell
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-2xl space-y-6 px-[var(--a-space-6)] py-[var(--a-space-7)]">
+    <ADevPage
+      kicker="UI-08 · Command palette"
+      title="Palette + recherche"
+      description="Gate clavier : Ctrl+K · ↑↓ · Entrée · Esc — raccourcis affichés à droite de chaque commande"
+      extraActions={
+        <AButton type="button" size="sm" onClick={() => setPaletteOpen(true)}>
+          Ouvrir (ou Ctrl+K)
+        </AButton>
+      }
+      overlay={<ACommandPalette open={open} onOpenChange={setPaletteOpen} />}
+      mainClassName="mx-auto max-w-2xl space-y-6 px-[var(--a-space-6)] py-[var(--a-space-7)]"
+    >
         <section className="a-card space-y-2 p-4">
           <h2 className="font-medium">Visibles (grants + modules ON)</h2>
           <ul className="a-mono space-y-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -96,7 +75,6 @@ export default function DevPalettePage() {
             ))}
           </ul>
         </section>
-      </main>
-    </div>
+    </ADevPage>
   );
 }

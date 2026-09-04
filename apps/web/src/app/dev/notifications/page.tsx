@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import {
   AActivityCenter,
   AButton,
+  ADevPage,
   AOfflineBanner,
 } from "@/components/a";
-import { ThemeToggle } from "@/components/shell";
 import { useNotificationSse } from "@/hooks/use-notification-sse";
 import { unreadCount } from "@/lib/notifications";
 import { useNotificationsStore } from "@/stores/notifications-store";
@@ -25,42 +24,26 @@ export default function DevNotificationsPage() {
   const unread = unreadCount(items);
 
   return (
-    <div className="min-h-screen bg-a-surface-1 text-a-fg">
-      <AActivityCenter
-        open={inboxOpen}
-        onOpenChange={setInboxOpen}
-        items={items}
-        onMarkRead={markItemRead}
-        onMarkAllRead={markAllItemsRead}
-      />
-
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-a-border-subtle px-[var(--a-space-6)] py-[var(--a-space-4)]">
-        <div>
-          <p className="a-mono text-[length:var(--a-text-xs)] uppercase tracking-widest text-a-fg-subtle">
-            UI-09 · Notifications
-          </p>
-          <h1 className="mt-1 text-[length:var(--a-text-xl)] font-semibold">
-            Centre d’activité + SSE
-          </h1>
-          <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
-            Gate : couper le flux → bannière « Flux temps réel coupé »
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <ThemeToggle />
-          <AButton type="button" size="sm" onClick={() => setInboxOpen(true)}>
-            Ouvrir inbox ({unread})
-          </AButton>
-          <Link
-            href="/"
-            className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-accent"
-          >
-            Shell
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-2xl space-y-[var(--a-space-6)] px-[var(--a-space-6)] py-[var(--a-space-7)]">
+    <ADevPage
+      kicker="UI-09 · Notifications"
+      title="Centre d’activité + SSE"
+      description="Gate : couper le flux → bannière « Flux temps réel coupé »"
+      extraActions={
+        <AButton type="button" size="sm" onClick={() => setInboxOpen(true)}>
+          Ouvrir inbox ({unread})
+        </AButton>
+      }
+      overlay={
+        <AActivityCenter
+          open={inboxOpen}
+          onOpenChange={setInboxOpen}
+          items={items}
+          onMarkRead={markItemRead}
+          onMarkAllRead={markAllItemsRead}
+        />
+      }
+      mainClassName="mx-auto max-w-2xl space-y-[var(--a-space-6)] px-[var(--a-space-6)] py-[var(--a-space-7)]"
+    >
         <section className="a-card space-y-3 p-4">
           <h2 className="text-[length:var(--a-text-lg)] font-medium">
             État SSE
@@ -124,7 +107,6 @@ export default function DevNotificationsPage() {
             P0 (quarantaine) reste dans le centre — pas de toast.
           </p>
         </section>
-      </main>
-    </div>
+    </ADevPage>
   );
 }

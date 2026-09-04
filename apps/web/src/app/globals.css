@@ -94,6 +94,14 @@
   --a-sidebar-width: 15.5rem;
 }
 
+[data-density="compact"] {
+  --a-space-4: 0.75rem;
+  --a-space-5: 1rem;
+  --a-space-6: 1.125rem;
+  --a-space-7: 1.5rem;
+  --a-text-md: 0.875rem;
+}
+
 [data-theme="light"] {
   color-scheme: light;
 

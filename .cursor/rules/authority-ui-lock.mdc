@@ -1,0 +1,20 @@
+---
+description: AUTHORITY visual identity lock — mandatory for every UI screen
+alwaysApply: true
+---
+
+# Visual identity lock
+
+Before any UI: read `apps/web/src/app/globals.css` (`--a-*`) and reuse `AppShell` + `A*` + `AScreenHeader`.
+
+**Locked:** IBM Plex (D015), teal `#0d9488` via `--a-accent` (D016), SPECTRE not Ghost, radius sm/md/lg only, dark+light.
+
+**Chrome (every module page):** `AppShell` (rail + header + breadcrumbs + monitor). Page body = `AScreenHeader` (title left, actions right) then filters then table/form. No second sidebar, no module tokens, no raw hex, no Inter/Geist, no glass on TND/stock.
+
+**Gates `/dev/*`:** `ADevPage` only — do not invent a new header.
+
+**Buttons:** `AButton` (primary = one CTA right). Icon buttons 32px like shell. Colors = meaning only (status text, not big colored boxes).
+
+**Reference screens:** `/`, `/preview/lots`, `/preview/commandes`, `/settings`, `/dev/tokens`.
+
+If a screen does not match those, fix the screen — do not invent a new look.

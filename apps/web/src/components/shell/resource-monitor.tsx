@@ -1,18 +1,30 @@
 "use client";
 
-/** Compact ResourceMonitor — mock data until THU-07 wiring. */
-const METRICS = [
-  { key: "CPU", value: "12 %" },
-  { key: "RAM", value: "41 %" },
-  { key: "Workers", value: "4" },
-  { key: "Queues", value: "6" },
-  { key: "Jobs", value: "0" },
-  { key: "DB", value: "ok" },
-  { key: "Redis", value: "ok" },
-  { key: "Lat", value: "18 ms" },
-] as const;
+import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
 
 export function ResourceMonitor() {
+  const q = useMonitorSnapshot();
+  const cpu =
+    q.data?.cpu.usageRatio == null
+      ? "—"
+      : `${Math.round(q.data.cpu.usageRatio * 100)}%`;
+  const ram = q.data
+    ? `${Math.round(q.data.ram.usageRatio * 100)}%`
+    : "—";
+  const shed = q.data?.pressure.shedP4 ? "P4 shed" : "ok";
+  const jobs = q.data
+    ? `${q.data.jobs.running}/${q.data.jobs.pending}`
+    : "—";
+
+  const metrics = [
+    { key: "CPU", value: cpu },
+    { key: "RAM", value: ram },
+    { key: "Shed", value: shed },
+    { key: "Jobs", value: jobs },
+    { key: "DB", value: q.data?.db.ok ? "ok" : q.isError ? "n/a" : "…" },
+    { key: "Redis", value: q.data?.redis.ok ? "ok" : q.isError ? "n/a" : "…" },
+  ] as const;
+
   return (
     <footer
       className="flex h-8 shrink-0 items-center gap-3 overflow-x-auto border-t border-a-border-subtle bg-a-surface-2 px-3"
@@ -21,7 +33,7 @@ export function ResourceMonitor() {
       <span className="a-mono shrink-0 text-[length:var(--a-text-xs)] text-a-fg-subtle">
         monitor
       </span>
-      {METRICS.map((m) => (
+      {metrics.map((m) => (
         <span
           key={m.key}
           className="a-mono shrink-0 text-[length:var(--a-text-xs)] text-a-fg-muted"
