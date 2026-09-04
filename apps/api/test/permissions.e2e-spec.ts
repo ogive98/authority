@@ -77,6 +77,7 @@ describe('Permissions (e2e)', () => {
         PERMISSION_KEYS.platformNumberingAllocate,
         PERMISSION_KEYS.settingsSelf,
         PERMISSION_KEYS.settingsCompanyWrite,
+        PERMISSION_KEYS.hrWageRead,
       ]),
     );
     expect(body.permissions.some((key) => key.includes('*'))).toBe(false);

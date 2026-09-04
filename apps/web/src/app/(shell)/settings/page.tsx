@@ -3,30 +3,37 @@
 import { useEffect, useState } from "react";
 import { AButton, AScreenHeader, ASwitch } from "@/components/a";
 import { cn } from "@/lib/utils";
+import { usePrefsStore, type Density } from "@/stores/prefs-store";
 
 type Tab = "general" | "apparence" | "notifications";
-type Density = "comfortable" | "compact";
-
-const DENSITY_KEY = "authority-density";
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>("apparence");
-  const [density, setDensity] = useState<Density>("comfortable");
-  const [jobAlerts, setJobAlerts] = useState(true);
-  const [sseBanner, setSseBanner] = useState(true);
+  const [savedFlash, setSavedFlash] = useState(false);
+
+  const density = usePrefsStore((s) => s.density);
+  const setDensity = usePrefsStore((s) => s.setDensity);
+  const showSseBanner = usePrefsStore((s) => s.showSseBanner);
+  const setShowSseBanner = usePrefsStore((s) => s.setShowSseBanner);
+  const jobAlerts = usePrefsStore((s) => s.jobAlerts);
+  const setJobAlerts = usePrefsStore((s) => s.setJobAlerts);
 
   useEffect(() => {
-    const stored = localStorage.getItem(DENSITY_KEY);
-    if (stored === "compact" || stored === "comfortable") {
-      setDensity(stored);
-      document.documentElement.setAttribute("data-density", stored);
-    }
+    usePrefsStore.getState().applyDensityToDom(usePrefsStore.getState().density);
   }, []);
 
   function applyDensity(next: Density) {
     setDensity(next);
-    localStorage.setItem(DENSITY_KEY, next);
-    document.documentElement.setAttribute("data-density", next);
+  }
+
+  function onSseBannerChange(on: boolean) {
+    setShowSseBanner(on);
+  }
+
+  function onSave() {
+    // Prefs are already persisted via zustand; flash confirms the CTA.
+    setSavedFlash(true);
+    window.setTimeout(() => setSavedFlash(false), 1600);
   }
 
   return (
@@ -35,8 +42,8 @@ export default function SettingsPage() {
         title="Préférences"
         description="Apparence du poste — une préférence n’outrepasse jamais une permission."
         actions={
-          <AButton type="button" size="sm">
-            Enregistrer
+          <AButton type="button" size="sm" onClick={onSave}>
+            {savedFlash ? "Enregistré" : "Enregistrer"}
           </AButton>
         }
       />
@@ -101,6 +108,10 @@ export default function SettingsPage() {
               <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
                 Densité
               </p>
+              <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                Compact resserre uniquement les lignes de tableaux — le chrome
+                (header, rail, titres) ne bouge pas.
+              </p>
               <div className="flex gap-2">
                 <AButton
                   type="button"
@@ -131,7 +142,7 @@ export default function SettingsPage() {
                   Alertes jobs
                 </p>
                 <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Shed P4 et files Thunder.
+                  Afficher shed P4 / files Thunder dans le centre d’activité.
                 </p>
               </div>
               <ASwitch
@@ -146,13 +157,13 @@ export default function SettingsPage() {
                   Bannière SSE
                 </p>
                 <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Afficher « flux temps réel coupé ».
+                  Afficher « flux temps réel coupé » quand le stream est coupé.
                 </p>
               </div>
               <ASwitch
                 label="Bannière SSE"
-                checked={sseBanner}
-                onCheckedChange={setSseBanner}
+                checked={showSseBanner}
+                onCheckedChange={onSseBannerChange}
               />
             </div>
           </section>

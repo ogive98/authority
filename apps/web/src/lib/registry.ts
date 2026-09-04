@@ -17,7 +17,7 @@ export type MeRegistry = {
   flags: { key: string; enabled: boolean }[];
 };
 
-/** Offline / unauthenticated fallback — home + settings only. */
+/** Offline / API-down fallback — home + settings always for shell chrome. */
 export const FALLBACK_REGISTRY: MeRegistry = {
   companyId: null,
   modules: [
@@ -26,8 +26,9 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       name: "Accueil",
       features: [
         { id: "dashboard", label: "Tableau de bord", href: "/" },
-        { id: "tasks", label: "Tâches", href: "/#tasks" },
-        { id: "alerts", label: "Alertes", href: "/#alerts" },
+        { id: "preview", label: "Écrans aperçu", href: "/preview" },
+        { id: "lots", label: "Lots", href: "/preview/lots" },
+        { id: "commandes", label: "Commandes", href: "/preview/commandes" },
       ],
     },
     {
@@ -42,13 +43,39 @@ export const FALLBACK_REGISTRY: MeRegistry = {
   flags: [],
 };
 
-export async function fetchMeRegistry(): Promise<MeRegistry> {
-  const res = await fetch("/api/v1/me/registry", {
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
-  if (!res.ok) {
-    throw new Error(`registry ${res.status}`);
+/** Ensure Accueil (+ Paramètres if missing) so the icon rail never goes blank. */
+export function ensureShellModules(data: MeRegistry): MeRegistry {
+  if (!data.modules?.length) {
+    return FALLBACK_REGISTRY;
   }
-  return res.json() as Promise<MeRegistry>;
+  const keys = new Set(data.modules.map((m) => m.key));
+  const modules = [...data.modules];
+  for (const fb of FALLBACK_REGISTRY.modules) {
+    if (!keys.has(fb.key)) {
+      modules.push(fb);
+    }
+  }
+  return { ...data, modules };
+}
+
+const REGISTRY_TIMEOUT_MS = 4_000;
+
+/**
+ * Never throws — shell chrome must keep icons even when Nest is down / hangs.
+ */
+export async function fetchMeRegistry(): Promise<MeRegistry> {
+  try {
+    const res = await fetch("/api/v1/me/registry", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      return FALLBACK_REGISTRY;
+    }
+    const data = (await res.json()) as MeRegistry;
+    return ensureShellModules(data);
+  } catch {
+    return FALLBACK_REGISTRY;
+  }
 }

@@ -155,6 +155,14 @@ describe('PermissionService matrix', () => {
     );
   });
 
+  it('denies hr.wage.read without a grant (field ACL fail-closed)', async () => {
+    await expect(
+      service.evaluate(userId, PERMISSION_KEYS.hrWageRead, {
+        companyId: companyDemo,
+      }),
+    ).resolves.toBe(false);
+  });
+
   it('does not apply a site-scoped grant to another site', async () => {
     prisma.iamGrant.findMany.mockImplementation(
       (args: { where: { subjectType: string } }) => {

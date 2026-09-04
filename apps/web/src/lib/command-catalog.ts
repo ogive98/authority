@@ -80,6 +80,13 @@ export const COMMAND_CATALOG: CommandItem[] = [
     shortcut: { keys: ["Ctrl", "Shift", "T"], key: "t", ctrl: true, shift: true },
   },
   {
+    id: "nav-field-acl",
+    label: "Dev — Field ACL",
+    group: "navigation",
+    href: "/dev/field-acl",
+    keywords: ["wage", "salaire", "acl", "mask"],
+  },
+  {
     id: "nav-datatable",
     label: "Dev — DataTable lots",
     group: "navigation",

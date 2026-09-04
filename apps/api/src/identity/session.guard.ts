@@ -32,21 +32,32 @@ export class SessionGuard implements CanActivate {
       });
     }
 
-    const session = await this.sessionService.findActiveSession(
-      token,
-      IamSessionRealm.BUSINESS,
-    );
-    if (!session) {
+    try {
+      const session = await this.sessionService.findActiveSession(
+        token,
+        IamSessionRealm.BUSINESS,
+      );
+      if (!session) {
+        throw new UnauthorizedException({
+          code: IDENTITY_ERROR_CODES.UNAUTHORIZED,
+          message: 'Session expired or revoked.',
+        });
+      }
+
+      this.sessionService.assertEnvMatch(session);
+
+      request.session = session;
+      request.user = session.user;
+      return true;
+    } catch (err) {
+      if (err instanceof UnauthorizedException) {
+        throw err;
+      }
+      // DB / Redis down must not surface as opaque 500 on every shell call.
       throw new UnauthorizedException({
         code: IDENTITY_ERROR_CODES.UNAUTHORIZED,
-        message: 'Session expired or revoked.',
+        message: 'Session store unavailable.',
       });
     }
-
-    this.sessionService.assertEnvMatch(session);
-
-    request.session = session;
-    request.user = session.user;
-    return true;
   }
 }

@@ -60,7 +60,7 @@ export function MonitorWidgetBody() {
 export function ModulesWidgetBody() {
   const { data, isPending } = useMeRegistry();
   if (isPending) return <ASkeleton lines={3} />;
-  const modules = data?.modules ?? [];
+  const modules = data.modules;
   if (modules.length === 0) {
     return (
       <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">

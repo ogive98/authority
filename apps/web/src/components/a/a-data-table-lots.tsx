@@ -250,7 +250,7 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
           <table className="w-full min-w-[640px] border-collapse text-left text-[length:var(--a-text-sm)]">
             <thead className="bg-a-surface-3 text-a-fg-muted">
               <tr>
-                <th className="w-10 px-3 py-2">
+                <th className="a-table-cell w-10">
                   <input
                     type="checkbox"
                     className="a-checkbox"
@@ -266,7 +266,7 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
                   <th
                     key={c.id}
                     className={cn(
-                      "px-3 py-2 font-medium",
+                      "a-table-cell font-medium",
                       c.numeric && "text-right",
                     )}
                   >
@@ -285,7 +285,10 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
                   )}
                   onClick={() => onRowClick?.(row)}
                 >
-                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className="a-table-cell"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <input
                       type="checkbox"
                       className="a-checkbox"
@@ -297,10 +300,7 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
                   {visibleCols.map((c) => (
                     <td
                       key={c.id}
-                      className={cn(
-                        "px-3 py-2",
-                        c.numeric && "text-right",
-                      )}
+                      className={cn("a-table-cell", c.numeric && "text-right")}
                     >
                       {cellValue(row, c.id)}
                     </td>

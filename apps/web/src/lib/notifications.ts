@@ -68,6 +68,12 @@ export function unreadCount(items: NotificationItem[]): number {
   return items.filter((n) => !n.read).length;
 }
 
+/** Client UX filter for « Alertes jobs » preference. */
+export function isJobAlert(n: NotificationItem): boolean {
+  const hay = `${n.title} ${n.body}`.toLowerCase();
+  return /shed|thunder|job|file critical|p4|dlq|concurrenc|bullmq/.test(hay);
+}
+
 export function markRead(
   items: NotificationItem[],
   id: string,

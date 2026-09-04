@@ -30,8 +30,8 @@ export type ACommandPaletteProps = {
 };
 
 /**
- * iOS Spotlight-like palette: search pill grows while typing, shrinks when empty;
- * results restagger on each keystroke.
+ * Command palette: search + run. Results restagger on each keystroke.
+ * Panel is centered with inset + mx-auto (not translateX) so open animation never flashes left.
  */
 export function ACommandPalette({
   open,
@@ -133,9 +133,10 @@ export function ACommandPalette({
         <Dialog.Overlay className="a-palette-overlay fixed inset-0 z-[var(--a-z-modal)]" />
         <Dialog.Content
           className={cn(
-            "a-palette-panel fixed top-[10%] left-1/2 z-[var(--a-z-modal)] -translate-x-1/2",
+            /* Center with inset + mx-auto — never translateX (avoids left flash vs pop animation). */
+            "a-palette-panel fixed top-[10%] right-0 left-0 z-[var(--a-z-modal)] mx-auto",
             "overflow-hidden focus:outline-none",
-            "rounded-[1.25rem] border border-a-border-subtle bg-a-surface-2/95 backdrop-blur-xl",
+            "rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2",
             expanded
               ? "w-[min(100%-1.5rem,36rem)]"
               : "w-[min(100%-1.5rem,26rem)]",
@@ -152,7 +153,7 @@ export function ACommandPalette({
           <div
             ref={searchRef}
             className={cn(
-              "a-palette-search mx-auto mt-3 flex items-center gap-2 rounded-full border border-a-border-subtle bg-a-surface-3 px-3",
+              "a-palette-search mx-auto mt-3 flex items-center gap-2 rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-3 px-3",
               "transition-[width,min-height,padding,box-shadow] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
               "motion-reduce:transition-none",
               expanded
@@ -200,7 +201,7 @@ export function ACommandPalette({
             {query ? (
               <button
                 type="button"
-                className="a-palette-clear inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-a-fg-muted hover:bg-a-surface-4 hover:text-a-fg"
+                className="a-palette-clear inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--a-radius-md)] text-a-fg-muted hover:bg-a-surface-4 hover:text-a-fg"
                 aria-label="Effacer"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
@@ -264,7 +265,7 @@ export function ACommandPalette({
                                 id={`cmd-${item.id}`}
                                 data-cmd-index={i}
                                 className={cn(
-                                  "flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-2.5 text-left text-[length:var(--a-text-sm)]",
+                                  "flex w-full items-center justify-between gap-3 rounded-[var(--a-radius-md)] px-2.5 py-2.5 text-left text-[length:var(--a-text-sm)]",
                                   "transition-colors duration-150",
                                   isActive
                                     ? "bg-a-accent-muted text-a-fg"
@@ -285,7 +286,7 @@ export function ACommandPalette({
                                       (k) => (
                                         <kbd
                                           key={`${item.id}-${k}`}
-                                          className="a-mono inline-flex min-w-[1.25rem] items-center justify-center rounded-md border border-a-border-subtle bg-a-surface-1/80 px-1 py-0.5 text-[length:var(--a-text-xs)] text-a-fg-subtle"
+                                          className="a-mono inline-flex min-w-[1.25rem] items-center justify-center rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-1/80 px-1 py-0.5 text-[length:var(--a-text-xs)] text-a-fg-subtle"
                                         >
                                           {k}
                                         </kbd>

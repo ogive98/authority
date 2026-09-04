@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start -p 3000",
     "typecheck": "tsc --noEmit",
-    "selftest": "npx --yes tsx src/lib/widget-catalog.selftest.ts",
+    "selftest": "npx --yes tsx src/lib/widget-catalog.selftest.ts && npx --yes tsx src/lib/field-acl.selftest.ts",
     "lint": "eslint ."
   },
   "dependencies": {

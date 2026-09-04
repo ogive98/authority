@@ -1,21 +1,21 @@
 "use client";
 
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useShellStore } from "@/stores/shell-store";
 import { iconForModule } from "./module-icons";
 
+/**
+ * Module icon rail — width always w-14 (never steals clicks over main content).
+ * Hover shows floating labels (pointer-events-none). Click opens feature popover.
+ */
 export function ShellSidebar() {
-  const [hovered, setHovered] = useState(false);
   const mobileOpen = useShellStore((s) => s.mobileNavOpen);
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
   const selectedModuleId = useShellStore((s) => s.selectedModuleId);
-  const setSelectedModuleId = useShellStore((s) => s.setSelectedModuleId);
+  const selectModule = useShellStore((s) => s.selectModule);
   const { data: registry } = useMeRegistry();
-
-  const expanded = mobileOpen || hovered;
-  const modules = registry?.modules ?? [];
+  const modules = registry.modules;
 
   return (
     <>
@@ -28,47 +28,24 @@ export function ShellSidebar() {
         />
       ) : null}
 
+      <div className="hidden w-14 shrink-0 md:block" aria-hidden />
+
       <aside
         id="shell-sidebar"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        className={cn(
-          "group/rail fixed inset-y-0 left-0 z-[var(--a-z-sticky)] flex flex-col border-r border-a-border-subtle bg-a-surface-1",
-          "transition-[width] duration-200 ease-out motion-reduce:transition-none",
-          "md:static md:translate-x-0",
-          expanded ? "w-[13.5rem]" : "w-14",
-          mobileOpen
-            ? "translate-x-0"
-            : "-translate-x-full md:translate-x-0",
-        )}
+        className="fixed inset-y-0 left-0 z-[var(--a-z-sticky)] hidden w-14 flex-col border-r border-a-border-subtle bg-a-surface-1 md:flex"
       >
-        <div
-          className={cn(
-            "flex h-12 shrink-0 items-center border-b border-a-border-subtle",
-            expanded ? "gap-2.5 px-3" : "justify-center px-2",
-          )}
-        >
+        <div className="flex h-12 shrink-0 items-center justify-center border-b border-a-border-subtle">
           <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center border border-a-border-strong text-[length:var(--a-text-sm)] font-semibold"
+            className="flex h-8 w-8 items-center justify-center border border-a-border-strong text-[length:var(--a-text-sm)] font-semibold"
             style={{ borderRadius: "var(--a-radius-sm)" }}
             aria-hidden
           >
             A
           </span>
-          <div
-            className={cn(
-              "min-w-0 overflow-hidden transition-opacity duration-200",
-              expanded ? "opacity-100" : "w-0 opacity-0",
-            )}
-          >
-            <p className="truncate text-[length:var(--a-text-sm)] font-semibold tracking-tight">
-              AUTHORITY
-            </p>
-          </div>
         </div>
 
         <nav
-          className="flex-1 overflow-x-hidden overflow-y-auto py-2"
+          className="flex-1 overflow-y-auto py-2"
           aria-label="Modules"
         >
           <ul className="space-y-0.5 px-1.5">
@@ -76,17 +53,13 @@ export function ShellSidebar() {
               const Icon = iconForModule(mod.key);
               const active = selectedModuleId === mod.key;
               return (
-                <li key={mod.key}>
+                <li key={mod.key} className="relative">
                   <button
                     type="button"
                     title={mod.name}
-                    onClick={() => {
-                      setSelectedModuleId(mod.key);
-                      setMobileNavOpen(false);
-                    }}
+                    onClick={() => selectModule(mod.key)}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-[var(--a-radius-md)] py-2 text-left text-[length:var(--a-text-sm)] transition-colors",
-                      expanded ? "px-2.5" : "justify-center px-0",
+                      "group/item relative flex w-full items-center justify-center rounded-[var(--a-radius-md)] py-2 transition-colors",
                       active
                         ? "bg-a-surface-3 text-a-fg"
                         : "text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
@@ -97,16 +70,74 @@ export function ShellSidebar() {
                       strokeWidth={1.75}
                       aria-hidden
                     />
+                    {/* Floating label — never widens hit-box over the workspace */}
                     <span
                       className={cn(
-                        "truncate transition-opacity duration-200",
-                        expanded
-                          ? "opacity-100"
-                          : "w-0 overflow-hidden opacity-0",
+                        "pointer-events-none absolute top-1/2 left-[calc(100%+0.5rem)] z-[var(--a-z-dropdown)] -translate-y-1/2",
+                        "whitespace-nowrap rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-2.5 py-1.5",
+                        "text-[length:var(--a-text-sm)] text-a-fg",
+                        "opacity-0 transition-opacity duration-100 group-hover/item:opacity-100",
                       )}
                     >
                       {mod.name}
                     </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </aside>
+
+      <aside
+        id="shell-sidebar-mobile"
+        aria-hidden={!mobileOpen}
+        inert={!mobileOpen ? true : undefined}
+        className={cn(
+          "fixed inset-y-0 left-0 z-[var(--a-z-dropdown)] flex w-[13.5rem] flex-col border-r border-a-border-subtle bg-a-surface-1 md:hidden",
+          "transition-transform duration-200 ease-out motion-reduce:transition-none",
+          mobileOpen
+            ? "translate-x-0"
+            : "pointer-events-none -translate-x-full",
+        )}
+      >
+        <div className="flex h-12 shrink-0 items-center gap-2.5 border-b border-a-border-subtle px-3">
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center border border-a-border-strong text-[length:var(--a-text-sm)] font-semibold"
+            style={{ borderRadius: "var(--a-radius-sm)" }}
+            aria-hidden
+          >
+            A
+          </span>
+          <p className="truncate text-[length:var(--a-text-sm)] font-semibold tracking-tight">
+            AUTHORITY
+          </p>
+        </div>
+        <nav className="flex-1 overflow-y-auto py-2" aria-label="Modules">
+          <ul className="space-y-0.5 px-1.5">
+            {modules.map((mod) => {
+              const Icon = iconForModule(mod.key);
+              const active = selectedModuleId === mod.key;
+              return (
+                <li key={mod.key}>
+                  <button
+                    type="button"
+                    title={mod.name}
+                    tabIndex={mobileOpen ? 0 : -1}
+                    onClick={() => selectModule(mod.key)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-[var(--a-radius-md)] px-2.5 py-2 text-left text-[length:var(--a-text-sm)] transition-colors",
+                      active
+                        ? "bg-a-surface-3 text-a-fg"
+                        : "text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
+                    )}
+                  >
+                    <Icon
+                      className="h-[1.125rem] w-[1.125rem] shrink-0"
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
+                    <span className="truncate">{mod.name}</span>
                   </button>
                 </li>
               );

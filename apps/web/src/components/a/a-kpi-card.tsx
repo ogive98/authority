@@ -5,6 +5,8 @@ export type AKpiCardProps = {
   value: string;
   delta?: string;
   deltaTone?: "success" | "warning" | "danger" | "neutral";
+  /** Field ACL: hide the numeric value (wage / protected amount). */
+  masked?: boolean;
 };
 
 /** KPI strip card — solid surface, tabular value, color on delta text only. */
@@ -13,6 +15,7 @@ export function AKpiCard({
   value,
   delta,
   deltaTone = "neutral",
+  masked = false,
 }: AKpiCardProps) {
   const tone =
     deltaTone === "success"
@@ -38,8 +41,11 @@ export function AKpiCard({
           </span>
         ) : null}
       </div>
-      <p className="a-mono a-tabular mt-2 text-[length:var(--a-text-2xl)] font-semibold tracking-tight">
-        {value}
+      <p
+        className="a-mono a-tabular mt-2 text-[length:var(--a-text-2xl)] font-semibold tracking-tight"
+        aria-label={masked ? `${label} masqué` : undefined}
+      >
+        {masked ? "••••" : value}
       </p>
     </article>
   );

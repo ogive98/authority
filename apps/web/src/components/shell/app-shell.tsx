@@ -7,14 +7,18 @@ import { ShellHeader } from "./header";
 import { MobileBottomNav } from "./mobile-bottom-nav";
 import { ResourceMonitor } from "./resource-monitor";
 import { ShellSidebar } from "./sidebar";
+import { PrefsHydrator } from "./prefs-hydrator";
+import { SpectreOverlay } from "./spectre-overlay";
 import { SyncModuleFromRoute } from "./sync-module-from-route";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-a-surface-1 text-a-fg">
       <SyncModuleFromRoute />
+      <PrefsHydrator />
       <CommandPaletteHost />
       <NotificationsHost />
+      <SpectreOverlay />
       <a
         href="#main"
         className="sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[var(--a-z-toast)] focus:block focus:bg-a-accent focus:px-3 focus:py-2 focus:text-a-accent-fg"

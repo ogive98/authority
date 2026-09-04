@@ -10,6 +10,7 @@ import { ModuleLifecycleService } from './catalog/module-lifecycle.service';
 import { CapabilitiesController } from './capabilities.controller';
 import { FeatureFlagService } from './feature-flag.service';
 import { FlagGuard } from './flag.guard';
+import { MeFieldAclService } from './me-field-acl.service';
 import { MeRegistryController } from './me-registry.controller';
 import { MeRegistryService } from './me-registry.service';
 import { ModuleActivationService } from './module-activation.service';
@@ -33,6 +34,7 @@ import { SalesSurfaceController } from './sales-surface.controller';
     ModuleActivationService,
     CapabilityResolverService,
     FeatureFlagService,
+    MeFieldAclService,
     MeRegistryService,
     ModuleGuard,
     FlagGuard,
@@ -45,6 +47,7 @@ import { SalesSurfaceController } from './sales-surface.controller';
     ModuleActivationService,
     CapabilityResolverService,
     FeatureFlagService,
+    MeFieldAclService,
     MeRegistryService,
     ModuleGuard,
     FlagGuard,

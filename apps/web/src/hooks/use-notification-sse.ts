@@ -17,8 +17,10 @@ export type UseNotificationSseOptions = {
   enabled?: boolean;
 };
 
+const RECONNECT_MS = 4000;
+
 /**
- * Subscribes to notification SSE. Disconnect / pause → store.sseStatus = disconnected.
+ * Subscribes to notification SSE. On error: mark disconnected and retry.
  */
 export function useNotificationSse(options: UseNotificationSseOptions = {}) {
   const url = options.url ?? NOTIFICATION_SSE_PATH;
@@ -37,35 +39,44 @@ export function useNotificationSse(options: UseNotificationSseOptions = {}) {
 
     let es: EventSource | null = null;
     let intentionalClose = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    setSseStatus("connecting");
-    es = new EventSource(url);
-
-    es.onopen = () => {
-      setSseStatus("connected");
-    };
-
-    es.onmessage = (ev) => {
-      try {
-        const data = JSON.parse(ev.data) as StreamMessage;
-        if (data.kind === "snapshot" && Array.isArray(data.items)) {
-          applySnapshot(data.items);
-        } else if (data.kind === "notification" && data.item) {
-          pushItem(data.item);
-        }
-      } catch {
-        /* ignore malformed frames */
-      }
-    };
-
-    es.onerror = () => {
+    function connect() {
       if (intentionalClose) return;
-      setSseStatus("disconnected");
-      es?.close();
-    };
+      setSseStatus("connecting");
+      es = new EventSource(url);
+
+      es.onopen = () => {
+        setSseStatus("connected");
+      };
+
+      es.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data) as StreamMessage;
+          if (data.kind === "snapshot" && Array.isArray(data.items)) {
+            applySnapshot(data.items);
+          } else if (data.kind === "notification" && data.item) {
+            pushItem(data.item);
+          }
+        } catch {
+          /* ignore malformed frames */
+        }
+      };
+
+      es.onerror = () => {
+        if (intentionalClose) return;
+        setSseStatus("disconnected");
+        es?.close();
+        es = null;
+        retryTimer = setTimeout(connect, RECONNECT_MS);
+      };
+    }
+
+    connect();
 
     return () => {
       intentionalClose = true;
+      if (retryTimer) clearTimeout(retryTimer);
       es?.close();
     };
   }, [

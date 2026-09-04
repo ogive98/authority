@@ -48,11 +48,11 @@ export default function PreviewCommandesPage() {
           <table className="w-full min-w-[640px] border-collapse text-left text-[length:var(--a-text-sm)]">
             <thead className="bg-a-surface-3 text-a-fg-muted">
               <tr>
-                <th className="px-3 py-2 font-medium">N°</th>
-                <th className="px-3 py-2 font-medium">Client</th>
-                <th className="px-3 py-2 text-right font-medium">Montant</th>
-                <th className="px-3 py-2 font-medium">Statut</th>
-                <th className="px-3 py-2 font-medium">Échéance</th>
+                <th className="a-table-cell font-medium">N°</th>
+                <th className="a-table-cell font-medium">Client</th>
+                <th className="a-table-cell text-right font-medium">Montant</th>
+                <th className="a-table-cell font-medium">Statut</th>
+                <th className="a-table-cell font-medium">Échéance</th>
               </tr>
             </thead>
             <tbody>
@@ -62,12 +62,12 @@ export default function PreviewCommandesPage() {
                   className="cursor-pointer border-t border-a-border-subtle hover:bg-a-surface-3/60"
                   onClick={() => setOrder(row)}
                 >
-                  <td className="a-mono px-3 py-2">{row.id}</td>
-                  <td className="px-3 py-2">{row.client}</td>
-                  <td className="a-mono a-tabular px-3 py-2 text-right">
+                  <td className="a-mono a-table-cell">{row.id}</td>
+                  <td className="a-table-cell">{row.client}</td>
+                  <td className="a-mono a-tabular a-table-cell text-right">
                     {row.amountTnd} TND
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="a-table-cell">
                     <span
                       className={
                         row.status === "paid"
@@ -80,7 +80,7 @@ export default function PreviewCommandesPage() {
                       {orderStatusLabel(row.status)}
                     </span>
                   </td>
-                  <td className="a-mono px-3 py-2">{row.due}</td>
+                  <td className="a-mono a-table-cell">{row.due}</td>
                 </tr>
               ))}
             </tbody>

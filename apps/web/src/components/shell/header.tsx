@@ -17,6 +17,7 @@ import {
   SpectreIcon,
   ThemeModeSwitch,
 } from "./mode-switch";
+import { UserMenu } from "./user-menu";
 import { cn } from "@/lib/utils";
 
 function IconBtn({
@@ -67,6 +68,20 @@ export function ShellHeader() {
     setTheme(current);
   }, []);
 
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      "data-spectre",
+      spectreEnabled ? "on" : "off",
+    );
+  }, [spectreEnabled]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      "data-patch",
+      patchEnabled ? "on" : "off",
+    );
+  }, [patchEnabled]);
+
   function applyTheme(next: "dark" | "light") {
     document.documentElement.setAttribute("data-theme", next);
     setTheme(next);
@@ -79,7 +94,7 @@ export function ShellHeader() {
           type="button"
           className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-md)] text-a-fg-muted hover:bg-a-surface-3 md:hidden"
           aria-label="Ouvrir les modules"
-          aria-controls="shell-sidebar"
+          aria-controls="shell-sidebar-mobile"
           onClick={() => setMobileNavOpen(true)}
         >
           <Menu className="h-4 w-4" strokeWidth={1.75} />
@@ -144,17 +159,18 @@ export function ShellHeader() {
           checked={patchEnabled}
           onCheckedChange={setPatchEnabled}
         />
+        {patchEnabled ? (
+          <span
+            className="a-mono hidden rounded-[var(--a-radius-sm)] border border-a-warning/40 bg-a-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-a-warning lg:inline"
+            title="PATCH MODE actif — correctifs hot-path"
+          >
+            PATCH
+          </span>
+        ) : null}
 
         <ThemeModeSwitch theme={theme} onThemeChange={applyTheme} />
 
-        <button
-          type="button"
-          title="Profil (stub)"
-          aria-label="Profil"
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-a-border-subtle bg-a-surface-2 text-[length:var(--a-text-xs)] font-medium text-a-fg-muted"
-        >
-          U
-        </button>
+        <UserMenu />
       </div>
     </header>
   );
