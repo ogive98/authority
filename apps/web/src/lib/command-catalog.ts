@@ -87,6 +87,13 @@ export const COMMAND_CATALOG: CommandItem[] = [
     keywords: ["wage", "salaire", "acl", "mask"],
   },
   {
+    id: "nav-print",
+    label: "Dev — Impression",
+    group: "navigation",
+    href: "/dev/print",
+    keywords: ["print", "job", "bl", "document"],
+  },
+  {
     id: "nav-datatable",
     label: "Dev — DataTable lots",
     group: "navigation",
