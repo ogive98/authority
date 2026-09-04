@@ -13,6 +13,10 @@ export const PERMISSION_CATALOGUE = [
   'thunder.job.enqueue',
   'system_monitoring.view',
   'hr.wage.read',
+  'products.read',
+  'products.write',
+  'products.activate',
+  'master_data.refs.read',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_CATALOGUE)[number];
@@ -32,6 +36,10 @@ export const PERMISSION_KEYS = {
   thunderJobEnqueue: 'thunder.job.enqueue',
   systemMonitoringView: 'system_monitoring.view',
   hrWageRead: 'hr.wage.read',
+  productsRead: 'products.read',
+  productsWrite: 'products.write',
+  productsActivate: 'products.activate',
+  masterDataRefsRead: 'master_data.refs.read',
 } as const satisfies Record<string, PermissionKey>;
 
 export const PERMISSION_METADATA_KEY = 'authority:permission';

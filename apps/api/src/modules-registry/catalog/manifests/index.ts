@@ -8,10 +8,11 @@ import { organizationManifest } from './organization.manifest';
 import { payrollManifest } from './payroll.manifest';
 import { platformManifest } from './platform.manifest';
 import { productionManifest } from './production.manifest';
+import { productsManifest } from './products.manifest';
 import { salesManifest } from './sales.manifest';
 import { settingsManifest } from './settings.manifest';
 
-/** Static catalog — exactly the 11 seeded runtime module keys. */
+/** Static catalog — exactly the seeded runtime module keys. */
 export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   platformManifest,
   identityManifest,
@@ -24,4 +25,5 @@ export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   payrollManifest,
   customersManifest,
   masterDataManifest,
+  productsManifest,
 ] as const;

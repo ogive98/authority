@@ -11,6 +11,8 @@ import { PlatformModule } from './platform/platform.module';
 import { LicenseModule } from './license/license.module';
 import { SettingsModule } from './settings/settings.module';
 import { ThunderModule } from './thunder-core/thunder.module';
+import { ProductsModule } from './products/products.module';
+import { MasterDataModule } from './master-data/master-data.module';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { ThunderModule } from './thunder-core/thunder.module';
     LicenseModule,
     SettingsModule,
     ThunderModule,
+    MasterDataModule,
+    ProductsModule,
   ],
 })
 export class AppModule {}

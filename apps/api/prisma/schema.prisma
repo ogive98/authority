@@ -587,3 +587,96 @@ model ThunderRuleDef {
   @@index([eventPattern])
   @@map("thunder_rule_def")
 }
+
+// --- prd_* products catalogue (MOD-PRODUCTS V0 + POLY-01) ---
+
+enum PrdProductStatus {
+  DRAFT
+  ACTIVE
+  OBSOLETE
+}
+
+model PrdProduct {
+  id              String           @id @default(uuid()) @db.Uuid
+  companyId       String           @map("company_id") @db.Uuid
+  sku             String
+  name            String
+  typeKey         String           @map("type_key")
+  uom             String
+  trackLot        Boolean          @default(false) @map("track_lot")
+  perishable      Boolean          @default(false)
+  storageClassKey String           @map("storage_class_key")
+  allergenFlags   Json             @default("[]") @map("allergen_flags")
+  status          PrdProductStatus @default(DRAFT)
+  version         Int              @default(0)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?        @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, sku])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@map("prd_product")
+}
+
+// --- md_* master data reference lists (POLY-01) ---
+
+enum MdRefKind {
+  product_type
+  uom
+  storage_class
+  allergen
+}
+
+model MdRefValue {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  kind      MdRefKind
+  code      String
+  label     String
+  sort      Int       @default(0)
+  enabled   Boolean   @default(true)
+  metaJson  Json      @default("{}") @map("meta_json")
+  version   Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, kind, code])
+  @@index([companyId, kind, enabled])
+  @@map("md_ref_value")
+}
+
+// --- sa_* Super Admin industry packs (POLY-01) ---
+
+model SaIndustryPack {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  name        String
+  description String?
+  version     Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  items SaIndustryPackItem[]
+
+  @@map("sa_industry_pack")
+}
+
+model SaIndustryPackItem {
+  id        String    @id @default(uuid()) @db.Uuid
+  packId    String    @map("pack_id") @db.Uuid
+  kind      MdRefKind
+  code      String
+  label     String
+  sort      Int       @default(0)
+  metaJson  Json      @default("{}") @map("meta_json")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  pack SaIndustryPack @relation(fields: [packId], references: [id], onDelete: Cascade)
+
+  @@unique([packId, kind, code])
+  @@index([packId, kind])
+  @@map("sa_industry_pack_item")
+}

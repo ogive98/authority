@@ -14,6 +14,10 @@ import type { LicensePayload } from '../src/license/license.constants';
 import { LICENSE_CACHE_KEY } from '../src/license/license.constants';
 import { encryptMfaSecret } from '../src/super-admin/mfa-crypto';
 import Redis from 'ioredis';
+import {
+  applyPackToCompany,
+  seedIndustryPacks,
+} from './industry-packs.seed';
 
 const DEMO_USER_EMAIL = 'demo@authority.local';
 const DEMO_USER_PASSWORD = 'DemoPass123!';
@@ -129,9 +133,14 @@ async function main() {
     'payroll',
     'customers',
     'master_data',
+    'products',
   ] as const;
 
   for (const moduleKey of businessModules) {
+    const enabled =
+      moduleKey === 'master_data' || moduleKey === 'products'
+        ? 'ENABLED'
+        : 'DISABLED';
     await prisma.modModuleState.upsert({
       where: {
         companyId_moduleKey: {
@@ -139,11 +148,11 @@ async function main() {
           moduleKey,
         },
       },
-      update: { status: 'DISABLED' },
+      update: { status: enabled },
       create: {
         companyId: company.id,
         moduleKey,
-        status: 'DISABLED',
+        status: enabled,
       },
     });
   }
@@ -298,6 +307,30 @@ async function main() {
     subjectId: demoUser.id,
     companyId: company.id,
   });
+  await upsertGrant({
+    permissionKey: 'products.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'products.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'products.activate',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'master_data.refs.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
 
   await seedSettingsDefinitions(company.id, demoUser.id);
 
@@ -419,6 +452,9 @@ async function main() {
   }
 
   await clearLicenseCache();
+
+  await seedIndustryPacks(prisma);
+  await applyPackToCompany(prisma, company.id, 'dairy');
 
   console.log(
     `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, limited ${LIMITED_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}`,

@@ -13,6 +13,7 @@ export const BUSINESS_MODULE_KEYS = [
   'payroll',
   'customers',
   'master_data',
+  'products',
 ] as const;
 
 export const FLAG_KEYS = {

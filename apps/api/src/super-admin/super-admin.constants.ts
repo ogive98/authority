@@ -9,6 +9,7 @@ export const SUPER_ADMIN_ERROR_CODES = {
   UNAUTHORIZED: 'SA.UNAUTHORIZED',
   MFA_NOT_ENROLLED: 'SA.MFA_NOT_ENROLLED',
   MFA_INVALID: 'SA.MFA_INVALID',
+  NOT_FOUND: 'SA.NOT_FOUND',
 } as const;
 
 export type SuperAdminErrorCode =
