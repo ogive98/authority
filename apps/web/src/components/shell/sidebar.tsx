@@ -13,6 +13,7 @@ export function ShellSidebar() {
   const mobileOpen = useShellStore((s) => s.mobileNavOpen);
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
   const selectedModuleId = useShellStore((s) => s.selectedModuleId);
+  const featureMenuOpen = useShellStore((s) => s.featureMenuOpen);
   const selectModule = useShellStore((s) => s.selectModule);
   const { data: registry } = useMeRegistry();
   const modules = registry.modules;
@@ -56,7 +57,12 @@ export function ShellSidebar() {
                 <li key={mod.key} className="relative">
                   <button
                     type="button"
+                    id={`rail-${mod.key}`}
                     title={mod.name}
+                    aria-label={mod.name}
+                    aria-haspopup="dialog"
+                    aria-expanded={featureMenuOpen && active}
+                    aria-controls="shell-feature-menu"
                     onClick={() => selectModule(mod.key)}
                     className={cn(
                       "group/item relative flex w-full items-center justify-center rounded-[var(--a-radius-md)] py-2 transition-colors",
@@ -122,7 +128,11 @@ export function ShellSidebar() {
                 <li key={mod.key}>
                   <button
                     type="button"
+                    id={`rail-m-${mod.key}`}
                     title={mod.name}
+                    aria-label={mod.name}
+                    aria-haspopup="dialog"
+                    aria-expanded={featureMenuOpen && active}
                     tabIndex={mobileOpen ? 0 : -1}
                     onClick={() => selectModule(mod.key)}
                     className={cn(

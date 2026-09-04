@@ -37,8 +37,8 @@
   --a-success-fg: #ecfdf5;
   --a-warning: #d97706;
   --a-warning-fg: #fffbeb;
-  /* Rouge atténué — même sobriété que teal, pas rose néon */
-  --a-danger: #b85c63;
+  /* Rouge atténué — même sobriété que teal, pas rose néon ; AA ≥ 4.5 sur canvas */
+  --a-danger: #c46d74;
   --a-danger-fg: #fce8ea;
   --a-info: #0284c7;
   --a-info-fg: #f0f9ff;
@@ -145,6 +145,27 @@
   --a-focus-ring-offset: var(--a-surface-2);
 }
 
+/* Control Center — spectre/slate, jamais teal métier (UI-14) */
+[data-portal="sa"] {
+  --a-accent: #7c8a9a;
+  --a-accent-hover: #94a3b8;
+  --a-accent-muted: rgba(124, 138, 154, 0.12);
+  --a-accent-fg: #e8eef4;
+  --a-focus-ring: #94a3b8;
+  --a-lightning-bg: color-mix(in srgb, #7c8a9a 7%, var(--a-surface-2));
+  --a-lightning-border: color-mix(in srgb, #7c8a9a 22%, transparent);
+}
+
+[data-theme="light"] [data-portal="sa"] {
+  --a-accent: #64748b;
+  --a-accent-hover: #475569;
+  --a-accent-fg: #f8fafc;
+  --a-accent-muted: #e2e8f0;
+  --a-focus-ring: #475569;
+  --a-lightning-bg: color-mix(in srgb, #64748b 8%, var(--a-surface-2));
+  --a-lightning-border: color-mix(in srgb, #64748b 28%, var(--a-border-subtle));
+}
+
 @theme inline {
   --color-a-surface-1: var(--a-surface-1);
   --color-a-surface-2: var(--a-surface-2);
@@ -210,6 +231,27 @@
   }
 
   :focus-visible {
+    outline: 2px solid var(--a-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .a-skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0.5rem;
+    z-index: var(--a-z-toast);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--a-radius-md);
+    background: var(--a-accent);
+    color: var(--a-accent-fg);
+    font-size: var(--a-text-sm);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .a-skip-link:focus,
+  .a-skip-link:focus-visible {
+    left: 0.5rem;
     outline: 2px solid var(--a-focus-ring);
     outline-offset: 2px;
   }

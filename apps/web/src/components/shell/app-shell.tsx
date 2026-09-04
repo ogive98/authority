@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ASkipLink } from "@/components/a/a-skip-link";
 import { CommandPaletteHost } from "./command-palette-host";
 import { NotificationsHost } from "./notifications-host";
 import { ShellBreadcrumbs } from "./breadcrumbs";
@@ -19,12 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <CommandPaletteHost />
       <NotificationsHost />
       <SpectreOverlay />
-      <a
-        href="#main"
-        className="sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[var(--a-z-toast)] focus:block focus:bg-a-accent focus:px-3 focus:py-2 focus:text-a-accent-fg"
-      >
-        Aller au contenu
-      </a>
+      <ASkipLink />
       <ShellSidebar />
       <FeatureMenu />
       <div className="flex min-h-screen min-w-0 flex-1 flex-col pb-12 md:pb-0">

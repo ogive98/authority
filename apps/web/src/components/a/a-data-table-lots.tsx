@@ -169,9 +169,9 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
           aria-label="Filtrer par statut"
         >
           <option value="all">Tous statuts</option>
-          <option value="open">open</option>
-          <option value="closed">closed</option>
-          <option value="quarantine">quarantine</option>
+          <option value="open">ouvert</option>
+          <option value="closed">clôturé</option>
+          <option value="quarantine">quarantaine</option>
         </select>
         <AButton
           type="button"
@@ -343,18 +343,21 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
 }
 
 function StatusLabel({ status }: { status: LotStatus }) {
-  const color =
+  const tone =
     status === "open"
-      ? "var(--a-accent)"
+      ? "text-a-accent"
       : status === "quarantine"
-        ? "var(--a-danger)"
-        : "var(--a-fg-muted)";
+        ? "text-a-danger"
+        : "text-a-fg-muted";
+  const label =
+    status === "open"
+      ? "ouvert"
+      : status === "quarantine"
+        ? "quarantaine"
+        : "clôturé";
   return (
-    <span
-      className="text-[length:var(--a-text-sm)] font-medium capitalize"
-      style={{ color }}
-    >
-      {status}
+    <span className={cn("text-[length:var(--a-text-sm)] font-medium", tone)}>
+      {label}
     </span>
   );
 }

@@ -94,6 +94,13 @@ export const COMMAND_CATALOG: CommandItem[] = [
     keywords: ["print", "job", "bl", "document"],
   },
   {
+    id: "nav-a11y",
+    label: "Dev — Accessibilité",
+    group: "navigation",
+    href: "/dev/a11y",
+    keywords: ["a11y", "skip", "contrast", "clavier"],
+  },
+  {
     id: "nav-datatable",
     label: "Dev — DataTable lots",
     group: "navigation",

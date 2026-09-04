@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/shell";
 import { cn } from "@/lib/utils";
+import { ASkipLink } from "./a-skip-link";
 import { AScreenHeader } from "./a-screen-header";
 
 export function ADevGateActions({ extra }: { extra?: ReactNode }) {
@@ -47,6 +48,7 @@ export function ADevPage({
 }: ADevPageProps) {
   return (
     <div className={cn("min-h-screen bg-a-surface-1 text-a-fg", className)}>
+      <ASkipLink />
       {overlay}
       <AScreenHeader
         kicker={kicker}
@@ -56,6 +58,7 @@ export function ADevPage({
         actions={<ADevGateActions extra={extraActions} />}
       />
       <main
+        id="main"
         className={
           mainClassName ?? "px-[var(--a-space-6)] py-[var(--a-space-7)]"
         }

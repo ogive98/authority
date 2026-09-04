@@ -31,5 +31,6 @@ export { AScreenHeader } from "./a-screen-header";
 export { ADevPage, ADevGateActions } from "./a-dev-page";
 export { AKpiCard } from "./a-kpi-card";
 export { ASensitiveValue } from "./a-sensitive-value";
+export { ASkipLink } from "./a-skip-link";
 export { APrintButton } from "./a-print-button";
 export { AJobProgress } from "./a-job-progress";
