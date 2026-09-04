@@ -23,6 +23,20 @@ describe('ResourceManagerService', () => {
     );
   });
 
+  it('sheds import from live RAM sample, never critical', () => {
+    service.observeLive({
+      cpuUsageRatio: 0.1,
+      ramUsageRatio: 0.96,
+      pgPoolUsage: null,
+      sampledAt: Date.now(),
+    });
+
+    expect(service.getPressure().reason).toBe('ram_pressure');
+    expect(service.getConcurrency('import')).toBe(0);
+    expect(service.getConcurrency('critical')).toBeGreaterThan(0);
+    expect(service.shouldAdmitEnqueue('critical', 'c1').allowed).toBe(true);
+  });
+
   it('throttles fairness burst on import queue', () => {
     process.env.THUNDER_FAIRNESS_BURST = '2';
     process.env.THUNDER_FAIRNESS_REFILL_PER_SEC = '1';
@@ -31,5 +45,16 @@ describe('ResourceManagerService', () => {
     expect(service.shouldAdmitEnqueue('import', 'c1').allowed).toBe(true);
     expect(service.shouldAdmitEnqueue('import', 'c1').allowed).toBe(true);
     expect(service.shouldAdmitEnqueue('import', 'c1').allowed).toBe(false);
+  });
+
+  it('exposes live sample for the monitor snapshot', () => {
+    expect(service.getLiveSample()).toBeNull();
+    service.observeLive({
+      cpuUsageRatio: 0.2,
+      ramUsageRatio: 0.3,
+      pgPoolUsage: null,
+      sampledAt: 1,
+    });
+    expect(service.getLiveSample()?.cpuUsageRatio).toBe(0.2);
   });
 });

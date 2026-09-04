@@ -116,10 +116,12 @@ export class MonitorSnapshotService {
 
     const cpuCores = cpus().length || 1;
     const loadAvg1 = loadavg()[0] ?? 0;
+    const live = this.resources.getLiveSample();
     const usageRatio =
-      process.platform === 'win32'
+      live?.cpuUsageRatio ??
+      (process.platform === 'win32'
         ? null
-        : Math.min(1, Math.max(0, loadAvg1 / cpuCores));
+        : Math.min(1, Math.max(0, loadAvg1 / cpuCores)));
 
     const totalBytes = totalmem();
     const freeBytes = freemem();

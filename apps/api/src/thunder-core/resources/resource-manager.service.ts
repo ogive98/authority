@@ -1,14 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import type { ThunderQueueFamily } from '../thunder.constants';
+import { evaluatePressure } from './pressure';
 import {
   QUEUE_DEFAULT_PRIORITY,
   SHEDDABLE_QUEUES,
+  type LiveResourceSample,
   type ResourcePressureSnapshot,
 } from './resource-manager.types';
 
+/** Caps, fairness, and P4 shed. Does not route jobs to named workers. */
 @Injectable()
 export class ResourceManagerService {
   private forcedShedP4 = false;
+  private pressureReason?: string;
+  private live: LiveResourceSample | null = null;
   private readonly tokens = new Map<
     string,
     { tokens: number; updatedAt: number }
@@ -26,12 +31,21 @@ export class ResourceManagerService {
     return readPositiveInt(process.env.THUNDER_STALL_MS, 60_000);
   }
 
+  /** Closed-loop input from CapacityPlannerWorker (CPU/RAM/PG live). */
+  observeLive(sample: LiveResourceSample): void {
+    this.live = sample;
+  }
+
+  /** Latest live sample from CapacityPlannerWorker, or null before first tick. */
+  getLiveSample(): LiveResourceSample | null {
+    return this.live;
+  }
+
   getConcurrency(queue: ThunderQueueFamily): number {
     if (queue === 'critical') {
       return Math.max(2, Math.min(4, this.getMaxWorkers()));
     }
     if (queue === 'import' || queue === 'analytics') {
-      // 0 = do not start / pause workers for sheddable lanes under pressure
       if (this.getPressure().shedP4) {
         return 0;
       }
@@ -58,26 +72,17 @@ export class ResourceManagerService {
     }
   }
 
-  private pressureReason?: string;
-
   getPressure(): ResourcePressureSnapshot {
-    if (this.forcedShedP4 || process.env.THUNDER_SHED_P4 === 'true') {
-      return {
-        shedP4: true,
-        reason: this.pressureReason ?? 'THUNDER_SHED_P4',
-      };
-    }
-
-    const pgPressure = Number(process.env.THUNDER_PG_POOL_USAGE ?? '0');
-    const cpuPressure = Number(process.env.THUNDER_CPU_USAGE ?? '0');
-    if (pgPressure >= 0.8 || cpuPressure >= 0.85) {
-      return {
-        shedP4: true,
-        reason: pgPressure >= 0.8 ? 'pg_pool_pressure' : 'cpu_pressure',
-      };
-    }
-
-    return { shedP4: false };
+    return evaluatePressure({
+      forced: this.forcedShedP4,
+      forcedReason: this.pressureReason,
+      envShed: process.env.THUNDER_SHED_P4 === 'true',
+      envCpu: Number(process.env.THUNDER_CPU_USAGE ?? '0'),
+      envPg: Number(process.env.THUNDER_PG_POOL_USAGE ?? '0'),
+      liveCpu: this.live?.cpuUsageRatio ?? null,
+      liveRam: this.live?.ramUsageRatio ?? null,
+      livePg: this.live?.pgPoolUsage ?? null,
+    });
   }
 
   shouldAdmitEnqueue(
@@ -87,11 +92,14 @@ export class ResourceManagerService {
     allowed: boolean;
     reason?: string;
   } {
-    if (this.isSheddableQueue(queue) && this.getPressure().shedP4) {
-      return {
-        allowed: false,
-        reason: this.getPressure().reason ?? 'shed_p4',
-      };
+    if (this.isSheddableQueue(queue)) {
+      const pressure = this.getPressure();
+      if (pressure.shedP4) {
+        return {
+          allowed: false,
+          reason: pressure.reason ?? 'shed_p4',
+        };
+      }
     }
 
     if (queue === 'import' || queue === 'analytics') {

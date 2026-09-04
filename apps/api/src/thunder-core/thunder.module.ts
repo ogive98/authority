@@ -22,6 +22,7 @@ import { MonitorSnapshotService } from './observability/monitor-snapshot.service
 import { CircuitBreakerService } from './resilience/circuit-breaker.service';
 import { PlanAbcPolicyService } from './resilience/plan-abc/plan-abc-policy.service';
 import { PlanCRegistryService } from './resilience/plan-c-registry.service';
+import { CapacityPlannerWorker } from './resources/capacity-planner.worker';
 import { ResourceManagerService } from './resources/resource-manager.service';
 import { WatchdogService } from './resources/watchdog.service';
 import { WatchdogWorker } from './resources/watchdog.worker';
@@ -59,6 +60,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     PlanCRegistryService,
     PlanAbcPolicyService,
     ResourceManagerService,
+    CapacityPlannerWorker,
     WatchdogService,
     WatchdogWorker,
     AdmissionOrchestratorService,

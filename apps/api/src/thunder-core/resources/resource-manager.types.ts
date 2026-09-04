@@ -15,3 +15,10 @@ export interface ResourcePressureSnapshot {
   shedP4: boolean;
   reason?: string;
 }
+
+export type LiveResourceSample = {
+  cpuUsageRatio: number | null;
+  ramUsageRatio: number;
+  pgPoolUsage: number | null;
+  sampledAt: number;
+};

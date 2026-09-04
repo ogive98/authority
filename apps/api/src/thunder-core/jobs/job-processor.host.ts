@@ -13,7 +13,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import type { ThunderContext } from '../context/thunder-context';
 import { ResourceManagerService } from '../resources/resource-manager.service';
 import { PlanAbcPolicyService } from '../resilience/plan-abc/plan-abc-policy.service';
-import { thunderQueueName, thunderWorkersEnabled } from '../thunder.constants';
+import {
+  thunderQueueName,
+  thunderWorkersEnabled,
+  type ThunderQueueFamily,
+} from '../thunder.constants';
+import { SHEDDABLE_QUEUES } from '../resources/resource-manager.types';
 import { CircuitBreakerService } from '../resilience/circuit-breaker.service';
 import { DlqService } from './dlq/dlq.service';
 import type { ThunderQueueJobData } from './job.types';
@@ -27,7 +32,10 @@ import {
 @Injectable()
 export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(JobProcessorHost.name);
-  private readonly workers: Worker<ThunderQueueJobData>[] = [];
+  private readonly lanes = new Map<
+    ThunderQueueFamily,
+    Worker<ThunderQueueJobData>
+  >();
   private workerConnections: Redis[] = [];
 
   constructor(
@@ -47,14 +55,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     }
 
     for (const queueFamily of this.registry.getQueuesInUse()) {
-      const concurrency = this.resources.getConcurrency(queueFamily);
-      if (concurrency <= 0) {
-        this.logger.log(
-          `Thunder worker skipped for ${queueFamily} (concurrency=0 / shed)`,
-        );
-        continue;
-      }
-
+      const target = this.resources.getConcurrency(queueFamily);
       const connection = this.redis.createBullConnection();
       if (!connection) {
         this.logger.warn('Thunder workers skipped — Redis unavailable');
@@ -67,7 +68,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
         async (job) => this.processJob(job),
         {
           connection,
-          concurrency,
+          concurrency: Math.max(1, target),
           settings: {
             backoffStrategy: (attemptsMade) =>
               computeBackoffDelayMs(attemptsMade),
@@ -79,16 +80,47 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
         void this.handleFinalFailure(job, error);
       });
 
-      this.workers.push(worker);
-      this.logger.log(
-        `Thunder worker listening on ${queueFamily} (concurrency=${concurrency})`,
-      );
+      this.lanes.set(queueFamily, worker);
+      if (target <= 0) {
+        void worker.pause();
+        this.logger.log(`Thunder lane ${queueFamily} started paused (shed P4)`);
+      } else {
+        this.logger.log(
+          `Thunder worker listening on ${queueFamily} (concurrency=${target})`,
+        );
+      }
+    }
+  }
+
+  /** Pause/resume sheddable lanes from live pressure. Never touches critical. */
+  async syncSheddableLanes(): Promise<void> {
+    for (const family of SHEDDABLE_QUEUES) {
+      const worker = this.lanes.get(family);
+      if (!worker) continue;
+      const pause = this.resources.getConcurrency(family) <= 0;
+      try {
+        if (pause && !worker.isPaused()) {
+          await worker.pause();
+          this.logger.log(`Thunder lane paused ${family} (shed P4)`);
+        } else if (!pause && worker.isPaused()) {
+          await worker.resume();
+          this.logger.log(`Thunder lane resumed ${family}`);
+        }
+      } catch (error) {
+        this.logger.warn(
+          error instanceof Error
+            ? error.message
+            : `Lane sync failed for ${family}`,
+        );
+      }
     }
   }
 
   async onModuleDestroy(): Promise<void> {
-    await Promise.all(this.workers.map((worker) => worker.close(true)));
-    this.workers.length = 0;
+    await Promise.all(
+      [...this.lanes.values()].map((worker) => worker.close(true)),
+    );
+    this.lanes.clear();
 
     for (const connection of this.workerConnections) {
       try {
