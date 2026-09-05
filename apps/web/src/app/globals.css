@@ -447,6 +447,12 @@
     }
   }
 
+  @keyframes a-portal-dash {
+    to {
+      stroke-dashoffset: -140;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .a-palette-overlay,
     .a-palette-panel,

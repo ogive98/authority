@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ABadge } from "@/components/a/a-badge";
 import { AErrorState } from "@/components/a/a-error-state";
 import { AScreenHeader } from "@/components/a/a-screen-header";
+import { PortalPackageJourney } from "@/components/portal/portal-package-journey";
 import {
   fetchDelivery,
   portalDeliveryBadgeTone,
@@ -50,7 +51,7 @@ export default async function PortalDeliveryDetailPage({
       <AScreenHeader
         kicker="Customer Portal"
         title={delivery.number}
-        description="Suivi d’expédition — statut métier, pas de tracking GPS"
+        description="Suivi d’expédition — schéma interactif du statut réel"
         actions={
           <Link href={PORTAL_DELIVERIES_PATH}>
             <span className="text-[length:var(--a-text-sm)] text-a-accent hover:underline">
@@ -60,6 +61,8 @@ export default async function PortalDeliveryDetailPage({
         }
       />
       <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
+        <PortalPackageJourney delivery={delivery} />
+
         <div className="a-card grid gap-4 p-[var(--a-space-5)] sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">

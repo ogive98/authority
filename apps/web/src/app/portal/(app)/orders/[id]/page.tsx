@@ -3,11 +3,14 @@ import { notFound } from "next/navigation";
 import { ABadge } from "@/components/a/a-badge";
 import { AErrorState } from "@/components/a/a-error-state";
 import { AScreenHeader } from "@/components/a/a-screen-header";
+import { PortalPackageJourney } from "@/components/portal/portal-package-journey";
 import { PortalReorderButton } from "@/components/portal/portal-reorder-button";
 import {
+  fetchDeliveries,
   fetchOrder,
   portalOrderBadgeTone,
   portalOrderStatusLabel,
+  PORTAL_DELIVERIES_PATH,
   PORTAL_ORDERS_PATH,
 } from "@/lib/customer-portal";
 
@@ -17,7 +20,10 @@ export default async function PortalOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { status, data: order } = await fetchOrder(id);
+  const [{ status, data: order }, deliveriesRes] = await Promise.all([
+    fetchOrder(id),
+    fetchDeliveries({ limit: 50 }),
+  ]);
 
   if (status === 404) {
     notFound();
@@ -45,6 +51,11 @@ export default async function PortalOrderDetailPage({
     );
   }
 
+  const linkedDelivery =
+    deliveriesRes.status === 200 && deliveriesRes.data
+      ? (deliveriesRes.data.items.find((d) => d.orderId === order.id) ?? null)
+      : null;
+
   return (
     <div>
       <AScreenHeader
@@ -63,6 +74,34 @@ export default async function PortalOrderDetailPage({
         }
       />
       <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
+        {linkedDelivery ? (
+          <div className="space-y-2">
+            <PortalPackageJourney delivery={linkedDelivery} />
+            <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+              Expédition{" "}
+              <Link
+                href={`${PORTAL_DELIVERIES_PATH}/${linkedDelivery.id}`}
+                className="a-mono text-a-accent hover:underline"
+              >
+                {linkedDelivery.number}
+              </Link>
+            </p>
+          </div>
+        ) : (
+          <div className="a-card border-dashed p-[var(--a-space-4)]">
+            <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+              Parcours colis
+            </p>
+            <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
+              {order.status === "CONFIRMED"
+                ? "Commande confirmée — en attente de création d’expédition côté ADV / logistique."
+                : order.status === "DRAFT"
+                  ? "Brouillon — le suivi colis apparaîtra après confirmation et expédition."
+                  : "Aucune expédition liée à cette commande pour le moment."}
+            </p>
+          </div>
+        )}
+
         <div className="a-card grid gap-4 p-[var(--a-space-5)] sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
