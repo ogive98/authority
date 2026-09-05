@@ -42,6 +42,7 @@ describe('CustomerPortalAuthService', () => {
   };
   let authService: { authenticatePassword: jest.Mock; toMeResponse: jest.Mock };
   let sessionService: { createSession: jest.Mock };
+  let moduleRegistry: { isEnabled: jest.Mock };
   let service: CustomerPortalAuthService;
 
   beforeEach(() => {
@@ -72,10 +73,14 @@ describe('CustomerPortalAuthService', () => {
         token: 'portal-token',
       }),
     };
+    moduleRegistry = {
+      isEnabled: jest.fn().mockResolvedValue(true),
+    };
     service = new CustomerPortalAuthService(
       prisma as never,
       authService as unknown as AuthService,
       sessionService as unknown as SessionService,
+      moduleRegistry as never,
     );
   });
 

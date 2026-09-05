@@ -32,7 +32,8 @@ describe('CustomerPortalClaimsService', () => {
     };
 
     const outbox = { enqueue: jest.fn().mockResolvedValue({ id: 'o1' }) };
-    const prisma = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prisma: any = {
       ptlClaim: {
         count: jest.fn().mockResolvedValue(1),
         findMany: jest.fn().mockResolvedValue([claim]),

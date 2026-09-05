@@ -3,11 +3,13 @@ import { AuditModule } from '../audit/audit.module';
 import { DeliveryModule } from '../delivery/delivery.module';
 import { FinanceModule } from '../finance/finance.module';
 import { IdentityModule } from '../identity/identity.module';
+import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SalesModule } from '../sales/sales.module';
 import { CustomerPortalAuthService } from './customer-portal-auth.service';
 import { CustomerPortalClaimsService } from './customer-portal-claims.service';
 import { CustomerPortalController } from './customer-portal.controller';
+import { CustomerPortalModuleGuard } from './customer-portal-module.guard';
 import { CustomerPortalOrdersService } from './customer-portal-orders.service';
 import { CustomerPortalSessionGuard } from './customer-portal-session.guard';
 
@@ -19,6 +21,7 @@ import { CustomerPortalSessionGuard } from './customer-portal-session.guard';
     DeliveryModule,
     FinanceModule,
     AuditModule,
+    ModulesRegistryModule,
   ],
   controllers: [CustomerPortalController],
   providers: [
@@ -26,6 +29,7 @@ import { CustomerPortalSessionGuard } from './customer-portal-session.guard';
     CustomerPortalOrdersService,
     CustomerPortalClaimsService,
     CustomerPortalSessionGuard,
+    CustomerPortalModuleGuard,
   ],
   exports: [CustomerPortalAuthService, CustomerPortalSessionGuard],
 })

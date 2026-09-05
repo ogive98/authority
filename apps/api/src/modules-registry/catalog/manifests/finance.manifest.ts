@@ -33,13 +33,9 @@ export const financeManifest: ModuleManifest = {
       permissionKey: 'finance.allocate',
       riskLevel: 'high',
       requiresAudit: true,
-      requiresIdempotency: true,
     },
   ],
-  commands: [
-    'finance.open_item.create',
-    'finance.open_item.allocate',
-  ],
+  commands: ['finance.open_item.create', 'finance.open_item.allocate'],
   queries: [
     'finance.open_items.list',
     'finance.open_items.get',

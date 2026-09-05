@@ -342,7 +342,7 @@ export default function FinancePage() {
 
       <ADrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onOpenChange={setDrawerOpen}
         title="Nouvelle créance"
         description="Montant total enregistré tel quel — pas de TVA calculée."
       >
@@ -448,7 +448,9 @@ export default function FinancePage() {
 
       <ADrawer
         open={!!allocateDraft}
-        onClose={() => setAllocateDraft(null)}
+        onOpenChange={(open) => {
+          if (!open) setAllocateDraft(null);
+        }}
         title="Encaissement"
         description={
           allocateDraft

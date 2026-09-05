@@ -68,7 +68,7 @@ export const deliveryManifest: ModuleManifest = {
     'delivery.shipment.delivered.v1',
     'delivery.shipment.failed.v1',
   ],
-  consumedEvents: ['sales.order.confirmed.v1'],
+  consumedEvents: [],
   navigationEntries: [
     { id: 'shipments', label: 'Livraisons', href: '/delivery' },
   ],

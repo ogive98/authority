@@ -55,7 +55,14 @@ export const portalsManifest: ModuleManifest = {
     'customer_portal.claims.read',
     'customer_portal.claims.create',
   ],
-  dependencies: ['platform', 'identity', 'customers'],
+  dependencies: [
+    'platform',
+    'identity',
+    'customers',
+    'sales',
+    'delivery',
+    'finance',
+  ],
   publishedEvents: ['portals.claim.created.v1'],
   navigationEntries: [],
 };

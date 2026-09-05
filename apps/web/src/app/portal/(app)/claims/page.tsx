@@ -43,7 +43,7 @@ export default async function PortalClaimsPage() {
         actions={
           <Link
             href={`${PORTAL_CLAIMS_PATH}/new`}
-            className="rounded-[var(--a-radius-sm)] bg-a-accent px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium text-white hover:bg-a-accent-hover"
+            className="rounded-[var(--a-radius-sm)] bg-a-accent px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium text-a-accent-fg hover:bg-a-accent-hover"
           >
             Nouvelle réclamation
           </Link>

@@ -52,7 +52,26 @@ describe('DeliveryService', () => {
       lines: [line],
     };
 
-    let shipment = {
+    let shipment: {
+      id: string;
+      companyId: string;
+      number: string;
+      orderId: string;
+      customerId: string;
+      warehouseId: string;
+      roundId: string | null;
+      status: DlvShipmentStatus;
+      driverLabel: string | null;
+      preferredDriver: string | null;
+      failReason: string | null;
+      version: number;
+      assignedAt: Date | null;
+      dispatchedAt: Date | null;
+      completedAt: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+      deletedAt: Date | null;
+    } = {
       id: shipmentId,
       companyId,
       number: 'SH-2026-0001',
@@ -81,7 +100,8 @@ describe('DeliveryService', () => {
       reserve: jest.fn().mockResolvedValue({}),
     };
 
-    const prisma = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prisma: any = {
       dlvShipment: {
         findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn().mockImplementation(({ where }: { where: { id?: string; orderId?: string } }) => {

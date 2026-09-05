@@ -176,32 +176,73 @@ export class FinanceService {
     id: string,
     dto: AllocateOpenItemDto,
   ): Promise<OpenItemDto> {
-    const existing = await this.findActive(companyId, id);
-    if (existing.status === FinOpenItemStatus.CLOSED) {
-      throw new FinanceException(
-        FINANCE_ERROR_CODES.INVALID_STATUS,
-        'Open item is already closed.',
-        HttpStatus.CONFLICT,
-      );
-    }
-
     const pay = round3(dto.amount);
-    const open = Number(existing.amountOpen);
-    if (pay > open + 1e-9) {
+    if (pay <= 0) {
       throw new FinanceException(
-        FINANCE_ERROR_CODES.OVER_ALLOCATE,
-        'Allocation exceeds open amount.',
-        HttpStatus.CONFLICT,
+        FINANCE_ERROR_CODES.INVALID_AMOUNT,
+        'amount must be positive.',
+        HttpStatus.BAD_REQUEST,
       );
     }
-
-    const nextOpen = round3(open - pay);
-    const nextStatus =
-      nextOpen <= 0
-        ? FinOpenItemStatus.CLOSED
-        : FinOpenItemStatus.PARTIAL;
 
     const row = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.finOpenItem.findFirst({
+        where: { id, companyId, deletedAt: null },
+      });
+      if (!existing) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.NOT_FOUND,
+          'Open item not found.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      if (existing.status === FinOpenItemStatus.CLOSED) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_STATUS,
+          'Open item is already closed.',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      const open = Number(existing.amountOpen);
+      if (pay > open + 1e-9) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.OVER_ALLOCATE,
+          'Allocation exceeds open amount.',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      const nextOpen = round3(open - pay);
+      const nextStatus =
+        nextOpen <= 0
+          ? FinOpenItemStatus.CLOSED
+          : FinOpenItemStatus.PARTIAL;
+
+      /** Optimistic concurrency — reject if another allocate raced. */
+      const locked = await tx.finOpenItem.updateMany({
+        where: {
+          id,
+          companyId,
+          deletedAt: null,
+          version: existing.version,
+          amountOpen: { gte: pay },
+          status: { not: FinOpenItemStatus.CLOSED },
+        },
+        data: {
+          amountOpen: Math.max(0, nextOpen),
+          status: nextStatus,
+          version: { increment: 1 },
+        },
+      });
+      if (locked.count !== 1) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.OVER_ALLOCATE,
+          'Allocation conflict — retry.',
+          HttpStatus.CONFLICT,
+        );
+      }
+
       await tx.finAllocation.create({
         data: {
           companyId,
@@ -212,13 +253,8 @@ export class FinanceService {
         },
       });
 
-      const updated = await tx.finOpenItem.update({
-        where: { id },
-        data: {
-          amountOpen: Math.max(0, nextOpen),
-          status: nextStatus,
-          version: { increment: 1 },
-        },
+      const updated = await tx.finOpenItem.findFirstOrThrow({
+        where: { id, companyId },
         include: { allocations: { orderBy: { paidAt: 'desc' } } },
       });
 
@@ -367,7 +403,7 @@ export class FinanceService {
     if (rows.length === 0) return [];
     const customerIds = [...new Set(rows.map((r) => r.customerId))];
     const customers = await this.prisma.cusCustomer.findMany({
-      where: { companyId, id: { in: customerIds } },
+      where: { companyId, id: { in: customerIds }, deletedAt: null },
       include: { party: true },
     });
     const map = new Map(customers.map((c) => [c.id, c]));

@@ -9,6 +9,7 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  MinLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -53,10 +54,12 @@ export class PortalCreateClaimDto {
   type!: PtlClaimType;
 
   @IsString()
+  @MinLength(1)
   @MaxLength(160)
   subject!: string;
 
   @IsString()
+  @MinLength(1)
   @MaxLength(2000)
   description!: string;
 

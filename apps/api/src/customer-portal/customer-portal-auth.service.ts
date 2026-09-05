@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { ForbiddenException, HttpStatus, Injectable } from '@nestjs/common';
 import {
   IamLifecycleStatus,
   IamSessionRealm,
@@ -8,6 +8,8 @@ import { AuthService, type LoginResult } from '../identity/auth.service';
 import { IDENTITY_ERROR_CODES } from '../identity/identity.constants';
 import { IdentityException } from '../identity/identity.exception';
 import { SessionService } from '../identity/session.service';
+import { ModuleRegistryService } from '../modules-registry/module-registry.service';
+import { MODULE_ERROR_CODES } from '../modules-registry/modules.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CUSTOMER_PORTAL_DEFAULTS,
@@ -33,6 +35,7 @@ export class CustomerPortalAuthService {
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
     private readonly sessionService: SessionService,
+    private readonly moduleRegistry: ModuleRegistryService,
   ) {}
 
   async login(params: {
@@ -43,6 +46,15 @@ export class CustomerPortalAuthService {
   }): Promise<CustomerPortalLoginResult> {
     const user = await this.authService.authenticatePassword(params);
     const membership = await this.requireActiveMembership(user.id);
+
+    if (
+      !(await this.moduleRegistry.isEnabled(membership.companyId, 'portals'))
+    ) {
+      throw new ForbiddenException({
+        code: MODULE_ERROR_CODES.DISABLED,
+        message: 'Module is disabled.',
+      });
+    }
 
     await this.prisma.iamLoginAttempt.create({
       data: {
@@ -74,6 +86,10 @@ export class CustomerPortalAuthService {
       where: {
         userId,
         status: IamLifecycleStatus.ACTIVE,
+        customer: {
+          deletedAt: null,
+          status: 'ACTIVE',
+        },
       },
       orderBy: { createdAt: 'asc' },
     });

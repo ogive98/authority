@@ -125,7 +125,18 @@ export class CustomerPortalClaimsService {
       await this.assertOrder(companyId, customerId, dto.orderId);
     }
     if (dto.shipmentId) {
-      await this.assertShipment(companyId, customerId, dto.shipmentId);
+      const ship = await this.assertShipment(
+        companyId,
+        customerId,
+        dto.shipmentId,
+      );
+      if (dto.orderId && ship.orderId !== dto.orderId) {
+        throw new CustomerPortalException(
+          CUSTOMER_PORTAL_ERROR_CODES.VALIDATION,
+          'shipmentId does not belong to the given orderId.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
     }
 
     const number = await this.nextNumber(companyId);
@@ -182,13 +193,15 @@ export class CustomerPortalClaimsService {
     companyId: string,
     customerId: string,
     shipmentId: string,
-  ): Promise<void> {
+  ): Promise<{ id: string; orderId: string }> {
     const ship = await this.prisma.dlvShipment.findFirst({
       where: { id: shipmentId, companyId, customerId, deletedAt: null },
+      select: { id: true, orderId: true },
     });
     if (!ship) {
       throw this.notFound();
     }
+    return ship;
   }
 
   private async nextNumber(companyId: string): Promise<string> {

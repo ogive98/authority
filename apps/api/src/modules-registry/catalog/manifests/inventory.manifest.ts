@@ -61,6 +61,7 @@ export const inventoryManifest: ModuleManifest = {
     'inventory.stock.adjusted.v1',
     'inventory.stock.reserved.v1',
     'inventory.stock.released.v1',
+    'inventory.stock.issued.v1',
   ],
   navigationEntries: [
     { id: 'stock', label: 'Stock', href: '/inventory' },

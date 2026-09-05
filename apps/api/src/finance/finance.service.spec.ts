@@ -46,7 +46,8 @@ describe('FinanceService', () => {
 
     const outbox = { enqueue: jest.fn().mockResolvedValue({ id: 'o1' }) };
 
-    const prisma = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prisma: any = {
       finOpenItem: {
         findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn().mockImplementation(({ where }: { where: { id?: string } }) => {
@@ -83,6 +84,21 @@ describe('FinanceService', () => {
             allocations: [...item.allocations],
           });
         }),
+        updateMany: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) => {
+          item = {
+            ...item,
+            amountOpen:
+              data.amountOpen != null
+                ? new Prisma.Decimal(data.amountOpen as number)
+                : item.amountOpen,
+            status: (data.status as FinOpenItemStatus) ?? item.status,
+            version: item.version + 1,
+          };
+          return Promise.resolve({ count: 1 });
+        }),
+        findFirstOrThrow: jest.fn().mockImplementation(() =>
+          Promise.resolve({ ...item, allocations: [...item.allocations] }),
+        ),
         aggregate: jest.fn().mockResolvedValue({
           _sum: { amountOpen: item.amountOpen },
         }),

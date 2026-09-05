@@ -15,8 +15,10 @@ import { IamSessionRealm } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { LoginDto } from '../identity/login.dto';
 import { SessionService } from '../identity/session.service';
+import { RequireModule } from '../modules-registry/modules.decorators';
 import { CustomerPortalAuthService } from './customer-portal-auth.service';
 import { CustomerPortalClaimsService } from './customer-portal-claims.service';
+import { CustomerPortalModuleGuard } from './customer-portal-module.guard';
 import { CustomerPortalOrdersService } from './customer-portal-orders.service';
 import {
   CustomerPortalSessionGuard,
@@ -89,13 +91,13 @@ export class CustomerPortalController {
   }
 
   @Get('me')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   async me(@Req() req: CustomerPortalRequest) {
     return this.portalAuthService.getMe(req.user!.id);
   }
 
   @Get('dashboard')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   dashboard(@Req() req: CustomerPortalRequest) {
     // IDOR: customerId/companyId come only from session membership, never client input
     return this.portalOrdersService.getDashboardShell(
@@ -105,7 +107,7 @@ export class CustomerPortalController {
   }
 
   @Get('catalog')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   listCatalog(
     @Req() req: CustomerPortalRequest,
     @Query('q') q?: string,
@@ -125,7 +127,7 @@ export class CustomerPortalController {
   }
 
   @Get('orders')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   listOrders(
     @Req() req: CustomerPortalRequest,
     @Query('q') q?: string,
@@ -146,7 +148,7 @@ export class CustomerPortalController {
 
   @Post('orders')
   @HttpCode(201)
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   createOrder(
     @Req() req: CustomerPortalRequest,
     @Body() dto: PortalCreateOrderDto,
@@ -159,7 +161,7 @@ export class CustomerPortalController {
   }
 
   @Get('orders/:id')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   getOrder(
     @Req() req: CustomerPortalRequest,
     @Param('id', ParseUUIDPipe) id: string,
@@ -173,7 +175,7 @@ export class CustomerPortalController {
 
   @Post('orders/:id/reorder')
   @HttpCode(201)
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   reorderOrder(
     @Req() req: CustomerPortalRequest,
     @Param('id', ParseUUIDPipe) id: string,
@@ -188,7 +190,7 @@ export class CustomerPortalController {
   }
 
   @Get('deliveries')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   listDeliveries(
     @Req() req: CustomerPortalRequest,
     @Query('q') q?: string,
@@ -210,7 +212,7 @@ export class CustomerPortalController {
   }
 
   @Get('deliveries/:id')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   getDelivery(
     @Req() req: CustomerPortalRequest,
     @Param('id', ParseUUIDPipe) id: string,
@@ -223,7 +225,8 @@ export class CustomerPortalController {
   }
 
   @Get('finance/open-items')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('finance')
   listOpenItems(
     @Req() req: CustomerPortalRequest,
     @Query('q') q?: string,
@@ -245,7 +248,8 @@ export class CustomerPortalController {
   }
 
   @Get('finance/open-items/:id')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('finance')
   getOpenItem(
     @Req() req: CustomerPortalRequest,
     @Param('id', ParseUUIDPipe) id: string,
@@ -258,7 +262,8 @@ export class CustomerPortalController {
   }
 
   @Get('finance/credit')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('finance')
   getCredit(@Req() req: CustomerPortalRequest) {
     return this.portalOrdersService.getCredit(
       req.companyId!,
@@ -267,7 +272,7 @@ export class CustomerPortalController {
   }
 
   @Get('claims')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   listClaims(
     @Req() req: CustomerPortalRequest,
     @Query('q') q?: string,
@@ -285,7 +290,7 @@ export class CustomerPortalController {
   }
 
   @Get('claims/:id')
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   getClaim(
     @Req() req: CustomerPortalRequest,
     @Param('id', ParseUUIDPipe) id: string,
@@ -299,7 +304,7 @@ export class CustomerPortalController {
 
   @Post('claims')
   @HttpCode(201)
-  @UseGuards(CustomerPortalSessionGuard)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   createClaim(
     @Req() req: CustomerPortalRequest,
     @Body() dto: PortalCreateClaimDto,
