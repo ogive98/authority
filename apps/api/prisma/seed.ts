@@ -555,18 +555,56 @@ async function seedSettingsDefinitions(
       valueType: 'enum',
       defaultJson: 'fr-TN',
       description: 'Interface language',
+      isPrefOnly: true,
     },
     {
       key: 'ui.theme',
       valueType: 'enum',
       defaultJson: 'system',
       description: 'Color theme',
+      isPrefOnly: true,
     },
     {
       key: 'ui.density',
       valueType: 'enum',
       defaultJson: 'comfortable',
       description: 'UI density',
+      isPrefOnly: true,
+    },
+    {
+      key: 'sales.reserve_on_confirm',
+      valueType: 'boolean',
+      defaultJson: true,
+      description: 'Reserve stock automatically on sales order confirm',
+      isPrefOnly: false,
+    },
+    {
+      key: 'sales.auto_confirm_on_create',
+      valueType: 'boolean',
+      defaultJson: false,
+      description: 'Auto-run confirm+reserve workflow after creating a draft',
+      isPrefOnly: false,
+    },
+    {
+      key: 'sales.require_requested_date',
+      valueType: 'boolean',
+      defaultJson: false,
+      description: 'Require requested delivery date on order intake',
+      isPrefOnly: false,
+    },
+    {
+      key: 'sales.allow_manual_price',
+      valueType: 'boolean',
+      defaultJson: true,
+      description: 'Allow manual unit price on order lines (V0 without pricing engine)',
+      isPrefOnly: false,
+    },
+    {
+      key: 'sales.default_currency',
+      valueType: 'string',
+      defaultJson: 'TND',
+      description: 'Default currency for sales orders',
+      isPrefOnly: false,
     },
   ] as const;
 
@@ -577,17 +615,32 @@ async function seedSettingsDefinitions(
         valueType: definition.valueType,
         defaultJson: definition.defaultJson,
         description: definition.description,
-        isPrefOnly: true,
+        isPrefOnly: definition.isPrefOnly,
       },
       create: {
         key: definition.key,
         valueType: definition.valueType,
         defaultJson: definition.defaultJson,
         description: definition.description,
-        isPrefOnly: true,
+        isPrefOnly: definition.isPrefOnly,
       },
     });
   }
+
+  await upsertSettingValue({
+    defKey: 'sales.reserve_on_confirm',
+    level: SetLevel.COMPANY,
+    companyId,
+    subjectId: companyId,
+    valueJson: true,
+  });
+  await upsertSettingValue({
+    defKey: 'sales.auto_confirm_on_create',
+    level: SetLevel.COMPANY,
+    companyId,
+    subjectId: companyId,
+    valueJson: false,
+  });
 
   await upsertSettingValue({
     defKey: 'ui.theme',
@@ -619,7 +672,7 @@ async function upsertSettingValue(params: {
   level: SetLevel;
   companyId: string;
   subjectId: string;
-  valueJson: string;
+  valueJson: string | boolean | number;
 }): Promise<void> {
   const scopeKey = buildScopeKey(params.level, {
     companyId: params.companyId,

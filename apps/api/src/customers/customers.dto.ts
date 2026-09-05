@@ -65,6 +65,11 @@ export class CreateCustomerDto {
   @IsOptional()
   @IsString()
   @MaxLength(120)
+  nickname?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
   salesRep?: string;
 
   @IsOptional()
@@ -90,6 +95,11 @@ export class UpdateCustomerDto {
   @IsString()
   @MaxLength(64)
   taxId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  nickname?: string | null;
 
   @IsOptional()
   @IsString()

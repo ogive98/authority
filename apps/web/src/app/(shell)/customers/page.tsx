@@ -31,6 +31,7 @@ type LoadState =
 type FormState = {
   code: string;
   legalName: string;
+  nickname: string;
   taxId: string;
   salesRep: string;
   paymentTerms: string;
@@ -52,6 +53,7 @@ export default function CustomersPage() {
     (): FormState => ({
       code: "",
       legalName: "",
+      nickname: "",
       taxId: "",
       salesRep: "",
       paymentTerms: "",
@@ -98,6 +100,7 @@ export default function CustomersPage() {
     setForm({
       code: detail.data.code,
       legalName: detail.data.legalName,
+      nickname: detail.data.nickname ?? "",
       taxId: detail.data.taxId ?? "",
       salesRep: detail.data.salesRep ?? "",
       paymentTerms: detail.data.paymentTerms ?? "",
@@ -127,6 +130,7 @@ export default function CustomersPage() {
         const res = await createCustomer({
           code: form.code.trim(),
           legalName: form.legalName.trim(),
+          nickname: form.nickname.trim() || undefined,
           taxId: form.taxId.trim() || undefined,
           salesRep: form.salesRep.trim() || undefined,
           paymentTerms: form.paymentTerms.trim() || undefined,
@@ -139,6 +143,7 @@ export default function CustomersPage() {
       } else {
         const res = await updateCustomer(editing.id, {
           legalName: form.legalName.trim(),
+          nickname: form.nickname.trim() || undefined,
           taxId: form.taxId.trim() || undefined,
           salesRep: form.salesRep.trim() || undefined,
           paymentTerms: form.paymentTerms.trim() || undefined,
@@ -254,6 +259,9 @@ export default function CustomersPage() {
                     Code
                   </th>
                   <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
+                    Surnom
+                  </th>
+                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
                     Raison sociale
                   </th>
                   <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
@@ -281,6 +289,9 @@ export default function CustomersPage() {
                       >
                         {row.code}
                       </button>
+                    </td>
+                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
+                      {row.nickname ?? "—"}
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
                       {row.legalName}
@@ -363,6 +374,15 @@ export default function CustomersPage() {
                 onChange={(e) =>
                   setForm({ ...form, legalName: e.target.value })
                 }
+              />
+            </Field>
+            <Field label="Surnom (prise de commande)">
+              <AInput
+                value={form.nickname}
+                onChange={(e) =>
+                  setForm({ ...form, nickname: e.target.value })
+                }
+                placeholder="Ex. Atlas"
               />
             </Field>
             <Field label="Matricule fiscal">

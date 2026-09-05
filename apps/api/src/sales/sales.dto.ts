@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsInt,
   IsNumber,
@@ -11,7 +12,6 @@ import {
   Max,
   MaxLength,
   Min,
-  MinLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -63,6 +63,11 @@ export class CreateSalesOrderDto {
   @ValidateNested({ each: true })
   @Type(() => SalesOrderLineInputDto)
   lines!: SalesOrderLineInputDto[];
+
+  /** When true, run confirm+reserve after create. */
+  @IsOptional()
+  @IsBoolean()
+  confirmAfter?: boolean;
 }
 
 export class UpdateSalesOrderDto {

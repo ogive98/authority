@@ -52,6 +52,15 @@ export type CreateSalesOrderBody = {
   requestedDate?: string;
   notes?: string;
   lines: SalesLineInput[];
+  confirmAfter?: boolean;
+};
+
+export type SalesIntakeSettings = {
+  reserveOnConfirm: boolean;
+  autoConfirmOnCreate: boolean;
+  requireRequestedDate: boolean;
+  allowManualPrice: boolean;
+  defaultCurrency: string;
 };
 
 export const STATUS_LABELS: Record<SalesOrderStatus, string> = {
@@ -75,6 +84,22 @@ async function parseFail(res: Response): Promise<ApiFail> {
   };
 }
 
+export async function fetchIntakeSettings(): Promise<
+  { ok: true; data: SalesIntakeSettings } | ApiFail
+> {
+  try {
+    const res = await fetch("/api/v1/sales/intake-settings", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as SalesIntakeSettings };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function fetchSalesOrders(q?: string): Promise<
   { ok: true; data: SalesOrderListResponse } | ApiFail
 > {
@@ -89,22 +114,6 @@ export async function fetchSalesOrders(q?: string): Promise<
     });
     if (!res.ok) return parseFail(res);
     return { ok: true, data: (await res.json()) as SalesOrderListResponse };
-  } catch {
-    return { ok: false, status: 0, message: "Réseau indisponible." };
-  }
-}
-
-export async function fetchSalesOrder(
-  id: string,
-): Promise<{ ok: true; data: SalesOrder } | ApiFail> {
-  try {
-    const res = await fetch(`/api/v1/sales/orders/${id}`, {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-    });
-    if (!res.ok) return parseFail(res);
-    return { ok: true, data: (await res.json()) as SalesOrder };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
@@ -166,14 +175,18 @@ export type CustomerOption = {
   id: string;
   code: string;
   legalName: string;
+  nickname: string | null;
   status: string;
 };
 
-export async function fetchCustomerOptions(): Promise<
+export async function searchCustomers(q: string): Promise<
   { ok: true; items: CustomerOption[] } | ApiFail
 > {
   try {
-    const res = await fetch("/api/v1/customers", {
+    const url = q.trim()
+      ? `/api/v1/customers?q=${encodeURIComponent(q.trim())}&limit=20`
+      : "/api/v1/customers?limit=20";
+    const res = await fetch(url, {
       credentials: "include",
       headers: { Accept: "application/json" },
       cache: "no-store",
@@ -184,12 +197,52 @@ export async function fetchCustomerOptions(): Promise<
         id: string;
         code: string;
         legalName: string;
+        nickname?: string | null;
         status: string;
       }>;
     };
     return {
       ok: true,
-      items: data.items.filter((c) => c.status === "ACTIVE"),
+      items: data.items
+        .filter((c) => c.status === "ACTIVE")
+        .map((c) => ({
+          id: c.id,
+          code: c.code,
+          legalName: c.legalName,
+          nickname: c.nickname ?? null,
+          status: c.status,
+        })),
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function searchProducts(q: string): Promise<
+  | {
+      ok: true;
+      items: Array<{ id: string; sku: string; name: string; status: string }>;
+    }
+  | ApiFail
+> {
+  try {
+    const url = q.trim()
+      ? `/api/v1/products?q=${encodeURIComponent(q.trim())}&limit=20`
+      : "/api/v1/products?limit=20";
+    const res = await fetch(url, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    const data = (await res.json()) as {
+      items: Array<{ id: string; sku: string; name: string; status: string }>;
+    };
+    return {
+      ok: true,
+      items: data.items.filter(
+        (p) => p.status === "ACTIVE" || p.status === "DRAFT",
+      ),
     };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };

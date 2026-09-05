@@ -93,6 +93,9 @@ describe('SalesService', () => {
         deleteMany: jest.fn(),
         createMany: jest.fn(),
       },
+      setValue: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       cusCustomer: {
         findFirst: jest.fn().mockResolvedValue(customer),
         findMany: jest.fn().mockResolvedValue([customer]),

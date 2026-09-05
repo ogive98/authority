@@ -18,6 +18,7 @@ export type Customer = {
   partyId: string;
   code: string;
   legalName: string;
+  nickname: string | null;
   taxId: string | null;
   salesRep: string | null;
   paymentTerms: string | null;
@@ -36,6 +37,7 @@ export type CustomerListResponse = {
 export type CustomerWriteBody = {
   code?: string;
   legalName: string;
+  nickname?: string;
   taxId?: string;
   salesRep?: string;
   paymentTerms?: string;

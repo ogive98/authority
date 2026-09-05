@@ -16,6 +16,7 @@ export {
 export { ADemoWatermark } from "./a-demo-watermark";
 export { ADataTableLots } from "./a-data-table-lots";
 export { ADrawer } from "./a-drawer";
+export { ACombobox, type AComboboxOption } from "./a-combobox";
 export { AConfirmDialog } from "./a-confirm-dialog";
 export {
   ADynamicForm,

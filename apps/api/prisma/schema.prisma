@@ -714,6 +714,7 @@ model CusCustomer {
   companyId    String            @map("company_id") @db.Uuid
   partyId      String            @map("party_id") @db.Uuid
   code         String
+  nickname     String?           @map("nickname")
   salesRep     String?           @map("sales_rep")
   paymentTerms String?           @map("payment_terms")
   status       CusCustomerStatus @default(ACTIVE)
@@ -729,6 +730,7 @@ model CusCustomer {
   @@unique([companyId, partyId])
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, status])
+  @@index([companyId, nickname])
   @@map("cus_customer")
 }
 

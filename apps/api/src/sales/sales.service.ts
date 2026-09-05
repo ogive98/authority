@@ -15,6 +15,8 @@ import {
   SALES_ERROR_CODES,
   SALES_EVENT_TYPES,
   SALES_RESERVE_REF_TYPE,
+  SALES_SETTING_DEFAULTS,
+  SALES_SETTING_KEYS,
 } from './sales.constants';
 import { SalesException } from './sales.exception';
 import type {
@@ -59,6 +61,14 @@ export type SalesOrderDto = {
 
 type OrderWithLines = SalOrder & { lines: SalOrderLine[] };
 
+export type SalesIntakeSettings = {
+  reserveOnConfirm: boolean;
+  autoConfirmOnCreate: boolean;
+  requireRequestedDate: boolean;
+  allowManualPrice: boolean;
+  defaultCurrency: string;
+};
+
 @Injectable()
 export class SalesService {
   constructor(
@@ -66,6 +76,54 @@ export class SalesService {
     private readonly outbox: OutboxService,
     private readonly inventory: InventoryService,
   ) {}
+
+  async getIntakeSettings(companyId: string): Promise<SalesIntakeSettings> {
+    const keys = Object.values(SALES_SETTING_KEYS);
+    const values = await this.prisma.setValue.findMany({
+      where: {
+        defKey: { in: keys },
+        scopeKey: `company:${companyId}`,
+        deletedAt: null,
+      },
+    });
+    const map = new Map(values.map((v) => [v.defKey, v.valueJson]));
+
+    const asBool = (key: string, fallback: boolean): boolean => {
+      const raw = map.get(key);
+      if (raw === undefined || raw === null) return fallback;
+      if (typeof raw === 'boolean') return raw;
+      if (typeof raw === 'string') return raw === 'true' || raw === '1';
+      return Boolean(raw);
+    };
+    const asString = (key: string, fallback: string): string => {
+      const raw = map.get(key);
+      if (raw === undefined || raw === null) return fallback;
+      return String(raw).replace(/^"|"$/g, '') || fallback;
+    };
+
+    return {
+      reserveOnConfirm: asBool(
+        SALES_SETTING_KEYS.RESERVE_ON_CONFIRM,
+        SALES_SETTING_DEFAULTS[SALES_SETTING_KEYS.RESERVE_ON_CONFIRM],
+      ),
+      autoConfirmOnCreate: asBool(
+        SALES_SETTING_KEYS.AUTO_CONFIRM_ON_CREATE,
+        SALES_SETTING_DEFAULTS[SALES_SETTING_KEYS.AUTO_CONFIRM_ON_CREATE],
+      ),
+      requireRequestedDate: asBool(
+        SALES_SETTING_KEYS.REQUIRE_REQUESTED_DATE,
+        SALES_SETTING_DEFAULTS[SALES_SETTING_KEYS.REQUIRE_REQUESTED_DATE],
+      ),
+      allowManualPrice: asBool(
+        SALES_SETTING_KEYS.ALLOW_MANUAL_PRICE,
+        SALES_SETTING_DEFAULTS[SALES_SETTING_KEYS.ALLOW_MANUAL_PRICE],
+      ),
+      defaultCurrency: asString(
+        SALES_SETTING_KEYS.DEFAULT_CURRENCY,
+        SALES_SETTING_DEFAULTS[SALES_SETTING_KEYS.DEFAULT_CURRENCY],
+      ),
+    };
+  }
 
   async list(
     companyId: string,
@@ -107,6 +165,15 @@ export class SalesService {
     companyId: string,
     dto: CreateSalesOrderDto,
   ): Promise<SalesOrderDto> {
+    const settings = await this.getIntakeSettings(companyId);
+    if (settings.requireRequestedDate && !dto.requestedDate) {
+      throw new SalesException(
+        SALES_ERROR_CODES.INVALID_LINE,
+        'requestedDate is required by company settings.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     await this.assertCustomer(companyId, dto.customerId);
     await this.assertWarehouse(companyId, dto.warehouseId);
     const lineInputs = this.normalizeLines(dto.lines);
@@ -117,6 +184,8 @@ export class SalesService {
 
     const amountTotal = sumLineTotals(lineInputs);
     const number = await this.nextOrderNumber(companyId);
+    const currency =
+      (dto.currency ?? settings.defaultCurrency).trim() || settings.defaultCurrency;
 
     const row = await this.prisma.$transaction(async (tx) => {
       const order = await tx.salOrder.create({
@@ -128,7 +197,7 @@ export class SalesService {
           requestedDate: dto.requestedDate
             ? new Date(dto.requestedDate)
             : null,
-          currency: (dto.currency ?? 'TND').trim() || 'TND',
+          currency,
           notes: dto.notes?.trim() || null,
           amountTotal,
           status: SalOrderStatus.DRAFT,
@@ -163,6 +232,13 @@ export class SalesService {
 
       return order;
     });
+
+    const shouldConfirm =
+      dto.confirmAfter === true ||
+      (dto.confirmAfter !== false && settings.autoConfirmOnCreate);
+    if (shouldConfirm) {
+      return this.confirm(companyId, row.id);
+    }
 
     return this.enrichOne(companyId, row);
   }
@@ -289,43 +365,46 @@ export class SalesService {
     await this.assertCreditPolicy(companyId, order.customerId);
     await this.assertWarehouse(companyId, order.warehouseId);
 
+    const settings = await this.getIntakeSettings(companyId);
     const reserved: { productId: string; qty: number }[] = [];
-    try {
-      for (const line of order.lines) {
-        await this.inventory.reserve(companyId, {
-          productId: line.productId,
-          warehouseId: order.warehouseId,
-          qty: Number(line.qty.toString()),
-          refType: SALES_RESERVE_REF_TYPE,
-          refId: order.id,
-        });
-        reserved.push({
-          productId: line.productId,
-          qty: Number(line.qty.toString()),
-        });
-      }
-    } catch (err) {
-      for (const r of reserved.reverse()) {
-        try {
-          await this.inventory.release(companyId, {
-            productId: r.productId,
+    if (settings.reserveOnConfirm) {
+      try {
+        for (const line of order.lines) {
+          await this.inventory.reserve(companyId, {
+            productId: line.productId,
             warehouseId: order.warehouseId,
-            qty: r.qty,
+            qty: Number(line.qty.toString()),
             refType: SALES_RESERVE_REF_TYPE,
             refId: order.id,
           });
-        } catch {
-          // best-effort compensate
+          reserved.push({
+            productId: line.productId,
+            qty: Number(line.qty.toString()),
+          });
         }
+      } catch (err) {
+        for (const r of reserved.reverse()) {
+          try {
+            await this.inventory.release(companyId, {
+              productId: r.productId,
+              warehouseId: order.warehouseId,
+              qty: r.qty,
+              refType: SALES_RESERVE_REF_TYPE,
+              refId: order.id,
+            });
+          } catch {
+            // best-effort compensate
+          }
+        }
+        if (err instanceof SalesException) throw err;
+        const message =
+          err instanceof Error ? err.message : 'Stock reservation failed.';
+        throw new SalesException(
+          SALES_ERROR_CODES.STOCK_RESERVE_FAILED,
+          message,
+          HttpStatus.CONFLICT,
+        );
       }
-      if (err instanceof SalesException) throw err;
-      const message =
-        err instanceof Error ? err.message : 'Stock reservation failed.';
-      throw new SalesException(
-        SALES_ERROR_CODES.STOCK_RESERVE_FAILED,
-        message,
-        HttpStatus.CONFLICT,
-      );
     }
 
     const row = await this.prisma.$transaction(async (tx) => {
@@ -406,14 +485,17 @@ export class SalesService {
     }
 
     if (order.status === SalOrderStatus.CONFIRMED) {
-      for (const line of order.lines) {
-        await this.inventory.release(companyId, {
-          productId: line.productId,
-          warehouseId: order.warehouseId,
-          qty: Number(line.qty.toString()),
-          refType: SALES_RESERVE_REF_TYPE,
-          refId: order.id,
-        });
+      const settings = await this.getIntakeSettings(companyId);
+      if (settings.reserveOnConfirm) {
+        for (const line of order.lines) {
+          await this.inventory.release(companyId, {
+            productId: line.productId,
+            warehouseId: order.warehouseId,
+            qty: Number(line.qty.toString()),
+            refType: SALES_RESERVE_REF_TYPE,
+            refId: order.id,
+          });
+        }
       }
     }
 

@@ -38,6 +38,7 @@ export type CustomerDto = {
   partyId: string;
   code: string;
   legalName: string;
+  nickname: string | null;
   taxId: string | null;
   salesRep: string | null;
   paymentTerms: string | null;
@@ -70,6 +71,7 @@ export class CustomersService {
       const q = opts.q.trim();
       where.OR = [
         { code: { contains: q, mode: 'insensitive' } },
+        { nickname: { contains: q, mode: 'insensitive' } },
         { party: { legalName: { contains: q, mode: 'insensitive' } } },
         { salesRep: { contains: q, mode: 'insensitive' } },
       ];
@@ -152,6 +154,7 @@ export class CustomersService {
             companyId,
             partyId: partyId!,
             code,
+            nickname: dto.nickname?.trim() || null,
             salesRep: dto.salesRep?.trim() || null,
             paymentTerms: dto.paymentTerms?.trim() || null,
             status: CusCustomerStatus.ACTIVE,
@@ -237,6 +240,9 @@ export class CustomersService {
       const updated = await tx.cusCustomer.updateMany({
         where: { id, companyId, version: dto.version, deletedAt: null },
         data: {
+          ...(dto.nickname !== undefined
+            ? { nickname: dto.nickname?.trim() || null }
+            : {}),
           ...(dto.salesRep !== undefined
             ? { salesRep: dto.salesRep?.trim() || null }
             : {}),
@@ -400,6 +406,7 @@ function serializeCustomer(row: CustomerWithParty): CustomerDto {
     partyId: row.partyId,
     code: row.code,
     legalName: row.party.legalName,
+    nickname: row.nickname,
     taxId: row.party.taxId,
     salesRep: row.salesRep,
     paymentTerms: row.paymentTerms,

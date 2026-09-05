@@ -28,6 +28,12 @@ import { SalesService } from './sales.service';
 export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
+  @Get('intake-settings')
+  @RequirePermission(PERMISSION_KEYS.salesRead)
+  intakeSettings(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.salesService.getIntakeSettings(tenancy.companyId);
+  }
+
   @Get('orders')
   @RequirePermission(PERMISSION_KEYS.salesRead)
   list(

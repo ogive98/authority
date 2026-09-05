@@ -22,3 +22,20 @@ export const SALES_EVENT_TYPES = {
 } as const;
 
 export const SALES_RESERVE_REF_TYPE = 'sales.order';
+
+/** Company settings (docs SETTINGS.md + intake V0.1). */
+export const SALES_SETTING_KEYS = {
+  RESERVE_ON_CONFIRM: 'sales.reserve_on_confirm',
+  AUTO_CONFIRM_ON_CREATE: 'sales.auto_confirm_on_create',
+  REQUIRE_REQUESTED_DATE: 'sales.require_requested_date',
+  ALLOW_MANUAL_PRICE: 'sales.allow_manual_price',
+  DEFAULT_CURRENCY: 'sales.default_currency',
+} as const;
+
+export const SALES_SETTING_DEFAULTS = {
+  [SALES_SETTING_KEYS.RESERVE_ON_CONFIRM]: true,
+  [SALES_SETTING_KEYS.AUTO_CONFIRM_ON_CREATE]: false,
+  [SALES_SETTING_KEYS.REQUIRE_REQUESTED_DATE]: false,
+  [SALES_SETTING_KEYS.ALLOW_MANUAL_PRICE]: true,
+  [SALES_SETTING_KEYS.DEFAULT_CURRENCY]: 'TND',
+} as const;
