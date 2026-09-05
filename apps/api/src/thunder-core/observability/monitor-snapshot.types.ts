@@ -60,6 +60,11 @@ export interface ThunderMonitorSnapshot {
     failures: number;
     openedAt: string | null;
   }>;
+  /** Admission rejects since process start (THU-HARD-03). */
+  admission: {
+    rejectTotal: number;
+    rejectByReason: Record<string, number>;
+  };
   db: {
     ok: boolean;
     poolUsageRatio: number | null;

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { cpus, freemem, loadavg, totalmem } from 'node:os';
 import { RedisService } from '../../infrastructure/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AdmissionOrchestratorService } from '../admission/admission-orchestrator.service';
 import { CircuitBreakerService } from '../resilience/circuit-breaker.service';
 import { ResourceManagerService } from '../resources/resource-manager.service';
 import {
@@ -17,6 +18,7 @@ export class MonitorSnapshotService {
     private readonly redis: RedisService,
     private readonly resources: ResourceManagerService,
     private readonly circuitBreaker: CircuitBreakerService,
+    private readonly admission: AdmissionOrchestratorService,
   ) {}
 
   async snapshot(): Promise<ThunderMonitorSnapshot> {
@@ -179,6 +181,13 @@ export class MonitorSnapshotService {
         failures: b.failures,
         openedAt: b.openedAt,
       })),
+      admission: (() => {
+        const rejects = this.admission.getRejectSnapshot();
+        return {
+          rejectTotal: rejects.total,
+          rejectByReason: rejects.byReason,
+        };
+      })(),
       db: {
         ok: dbOk,
         poolUsageRatio: Number.isFinite(pgPool) ? pgPool : null,

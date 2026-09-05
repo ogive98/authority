@@ -47,6 +47,13 @@ describe('MonitorSnapshotService', () => {
     ]),
   };
 
+  const admission = {
+    getRejectSnapshot: jest.fn().mockReturnValue({
+      total: 2,
+      byReason: { 'THUNDER.SHED_P4': 2 },
+    }),
+  };
+
   it('builds a schemaVersion 1 snapshot with outbox lag seconds and breakers', async () => {
     const prisma = mockPrisma();
     const redis = {
@@ -65,6 +72,7 @@ describe('MonitorSnapshotService', () => {
       redis as never,
       resources as never,
       circuitBreaker as never,
+      admission as never,
     );
 
     const snap = await service.snapshot();
@@ -89,6 +97,10 @@ describe('MonitorSnapshotService', () => {
         openedAt: null,
       },
     ]);
+    expect(snap.admission).toEqual({
+      rejectTotal: 2,
+      rejectByReason: { 'THUNDER.SHED_P4': 2 },
+    });
     expect(snap.events.eventsPerSecondEstimate).toBe(2);
     expect(snap.redis.ok).toBe(true);
     expect(snap.db.ok).toBe(true);
@@ -145,6 +157,7 @@ describe('MonitorSnapshotService', () => {
       redis as never,
       resources as never,
       circuitBreaker as never,
+      admission as never,
     );
     const snap = await service.snapshot();
     expect(snap.cpu.usageRatio).toBe(0.42);

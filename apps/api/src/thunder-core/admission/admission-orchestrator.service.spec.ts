@@ -139,7 +139,7 @@ describe('AdmissionOrchestratorService', () => {
   });
 
   it('returns plan_c when breaker is open', async () => {
-    const { service } = build({ breakerAllowed: false });
+    const { service, resources } = build({ breakerAllowed: false });
     const result = await service.admitEnqueue({
       jobType: 'thunder.breaker-guarded.v1',
       companyId,
@@ -151,6 +151,33 @@ describe('AdmissionOrchestratorService', () => {
       kind: 'plan_c',
       dependencyKey: 'external_api_stub',
     });
+    expect(resources.shouldAdmitEnqueue).not.toHaveBeenCalled();
+    expect(service.getRejectSnapshot().byReason.PLAN_C).toBe(1);
+  });
+
+  it('checks breaker before budget (THU-HARD-03 order)', async () => {
+    const { service, circuitBreaker, resources } = build({
+      breakerAllowed: true,
+      admitBudget: { allowed: false, reason: 'shed_p4' },
+    });
+    const result = await service.admitEnqueue({
+      jobType: 'thunder.breaker-guarded.v1',
+      companyId,
+      queue: 'import',
+      idempotencyKey: 'k1',
+    });
+    expect(circuitBreaker.checkAdmission).toHaveBeenCalled();
+    expect(resources.shouldAdmitEnqueue).toHaveBeenCalled();
+    expect(result).toMatchObject({
+      allowed: false,
+      kind: 'reject',
+      code: THUNDER_ERROR_CODES.SHED_P4,
+    });
+    const order = [
+      circuitBreaker.checkAdmission.mock.invocationCallOrder[0],
+      resources.shouldAdmitEnqueue.mock.invocationCallOrder[0],
+    ];
+    expect(order[0]).toBeLessThan(order[1]);
   });
 
   it('rejects under shed pressure', async () => {
@@ -168,5 +195,8 @@ describe('AdmissionOrchestratorService', () => {
       kind: 'reject',
       code: THUNDER_ERROR_CODES.SHED_P4,
     });
+    expect(
+      service.getRejectSnapshot().byReason[THUNDER_ERROR_CODES.SHED_P4],
+    ).toBe(1);
   });
 });

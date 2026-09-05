@@ -66,8 +66,16 @@ export type AdmissionResult =
       correlationId: string;
     };
 
+export type AdmissionRejectSnapshot = {
+  total: number;
+  byReason: Record<string, number>;
+};
+
 @Injectable()
 export class AdmissionOrchestratorService {
+  /** In-process reject counters until Prometheus (THU-HARD-04). */
+  private readonly rejectTotals = new Map<string, number>();
+
   constructor(
     private readonly license: LicenseService,
     private readonly modules: ModuleRegistryService,
@@ -83,9 +91,24 @@ export class AdmissionOrchestratorService {
     return raw as AuthoritySystemMode;
   }
 
+  getRejectSnapshot(): AdmissionRejectSnapshot {
+    const byReason: Record<string, number> = {};
+    let total = 0;
+    for (const [reason, count] of this.rejectTotals.entries()) {
+      byReason[reason] = count;
+      total += count;
+    }
+    return { total, byReason };
+  }
+
+  /** Test / ops hook. */
+  resetRejectSnapshot(): void {
+    this.rejectTotals.clear();
+  }
+
   /**
-   * Checklist §11 steps 1–5, 7–8 (license, mode, module/flag, breaker, budget).
-   * Idempotency (6) and in-flight lock (9) stay in JobEnqueueService ordering.
+   * Checklist (THU-HARD-03): licence → mode → module → flag → breaker → budget.
+   * Idempotency and in-flight lock stay in JobEnqueueService.
    */
   async admitEnqueue(input: AdmissionEnqueueInput): Promise<AdmissionResult> {
     const correlationId =
@@ -101,7 +124,7 @@ export class AdmissionOrchestratorService {
         license.status !== LICENSE_STATUSES.active &&
         license.status !== LICENSE_STATUSES.grace
       ) {
-        return reject(
+        return this.reject(
           THUNDER_ERROR_CODES.LICENSE_INVALID,
           `License status: ${license.status}`,
           HttpStatus.FORBIDDEN,
@@ -115,7 +138,7 @@ export class AdmissionOrchestratorService {
           : error instanceof Error
             ? error.message
             : 'License check failed';
-      return reject(
+      return this.reject(
         THUNDER_ERROR_CODES.LICENSE_INVALID,
         message,
         HttpStatus.FORBIDDEN,
@@ -128,7 +151,7 @@ export class AdmissionOrchestratorService {
       WRITE_BLOCKING_MODES.has(mode) &&
       process.env.THUNDER_ALLOW_ENQUEUE_IN_RESTRICTED_MODE !== 'true'
     ) {
-      return reject(
+      return this.reject(
         THUNDER_ERROR_CODES.SYSTEM_MODE_BLOCKS,
         `System mode ${mode} blocks job enqueue`,
         HttpStatus.SERVICE_UNAVAILABLE,
@@ -140,7 +163,7 @@ export class AdmissionOrchestratorService {
     if (moduleKey) {
       const enabled = await this.modules.isEnabled(input.companyId, moduleKey);
       if (!enabled) {
-        return reject(
+        return this.reject(
           THUNDER_ERROR_CODES.MODULE_DISABLED,
           `Module disabled: ${moduleKey}`,
           HttpStatus.SERVICE_UNAVAILABLE,
@@ -155,12 +178,28 @@ export class AdmissionOrchestratorService {
         policy.requiredFlag,
       );
       if (!flagOn) {
-        return reject(
+        return this.reject(
           THUNDER_ERROR_CODES.FLAG_DISABLED,
           `Feature flag off: ${policy.requiredFlag}`,
           HttpStatus.FORBIDDEN,
           correlationId,
         );
+      }
+    }
+
+    const dependencyKey =
+      policy.circuitBreaker?.dependencyKey ?? input.registryDependencyKey;
+    if (dependencyKey) {
+      const breaker = await this.circuitBreaker.checkAdmission(dependencyKey);
+      if (!breaker.allowed) {
+        this.recordReject('PLAN_C');
+        return {
+          allowed: false,
+          kind: 'plan_c',
+          policy,
+          dependencyKey,
+          correlationId,
+        };
       }
     }
 
@@ -173,27 +212,12 @@ export class AdmissionOrchestratorService {
         budget.reason === 'fairness_throttle'
           ? THUNDER_ERROR_CODES.FAIRNESS_THROTTLE
           : THUNDER_ERROR_CODES.SHED_P4;
-      return reject(
+      return this.reject(
         code,
         budget.reason ?? 'Resource admission denied',
         HttpStatus.SERVICE_UNAVAILABLE,
         correlationId,
       );
-    }
-
-    const dependencyKey =
-      policy.circuitBreaker?.dependencyKey ?? input.registryDependencyKey;
-    if (dependencyKey) {
-      const breaker = await this.circuitBreaker.checkAdmission(dependencyKey);
-      if (!breaker.allowed) {
-        return {
-          allowed: false,
-          kind: 'plan_c',
-          policy,
-          dependencyKey,
-          correlationId,
-        };
-      }
     }
 
     return {
@@ -223,22 +247,27 @@ export class AdmissionOrchestratorService {
     }
     await this.redis.del(key);
   }
-}
 
-function reject(
-  code: ThunderErrorCode,
-  message: string,
-  status: HttpStatus,
-  correlationId: string,
-): AdmissionResult {
-  return {
-    allowed: false,
-    kind: 'reject',
-    code,
-    message,
-    status,
-    correlationId,
-  };
+  private reject(
+    code: ThunderErrorCode,
+    message: string,
+    status: HttpStatus,
+    correlationId: string,
+  ): AdmissionResult {
+    this.recordReject(code);
+    return {
+      allowed: false,
+      kind: 'reject',
+      code,
+      message,
+      status,
+      correlationId,
+    };
+  }
+
+  private recordReject(reason: string): void {
+    this.rejectTotals.set(reason, (this.rejectTotals.get(reason) ?? 0) + 1);
+  }
 }
 
 function inflightKey(companyId: string, idempotencyKey: string): string {
