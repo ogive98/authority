@@ -10,6 +10,7 @@ import {
 export type ThunderMetricsGaugeInput = {
   dlqSize: number;
   outboxUnpublished: number;
+  outboxDlqSize: number;
   outboxLagOldestSeconds: number | null;
   breakers: Array<{
     dependencyKey: string;
@@ -38,6 +39,7 @@ export class ThunderMetricsService {
   private readonly admissionReject: Counter<string>;
   private readonly dlqSize: Gauge<string>;
   private readonly outboxUnpublished: Gauge<string>;
+  private readonly outboxDlqSize: Gauge<string>;
   private readonly outboxLagOldest: Gauge<string>;
   private readonly breakerState: Gauge<string>;
   private readonly queuePending: Gauge<string>;
@@ -95,6 +97,12 @@ export class ThunderMetricsService {
     this.outboxUnpublished = new Gauge({
       name: 'thunder_outbox_unpublished',
       help: 'Unpublished core_outbox rows',
+      registers: [this.registry],
+    });
+
+    this.outboxDlqSize = new Gauge({
+      name: 'thunder_outbox_dlq_size',
+      help: 'Exhausted outbox publishes in core_outbox_dlq',
       registers: [this.registry],
     });
 
@@ -176,6 +184,7 @@ export class ThunderMetricsService {
   syncGauges(input: ThunderMetricsGaugeInput): void {
     this.dlqSize.set(input.dlqSize);
     this.outboxUnpublished.set(input.outboxUnpublished);
+    this.outboxDlqSize.set(input.outboxDlqSize);
     this.outboxLagOldest.set(input.outboxLagOldestSeconds ?? 0);
 
     for (const breaker of input.breakers) {

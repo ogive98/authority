@@ -14,6 +14,7 @@ describe('ThunderMetricsService', () => {
     metrics.syncGauges({
       dlqSize: 3,
       outboxUnpublished: 4,
+      outboxDlqSize: 1,
       outboxLagOldestSeconds: 12.5,
       breakers: [{ dependencyKey: 'external_api_stub', stateGauge: 0 }],
       queues: [{ family: 'ops', pending: 2, running: 1 }],
@@ -25,6 +26,7 @@ describe('ThunderMetricsService', () => {
     expect(text).toContain('thunder_job_success_total');
     expect(text).toContain('thunder_admission_reject_total');
     expect(text).toContain('thunder_dlq_size');
+    expect(text).toContain('thunder_outbox_dlq_size');
     expect(text).toContain('thunder_breaker_state');
     expect(metrics.contentType).toContain('text/plain');
 

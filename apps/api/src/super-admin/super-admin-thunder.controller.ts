@@ -35,6 +35,7 @@ import { AuditService } from '../audit/audit.service';
 import { AuthenticatedRequest } from '../identity/session.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { DlqService } from '../thunder-core/jobs/dlq/dlq.service';
+import { OutboxDlqService } from '../thunder-core/events/outbox-dlq.service';
 import { MonitorSnapshotService } from '../thunder-core/observability/monitor-snapshot.service';
 import { ThunderMetricsService } from '../thunder-core/observability/thunder-metrics.service';
 import type { ThunderMonitorSnapshot } from '../thunder-core/observability/monitor-snapshot.types';
@@ -147,6 +148,7 @@ class UpdateRuleDto {
 export class SuperAdminThunderController {
   constructor(
     private readonly dlqService: DlqService,
+    private readonly outboxDlqService: OutboxDlqService,
     private readonly circuitBreaker: CircuitBreakerService,
     private readonly monitorSnapshot: MonitorSnapshotService,
     private readonly ruleDefs: RuleDefService,
@@ -225,6 +227,18 @@ export class SuperAdminThunderController {
   listDlq(@Query('limit') limit?: string, @Query('cursor') cursor?: string) {
     const parsedLimit = limit ? Number(limit) : undefined;
     return this.dlqService.list({
+      limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+      cursor,
+    });
+  }
+
+  @Get('outbox-dlq')
+  listOutboxDlq(
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const parsedLimit = limit ? Number(limit) : undefined;
+    return this.outboxDlqService.list({
       limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
       cursor,
     });

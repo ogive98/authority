@@ -7,6 +7,10 @@ import {
 import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import type Redis from 'ioredis';
+import {
+  assertJsonPayloadSize,
+  PayloadTooLargeError,
+} from '../../common/json-safety';
 import { RedisService } from '../../infrastructure/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AdmissionOrchestratorService } from '../admission/admission-orchestrator.service';
@@ -206,6 +210,19 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
         `Unknown job type: ${input.jobType}`,
         HttpStatus.BAD_REQUEST,
       );
+    }
+
+    try {
+      assertJsonPayloadSize(input.payload);
+    } catch (error) {
+      if (error instanceof PayloadTooLargeError) {
+        throw new ThunderException(
+          THUNDER_ERROR_CODES.PAYLOAD_TOO_LARGE,
+          error.message,
+          HttpStatus.PAYLOAD_TOO_LARGE,
+        );
+      }
+      throw error;
     }
 
     const decision = await this.admission.admitEnqueue({

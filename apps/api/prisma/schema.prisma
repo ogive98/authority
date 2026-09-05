@@ -27,6 +27,27 @@ model CoreOutbox {
   @@map("core_outbox")
 }
 
+model CoreOutboxDlq {
+  id              String   @id @default(uuid()) @db.Uuid
+  outboxId        String   @map("outbox_id") @db.Uuid
+  companyId       String?  @map("company_id") @db.Uuid
+  aggregateType   String   @map("aggregate_type")
+  aggregateId     String   @map("aggregate_id") @db.Uuid
+  eventType       String   @map("event_type")
+  eventVersion    Int      @map("event_version")
+  payloadJson     Json     @map("payload_json")
+  headers         Json?
+  lastError       String   @map("last_error")
+  publishAttempts Int      @map("publish_attempts")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  failedAt        DateTime @default(now()) @map("failed_at") @db.Timestamptz(6)
+
+  @@index([companyId, failedAt(sort: Desc)])
+  @@index([outboxId])
+  @@index([eventType])
+  @@map("core_outbox_dlq")
+}
+
 model CoreProcessedEvent {
   id          String   @id @default(uuid()) @db.Uuid
   consumer    String

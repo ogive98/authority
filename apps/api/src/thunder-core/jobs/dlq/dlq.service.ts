@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { scrubSecrets } from '../../../common/json-safety';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 export interface RecordDlqInput {
@@ -17,13 +18,14 @@ export class DlqService {
   constructor(private readonly prisma: PrismaService) {}
 
   async record(input: RecordDlqInput): Promise<{ id: string }> {
+    const scrubbed = scrubSecrets(input.payloadJson) as Prisma.InputJsonValue;
     const row = await this.prisma.thunderDlqEntry.create({
       data: {
         jobId: input.jobId,
         companyId: input.companyId,
         jobType: input.jobType,
         queue: input.queue,
-        payloadJson: input.payloadJson as Prisma.InputJsonValue,
+        payloadJson: scrubbed,
         lastError: input.lastError,
         attempts: input.attempts,
       },

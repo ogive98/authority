@@ -10,6 +10,7 @@ import { AdmissionOrchestratorService } from './admission/admission-orchestrator
 import { ConsumerRegistryService } from './events/consumer-registry.service';
 import { EventConsumerHost } from './events/event-consumer.host';
 import { EventConsumerWorker } from './events/event-consumer.worker';
+import { OutboxDlqService } from './events/outbox-dlq.service';
 import { OutboxPublisherService } from './events/outbox-publisher.service';
 import { OutboxPublisherWorker } from './events/outbox-publisher.worker';
 import { ProcessedEventService } from './events/processed-event.service';
@@ -53,6 +54,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     DlqService,
     ConsumerRegistryService,
     ProcessedEventService,
+    OutboxDlqService,
     OutboxPublisherService,
     OutboxPublisherWorker,
     EventConsumerHost,
@@ -76,6 +78,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     JobProcessorHost,
     JobQueryService,
     DlqService,
+    OutboxDlqService,
     OutboxPublisherService,
     EventConsumerHost,
     ProcessedEventService,

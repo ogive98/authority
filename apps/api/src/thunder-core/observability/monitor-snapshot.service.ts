@@ -28,6 +28,7 @@ export class MonitorSnapshotService {
     const [
       jobGroups,
       dlq,
+      outboxDlq,
       outboxLagStats,
       publishedLastMinute,
       redisOk,
@@ -40,6 +41,7 @@ export class MonitorSnapshotService {
         _count: { _all: true },
       }),
       this.prisma.thunderDlqEntry.count(),
+      this.prisma.coreOutboxDlq.count(),
       this.queryOutboxLagStats(),
       this.prisma.coreOutbox.count({
         where: {
@@ -158,6 +160,7 @@ export class MonitorSnapshotService {
     this.metrics.syncGauges({
       dlqSize: dlq,
       outboxUnpublished: outboxLag,
+      outboxDlqSize: outboxDlq,
       outboxLagOldestSeconds: outboxLagStats.oldest,
       breakers: breakerRows.map((b) => ({
         dependencyKey: b.dependencyKey,
@@ -202,6 +205,7 @@ export class MonitorSnapshotService {
           p95: outboxLagStats.p95,
           p99: outboxLagStats.p99,
         },
+        outboxDlq,
         publishedLastMinute,
         eventsPerSecondEstimate: publishedLastMinute / 60,
       },

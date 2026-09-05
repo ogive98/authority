@@ -1,10 +1,14 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import type { CoreOutbox, Prisma } from '@prisma/client';
 import type Redis from 'ioredis';
+import {
+  resolveOutboxMaxPublishAttempts,
+} from '../../common/json-safety';
 import { RedisService } from '../../infrastructure/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { thunderEventStreamKey } from '../thunder.constants';
 import { buildEventEnvelope } from './event-envelope.builder';
+import { OutboxDlqService } from './outbox-dlq.service';
 
 const DEFAULT_BATCH = 100;
 const MIN_BATCH = 1;
@@ -54,11 +58,13 @@ export class OutboxPublisherService implements OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly outboxDlq: OutboxDlqService,
   ) {}
 
   /**
    * Claim unpublished rows with FOR UPDATE SKIP LOCKED (multi-publisher safe),
    * then XADD + mark published inside the same transaction.
+   * After N failed publishes → core_outbox_dlq (THU-HARD-05).
    */
   async publishDue(limit = resolveOutboxBatchSize()): Promise<number> {
     const connection = this.getPublisherRedis();
@@ -67,6 +73,7 @@ export class OutboxPublisherService implements OnModuleDestroy {
     }
 
     const batchSize = clampOutboxBatchSize(limit);
+    const maxAttempts = resolveOutboxMaxPublishAttempts();
 
     return this.prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<ClaimedOutboxRow[]>`
@@ -115,11 +122,39 @@ export class OutboxPublisherService implements OnModuleDestroy {
           });
           published += 1;
         } catch (error) {
-          this.logger.warn(
+          const message =
             error instanceof Error
               ? error.message
-              : `Failed to publish outbox row ${row.id}`,
-          );
+              : `Failed to publish outbox row ${row.id}`;
+          const nextAttempts = row.publishAttempts + 1;
+
+          if (nextAttempts >= maxAttempts) {
+            await this.outboxDlq.record(tx, {
+              outboxId: row.id,
+              companyId: row.companyId,
+              aggregateType: row.aggregateType,
+              aggregateId: row.aggregateId,
+              eventType: row.eventType,
+              eventVersion: row.eventVersion,
+              payloadJson: row.payloadJson,
+              headers: row.headers,
+              lastError: message,
+              publishAttempts: nextAttempts,
+              createdAt:
+                row.createdAt instanceof Date
+                  ? row.createdAt
+                  : new Date(row.createdAt),
+            });
+            await tx.coreOutbox.delete({ where: { id: row.id } });
+          } else {
+            await tx.coreOutbox.update({
+              where: { id: row.id },
+              data: { publishAttempts: nextAttempts },
+            });
+            this.logger.warn(
+              `Outbox publish failed for ${row.id} (attempt ${nextAttempts}/${maxAttempts}): ${message}`,
+            );
+          }
         }
       }
 

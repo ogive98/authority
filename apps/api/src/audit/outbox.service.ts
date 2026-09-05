@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { assertJsonPayloadSize } from '../common/json-safety';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface OutboxEnqueueInput {
@@ -20,6 +21,11 @@ export class OutboxService {
     tx: Prisma.TransactionClient,
     input: OutboxEnqueueInput,
   ): Promise<{ id: string }> {
+    assertJsonPayloadSize(input.payloadJson);
+    if (input.headers !== undefined) {
+      assertJsonPayloadSize(input.headers);
+    }
+
     const row = await tx.coreOutbox.create({
       data: {
         companyId: input.companyId,

@@ -49,6 +49,8 @@ export interface ThunderMonitorSnapshot {
       p95: number | null;
       p99: number | null;
     };
+    /** Exhausted outbox publishes (THU-HARD-05). */
+    outboxDlq: number;
     publishedLastMinute: number;
     eventsPerSecondEstimate: number;
   };
