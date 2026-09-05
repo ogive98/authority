@@ -268,26 +268,30 @@ describe('Thunder hardening (e2e)', () => {
       .buffer(true)
       .parse((response, callback) => {
         let data = '';
-        response.setEncoding('utf8');
+        const stream = response as unknown as NodeJS.ReadableStream & {
+          destroy?: () => void;
+          setEncoding?: (enc: BufferEncoding) => void;
+        };
+        stream.setEncoding?.('utf8');
         const finish = () => {
           if (settled) {
             return;
           }
           settled = true;
           try {
-            response.destroy();
+            stream.destroy?.();
           } catch {
             // ignore
           }
           callback(null, data);
         };
-        response.on('data', (chunk: string) => {
+        stream.on('data', (chunk: string) => {
           data += chunk;
           if (data.includes('schemaVersion') || data.includes('"asOf"')) {
             finish();
           }
         });
-        response.on('error', (err: Error) => {
+        stream.on('error', (err: Error) => {
           if (settled) {
             return;
           }

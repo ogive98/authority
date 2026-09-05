@@ -13,6 +13,7 @@ import { SettingsModule } from './settings/settings.module';
 import { ThunderModule } from './thunder-core/thunder.module';
 import { ProductsModule } from './products/products.module';
 import { MasterDataModule } from './master-data/master-data.module';
+import { CustomersModule } from './customers/customers.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { MasterDataModule } from './master-data/master-data.module';
     ThunderModule,
     MasterDataModule,
     ProductsModule,
+    CustomersModule,
   ],
 })
 export class AppModule {}

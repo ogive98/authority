@@ -1,8 +1,16 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { MdRefKind, Prisma } from '@prisma/client';
+import {
+  MdParty,
+  MdPartyStatus,
+  MdPartyType,
+  MdRefKind,
+  Prisma,
+} from '@prisma/client';
 import { PRODUCTS_ERROR_CODES } from '../products/products.constants';
 import { ProductsException } from '../products/products.exception';
 import { PrismaService } from '../prisma/prisma.service';
+import { MASTER_DATA_ERROR_CODES } from './master-data.constants';
+import { MasterDataException } from './master-data.exception';
 
 export type RefValueDto = {
   kind: MdRefKind;
@@ -12,6 +20,21 @@ export type RefValueDto = {
   enabled: boolean;
   meta: Record<string, unknown>;
 };
+
+export type PartyDto = {
+  id: string;
+  companyId: string;
+  type: MdPartyType;
+  legalName: string;
+  taxId: string | null;
+  defaultLang: string | null;
+  status: MdPartyStatus;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type DbClient = Prisma.TransactionClient | PrismaService;
 
 @Injectable()
 export class MasterDataService {
@@ -136,6 +159,87 @@ export class MasterDataService {
     }
     return { packKey: pack.key, upserted };
   }
+
+  async listParties(
+    companyId: string,
+    opts: { q?: string; type?: MdPartyType; limit?: number } = {},
+  ): Promise<{ items: PartyDto[] }> {
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 100);
+    const where: Prisma.MdPartyWhereInput = {
+      companyId,
+      deletedAt: null,
+      ...(opts.type ? { type: opts.type } : {}),
+    };
+    if (opts.q?.trim()) {
+      where.legalName = { contains: opts.q.trim(), mode: 'insensitive' };
+    }
+    const rows = await this.prisma.mdParty.findMany({
+      where,
+      orderBy: [{ legalName: 'asc' }, { id: 'asc' }],
+      take: limit,
+    });
+    return { items: rows.map(serializeParty) };
+  }
+
+  async getParty(companyId: string, id: string): Promise<PartyDto> {
+    const row = await this.requireParty(companyId, id);
+    return serializeParty(row);
+  }
+
+  async createParty(
+    companyId: string,
+    input: {
+      type: MdPartyType;
+      legalName: string;
+      taxId?: string;
+      defaultLang?: string;
+    },
+    db: DbClient = this.prisma,
+  ): Promise<MdParty> {
+    return db.mdParty.create({
+      data: {
+        companyId,
+        type: input.type,
+        legalName: input.legalName.trim(),
+        taxId: input.taxId?.trim() || null,
+        defaultLang: input.defaultLang?.trim() || null,
+        status: MdPartyStatus.ACTIVE,
+      },
+    });
+  }
+
+  async requireParty(
+    companyId: string,
+    id: string,
+    db: DbClient = this.prisma,
+  ): Promise<MdParty> {
+    const row = await db.mdParty.findFirst({
+      where: { id, companyId, deletedAt: null },
+    });
+    if (!row) {
+      throw new MasterDataException(
+        MASTER_DATA_ERROR_CODES.PARTY_NOT_FOUND,
+        'Party not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return row;
+  }
+}
+
+function serializeParty(row: MdParty): PartyDto {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    type: row.type,
+    legalName: row.legalName,
+    taxId: row.taxId,
+    defaultLang: row.defaultLang,
+    status: row.status,
+    version: row.version,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }
 
 function asObject(value: Prisma.JsonValue): Record<string, unknown> {

@@ -138,7 +138,9 @@ async function main() {
 
   for (const moduleKey of businessModules) {
     const enabled =
-      moduleKey === 'master_data' || moduleKey === 'products'
+      moduleKey === 'master_data' ||
+      moduleKey === 'products' ||
+      moduleKey === 'customers'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -327,6 +329,30 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'master_data.refs.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'master_data.party.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'master_data.party.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'customers.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'customers.write',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,

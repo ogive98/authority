@@ -668,6 +668,91 @@ model MdRefValue {
   @@map("md_ref_value")
 }
 
+// --- md_party kernel (Customers V1a) ---
+
+enum MdPartyType {
+  CUSTOMER
+  SUPPLIER
+  BOTH
+}
+
+enum MdPartyStatus {
+  ACTIVE
+  BLOCKED
+}
+
+model MdParty {
+  id          String        @id @default(uuid()) @db.Uuid
+  companyId   String        @map("company_id") @db.Uuid
+  type        MdPartyType
+  legalName   String        @map("legal_name")
+  taxId       String?       @map("tax_id")
+  defaultLang String?       @map("default_lang")
+  status      MdPartyStatus @default(ACTIVE)
+  version     Int           @default(0)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?     @map("deleted_at") @db.Timestamptz(6)
+
+  customers CusCustomer[]
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, type, status])
+  @@index([companyId, legalName])
+  @@map("md_party")
+}
+
+// --- cus_* Customers V1a ---
+
+enum CusCustomerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model CusCustomer {
+  id           String            @id @default(uuid()) @db.Uuid
+  companyId    String            @map("company_id") @db.Uuid
+  partyId      String            @map("party_id") @db.Uuid
+  code         String
+  salesRep     String?           @map("sales_rep")
+  paymentTerms String?           @map("payment_terms")
+  status       CusCustomerStatus @default(ACTIVE)
+  version      Int               @default(0)
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  party    MdParty      @relation(fields: [partyId], references: [id])
+  contacts CusContact[]
+
+  @@unique([companyId, code])
+  @@unique([companyId, partyId])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@map("cus_customer")
+}
+
+model CusContact {
+  id         String    @id @default(uuid()) @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  customerId String    @map("customer_id") @db.Uuid
+  name       String
+  phone      String?
+  whatsapp   String?
+  email      String?
+  role       String?
+  active     Boolean   @default(true)
+  version    Int       @default(0)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  customer CusCustomer @relation(fields: [customerId], references: [id])
+
+  @@index([companyId, customerId, createdAt(sort: Desc)])
+  @@map("cus_contact")
+}
+
 // --- sa_* Super Admin industry packs (POLY-01) ---
 
 model SaIndustryPack {

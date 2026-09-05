@@ -137,7 +137,7 @@ export const COMMAND_CATALOG: CommandItem[] = [
     id: "search-customer",
     label: "Client — Fromagerie Atlas",
     group: "search",
-    href: "/",
+    href: "/customers",
     keywords: ["client", "customer"],
     requiresModule: "customers",
     permissionKey: "customers.read",
