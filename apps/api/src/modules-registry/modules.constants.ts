@@ -15,6 +15,7 @@ export const BUSINESS_MODULE_KEYS = [
   'customers',
   'master_data',
   'products',
+  'portals',
 ] as const;
 
 export const FLAG_KEYS = {

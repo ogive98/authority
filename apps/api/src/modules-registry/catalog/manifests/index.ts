@@ -8,6 +8,7 @@ import { monitoringManifest } from './monitoring.manifest';
 import { organizationManifest } from './organization.manifest';
 import { payrollManifest } from './payroll.manifest';
 import { platformManifest } from './platform.manifest';
+import { portalsManifest } from './portals.manifest';
 import { productionManifest } from './production.manifest';
 import { productsManifest } from './products.manifest';
 import { salesManifest } from './sales.manifest';
@@ -28,4 +29,5 @@ export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   customersManifest,
   masterDataManifest,
   productsManifest,
+  portalsManifest,
 ] as const;

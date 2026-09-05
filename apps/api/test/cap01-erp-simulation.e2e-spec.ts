@@ -103,13 +103,13 @@ describe('CAP-01 ERP simulations (e2e)', () => {
     });
   }
 
-  it('SIM-01 boot: catalog = 13 modules, every dep resolves, no orphan caps', () => {
+  it('SIM-01 boot: catalog = 14 modules, every dep resolves, no orphan caps', () => {
     if (!hasDatabase) {
       return;
     }
 
     const manifests = catalog.list();
-    expect(manifests).toHaveLength(13);
+    expect(manifests).toHaveLength(14);
 
     const ids = new Set(manifests.map((m) => m.id));
     const capKeys = new Set<string>();

@@ -135,6 +135,7 @@ async function main() {
     'customers',
     'master_data',
     'products',
+    'portals',
   ] as const;
 
   for (const moduleKey of businessModules) {
@@ -144,7 +145,8 @@ async function main() {
       moduleKey === 'customers' ||
       moduleKey === 'inventory' ||
       moduleKey === 'sales' ||
-      moduleKey === 'delivery'
+      moduleKey === 'delivery' ||
+      moduleKey === 'portals'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -671,8 +673,107 @@ async function main() {
   await seedIndustryPacks(prisma);
   await applyPackToCompany(prisma, company.id, 'dairy');
 
+  // Customer Portal P1 — demo user + membership (membership-only access)
+  const PORTAL_USER_EMAIL = 'portal@authority.local';
+  const PORTAL_USER_PASSWORD = 'PortalPass123!';
+
+  const portalPasswordHash = await argon2.hash(PORTAL_USER_PASSWORD, {
+    type: argon2.argon2id,
+  });
+
+  const portalUser = await prisma.iamUser.upsert({
+    where: { email: PORTAL_USER_EMAIL },
+    update: {
+      passwordHash: portalPasswordHash,
+      status: 'ACTIVE',
+      displayName: 'Portal Demo Buyer',
+      mfaEnabled: false,
+    },
+    create: {
+      email: PORTAL_USER_EMAIL,
+      displayName: 'Portal Demo Buyer',
+      status: 'ACTIVE',
+      passwordHash: portalPasswordHash,
+      mfaEnabled: false,
+    },
+  });
+
+  let portalParty = await prisma.mdParty.findFirst({
+    where: {
+      companyId: company.id,
+      legalName: 'Portal Demo Customer',
+      deletedAt: null,
+    },
+  });
+  if (!portalParty) {
+    portalParty = await prisma.mdParty.create({
+      data: {
+        companyId: company.id,
+        type: 'CUSTOMER',
+        legalName: 'Portal Demo Customer',
+        status: 'ACTIVE',
+      },
+    });
+  }
+
+  let portalCustomer = await prisma.cusCustomer.findFirst({
+    where: {
+      companyId: company.id,
+      OR: [{ code: 'PORTAL-DEMO' }, { partyId: portalParty.id }],
+    },
+  });
+  if (portalCustomer) {
+    portalCustomer = await prisma.cusCustomer.update({
+      where: { id: portalCustomer.id },
+      data: {
+        code: 'PORTAL-DEMO',
+        nickname: 'Portal Demo',
+        status: 'ACTIVE',
+        deletedAt: null,
+        partyId: portalParty.id,
+      },
+    });
+  } else {
+    portalCustomer = await prisma.cusCustomer.create({
+      data: {
+        companyId: company.id,
+        partyId: portalParty.id,
+        code: 'PORTAL-DEMO',
+        nickname: 'Portal Demo',
+        status: 'ACTIVE',
+      },
+    });
+  }
+
+  const existingPortalMem = await prisma.ptlMembership.findFirst({
+    where: {
+      companyId: company.id,
+      userId: portalUser.id,
+      customerId: portalCustomer.id,
+    },
+  });
+  if (existingPortalMem) {
+    await prisma.ptlMembership.update({
+      where: { id: existingPortalMem.id },
+      data: {
+        role: 'buyer',
+        status: IamLifecycleStatus.ACTIVE,
+      },
+    });
+  } else {
+    await prisma.ptlMembership.create({
+      data: {
+        companyId: company.id,
+        userId: portalUser.id,
+        customerId: portalCustomer.id,
+        role: 'buyer',
+        status: IamLifecycleStatus.ACTIVE,
+      },
+    });
+  }
+
   console.log(
-    `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, limited ${LIMITED_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}`,
+    `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, limited ${LIMITED_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}, portal ${PORTAL_USER_EMAIL}`,
   );
 }
 

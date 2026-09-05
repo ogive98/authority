@@ -125,6 +125,7 @@ enum IamLifecycleStatus {
 enum IamSessionRealm {
   BUSINESS
   SUPER_ADMIN
+  CUSTOMER_PORTAL
 }
 
 enum IamMfaPurpose {
@@ -152,6 +153,7 @@ model IamUser {
   loginAttempts          IamLoginAttempt[]
   assignments            OrgUserAssignment[]
   superAdminMembership   IamSuperAdminMembership?
+  portalMemberships      PtlMembership[]
 
   @@map("iam_user")
 }
@@ -746,9 +748,10 @@ model CusCustomer {
   updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt      DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
-  party    MdParty      @relation(fields: [partyId], references: [id])
-  zone     CusZone?     @relation(fields: [zoneId], references: [id])
-  contacts CusContact[]
+  party             MdParty         @relation(fields: [partyId], references: [id])
+  zone              CusZone?        @relation(fields: [zoneId], references: [id])
+  contacts          CusContact[]
+  portalMemberships PtlMembership[]
 
   @@unique([companyId, code])
   @@unique([companyId, partyId])
@@ -758,6 +761,27 @@ model CusCustomer {
   @@index([companyId, blocked])
   @@index([companyId, zoneId])
   @@map("cus_customer")
+}
+
+// --- ptl_* Customer Portal (P1) ---
+
+model PtlMembership {
+  id         String             @id @default(uuid()) @db.Uuid
+  companyId  String             @map("company_id") @db.Uuid
+  customerId String             @map("customer_id") @db.Uuid
+  userId     String             @map("user_id") @db.Uuid
+  role       String             @default("buyer")
+  status     IamLifecycleStatus @default(ACTIVE)
+  version    Int                @default(0)
+  createdAt  DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer CusCustomer @relation(fields: [customerId], references: [id])
+  user     IamUser     @relation(fields: [userId], references: [id])
+
+  @@unique([companyId, userId, customerId])
+  @@index([companyId, userId])
+  @@map("ptl_membership")
 }
 
 model CusContact {
