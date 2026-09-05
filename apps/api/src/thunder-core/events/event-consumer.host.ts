@@ -5,6 +5,7 @@ import {
   thunderConsumersEnabled,
   thunderEventStreamKey,
 } from '../thunder.constants';
+import { withThunderSpan } from '../observability/tracing';
 import { ConsumerRegistryService } from './consumer-registry.service';
 import { parseEventEnvelopeFromStreamFields } from './event-envelope.builder';
 import { ProcessedEventService } from './processed-event.service';
@@ -77,23 +78,33 @@ export class EventConsumerHost implements OnModuleDestroy {
       for (const [messageId, fields] of messages) {
         try {
           const envelope = parseEventEnvelopeFromStreamFields(fields);
-          const alreadyProcessed = await this.processedEvents.isProcessed(
-            consumerGroup,
-            envelope.eventId,
-          );
+          await withThunderSpan(
+            'thunder.event.consume',
+            {
+              'thunder.consumer_id': consumerGroup,
+              'thunder.event_type': envelope.eventType,
+              'thunder.event_id': envelope.eventId,
+            },
+            async () => {
+              const alreadyProcessed = await this.processedEvents.isProcessed(
+                consumerGroup,
+                envelope.eventId,
+              );
 
-          if (alreadyProcessed) {
-            await connection.xack(streamKey, consumerGroup, messageId);
-            continue;
-          }
+              if (alreadyProcessed) {
+                await connection.xack(streamKey, consumerGroup, messageId);
+                return;
+              }
 
-          await registration.handler(envelope);
-          await this.processedEvents.markProcessed(
-            consumerGroup,
-            envelope.eventId,
+              await registration.handler(envelope);
+              await this.processedEvents.markProcessed(
+                consumerGroup,
+                envelope.eventId,
+              );
+              await connection.xack(streamKey, consumerGroup, messageId);
+              handled += 1;
+            },
           );
-          await connection.xack(streamKey, consumerGroup, messageId);
-          handled += 1;
         } catch (error) {
           this.logger.warn(
             error instanceof Error

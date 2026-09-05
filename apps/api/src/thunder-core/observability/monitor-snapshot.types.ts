@@ -76,6 +76,11 @@ export interface ThunderMonitorSnapshot {
     jobRetryTotal: number;
     admissionRejectTotal: number;
   };
+  /** OpenTelemetry hooks status (THU-HARD-06). */
+  tracing: {
+    enabled: boolean;
+    tracerName: string;
+  };
   db: {
     ok: boolean;
     poolUsageRatio: number | null;

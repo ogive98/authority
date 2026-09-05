@@ -117,6 +117,8 @@ describe('MonitorSnapshotService', () => {
     });
     expect(snap.metrics.scrapePath).toBe('/api/v1/thunder/metrics');
     expect(snap.metrics.jobSuccessTotal).toBe(5);
+    expect(snap.tracing.tracerName).toBe('authority.thunder');
+    expect(typeof snap.tracing.enabled).toBe('boolean');
     expect(metrics.syncGauges).toHaveBeenCalled();
     expect(snap.events.eventsPerSecondEstimate).toBe(2);
     expect(snap.redis.ok).toBe(true);

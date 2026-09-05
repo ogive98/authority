@@ -15,6 +15,7 @@ import {
   type ThunderQueueFamily,
 } from '../thunder.constants';
 import { ThunderMetricsService } from '../observability/thunder-metrics.service';
+import { withThunderSpan } from '../observability/tracing';
 
 export type AuthoritySystemMode =
   | 'NORMAL'
@@ -113,6 +114,32 @@ export class AdmissionOrchestratorService {
    * Idempotency and in-flight lock stay in JobEnqueueService.
    */
   async admitEnqueue(input: AdmissionEnqueueInput): Promise<AdmissionResult> {
+    return withThunderSpan(
+      'thunder.admission.enqueue',
+      {
+        'thunder.job_type': input.jobType,
+        'thunder.queue': input.queue,
+        'thunder.company_id': input.companyId,
+      },
+      async (span) => {
+        const result = await this.admitEnqueueInner(input);
+        if (result.allowed) {
+          span.setAttribute('thunder.admission', 'allow');
+        } else if (result.kind === 'plan_c') {
+          span.setAttribute('thunder.admission', 'plan_c');
+        } else {
+          span.setAttribute('thunder.admission', 'reject');
+          span.setAttribute('thunder.reject_code', result.code);
+        }
+        span.setAttribute('thunder.correlation_id', result.correlationId);
+        return result;
+      },
+    );
+  }
+
+  private async admitEnqueueInner(
+    input: AdmissionEnqueueInput,
+  ): Promise<AdmissionResult> {
     const correlationId =
       input.correlationId && input.correlationId.length > 0
         ? input.correlationId

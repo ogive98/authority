@@ -30,6 +30,7 @@ import type { JobEnqueueResult } from './job.types';
 import { JobRegistryService } from './job-registry.service';
 import { hashJobPayload } from './payload-hash';
 import { DEFAULT_MAX_ATTEMPTS } from './retry/retry-policy';
+import { withThunderSpan } from '../observability/tracing';
 
 export interface EnqueueJobInput {
   jobType: string;
@@ -203,6 +204,26 @@ export class JobEnqueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   async enqueue(input: EnqueueJobInput): Promise<JobEnqueueResult> {
+    return withThunderSpan(
+      'thunder.job.enqueue',
+      {
+        'thunder.job_type': input.jobType,
+        'thunder.queue': input.queue,
+        'thunder.company_id': input.companyId,
+      },
+      async (span) => {
+        const result = await this.enqueueInner(input);
+        if ('jobId' in result && result.jobId) {
+          span.setAttribute('thunder.job_id', result.jobId);
+        }
+        span.setAttribute('thunder.enqueue_status', result.status);
+        span.setAttribute('thunder.replayed', result.replayed ?? false);
+        return result;
+      },
+    );
+  }
+
+  private async enqueueInner(input: EnqueueJobInput): Promise<JobEnqueueResult> {
     const registration = this.registry.get(input.jobType);
     if (!registration) {
       throw new ThunderException(

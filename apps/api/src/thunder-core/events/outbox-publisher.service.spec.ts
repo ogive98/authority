@@ -58,8 +58,13 @@ describe('OutboxPublisherService', () => {
         disconnect: jest.fn(),
       }),
     };
+    const outboxDlq = { record: jest.fn() };
 
-    const service = new OutboxPublisherService(prisma as never, redis as never);
+    const service = new OutboxPublisherService(
+      prisma as never,
+      redis as never,
+      outboxDlq as never,
+    );
 
     const published = await service.publishDue(10);
     expect(published).toBe(1);
@@ -73,7 +78,7 @@ describe('OutboxPublisherService', () => {
     expect(lastUpdate!.data.publishedAt).toBeInstanceOf(Date);
   });
 
-  it('leaves row unpublished when XADD fails', async () => {
+  it('increments publishAttempts when XADD fails under max', async () => {
     const row = {
       id: '11111111-1111-1111-1111-111111111111',
       companyId: null,
@@ -88,12 +93,12 @@ describe('OutboxPublisherService', () => {
       publishAttempts: 0,
     };
 
-    const update = jest.fn();
+    const update = jest.fn().mockResolvedValue({});
     const prisma = {
       $transaction: jest.fn(async (fn: (tx: unknown) => Promise<number>) =>
         fn({
           $queryRaw: jest.fn().mockResolvedValue([row]),
-          coreOutbox: { update },
+          coreOutbox: { update, delete: jest.fn() },
         }),
       ),
     };
@@ -103,10 +108,19 @@ describe('OutboxPublisherService', () => {
         disconnect: jest.fn(),
       }),
     };
+    const outboxDlq = { record: jest.fn() };
 
-    const service = new OutboxPublisherService(prisma as never, redis as never);
+    const service = new OutboxPublisherService(
+      prisma as never,
+      redis as never,
+      outboxDlq as never,
+    );
     const published = await service.publishDue(5);
     expect(published).toBe(0);
-    expect(update).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith({
+      where: { id: row.id },
+      data: { publishAttempts: 1 },
+    });
+    expect(outboxDlq.record).not.toHaveBeenCalled();
   });
 });

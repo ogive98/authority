@@ -29,6 +29,7 @@ import {
   DEFAULT_MAX_ATTEMPTS,
 } from './retry/retry-policy';
 import { ThunderMetricsService } from '../observability/thunder-metrics.service';
+import { withThunderSpan } from '../observability/tracing';
 
 @Injectable()
 export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
@@ -136,6 +137,22 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
 
   async processJob(job: Job<ThunderQueueJobData>): Promise<void> {
     const jobId = job.data.jobId;
+    return withThunderSpan(
+      'thunder.job.process',
+      {
+        'thunder.job_id': jobId,
+      },
+      async (span) => {
+        await this.processJobInner(job, span);
+      },
+    );
+  }
+
+  private async processJobInner(
+    job: Job<ThunderQueueJobData>,
+    span: { setAttribute: (key: string, value: string | number | boolean) => void },
+  ): Promise<void> {
+    const jobId = job.data.jobId;
     const row = await this.prisma.thunderJob.findUnique({
       where: { id: jobId },
     });
@@ -143,6 +160,12 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     if (!row) {
       this.logger.warn(`Thunder job row missing: ${jobId}`);
       return;
+    }
+
+    span.setAttribute('thunder.job_type', row.jobType);
+    span.setAttribute('thunder.queue', row.queue);
+    if (row.companyId) {
+      span.setAttribute('thunder.company_id', row.companyId);
     }
 
     if (row.status === 'COMPLETED' || row.status === 'CANCELLED') {

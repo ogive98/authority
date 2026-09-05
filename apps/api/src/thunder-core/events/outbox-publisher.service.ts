@@ -6,6 +6,7 @@ import {
 } from '../../common/json-safety';
 import { RedisService } from '../../infrastructure/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { withThunderSpan } from '../observability/tracing';
 import { thunderEventStreamKey } from '../thunder.constants';
 import { buildEventEnvelope } from './event-envelope.builder';
 import { OutboxDlqService } from './outbox-dlq.service';
@@ -67,6 +68,20 @@ export class OutboxPublisherService implements OnModuleDestroy {
    * After N failed publishes → core_outbox_dlq (THU-HARD-05).
    */
   async publishDue(limit = resolveOutboxBatchSize()): Promise<number> {
+    return withThunderSpan(
+      'thunder.outbox.publish',
+      { 'thunder.batch_limit': clampOutboxBatchSize(limit) },
+      async (span) => {
+        const published = await this.publishDueInner(limit);
+        span.setAttribute('thunder.published_count', published);
+        return published;
+      },
+    );
+  }
+
+  private async publishDueInner(
+    limit = resolveOutboxBatchSize(),
+  ): Promise<number> {
     const connection = this.getPublisherRedis();
     if (!connection) {
       return 0;

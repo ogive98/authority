@@ -3,8 +3,11 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { startThunderTracing } from './thunder-core/observability/tracing-bootstrap';
 
 async function bootstrap() {
+  await startThunderTracing();
+
   const app = await NestFactory.create(AppModule);
   app.enableShutdownHooks();
   app.use(cookieParser());

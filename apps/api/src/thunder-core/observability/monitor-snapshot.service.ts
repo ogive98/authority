@@ -11,6 +11,7 @@ import {
 } from '../thunder.constants';
 import type { ThunderMonitorSnapshot } from './monitor-snapshot.types';
 import { ThunderMetricsService } from './thunder-metrics.service';
+import { thunderTracingSnapshot } from './tracing';
 
 @Injectable()
 export class MonitorSnapshotService {
@@ -222,6 +223,7 @@ export class MonitorSnapshotService {
         jobRetryTotal: counterSummary.jobRetryTotal,
         admissionRejectTotal: counterSummary.admissionRejectTotal,
       },
+      tracing: thunderTracingSnapshot(),
       db: {
         ok: dbOk,
         poolUsageRatio: Number.isFinite(pgPool) ? pgPool : null,
