@@ -40,7 +40,15 @@ export interface ThunderMonitorSnapshot {
     dlq: number;
   };
   events: {
+    /** Unpublished outbox row count. */
     outboxLag: number;
+    /** Age of unpublished rows in seconds (THU-HARD-01). */
+    outboxLagSeconds: {
+      oldest: number | null;
+      p50: number | null;
+      p95: number | null;
+      p99: number | null;
+    };
     publishedLastMinute: number;
     eventsPerSecondEstimate: number;
   };

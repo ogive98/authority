@@ -1,8 +1,16 @@
 import { MonitorSnapshotService } from './monitor-snapshot.service';
 
 describe('MonitorSnapshotService', () => {
-  it('builds a schemaVersion 1 snapshot with required gauges', async () => {
-    const prisma = {
+  function mockPrisma(
+    lag = {
+      unpublished: 4,
+      oldest: 12.5,
+      p50: 5,
+      p95: 10,
+      p99: 11,
+    },
+  ) {
+    return {
       thunderJob: {
         groupBy: jest.fn().mockResolvedValue([
           { status: 'PENDING', queue: 'ops', _count: { _all: 2 } },
@@ -11,10 +19,22 @@ describe('MonitorSnapshotService', () => {
       },
       thunderDlqEntry: { count: jest.fn().mockResolvedValue(3) },
       coreOutbox: {
-        count: jest.fn().mockResolvedValueOnce(4).mockResolvedValueOnce(120),
+        count: jest.fn().mockResolvedValue(120),
       },
-      $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+      $queryRaw: jest
+        .fn()
+        .mockImplementation((strings: TemplateStringsArray) => {
+          const sql = strings.join(' ');
+          if (sql.includes('core_outbox') || sql.includes('percentile_cont')) {
+            return Promise.resolve([lag]);
+          }
+          return Promise.resolve([{ '?column?': 1 }]);
+        }),
     };
+  }
+
+  it('builds a schemaVersion 1 snapshot with outbox lag seconds', async () => {
+    const prisma = mockPrisma();
     const redis = {
       ping: jest.fn().mockResolvedValue(true),
       getUsedMemoryBytes: jest.fn().mockResolvedValue(1024),
@@ -39,6 +59,12 @@ describe('MonitorSnapshotService', () => {
     expect(snap.jobs.running).toBe(1);
     expect(snap.jobs.dlq).toBe(3);
     expect(snap.events.outboxLag).toBe(4);
+    expect(snap.events.outboxLagSeconds).toEqual({
+      oldest: 12.5,
+      p50: 5,
+      p95: 10,
+      p99: 11,
+    });
     expect(snap.events.eventsPerSecondEstimate).toBe(2);
     expect(snap.redis.ok).toBe(true);
     expect(snap.db.ok).toBe(true);
@@ -52,9 +78,25 @@ describe('MonitorSnapshotService', () => {
       thunderJob: { groupBy: jest.fn().mockResolvedValue([]) },
       thunderDlqEntry: { count: jest.fn().mockResolvedValue(0) },
       coreOutbox: {
-        count: jest.fn().mockResolvedValueOnce(0).mockResolvedValueOnce(0),
+        count: jest.fn().mockResolvedValue(0),
       },
-      $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+      $queryRaw: jest
+        .fn()
+        .mockImplementation((strings: TemplateStringsArray) => {
+          const sql = strings.join(' ');
+          if (sql.includes('core_outbox')) {
+            return Promise.resolve([
+              {
+                unpublished: 0,
+                oldest: null,
+                p50: null,
+                p95: null,
+                p99: null,
+              },
+            ]);
+          }
+          return Promise.resolve([{ '?column?': 1 }]);
+        }),
     };
     const redis = {
       ping: jest.fn().mockResolvedValue(true),
@@ -82,5 +124,6 @@ describe('MonitorSnapshotService', () => {
     const snap = await service.snapshot();
     expect(snap.cpu.usageRatio).toBe(0.42);
     expect(snap.pressure.shedP4).toBe(true);
+    expect(snap.events.outboxLagSeconds.oldest).toBeNull();
   });
 });

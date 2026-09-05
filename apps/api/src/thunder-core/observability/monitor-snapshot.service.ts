@@ -22,7 +22,7 @@ export class MonitorSnapshotService {
     const [
       jobGroups,
       dlq,
-      outboxLag,
+      outboxLagStats,
       publishedLastMinute,
       redisOk,
       redisMemory,
@@ -33,7 +33,7 @@ export class MonitorSnapshotService {
         _count: { _all: true },
       }),
       this.prisma.thunderDlqEntry.count(),
-      this.prisma.coreOutbox.count({ where: { publishedAt: null } }),
+      this.queryOutboxLagStats(),
       this.prisma.coreOutbox.count({
         where: {
           publishedAt: { gte: new Date(Date.now() - 60_000) },
@@ -43,6 +43,8 @@ export class MonitorSnapshotService {
       this.redis.getUsedMemoryBytes(),
       this.pingDb(),
     ]);
+
+    const outboxLag = outboxLagStats.unpublished;
 
     const jobs = {
       pending: 0,
@@ -157,6 +159,12 @@ export class MonitorSnapshotService {
       jobs,
       events: {
         outboxLag,
+        outboxLagSeconds: {
+          oldest: outboxLagStats.oldest,
+          p50: outboxLagStats.p50,
+          p95: outboxLagStats.p95,
+          p99: outboxLagStats.p99,
+        },
         publishedLastMinute,
         eventsPerSecondEstimate: publishedLastMinute / 60,
       },
@@ -188,4 +196,76 @@ export class MonitorSnapshotService {
       return false;
     }
   }
+
+  private async queryOutboxLagStats(): Promise<{
+    unpublished: number;
+    oldest: number | null;
+    p50: number | null;
+    p95: number | null;
+    p99: number | null;
+  }> {
+    try {
+      const rows = await this.prisma.$queryRaw<
+        Array<{
+          unpublished: number | bigint;
+          oldest: number | null;
+          p50: number | null;
+          p95: number | null;
+          p99: number | null;
+        }>
+      >`
+        SELECT
+          COUNT(*)::int AS unpublished,
+          EXTRACT(EPOCH FROM (NOW() - MIN(created_at)))::float8 AS oldest,
+          percentile_cont(0.50) WITHIN GROUP (
+            ORDER BY EXTRACT(EPOCH FROM (NOW() - created_at))
+          )::float8 AS p50,
+          percentile_cont(0.95) WITHIN GROUP (
+            ORDER BY EXTRACT(EPOCH FROM (NOW() - created_at))
+          )::float8 AS p95,
+          percentile_cont(0.99) WITHIN GROUP (
+            ORDER BY EXTRACT(EPOCH FROM (NOW() - created_at))
+          )::float8 AS p99
+        FROM core_outbox
+        WHERE published_at IS NULL
+      `;
+      const row = rows[0];
+      if (!row) {
+        return {
+          unpublished: 0,
+          oldest: null,
+          p50: null,
+          p95: null,
+          p99: null,
+        };
+      }
+      const unpublished = Number(row.unpublished);
+      return {
+        unpublished: Number.isFinite(unpublished) ? unpublished : 0,
+        oldest: toFiniteOrNull(row.oldest),
+        p50: toFiniteOrNull(row.p50),
+        p95: toFiniteOrNull(row.p95),
+        p99: toFiniteOrNull(row.p99),
+      };
+    } catch {
+      const unpublished = await this.prisma.coreOutbox.count({
+        where: { publishedAt: null },
+      });
+      return {
+        unpublished,
+        oldest: null,
+        p50: null,
+        p95: null,
+        p99: null,
+      };
+    }
+  }
+}
+
+function toFiniteOrNull(value: number | null | undefined): number | null {
+  if (value == null) {
+    return null;
+  }
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
