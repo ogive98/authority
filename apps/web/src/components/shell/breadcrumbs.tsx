@@ -33,7 +33,7 @@ export function ShellBreadcrumbs() {
   return (
     <nav
       aria-label="Fil d’Ariane"
-      className="flex h-9 shrink-0 items-center gap-1.5 border-b border-a-border-subtle bg-a-surface-1 px-3 text-[length:var(--a-text-sm)] md:px-4"
+      className="a-glass flex h-9 shrink-0 items-center gap-1.5 border-b border-a-border-subtle px-3 text-[length:var(--a-text-sm)] md:px-4"
     >
       {unique.map((c, i) => {
         const last = i === unique.length - 1;

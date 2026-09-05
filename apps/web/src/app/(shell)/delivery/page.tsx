@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ABadge,
   AButton,
   ACombobox,
   ADrawer,
@@ -38,11 +39,14 @@ type FormState = {
   driverLabel: string;
 };
 
-function statusClass(status: DeliveryShipment["status"]): string {
-  if (status === "DELIVERED") return "text-a-success";
-  if (status === "FAILED") return "text-a-warning";
-  if (status === "OUT") return "text-a-accent";
-  return "text-a-fg-muted";
+function shipmentBadgeTone(
+  status: DeliveryShipment["status"],
+): "success" | "warning" | "accent" | "neutral" | "info" {
+  if (status === "DELIVERED") return "success";
+  if (status === "FAILED") return "warning";
+  if (status === "OUT") return "accent";
+  if (status === "ASSIGNED") return "info";
+  return "neutral";
 }
 
 function orderToOption(o: EligibleOrder): AComboboxOption {
@@ -313,9 +317,9 @@ export default function DeliveryPage() {
                       )}
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      <span className={statusClass(row.status)}>
+                      <ABadge tone={shipmentBadgeTone(row.status)}>
                         {SHIPMENT_STATUS_LABELS[row.status]}
-                      </span>
+                      </ABadge>
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
                       <div className="flex flex-wrap gap-2">
@@ -364,7 +368,7 @@ export default function DeliveryPage() {
 
       <ADrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onOpenChange={setDrawerOpen}
         title="Nouvelle livraison"
         description="Choisir une commande confirmée sans expédition."
       >

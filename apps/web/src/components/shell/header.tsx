@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  Bell,
-  Building2,
-  Command,
-  Menu,
-  Search,
-} from "lucide-react";
+import { Bell, Menu, Search } from "lucide-react";
 import { useNotificationsStore } from "@/stores/notifications-store";
 import { unreadCount } from "@/lib/notifications";
 import { useShellStore } from "@/stores/shell-store";
@@ -38,7 +32,7 @@ function IconBtn({
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-md)] text-a-fg-muted transition-colors hover:bg-a-surface-3 hover:text-a-fg",
+        "inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted transition-colors duration-150 hover:bg-a-surface-3 hover:text-a-fg",
         className,
       )}
     >
@@ -47,8 +41,9 @@ function IconBtn({
   );
 }
 
+/** Utility Cube topbar — centered ⌘K search, utilities right, profile. */
 export function ShellHeader() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
   const setPaletteOpen = useShellStore((s) => s.setPaletteOpen);
   const spectreEnabled = useShellStore((s) => s.spectreEnabled);
@@ -64,7 +59,7 @@ export function ShellHeader() {
       (document.documentElement.getAttribute("data-theme") as
         | "dark"
         | "light"
-        | null) ?? "dark";
+        | null) ?? "light";
     setTheme(current);
   }, []);
 
@@ -88,43 +83,41 @@ export function ShellHeader() {
   }
 
   return (
-    <header className="grid h-12 shrink-0 grid-cols-[1fr_auto] items-center gap-2 border-b border-a-border-subtle bg-a-surface-1 px-3 md:grid-cols-[auto_1fr_auto] md:px-4">
-      <div className="flex items-center gap-1">
+    <header className="a-glass sticky top-0 z-[var(--a-z-sticky)] flex h-14 shrink-0 items-center gap-3 border-b border-a-border-subtle px-4">
+      <button
+        type="button"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted hover:bg-white/50 md:hidden"
+        aria-label="Ouvrir les modules"
+        aria-controls="shell-sidebar-mobile"
+        onClick={() => setMobileNavOpen(true)}
+      >
+        <Menu className="h-4 w-4" strokeWidth={1.75} />
+      </button>
+
+      <div className="flex min-w-0 flex-1 justify-center">
         <button
           type="button"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-md)] text-a-fg-muted hover:bg-a-surface-3 md:hidden"
-          aria-label="Ouvrir les modules"
-          aria-controls="shell-sidebar-mobile"
-          onClick={() => setMobileNavOpen(true)}
+          onClick={() => setPaletteOpen(true)}
+          className={cn(
+            "a-glass flex h-10 w-full max-w-xl items-center gap-2 rounded-[var(--a-radius-pill)] border border-a-border-subtle px-4",
+            "text-left text-[length:var(--a-text-sm)] text-a-fg-subtle transition-colors duration-150",
+            "hover:border-a-border-strong",
+          )}
         >
-          <Menu className="h-4 w-4" strokeWidth={1.75} />
+          <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+          <span className="min-w-0 flex-1 truncate">Rechercher…</span>
+          <kbd className="a-mono hidden shrink-0 rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-white/60 px-1.5 py-0.5 text-[10px] text-a-fg-subtle sm:inline">
+            ⌘K
+          </kbd>
         </button>
-        <IconBtn label="Contexte société / site (stub)">
-          <Building2 className="h-4 w-4" strokeWidth={1.75} />
-        </IconBtn>
       </div>
 
-      <div className="hidden items-center justify-center gap-1 md:flex">
-        <IconBtn
-          label="Recherche / palette (Ctrl+K)"
-          onClick={() => setPaletteOpen(true)}
-        >
-          <Search className="h-4 w-4" strokeWidth={1.75} />
-        </IconBtn>
-        <IconBtn
-          label="Palette de commandes (Ctrl+K)"
-          onClick={() => setPaletteOpen(true)}
-        >
-          <Command className="h-4 w-4" strokeWidth={1.75} />
-        </IconBtn>
-      </div>
-
-      <div className="flex items-center justify-end gap-2 sm:gap-3">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <IconBtn
           label={
             unread > 0
               ? `Notifications — ${unread} non lu${unread > 1 ? "s" : ""}`
-              : "Notifications — centre d’activité"
+              : "Notifications"
           }
           onClick={() => setInboxOpen(true)}
           className="relative"
@@ -132,18 +125,11 @@ export function ShellHeader() {
           <Bell className="h-4 w-4" strokeWidth={1.75} />
           {unread > 0 ? (
             <span
-              className="absolute top-1 right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-a-accent px-0.5 text-[9px] font-medium text-a-accent-fg"
+              className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-a-danger"
               aria-hidden
-            >
-              {unread > 9 ? "9+" : unread}
-            </span>
+            />
           ) : null}
         </IconBtn>
-
-        <div
-          className="hidden h-5 w-px bg-a-border-subtle sm:block"
-          aria-hidden
-        />
 
         <ModeSwitch
           className="hidden sm:inline-flex"
@@ -153,23 +139,19 @@ export function ShellHeader() {
           onCheckedChange={setSpectreEnabled}
         />
         <ModeSwitch
-          className="hidden lg:inline-flex"
+          className="hidden xl:inline-flex"
           label="PATCH MODE"
           icon={PatchIcon}
           checked={patchEnabled}
           onCheckedChange={setPatchEnabled}
         />
         {patchEnabled ? (
-          <span
-            className="a-mono hidden rounded-[var(--a-radius-sm)] border border-a-warning/40 bg-a-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-a-warning lg:inline"
-            title="PATCH MODE actif — correctifs hot-path"
-          >
+          <span className="a-mono hidden rounded-[var(--a-radius-pill)] bg-a-warning-soft px-2 py-0.5 text-[10px] font-medium text-a-warning xl:inline">
             PATCH
           </span>
         ) : null}
 
         <ThemeModeSwitch theme={theme} onThemeChange={applyTheme} />
-
         <UserMenu />
       </div>
     </header>

@@ -34,18 +34,19 @@ export function SyncModuleFromRoute() {
       setFeatureMenuOpen(false);
       return;
     }
-    if (pathname.startsWith("/inventory")) {
-      if (has("inventory")) setSelectedModuleId("inventory");
+    if (pathname.startsWith("/sales") || pathname.startsWith("/preview/commandes")) {
+      if (has("sales")) setSelectedModuleId("sales");
       setFeatureMenuOpen(false);
       return;
     }
-    if (pathname.startsWith("/sales")) {
-      if (has("sales")) setSelectedModuleId("sales");
+    if (pathname.startsWith("/preview/lots") || pathname.startsWith("/inventory")) {
+      if (has("inventory")) setSelectedModuleId("inventory");
       setFeatureMenuOpen(false);
       return;
     }
     if (pathname.startsWith("/delivery")) {
       if (has("delivery")) setSelectedModuleId("delivery");
+      else if (has("sales")) setSelectedModuleId("sales");
       setFeatureMenuOpen(false);
       return;
     }

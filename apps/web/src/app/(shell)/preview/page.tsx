@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AScreenHeader } from "@/components/a/a-screen-header";
 
-/** Visual-lock gallery — mock chrome only, not business modules. */
+/** Visual-lock gallery — mock chrome + real module entry points. */
 
 const SCREENS = [
   {
@@ -16,8 +16,18 @@ const SCREENS = [
   },
   {
     href: "/preview/commandes",
-    title: "Commandes",
-    blurb: "Table TND · statut texte · drawer.",
+    title: "Commandes (aperçu)",
+    blurb: "Table + badges pastel + drawer — mock.",
+  },
+  {
+    href: "/sales",
+    title: "Ventes",
+    blurb: "Module Sales réel — prise de commande multi-lignes.",
+  },
+  {
+    href: "/delivery",
+    title: "Livraison",
+    blurb: "Module Delivery — tournées / stock issue.",
   },
   {
     href: "/settings",
@@ -31,17 +41,19 @@ export default function PreviewHubPage() {
     <>
       <AScreenHeader
         title="Aperçu écrans"
-        description="Maquettes métier dans le shell locké — mock data, pas de module Sales/Stock réel."
+        description="Référence Utility Cube dans le shell — mock + modules réels."
       />
-      <div className="grid gap-4 p-[var(--a-space-6)] sm:grid-cols-2">
+      <div className="grid gap-3 p-[var(--a-space-6)] sm:grid-cols-2 lg:grid-cols-3">
         {SCREENS.map((s) => (
           <Link
             key={s.href}
             href={s.href}
-            className="a-card block p-[var(--a-space-5)] hover:bg-a-surface-3"
+            className="a-card block p-[var(--a-space-5)] transition-colors hover:bg-a-accent-muted/40"
           >
-            <p className="font-medium">{s.title}</p>
-            <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
+            <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+              {s.title}
+            </p>
+            <p className="mt-1 text-[13px] font-normal text-a-fg-muted">
               {s.blurb}
             </p>
           </Link>

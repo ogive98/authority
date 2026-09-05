@@ -9,7 +9,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-a-accent text-a-accent-fg hover:bg-a-accent-hover border border-transparent",
+          "bg-a-accent text-a-accent-fg border border-transparent hover:bg-a-accent-hover shadow-[0_1px_2px_rgb(5_150_105_/_0.2)]",
         secondary:
           "bg-a-surface-3 text-a-fg border border-a-border-subtle hover:bg-a-surface-4",
         outline:
@@ -43,7 +43,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <Comp
         className={cn(
           buttonVariants({ variant, size }),
-          "rounded-[var(--a-radius-md)]",
+          "rounded-[var(--a-radius-sm)]",
           className,
         )}
         ref={ref}

@@ -17,18 +17,43 @@ export type MeRegistry = {
   flags: { key: string; enabled: boolean }[];
 };
 
-/** Offline / API-down fallback — home + settings always for shell chrome. */
+/**
+ * Offline / API-down fallback — Utility Cube nav shape
+ * (Dashboard / Sales / Inventory / Settings) mapped to AUTHORITY routes.
+ */
 export const FALLBACK_REGISTRY: MeRegistry = {
   companyId: null,
   modules: [
     {
       key: "home",
-      name: "Accueil",
+      name: "Tableau de bord",
       features: [
-        { id: "dashboard", label: "Tableau de bord", href: "/" },
+        { id: "dashboard", label: "Vue d’ensemble", href: "/" },
         { id: "preview", label: "Écrans aperçu", href: "/preview" },
+      ],
+    },
+    {
+      key: "sales",
+      name: "Ventes",
+      features: [
+        { id: "orders", label: "Commandes", href: "/preview/commandes" },
+        { id: "sales-form", label: "Prise de commande", href: "/sales" },
+        { id: "customers", label: "Clients", href: "/customers" },
+      ],
+    },
+    {
+      key: "inventory",
+      name: "Stock",
+      features: [
         { id: "lots", label: "Lots", href: "/preview/lots" },
-        { id: "commandes", label: "Commandes", href: "/preview/commandes" },
+        { id: "inventory", label: "Inventaire", href: "/inventory" },
+      ],
+    },
+    {
+      key: "delivery",
+      name: "Livraison",
+      features: [
+        { id: "shipments", label: "Tournées", href: "/delivery" },
       ],
     },
     {

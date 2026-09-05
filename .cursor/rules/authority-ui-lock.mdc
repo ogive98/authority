@@ -1,20 +1,49 @@
 ---
-description: AUTHORITY visual identity lock — mandatory for every UI screen
+description: AUTHORITY visual identity — Utility Cube (LOCKED — all UI forever)
 alwaysApply: true
 ---
 
-# Visual identity lock
+# Visual identity lock (Utility Cube) — NON-NÉGOCIABLE
 
-Before any UI: read `apps/web/src/app/globals.css` (`--a-*`) and reuse `AppShell` + `A*` + `AScreenHeader`.
+This lock applies to **every** future screen, module, gate, widget, and PR.  
+No parallel design system. No “temporary” alternate chrome.
 
-**Locked:** IBM Plex (D015), teal `#0d9488` via `--a-accent` (D016), SPECTRE not Ghost, radius sm/md/lg only, dark+light.
+## Before any UI work
 
-**Chrome (every module page):** `AppShell` (rail + header + breadcrumbs + monitor). Page body = `AScreenHeader` (title left, actions right) then filters then table/form. No second sidebar, no module tokens, no raw hex, no Inter/Geist, no glass on TND/stock.
+1. Read `apps/web/src/app/globals.css` (`--a-*` tokens only).
+2. Reuse `AppShell` + `AScreenHeader` + `A*` / `ADrawer` / `ABadge` / `AButton`.
+3. Match reference pixels: `/` · `/preview/lots` · `/preview/commandes` · `/sales` · `/delivery` · `/settings`.
+4. If a screen diverges → **fix that screen**, never invent a second look.
 
-**Gates `/dev/*`:** `ADevPage` only — do not invent a new header.
+## Locked identity (2026-09-05)
 
-**Buttons:** `AButton` (primary = one CTA right). Icon buttons 32px like shell. Colors = meaning only (status text, not big colored boxes).
+| Token | Value |
+|-------|--------|
+| Fonts | **Inter** + JetBrains Mono (tabular) |
+| Accent | Soft emerald `#059669` · hover `#047857` · muted `#ecfdf5` |
+| Violet/sky | `#6868f0` → `#60a5fa` (optional glass accents only) |
+| Theme | **Light first** · dark secondary |
+| Radius | 8 / 12 / 16 px + pill badges |
+| Ops mode | **SPECTRE** (not Ghost) + PATCH |
 
-**Reference screens:** `/`, `/preview/lots`, `/preview/commandes`, `/settings`, `/dev/tokens`.
+## Chrome (mandatory)
 
-If a screen does not match those, fix the screen — do not invent a new look.
+- Sidebar sobré ~232px: icons + labels, **13px `font-normal`**, thin stroke icons, mint active on parent only, green **dot** on active leaf
+- Topbar: centered search ⌘K, notif, profil
+- Page: breadcrumbs → `AScreenHeader` (title medium, one primary CTA right) → filters → table/form → optional right `ADrawer`
+- Status = pastel pill `ABadge` only
+- Gates `/dev/*` = `ADevPage` only
+- Montants TND / stock = solid tabular (never blur the digits)
+
+## Forbidden
+
+- Second sidebar / topbar / “module skin”
+- Near-black greens (`#005040`, `#0f6b3f`, `#125b4a`) for CTAs — use `#059669`
+- IBM Plex / Geist as product UI fonts (superseded)
+- Promo “Discover Pro Plan” / decorative SPECTRE card in sidebar
+- Raw hex in `components/` (tokens only)
+- New typography scale fighting the 13px nav / soft headers
+
+## New modules
+
+Every business module ships **inside** this shell with the same density, badges, buttons, and drawer patterns. Ask before changing tokens.

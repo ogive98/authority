@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ABadge } from "@/components/a/a-badge";
 import { AButton } from "@/components/a/a-button";
 import { AEmptyState } from "@/components/a/a-empty-state";
 import { AInput } from "@/components/a/a-input";
@@ -158,7 +159,7 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
           className="max-w-xs"
         />
         <select
-          className="h-9 rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-2 text-[length:var(--a-text-sm)] text-a-fg"
+          className="h-9 rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-2 px-2 text-[length:var(--a-text-sm)] text-a-fg"
           value={filter.status ?? "all"}
           onChange={(e) =>
             applyFilter({
@@ -246,9 +247,10 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
           description="Aucun résultat pour ce filtre."
         />
       ) : (
-        <div className="overflow-x-auto rounded-[var(--a-radius-lg)] border border-a-border-subtle">
+        <div className="a-card overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-left text-[length:var(--a-text-sm)]">
-            <thead className="bg-a-surface-3 text-a-fg-muted">
+            <thead className="bg-a-surface-3/80 text-a-fg-muted">
               <tr>
                 <th className="a-table-cell w-10">
                   <input
@@ -280,7 +282,7 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
                 <tr
                   key={row.id}
                   className={cn(
-                    "border-t border-a-border-subtle hover:bg-a-surface-3/60",
+                    "border-t border-a-border-subtle transition-colors hover:bg-a-surface-3/50",
                     onRowClick && "cursor-pointer",
                   )}
                   onClick={() => onRowClick?.(row)}
@@ -309,6 +311,7 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -345,19 +348,15 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
 function StatusLabel({ status }: { status: LotStatus }) {
   const tone =
     status === "open"
-      ? "text-a-accent"
+      ? "success"
       : status === "quarantine"
-        ? "text-a-danger"
-        : "text-a-fg-muted";
+        ? "danger"
+        : "neutral";
   const label =
     status === "open"
-      ? "ouvert"
+      ? "Ouvert"
       : status === "quarantine"
-        ? "quarantaine"
-        : "clôturé";
-  return (
-    <span className={cn("text-[length:var(--a-text-sm)] font-medium", tone)}>
-      {label}
-    </span>
-  );
+        ? "Quarantaine"
+        : "Clôturé";
+  return <ABadge tone={tone}>{label}</ABadge>;
 }

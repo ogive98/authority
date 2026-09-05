@@ -62,10 +62,7 @@ export default function HomePage() {
             </Link>
           </li>
           <li>
-            <Link
-              href="/preview/commandes"
-              className="text-a-accent hover:underline"
-            >
+            <Link href="/sales" className="text-a-accent hover:underline">
               Commandes
             </Link>
           </li>

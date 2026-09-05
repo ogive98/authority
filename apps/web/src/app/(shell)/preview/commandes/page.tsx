@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
+  ABadge,
   AButton,
   ADrawer,
   AKpiCard,
@@ -13,16 +15,29 @@ import {
   type OrderRow,
 } from "@/lib/mock-orders";
 
+function orderBadgeTone(
+  status: OrderRow["status"],
+): "success" | "warning" | "danger" {
+  if (status === "paid") return "success";
+  if (status === "pending") return "warning";
+  return "danger";
+}
+
 export default function PreviewCommandesPage() {
+  const router = useRouter();
   const [order, setOrder] = useState<OrderRow | null>(null);
 
   return (
     <>
       <AScreenHeader
         title="Commandes"
-        description="Ventes B2B · TND — mock chrome, pas le module Sales."
+        description="Aperçu chrome — la prise de commande réelle est sur /sales."
         actions={
-          <AButton type="button" size="sm">
+          <AButton
+            type="button"
+            size="sm"
+            onClick={() => router.push("/sales?new=1")}
+          >
             Nouvelle commande
           </AButton>
         }
@@ -44,47 +59,43 @@ export default function PreviewCommandesPage() {
           />
         </section>
 
-        <div className="overflow-x-auto rounded-[var(--a-radius-lg)] border border-a-border-subtle">
-          <table className="w-full min-w-[640px] border-collapse text-left text-[length:var(--a-text-sm)]">
-            <thead className="bg-a-surface-3 text-a-fg-muted">
-              <tr>
-                <th className="a-table-cell font-medium">N°</th>
-                <th className="a-table-cell font-medium">Client</th>
-                <th className="a-table-cell text-right font-medium">Montant</th>
-                <th className="a-table-cell font-medium">Statut</th>
-                <th className="a-table-cell font-medium">Échéance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_ORDERS.map((row) => (
-                <tr
-                  key={row.id}
-                  className="cursor-pointer border-t border-a-border-subtle hover:bg-a-surface-3/60"
-                  onClick={() => setOrder(row)}
-                >
-                  <td className="a-mono a-table-cell">{row.id}</td>
-                  <td className="a-table-cell">{row.client}</td>
-                  <td className="a-mono a-tabular a-table-cell text-right">
-                    {row.amountTnd} TND
-                  </td>
-                  <td className="a-table-cell">
-                    <span
-                      className={
-                        row.status === "paid"
-                          ? "font-medium text-a-success"
-                          : row.status === "pending"
-                            ? "font-medium text-a-warning"
-                            : "font-medium text-a-danger"
-                      }
-                    >
-                      {orderStatusLabel(row.status)}
-                    </span>
-                  </td>
-                  <td className="a-mono a-table-cell">{row.due}</td>
+        <div className="a-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] border-collapse text-left text-[length:var(--a-text-sm)]">
+              <thead className="bg-a-surface-3/80 text-a-fg-muted">
+                <tr>
+                  <th className="a-table-cell font-medium">N°</th>
+                  <th className="a-table-cell font-medium">Client</th>
+                  <th className="a-table-cell text-right font-medium">Montant</th>
+                  <th className="a-table-cell font-medium">Statut</th>
+                  <th className="a-table-cell font-medium">Échéance</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {MOCK_ORDERS.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="cursor-pointer border-t border-a-border-subtle transition-colors hover:bg-a-surface-3/50"
+                    onClick={() => setOrder(row)}
+                  >
+                    <td className="a-mono a-table-cell text-a-fg">{row.id}</td>
+                    <td className="a-table-cell">{row.client}</td>
+                    <td className="a-mono a-tabular a-table-cell text-right">
+                      {row.amountTnd} TND
+                    </td>
+                    <td className="a-table-cell">
+                      <ABadge tone={orderBadgeTone(row.status)}>
+                        {orderStatusLabel(row.status)}
+                      </ABadge>
+                    </td>
+                    <td className="a-mono a-table-cell text-a-fg-muted">
+                      {row.due}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
       <ADrawer

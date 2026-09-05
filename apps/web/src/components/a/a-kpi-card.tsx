@@ -9,7 +9,7 @@ export type AKpiCardProps = {
   masked?: boolean;
 };
 
-/** KPI strip card — solid surface, tabular value, color on delta text only. */
+/** KPI strip — glass card; amounts stay solid tabular (readable). */
 export function AKpiCard({
   label,
   value,
@@ -27,7 +27,11 @@ export function AKpiCard({
           : "text-a-fg-muted";
 
   return (
-    <article className="a-card p-[var(--a-space-5)]">
+    <article className="a-card relative overflow-hidden p-[var(--a-space-5)]">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-a-accent/40"
+        aria-hidden
+      />
       <div className="flex items-start justify-between gap-3">
         <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">{label}</p>
         {delta ? (
@@ -42,7 +46,7 @@ export function AKpiCard({
         ) : null}
       </div>
       <p
-        className="a-mono a-tabular mt-2 text-[length:var(--a-text-2xl)] font-semibold tracking-tight"
+        className="a-mono a-tabular mt-2 text-[length:var(--a-text-2xl)] font-semibold tracking-tight text-a-fg"
         aria-label={masked ? `${label} masqué` : undefined}
       >
         {masked ? "••••" : value}

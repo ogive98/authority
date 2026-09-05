@@ -3,7 +3,6 @@ import { ASkipLink } from "@/components/a/a-skip-link";
 import { CommandPaletteHost } from "./command-palette-host";
 import { NotificationsHost } from "./notifications-host";
 import { ShellBreadcrumbs } from "./breadcrumbs";
-import { FeatureMenu } from "./feature-menu";
 import { ShellHeader } from "./header";
 import { MobileBottomNav } from "./mobile-bottom-nav";
 import { ResourceMonitor } from "./resource-monitor";
@@ -12,9 +11,13 @@ import { PrefsHydrator } from "./prefs-hydrator";
 import { SpectreOverlay } from "./spectre-overlay";
 import { SyncModuleFromRoute } from "./sync-module-from-route";
 
+/**
+ * Utility Cube shell: wide sidebar + topbar search + main column.
+ * Feature subnav lives inside the sidebar (no second column).
+ */
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-a-surface-1 text-a-fg">
+    <div className="a-canvas flex min-h-screen text-a-fg">
       <SyncModuleFromRoute />
       <PrefsHydrator />
       <CommandPaletteHost />
@@ -22,8 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <SpectreOverlay />
       <ASkipLink />
       <ShellSidebar />
-      <FeatureMenu />
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col pb-12 md:pb-0">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col pb-14 md:pb-0">
         <ShellHeader />
         <ShellBreadcrumbs />
         <main id="main" className="min-h-0 flex-1 overflow-auto">

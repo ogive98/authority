@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
+  ABadge,
   AButton,
   ACombobox,
   ADrawer,
@@ -28,7 +30,16 @@ import {
   searchProducts,
   type SalesIntakeSettings,
   type SalesOrder,
+  type SalesOrderStatus,
 } from "@/lib/sales";
+
+function orderBadgeTone(
+  status: SalesOrderStatus,
+): "success" | "warning" | "neutral" {
+  if (status === "CONFIRMED") return "success";
+  if (status === "CANCELLED") return "warning";
+  return "neutral";
+}
 
 type LoadState =
   | { kind: "loading" }
@@ -73,7 +84,9 @@ function newLine(): LineDraft {
   };
 }
 
-export default function SalesPage() {
+function SalesPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -91,6 +104,9 @@ export default function SalesPage() {
   >({});
   const [productLoadingKey, setProductLoadingKey] = useState<string | null>(
     null,
+  );
+  const [pendingNew, setPendingNew] = useState(
+    () => searchParams.get("new") === "1",
   );
 
   const load = useCallback(async (query?: string) => {
@@ -173,7 +189,7 @@ export default function SalesPage() {
     });
   }
 
-  function openCreate() {
+  const openCreate = useCallback(() => {
     setFormError(null);
     const wh = warehouses[0];
     setForm({
@@ -190,7 +206,14 @@ export default function SalesPage() {
     setProductOptsByKey({});
     setDrawerOpen(true);
     refreshCustomers("");
-  }
+  }, [warehouses, refreshCustomers]);
+
+  useEffect(() => {
+    if (!pendingNew) return;
+    openCreate();
+    setPendingNew(false);
+    router.replace("/sales", { scroll: false });
+  }, [pendingNew, openCreate, router]);
 
   async function submitCreate(confirmAfter: boolean) {
     if (!form) return;
@@ -389,17 +412,9 @@ export default function SalesPage() {
                       {row.amountTotal} {row.currency}
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      <span
-                        className={
-                          row.status === "CONFIRMED"
-                            ? "text-a-success"
-                            : row.status === "CANCELLED"
-                              ? "text-a-warning"
-                              : "text-a-fg-muted"
-                        }
-                      >
+                      <ABadge tone={orderBadgeTone(row.status)}>
                         {STATUS_LABELS[row.status]}
-                      </span>
+                      </ABadge>
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
                       <div className="flex flex-wrap gap-2">
@@ -719,5 +734,20 @@ export default function SalesPage() {
         ) : null}
       </ADrawer>
     </>
+  );
+}
+
+export default function SalesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-2 p-[var(--a-space-6)]">
+          <ASkeleton className="h-10 w-48" />
+          <ASkeleton className="h-10 w-full" />
+        </div>
+      }
+    >
+      <SalesPageInner />
+    </Suspense>
   );
 }

@@ -110,7 +110,7 @@ export default function SettingsPage() {
               </p>
               <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
                 Compact resserre uniquement les lignes de tableaux — le chrome
-                (header, rail, titres) ne bouge pas.
+                (header, sidebar, titres) ne bouge pas.
               </p>
               <div className="flex gap-2">
                 <AButton
