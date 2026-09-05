@@ -44,6 +44,11 @@ export function SyncModuleFromRoute() {
       setFeatureMenuOpen(false);
       return;
     }
+    if (pathname.startsWith("/delivery")) {
+      if (has("delivery")) setSelectedModuleId("delivery");
+      setFeatureMenuOpen(false);
+      return;
+    }
     if (pathname.startsWith("/search") || pathname.startsWith("/m/platform")) {
       if (has("platform")) setSelectedModuleId("platform");
       setFeatureMenuOpen(false);

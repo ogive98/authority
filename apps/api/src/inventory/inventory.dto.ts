@@ -80,3 +80,26 @@ export class ReleaseStockDto {
   @MaxLength(64)
   refId?: string;
 }
+
+/** Consume reserved stock on delivery (on_hand and reserved decrease). */
+export class IssueStockDto {
+  @IsUUID()
+  productId!: string;
+
+  @IsUUID()
+  warehouseId!: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  qty!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  refType?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  refId?: string;
+}

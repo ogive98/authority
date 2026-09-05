@@ -25,6 +25,7 @@ const ICONS: Record<string, LucideIcon> = {
   monitoring: Activity,
   sales: ShoppingCart,
   inventory: Package,
+  delivery: Truck,
   production: Factory,
   payroll: Landmark,
   customers: Users,

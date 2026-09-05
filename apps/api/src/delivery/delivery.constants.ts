@@ -1,0 +1,21 @@
+export const DELIVERY_ERROR_CODES = {
+  NOT_FOUND: 'DLV.NOT_FOUND',
+  INVALID_STATUS: 'DLV.INVALID_STATUS',
+  ORDER_NOT_FOUND: 'DLV.ORDER_NOT_FOUND',
+  ORDER_NOT_CONFIRMED: 'DLV.ORDER_NOT_CONFIRMED',
+  ORDER_ALREADY_SHIPPED: 'DLV.ORDER_ALREADY_SHIPPED',
+  DRIVER_REQUIRED: 'DLV.DRIVER_REQUIRED',
+  STOCK_ISSUE_FAILED: 'DLV.STOCK_ISSUE_FAILED',
+  STOCK_RELEASE_FAILED: 'DLV.STOCK_RELEASE_FAILED',
+} as const;
+
+export type DeliveryErrorCode =
+  (typeof DELIVERY_ERROR_CODES)[keyof typeof DELIVERY_ERROR_CODES];
+
+export const DELIVERY_EVENT_TYPES = {
+  DELIVERED: 'delivery.shipment.delivered.v1',
+  FAILED: 'delivery.shipment.failed.v1',
+} as const;
+
+export const DELIVERY_ISSUE_REF_TYPE = 'delivery.shipment';
+export const SALES_RESERVE_REF_TYPE = 'sales.order';

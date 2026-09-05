@@ -761,6 +761,7 @@ enum InvMovementType {
   ADJUST
   RESERVE
   RELEASE
+  ISSUE
 }
 
 model InvWarehouse {
@@ -911,4 +912,68 @@ model SalOrderLine {
   @@unique([orderId, lineNo])
   @@index([companyId, orderId])
   @@map("sal_order_line")
+}
+
+// --- dlv_* Delivery light ---
+
+enum DlvShipmentStatus {
+  READY
+  ASSIGNED
+  OUT
+  DELIVERED
+  FAILED
+}
+
+enum DlvRoundStatus {
+  PLANNED
+  IN_PROGRESS
+  DONE
+}
+
+model DlvRound {
+  id           String         @id @default(uuid()) @db.Uuid
+  companyId    String         @map("company_id") @db.Uuid
+  date         DateTime       @db.Date
+  driverLabel  String         @map("driver_label")
+  status       DlvRoundStatus @default(PLANNED)
+  notes        String?
+  version      Int            @default(0)
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  shipments DlvShipment[]
+
+  @@index([companyId, date(sort: Desc)])
+  @@index([companyId, status])
+  @@map("dlv_round")
+}
+
+model DlvShipment {
+  id              String            @id @default(uuid()) @db.Uuid
+  companyId       String            @map("company_id") @db.Uuid
+  number          String
+  orderId         String            @map("order_id") @db.Uuid
+  customerId      String            @map("customer_id") @db.Uuid
+  warehouseId     String            @map("warehouse_id") @db.Uuid
+  roundId         String?           @map("round_id") @db.Uuid
+  status          DlvShipmentStatus @default(READY)
+  driverLabel     String?           @map("driver_label")
+  preferredDriver String?           @map("preferred_driver")
+  failReason      String?           @map("fail_reason")
+  version         Int               @default(0)
+  assignedAt      DateTime?         @map("assigned_at") @db.Timestamptz(6)
+  dispatchedAt    DateTime?         @map("dispatched_at") @db.Timestamptz(6)
+  completedAt     DateTime?         @map("completed_at") @db.Timestamptz(6)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  round DlvRound? @relation(fields: [roundId], references: [id])
+
+  @@unique([companyId, number])
+  @@unique([companyId, orderId])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@map("dlv_shipment")
 }

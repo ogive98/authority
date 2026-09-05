@@ -16,6 +16,7 @@ import { InventoryException } from './inventory.exception';
 import type {
   AdjustStockDto,
   CreateWarehouseDto,
+  IssueStockDto,
   ReleaseStockDto,
   ReserveStockDto,
 } from './inventory.dto';
@@ -362,6 +363,78 @@ export class InventoryService {
         aggregateType: 'inv_balance',
         aggregateId: updated.id,
         eventType: INVENTORY_EVENT_TYPES.RELEASED,
+        payloadJson: {
+          balanceId: updated.id,
+          warehouseId: updated.warehouseId,
+          productId: updated.productId,
+          qty: qty.toString(),
+          onHand: updated.onHand.toString(),
+          reserved: updated.reserved.toString(),
+          refType: dto.refType ?? null,
+          refId: dto.refId ?? null,
+        },
+      });
+
+      return updated;
+    });
+
+    return this.toBalanceDto(companyId, balance);
+  }
+
+  /** Delivery complete: decrease on_hand and reserved together. */
+  async issue(companyId: string, dto: IssueStockDto): Promise<BalanceDto> {
+    const qty = toDecimal(dto.qty);
+    if (qty.lte(0)) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.INVALID_QTY,
+        'qty must be positive.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    await this.assertWarehouse(companyId, dto.warehouseId);
+    await this.assertProduct(companyId, dto.productId);
+
+    const balance = await this.prisma.$transaction(async (tx) => {
+      const bal = await this.lockOrCreateBalance(
+        tx,
+        companyId,
+        dto.warehouseId,
+        dto.productId,
+      );
+      if (bal.reserved.lt(qty) || bal.onHand.lt(qty)) {
+        throw new InventoryException(
+          INVENTORY_ERROR_CODES.INSUFFICIENT,
+          'Cannot issue more than reserved / on_hand.',
+          HttpStatus.CONFLICT,
+        );
+      }
+      const onHand = bal.onHand.sub(qty);
+      const reserved = bal.reserved.sub(qty);
+
+      const updated = await this.updateBalanceVersioned(tx, bal, {
+        onHand,
+        reserved,
+      });
+
+      await tx.invMovement.create({
+        data: {
+          companyId,
+          balanceId: updated.id,
+          type: InvMovementType.ISSUE,
+          qty,
+          onHandAfter: updated.onHand,
+          reservedAfter: updated.reserved,
+          refType: dto.refType?.trim() || null,
+          refId: dto.refId?.trim() || null,
+        },
+      });
+
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'inv_balance',
+        aggregateId: updated.id,
+        eventType: INVENTORY_EVENT_TYPES.ISSUED,
         payloadJson: {
           balanceId: updated.id,
           warehouseId: updated.warehouseId,

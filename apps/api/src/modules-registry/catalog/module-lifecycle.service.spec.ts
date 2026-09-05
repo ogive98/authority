@@ -22,10 +22,10 @@ describe('ModuleLifecycleService', () => {
     return { catalog, modules, lifecycle };
   }
 
-  it('boots all 12 seeded modules to READY (deps present in catalog)', () => {
+  it('boots all 13 seeded modules to READY (deps present in catalog)', () => {
     const { lifecycle } = build();
     const states = lifecycle.listProcessStates();
-    expect(states).toHaveLength(12);
+    expect(states).toHaveLength(13);
     expect(states.every((s) => s.state === 'READY')).toBe(true);
   });
 
@@ -155,6 +155,7 @@ describe('ModuleLifecycleService', () => {
         { moduleKey: 'organization', status: ModModuleStatus.ENABLED },
         { moduleKey: 'customers', status: ModModuleStatus.ENABLED },
         { moduleKey: 'inventory', status: ModModuleStatus.ENABLED },
+        { moduleKey: 'products', status: ModModuleStatus.ENABLED },
         { moduleKey: 'master_data', status: ModModuleStatus.DISABLED },
       ]),
     );
@@ -171,6 +172,7 @@ describe('ModuleLifecycleService', () => {
         { moduleKey: 'organization', status: ModModuleStatus.ENABLED },
         { moduleKey: 'customers', status: ModModuleStatus.ENABLED },
         { moduleKey: 'inventory', status: ModModuleStatus.ENABLED },
+        { moduleKey: 'products', status: ModModuleStatus.ENABLED },
         { moduleKey: 'master_data', status: ModModuleStatus.ENABLED },
       ]),
     );
@@ -194,7 +196,7 @@ describe('ModuleLifecycleService', () => {
   });
 
   it('static catalog has no process ERROR modules', () => {
-    expect(STATIC_MODULE_MANIFESTS).toHaveLength(12);
+    expect(STATIC_MODULE_MANIFESTS).toHaveLength(13);
     const { lifecycle } = build();
     expect(
       lifecycle.listProcessStates().filter((s) => s.state === 'ERROR'),

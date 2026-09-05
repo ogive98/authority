@@ -129,6 +129,7 @@ async function main() {
   const businessModules = [
     'sales',
     'inventory',
+    'delivery',
     'production',
     'payroll',
     'customers',
@@ -142,7 +143,8 @@ async function main() {
       moduleKey === 'products' ||
       moduleKey === 'customers' ||
       moduleKey === 'inventory' ||
-      moduleKey === 'sales'
+      moduleKey === 'sales' ||
+      moduleKey === 'delivery'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -391,6 +393,30 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'sales.confirm',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'delivery.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'delivery.prepare',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'delivery.complete',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'delivery.fail',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,

@@ -108,6 +108,15 @@ export const COMMAND_CATALOG: CommandItem[] = [
     permissionKey: "sales.read",
   },
   {
+    id: "nav-delivery",
+    label: "Livraisons",
+    group: "navigation",
+    href: "/delivery",
+    keywords: ["livraison", "delivery", "shipment", "livreur"],
+    requiresModule: "delivery",
+    permissionKey: "delivery.read",
+  },
+  {
     id: "nav-tokens",
     label: "Dev — Tokens",
     group: "navigation",
@@ -170,6 +179,15 @@ export const COMMAND_CATALOG: CommandItem[] = [
     permissionKey: "sales.read",
   },
   {
+    id: "search-shipment",
+    label: "SH-2026-0001 — Livraison Atlas",
+    group: "search",
+    href: "/delivery",
+    keywords: ["livraison", "shipment", "delivery"],
+    requiresModule: "delivery",
+    permissionKey: "delivery.read",
+  },
+  {
     id: "search-customer",
     label: "Client — Fromagerie Atlas",
     group: "search",
@@ -211,6 +229,10 @@ export const DEMO_PERMISSION_GRANTS = new Set([
   "customers.read",
   "products.read",
   "inventory.read",
+  "delivery.read",
+  "delivery.prepare",
+  "delivery.complete",
+  "delivery.fail",
   "settings.read",
 ]);
 
@@ -221,6 +243,7 @@ export const DEMO_ENABLED_MODULES = new Set([
   "platform",
   "sales",
   "inventory",
+  "delivery",
   "customers",
   "products",
 ]);

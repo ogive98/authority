@@ -14,4 +14,5 @@ export const INVENTORY_EVENT_TYPES = {
   ADJUSTED: 'inventory.stock.adjusted.v1',
   RESERVED: 'inventory.stock.reserved.v1',
   RELEASED: 'inventory.stock.released.v1',
+  ISSUED: 'inventory.stock.issued.v1',
 } as const;

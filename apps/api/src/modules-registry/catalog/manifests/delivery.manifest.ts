@@ -1,0 +1,75 @@
+import type { ModuleManifest } from '../manifest.types';
+
+export const deliveryManifest: ModuleManifest = {
+  id: 'delivery',
+  name: 'Delivery',
+  version: '1.0.0',
+  apiVersion: '1',
+  description: 'Delivery light — assign driver and complete shipments from confirmed orders',
+  capabilities: [
+    {
+      key: 'delivery.read',
+      moduleId: 'delivery',
+      version: '1',
+      description: 'List and read shipments / rounds',
+      permissionKey: 'delivery.read',
+      riskLevel: 'low',
+    },
+    {
+      key: 'delivery.prepare',
+      moduleId: 'delivery',
+      version: '1',
+      description: 'Create shipments and assign drivers',
+      permissionKey: 'delivery.prepare',
+      riskLevel: 'medium',
+      requiresAudit: true,
+    },
+    {
+      key: 'delivery.complete',
+      moduleId: 'delivery',
+      version: '1',
+      description: 'Dispatch and complete deliveries',
+      permissionKey: 'delivery.complete',
+      riskLevel: 'high',
+      requiresAudit: true,
+      requiresIdempotency: true,
+    },
+    {
+      key: 'delivery.fail',
+      moduleId: 'delivery',
+      version: '1',
+      description: 'Mark shipment failed and release stock',
+      permissionKey: 'delivery.fail',
+      riskLevel: 'high',
+      requiresAudit: true,
+    },
+  ],
+  commands: [
+    'delivery.shipment.create',
+    'delivery.shipment.assign',
+    'delivery.shipment.complete',
+    'delivery.shipment.fail',
+  ],
+  queries: ['delivery.shipments.list', 'delivery.shipments.get'],
+  permissions: [
+    'delivery.read',
+    'delivery.prepare',
+    'delivery.complete',
+    'delivery.fail',
+  ],
+  dependencies: [
+    'platform',
+    'organization',
+    'sales',
+    'inventory',
+    'customers',
+  ],
+  publishedEvents: [
+    'delivery.shipment.delivered.v1',
+    'delivery.shipment.failed.v1',
+  ],
+  consumedEvents: ['sales.order.confirmed.v1'],
+  navigationEntries: [
+    { id: 'shipments', label: 'Livraisons', href: '/delivery' },
+  ],
+};

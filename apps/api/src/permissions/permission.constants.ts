@@ -27,6 +27,10 @@ export const PERMISSION_CATALOGUE = [
   'sales.read',
   'sales.write',
   'sales.confirm',
+  'delivery.read',
+  'delivery.prepare',
+  'delivery.complete',
+  'delivery.fail',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_CATALOGUE)[number];
@@ -60,6 +64,10 @@ export const PERMISSION_KEYS = {
   salesRead: 'sales.read',
   salesWrite: 'sales.write',
   salesConfirm: 'sales.confirm',
+  deliveryRead: 'delivery.read',
+  deliveryPrepare: 'delivery.prepare',
+  deliveryComplete: 'delivery.complete',
+  deliveryFail: 'delivery.fail',
 } as const satisfies Record<string, PermissionKey>;
 
 export const PERMISSION_METADATA_KEY = 'authority:permission';

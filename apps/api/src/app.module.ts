@@ -16,6 +16,7 @@ import { MasterDataModule } from './master-data/master-data.module';
 import { CustomersModule } from './customers/customers.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { SalesModule } from './sales/sales.module';
+import { DeliveryModule } from './delivery/delivery.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SalesModule } from './sales/sales.module';
     CustomersModule,
     InventoryModule,
     SalesModule,
+    DeliveryModule,
   ],
 })
 export class AppModule {}

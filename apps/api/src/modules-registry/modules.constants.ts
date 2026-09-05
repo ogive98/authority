@@ -9,6 +9,7 @@ export const KERNEL_MODULE_KEYS = [
 export const BUSINESS_MODULE_KEYS = [
   'sales',
   'inventory',
+  'delivery',
   'production',
   'payroll',
   'customers',

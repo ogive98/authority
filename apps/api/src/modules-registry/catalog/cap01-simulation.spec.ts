@@ -15,10 +15,10 @@ describe('CAP-01 catalog stress simulations', () => {
       assertModuleManifest({ ...m }),
     );
     expect(() => assertCatalogIntegrity(manifests)).not.toThrow();
-    expect(manifests).toHaveLength(12);
+    expect(manifests).toHaveLength(13);
   });
 
-  it('rejects injecting a 12th module without dropping coverage rule', () => {
+  it('rejects injecting a 14th module without dropping coverage rule', () => {
     const modules = {
       isEnabled: jest.fn(),
     };
@@ -40,10 +40,10 @@ describe('CAP-01 catalog stress simulations', () => {
           ],
         },
       ]),
-    ).toThrow(/exactly 12/);
+    ).toThrow(/exactly 13/);
   });
 
-  it('detects dependency cycle candidates among the 12 (none expected)', () => {
+  it('detects dependency cycle candidates among the 13 (none expected)', () => {
     const byId = new Map(
       STATIC_MODULE_MANIFESTS.map((m) => [m.id, m] as const),
     );
