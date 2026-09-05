@@ -51,6 +51,7 @@ export type CreateSalesOrderBody = {
   warehouseId: string;
   requestedDate?: string;
   notes?: string;
+  preferredDriver?: string;
   lines: SalesLineInput[];
   confirmAfter?: boolean;
 };

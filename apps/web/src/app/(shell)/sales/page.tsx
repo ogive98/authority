@@ -47,14 +47,21 @@ type LineDraft = {
 type FormState = {
   customerId: string | null;
   customerLabel: string;
-  warehouseId: string;
+  warehouseId: string | null;
+  warehouseLabel: string;
   requestedDate: string;
+  preferredDriver: string;
   notes: string;
   lines: LineDraft[];
 };
 
-const selectClass =
-  "flex h-9 w-full rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-3 text-[length:var(--a-text-sm)] text-a-fg";
+function todayIsoDate(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 function newLine(): LineDraft {
   return {
@@ -78,6 +85,7 @@ export default function SalesPage() {
 
   const [customerOpts, setCustomerOpts] = useState<AComboboxOption[]>([]);
   const [customerLoading, setCustomerLoading] = useState(false);
+  const [warehouseOpts, setWarehouseOpts] = useState<AComboboxOption[]>([]);
   const [productOptsByKey, setProductOptsByKey] = useState<
     Record<string, AComboboxOption[]>
   >({});
@@ -106,42 +114,45 @@ export default function SalesPage() {
         fetchWarehouses(),
         fetchIntakeSettings(),
       ]);
-      if (w.ok) setWarehouses(w.items);
+      if (w.ok) {
+        setWarehouses(w.items);
+        setWarehouseOpts(
+          w.items.map((wh) => ({
+            id: wh.id,
+            label: `${wh.code} — ${wh.name}`,
+          })),
+        );
+      }
       if (s.ok) setSettings(s.data);
     })();
   }, [load]);
 
+  const refreshCustomers = useCallback((qText: string) => {
+    setCustomerLoading(true);
+    void searchCustomers(qText).then((res) => {
+      setCustomerLoading(false);
+      if (!res.ok) {
+        setCustomerOpts([]);
+        return;
+      }
+      setCustomerOpts(
+        res.items.map((c) => ({
+          id: c.id,
+          label: c.nickname
+            ? `${c.nickname} · ${c.code}`
+            : `${c.code} — ${c.legalName}`,
+          hint: c.nickname ? c.legalName : undefined,
+        })),
+      );
+    });
+  }, []);
+
   useEffect(() => {
     if (!form) return;
     const qCust = form.customerLabel.trim();
-    let cancelled = false;
-    const t = window.setTimeout(() => {
-      setCustomerLoading(true);
-      void searchCustomers(qCust).then((res) => {
-        if (cancelled) return;
-        setCustomerLoading(false);
-        if (!res.ok) {
-          setCustomerOpts([]);
-          return;
-        }
-        setCustomerOpts(
-          res.items.map((c) => ({
-            id: c.id,
-            label: c.nickname
-              ? `${c.nickname} · ${c.code}`
-              : `${c.code} — ${c.legalName}`,
-            hint: c.nickname
-              ? c.legalName
-              : c.code,
-          })),
-        );
-      });
-    }, 180);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t);
-    };
-  }, [form?.customerLabel, form]);
+    const t = window.setTimeout(() => refreshCustomers(qCust), 150);
+    return () => window.clearTimeout(t);
+  }, [form?.customerLabel, form != null, refreshCustomers]);
 
   function searchProductForLine(lineKey: string, text: string) {
     setProductLoadingKey(lineKey);
@@ -164,17 +175,21 @@ export default function SalesPage() {
 
   function openCreate() {
     setFormError(null);
+    const wh = warehouses[0];
     setForm({
       customerId: null,
       customerLabel: "",
-      warehouseId: warehouses[0]?.id ?? "",
-      requestedDate: "",
+      warehouseId: wh?.id ?? null,
+      warehouseLabel: wh ? `${wh.code} — ${wh.name}` : "",
+      requestedDate: todayIsoDate(),
+      preferredDriver: "",
       notes: "",
       lines: [newLine()],
     });
     setCustomerOpts([]);
     setProductOptsByKey({});
     setDrawerOpen(true);
+    refreshCustomers("");
   }
 
   async function submitCreate(confirmAfter: boolean) {
@@ -219,7 +234,8 @@ export default function SalesPage() {
     const res = await createSalesOrder({
       customerId: form.customerId,
       warehouseId: form.warehouseId,
-      requestedDate: form.requestedDate || undefined,
+      requestedDate: form.requestedDate || todayIsoDate(),
+      preferredDriver: form.preferredDriver.trim() || undefined,
       notes: form.notes.trim() || undefined,
       lines,
       confirmAfter,
@@ -479,30 +495,57 @@ export default function SalesPage() {
                   customerLabel: opt.label,
                 })
               }
+              onOpen={() => refreshCustomers(form.customerLabel.trim())}
               options={customerOpts}
               loading={customerLoading}
               placeholder="Ex. Atlas, C-001…"
               emptyText="Aucun client — créez-en un ou affinez la saisie"
             />
 
-            <div className="space-y-1">
-              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Entrepôt (réserve)
-              </label>
-              <select
-                className={selectClass}
-                value={form.warehouseId}
-                onChange={(e) =>
-                  setForm({ ...form, warehouseId: e.target.value })
-                }
-              >
-                {warehouses.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.code} — {w.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <ACombobox
+              label="Entrepôt (réserve stock)"
+              valueId={form.warehouseId}
+              displayValue={form.warehouseLabel}
+              onDisplayChange={(text) => {
+                setForm({
+                  ...form,
+                  warehouseLabel: text,
+                  warehouseId: null,
+                });
+                const q = text.trim().toLowerCase();
+                setWarehouseOpts(
+                  warehouses
+                    .filter(
+                      (w) =>
+                        !q ||
+                        w.code.toLowerCase().includes(q) ||
+                        w.name.toLowerCase().includes(q),
+                    )
+                    .map((w) => ({
+                      id: w.id,
+                      label: `${w.code} — ${w.name}`,
+                    })),
+                );
+              }}
+              onSelect={(opt) =>
+                setForm({
+                  ...form,
+                  warehouseId: opt.id,
+                  warehouseLabel: opt.label,
+                })
+              }
+              onOpen={() =>
+                setWarehouseOpts(
+                  warehouses.map((w) => ({
+                    id: w.id,
+                    label: `${w.code} — ${w.name}`,
+                  })),
+                )
+              }
+              options={warehouseOpts}
+              placeholder="MAIN…"
+              emptyText="Aucun entrepôt"
+            />
 
             <div className="space-y-1">
               <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -516,6 +559,23 @@ export default function SalesPage() {
                   setForm({ ...form, requestedDate: e.target.value })
                 }
               />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Livreur souhaité
+              </label>
+              <AInput
+                value={form.preferredDriver}
+                onChange={(e) =>
+                  setForm({ ...form, preferredDriver: e.target.value })
+                }
+                placeholder="Nom libre — assignation tournée = module Delivery"
+              />
+              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                Hint pour la préparation. L’affectation véhicule/chauffeur réelle
+                est portée par Delivery (phase suivante).
+              </p>
             </div>
 
             <div className="space-y-3 border-t border-a-border-subtle pt-4">
@@ -589,9 +649,13 @@ export default function SalesPage() {
                         ),
                       })
                     }
+                    onOpen={() =>
+                      searchProductForLine(line.key, line.productLabel)
+                    }
                     options={productOptsByKey[line.key] ?? []}
                     loading={productLoadingKey === line.key}
                     placeholder="SKU ou nom…"
+                    emptyText="Aucun produit — activez un article dans Catalogue"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">

@@ -36,6 +36,7 @@ describe('SalesService', () => {
       requestedDate: null,
       currency: 'TND',
       notes: null,
+      preferredDriver: null,
       amountTotal: new Prisma.Decimal(50),
       version: 0,
       confirmedAt: null,

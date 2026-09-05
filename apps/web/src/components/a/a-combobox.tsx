@@ -7,7 +7,6 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { AInput } from "./a-input";
@@ -25,6 +24,8 @@ type AComboboxProps = {
   displayValue: string;
   onDisplayChange: (text: string) => void;
   onSelect: (option: AComboboxOption) => void;
+  /** Called when the field opens (focus) so parent can prefetch options. */
+  onOpen?: () => void;
   options: AComboboxOption[];
   placeholder?: string;
   emptyText?: string;
@@ -33,7 +34,7 @@ type AComboboxProps = {
 };
 
 /**
- * Typeahead with portaled list so drawer overflow does not clip suggestions.
+ * Typeahead with portaled list (z-toast) so drawer fields never cover suggestions.
  */
 export function ACombobox({
   label,
@@ -41,6 +42,7 @@ export function ACombobox({
   displayValue,
   onDisplayChange,
   onSelect,
+  onOpen,
   options,
   placeholder,
   emptyText = "Aucune proposition",
@@ -60,7 +62,14 @@ export function ACombobox({
     const el = inputRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    setCoords({ top: r.bottom + 4, left: r.left, width: r.width });
+    const gap = 4;
+    const spaceBelow = window.innerHeight - r.bottom;
+    const preferUp = spaceBelow < 220 && r.top > 220;
+    setCoords({
+      top: preferUp ? r.top - gap : r.bottom + gap,
+      left: r.left,
+      width: Math.max(r.width, 200),
+    });
   }, []);
 
   useLayoutEffect(() => {
@@ -73,7 +82,7 @@ export function ACombobox({
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onScroll);
     };
-  }, [open, updateCoords, options.length, displayValue]);
+  }, [open, updateCoords, options.length, displayValue, loading]);
 
   useEffect(() => {
     if (!open) return;
@@ -88,10 +97,10 @@ export function ACombobox({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open, listId]);
 
-  const showList = open && (loading || options.length > 0 || displayValue.trim().length > 0);
+  const showList = open;
 
   return (
-    <div className="space-y-1">
+    <div className="relative z-10 space-y-1">
       {label ? (
         <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
           {label}
@@ -109,10 +118,12 @@ export function ACombobox({
         onFocus={() => {
           setOpen(true);
           updateCoords();
+          onOpen?.();
         }}
         onChange={(e) => {
           onDisplayChange(e.target.value);
           setOpen(true);
+          onOpen?.();
         }}
         onKeyDown={(e) => {
           if (e.key === "Escape") setOpen(false);
@@ -129,11 +140,16 @@ export function ACombobox({
             <ul
               id={listId}
               role="listbox"
-              className="fixed z-[calc(var(--a-z-modal)+20)] max-h-56 overflow-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 py-1 text-[length:var(--a-text-sm)] shadow-md"
+              className="fixed max-h-56 overflow-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 py-1 text-[length:var(--a-text-sm)] shadow-lg"
               style={{
                 top: coords.top,
                 left: coords.left,
                 width: coords.width,
+                zIndex: 520,
+                transform:
+                  coords.top < (inputRef.current?.getBoundingClientRect().top ?? 0)
+                    ? "translateY(-100%)"
+                    : undefined,
               }}
             >
               {loading ? (
@@ -142,7 +158,11 @@ export function ACombobox({
                 <li className="px-3 py-2 text-a-fg-muted">{emptyText}</li>
               ) : (
                 options.map((opt) => (
-                  <li key={opt.id} role="option" aria-selected={opt.id === valueId}>
+                  <li
+                    key={opt.id}
+                    role="option"
+                    aria-selected={opt.id === valueId}
+                  >
                     <button
                       type="button"
                       className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-a-surface-3"
@@ -168,12 +188,4 @@ export function ACombobox({
         : null}
     </div>
   );
-}
-
-export function ComboboxField({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  return <div className="space-y-1">{children}</div>;
 }

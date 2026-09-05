@@ -50,6 +50,7 @@ export type SalesOrderDto = {
   requestedDate: string | null;
   currency: string;
   notes: string | null;
+  preferredDriver: string | null;
   amountTotal: string;
   version: number;
   confirmedAt: string | null;
@@ -196,9 +197,10 @@ export class SalesService {
           warehouseId: dto.warehouseId,
           requestedDate: dto.requestedDate
             ? new Date(dto.requestedDate)
-            : null,
+            : new Date(new Date().toISOString().slice(0, 10)),
           currency,
           notes: dto.notes?.trim() || null,
+          preferredDriver: dto.preferredDriver?.trim() || null,
           amountTotal,
           status: SalOrderStatus.DRAFT,
           lines: {
@@ -308,6 +310,10 @@ export class SalesService {
             dto.notes === undefined
               ? undefined
               : dto.notes?.trim() || null,
+          preferredDriver:
+            dto.preferredDriver === undefined
+              ? undefined
+              : dto.preferredDriver?.trim() || null,
           amountTotal,
           version: { increment: 1 },
         },
@@ -742,6 +748,7 @@ function serializeOrder(
       : null,
     currency: row.currency,
     notes: row.notes,
+    preferredDriver: row.preferredDriver,
     amountTotal: row.amountTotal.toString(),
     version: row.version,
     confirmedAt: row.confirmedAt?.toISOString() ?? null,

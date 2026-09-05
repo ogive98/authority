@@ -873,6 +873,8 @@ model SalOrder {
   requestedDate DateTime?      @map("requested_date") @db.Date
   currency      String         @default("TND")
   notes         String?
+  /** Intake preference — real driver assignment lives in Delivery (11). */
+  preferredDriver String?      @map("preferred_driver")
   amountTotal   Decimal        @default(0) @map("amount_total") @db.Decimal(18, 3)
   version       Int            @default(0)
   confirmedAt   DateTime?      @map("confirmed_at") @db.Timestamptz(6)

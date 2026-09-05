@@ -58,6 +58,12 @@ export class CreateSalesOrderDto {
   @MaxLength(500)
   notes?: string;
 
+  /** Preferred livreur name — Delivery module assigns for real later. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  preferredDriver?: string;
+
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
@@ -92,6 +98,11 @@ export class UpdateSalesOrderDto {
   @IsString()
   @MaxLength(500)
   notes?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  preferredDriver?: string | null;
 
   @IsOptional()
   @IsArray()

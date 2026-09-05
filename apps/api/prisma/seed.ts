@@ -416,6 +416,74 @@ async function main() {
     },
   });
 
+  // Demo customer + product so sales intake autocomplete is never empty
+  let demoParty = await prisma.mdParty.findFirst({
+    where: {
+      companyId: company.id,
+      legalName: 'Fromagerie Atlas',
+      deletedAt: null,
+    },
+  });
+  if (!demoParty) {
+    demoParty = await prisma.mdParty.create({
+      data: {
+        companyId: company.id,
+        type: 'CUSTOMER',
+        legalName: 'Fromagerie Atlas',
+        status: 'ACTIVE',
+      },
+    });
+  }
+
+  const existingAtlas = await prisma.cusCustomer.findFirst({
+    where: {
+      companyId: company.id,
+      OR: [{ code: 'C-ATLAS' }, { partyId: demoParty.id }],
+    },
+  });
+  if (existingAtlas) {
+    await prisma.cusCustomer.update({
+      where: { id: existingAtlas.id },
+      data: {
+        code: 'C-ATLAS',
+        nickname: 'Atlas',
+        status: 'ACTIVE',
+        deletedAt: null,
+        partyId: demoParty.id,
+      },
+    });
+  } else {
+    await prisma.cusCustomer.create({
+      data: {
+        companyId: company.id,
+        partyId: demoParty.id,
+        code: 'C-ATLAS',
+        nickname: 'Atlas',
+        status: 'ACTIVE',
+      },
+    });
+  }
+
+  await prisma.prdProduct.upsert({
+    where: {
+      companyId_sku: { companyId: company.id, sku: 'BRIE-250' },
+    },
+    update: {
+      name: 'Brie 250g',
+      status: 'ACTIVE',
+      deletedAt: null,
+    },
+    create: {
+      companyId: company.id,
+      sku: 'BRIE-250',
+      name: 'Brie 250g',
+      typeKey: 'FINISHED',
+      uom: 'kg',
+      storageClassKey: 'COLD',
+      status: 'ACTIVE',
+    },
+  });
+
   await seedSettingsDefinitions(company.id, demoUser.id);
 
   const currentYear = new Date().getFullYear();
