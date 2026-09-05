@@ -91,6 +91,33 @@ describe('AdmissionOrchestratorService', () => {
     delete process.env.THUNDER_ALLOW_ENQUEUE_IN_RESTRICTED_MODE;
   });
 
+  it('admits enqueue when license is in grace', async () => {
+    const { service } = build({ licenseStatus: LICENSE_STATUSES.grace });
+    const result = await service.admitEnqueue({
+      jobType: 'thunder.hello.v1',
+      companyId,
+      queue: 'ops',
+      idempotencyKey: 'k-grace',
+      correlationId: 'c-grace',
+    });
+    expect(result.allowed).toBe(true);
+  });
+
+  it('rejects when license is invalid', async () => {
+    const { service } = build({ licenseStatus: 'EXPIRED' });
+    const result = await service.admitEnqueue({
+      jobType: 'thunder.hello.v1',
+      companyId,
+      queue: 'ops',
+      idempotencyKey: 'k-expired',
+    });
+    expect(result).toMatchObject({
+      allowed: false,
+      kind: 'reject',
+      code: THUNDER_ERROR_CODES.LICENSE_INVALID,
+    });
+  });
+
   it('admits a normal enqueue', async () => {
     const { service } = build();
     const result = await service.admitEnqueue({

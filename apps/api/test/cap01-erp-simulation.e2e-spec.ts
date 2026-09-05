@@ -141,6 +141,27 @@ describe('CAP-01 ERP simulations (e2e)', () => {
       return;
     }
 
+    const companyId = await demoCompanyId();
+    for (const key of [
+      'sales',
+      'inventory',
+      'production',
+      'payroll',
+      'customers',
+      'master_data',
+    ]) {
+      await setModuleStatus(companyId, key, 'DISABLED');
+    }
+    for (const key of [
+      'platform',
+      'identity',
+      'organization',
+      'settings',
+      'monitoring',
+    ]) {
+      await setModuleStatus(companyId, key, 'ENABLED');
+    }
+
     const agent = await loginAgent();
     const modulesRes = await agent.get('/api/v1/modules').expect(200);
     const modules = (modulesRes.body as ModulesResponse).modules;

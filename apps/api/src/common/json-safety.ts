@@ -9,10 +9,11 @@ export function resolveMaxPayloadBytes(
   raw: string | undefined = process.env.THUNDER_PAYLOAD_MAX_BYTES,
 ): number {
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed < 1024) {
+  // Allow small overrides for tests/lab; reject nonsense (< 32) and huge (> 10 MiB).
+  if (!Number.isFinite(parsed) || parsed < 32) {
     return DEFAULT_MAX_PAYLOAD_BYTES;
   }
-  return Math.trunc(parsed);
+  return Math.min(10 * 1024 * 1024, Math.trunc(parsed));
 }
 
 export function measureJsonBytes(value: unknown): number {

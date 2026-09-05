@@ -262,13 +262,15 @@ export class SuperAdminThunderController {
         actorUserId: req.user!.id,
         action: AUDIT_ACTIONS.thunderBreakerForceOpen,
         entityType: AUDIT_ENTITY_TYPES.thunderCircuitBreaker,
-        entityId: dependencyKey,
+        // dependencyKey is not a UUID — keep it in JSON (THU-HARD audit fix)
         beforeJson: {
+          dependencyKey,
           state: before.state,
           failures: before.failures,
           openedAt: before.openedAt,
         },
         afterJson: {
+          dependencyKey,
           state: after.state,
           failures: after.failures,
           openedAt: after.openedAt,
@@ -293,13 +295,14 @@ export class SuperAdminThunderController {
         actorUserId: req.user!.id,
         action: AUDIT_ACTIONS.thunderBreakerReset,
         entityType: AUDIT_ENTITY_TYPES.thunderCircuitBreaker,
-        entityId: dependencyKey,
         beforeJson: {
+          dependencyKey,
           state: before.state,
           failures: before.failures,
           openedAt: before.openedAt,
         },
         afterJson: {
+          dependencyKey,
           state: after.state,
           failures: after.failures,
           openedAt: after.openedAt,

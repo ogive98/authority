@@ -756,7 +756,8 @@ describe('Thunder jobs (e2e)', () => {
       asOf: string;
       jobs: { pending: number };
       ram: { totalBytes: number };
-      events: { outboxLag: number };
+      events: { outboxLag: number; outboxDlq: number };
+      tracing: { tracerName: string; enabled: boolean };
     };
 
     expect(body.schemaVersion).toBe(1);
@@ -764,6 +765,8 @@ describe('Thunder jobs (e2e)', () => {
     expect(typeof body.jobs.pending).toBe('number');
     expect(body.ram.totalBytes).toBeGreaterThan(0);
     expect(typeof body.events.outboxLag).toBe('number');
+    expect(typeof body.events.outboxDlq).toBe('number');
+    expect(body.tracing.tracerName).toBe('authority.thunder');
   });
 
   it('exposes monitor snapshot to Super Admin', async () => {

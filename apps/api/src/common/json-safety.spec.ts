@@ -36,6 +36,8 @@ describe('json-safety', () => {
 
   it('resolves defaults', () => {
     expect(resolveMaxPayloadBytes(undefined)).toBe(256 * 1024);
+    expect(resolveMaxPayloadBytes('64')).toBe(64);
+    expect(resolveMaxPayloadBytes('16')).toBe(256 * 1024);
     expect(resolveOutboxMaxPublishAttempts(undefined)).toBe(5);
   });
 });
