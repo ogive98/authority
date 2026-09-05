@@ -3,6 +3,7 @@ import { AScreenHeader } from "@/components/a/a-screen-header";
 import {
   fetchPortalDashboard,
   fetchPortalMe,
+  PORTAL_CLAIMS_PATH,
   PORTAL_DELIVERIES_PATH,
   PORTAL_FINANCE_PATH,
   PORTAL_ORDERS_PATH,
@@ -15,9 +16,10 @@ export default async function PortalDashboardPage() {
   ]);
 
   const message =
-    dashboard?.message ?? "Portal P4 — finance read + delivery track";
+    dashboard?.message ?? "Portal P6 — claims + finance + delivery track";
   const openOrders = dashboard?.kpis.openOrders ?? 0;
   const pendingDeliveries = dashboard?.kpis.pendingDeliveries ?? 0;
+  const openClaims = dashboard?.kpis.openClaims ?? 0;
   const outstanding = dashboard?.kpis.outstandingBalance;
   const outstandingLabel =
     outstanding == null
@@ -37,7 +39,7 @@ export default async function PortalDashboardPage() {
       />
       <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
         <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">{message}</p>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Link
             href={PORTAL_ORDERS_PATH}
             className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
@@ -78,6 +80,20 @@ export default async function PortalDashboardPage() {
             </p>
             <p className="mt-2 text-[length:var(--a-text-xs)] text-a-accent">
               Créances →
+            </p>
+          </Link>
+          <Link
+            href={PORTAL_CLAIMS_PATH}
+            className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
+          >
+            <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+              Réclamations ouvertes
+            </p>
+            <p className="a-mono mt-1 text-[length:var(--a-text-lg)] font-medium tabular-nums text-a-accent">
+              {openClaims}
+            </p>
+            <p className="mt-2 text-[length:var(--a-text-xs)] text-a-accent">
+              Voir / ouvrir →
             </p>
           </Link>
         </div>

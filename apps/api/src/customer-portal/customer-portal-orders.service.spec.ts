@@ -72,6 +72,9 @@ describe('CustomerPortalOrdersService', () => {
     get: jest.Mock;
     creditSnapshot: jest.Mock;
   };
+  let claimsService: {
+    countOpen: jest.Mock;
+  };
   let service: CustomerPortalOrdersService;
 
   beforeEach(() => {
@@ -107,11 +110,15 @@ describe('CustomerPortalOrdersService', () => {
         currency: 'TND',
       }),
     };
+    claimsService = {
+      countOpen: jest.fn().mockResolvedValue(1),
+    };
     service = new CustomerPortalOrdersService(
       prisma as never,
       salesService as unknown as SalesService,
       deliveryService as never,
       financeService as never,
+      claimsService as never,
     );
   });
 
@@ -209,7 +216,8 @@ describe('CustomerPortalOrdersService', () => {
     expect(shell.kpis.openOrders).toBe(2);
     expect(shell.kpis.pendingDeliveries).toBe(1);
     expect(shell.kpis.outstandingBalance).toBe(50);
-    expect(shell.message).toContain('P4');
+    expect(shell.kpis.openClaims).toBe(1);
+    expect(shell.message).toContain('P6');
   });
 
   it('creates draft with membership ids, last price, confirmAfter false', async () => {

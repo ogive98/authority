@@ -3,6 +3,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsDateString,
+  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
@@ -11,6 +12,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { PtlClaimType } from '@prisma/client';
 
 /** Portal create line — qty only; unitPrice resolved server-side (last customer price). */
 export class PortalCreateOrderLineDto {
@@ -44,4 +46,25 @@ export class PortalReorderDto {
   @IsOptional()
   @IsDateString()
   requestedDate?: string;
+}
+
+export class PortalCreateClaimDto {
+  @IsEnum(PtlClaimType)
+  type!: PtlClaimType;
+
+  @IsString()
+  @MaxLength(160)
+  subject!: string;
+
+  @IsString()
+  @MaxLength(2000)
+  description!: string;
+
+  @IsOptional()
+  @IsUUID()
+  orderId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  shipmentId?: string;
 }

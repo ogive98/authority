@@ -784,6 +784,47 @@ model PtlMembership {
   @@map("ptl_membership")
 }
 
+enum PtlClaimType {
+  DELIVERY
+  QUALITY
+  QUANTITY
+  BILLING
+  OTHER
+}
+
+enum PtlClaimStatus {
+  OPEN
+  UNDER_REVIEW
+  ACTION_REQUIRED
+  RESOLVED
+  CLOSED
+}
+
+/** Portal-owned claim — links optional order/shipment IDs (no Documents module yet). */
+model PtlClaim {
+  id              String         @id @default(uuid()) @db.Uuid
+  companyId       String         @map("company_id") @db.Uuid
+  customerId      String         @map("customer_id") @db.Uuid
+  number          String
+  type            PtlClaimType
+  status          PtlClaimStatus @default(OPEN)
+  subject         String
+  description     String
+  orderId         String?        @map("order_id") @db.Uuid
+  shipmentId      String?        @map("shipment_id") @db.Uuid
+  createdByUserId String         @map("created_by_user_id") @db.Uuid
+  resolutionNote  String?        @map("resolution_note")
+  version         Int            @default(0)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, number])
+  @@index([companyId, customerId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@map("ptl_claim")
+}
+
 model CusContact {
   id         String    @id @default(uuid()) @db.Uuid
   companyId  String    @map("company_id") @db.Uuid

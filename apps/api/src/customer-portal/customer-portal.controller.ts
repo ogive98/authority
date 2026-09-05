@@ -16,6 +16,7 @@ import type { Request, Response } from 'express';
 import { LoginDto } from '../identity/login.dto';
 import { SessionService } from '../identity/session.service';
 import { CustomerPortalAuthService } from './customer-portal-auth.service';
+import { CustomerPortalClaimsService } from './customer-portal-claims.service';
 import { CustomerPortalOrdersService } from './customer-portal-orders.service';
 import {
   CustomerPortalSessionGuard,
@@ -23,6 +24,7 @@ import {
 } from './customer-portal-session.guard';
 import { CUSTOMER_PORTAL_COOKIE_NAME } from './customer-portal.constants';
 import {
+  PortalCreateClaimDto,
   PortalCreateOrderDto,
   PortalReorderDto,
 } from './customer-portal.dto';
@@ -32,6 +34,7 @@ export class CustomerPortalController {
   constructor(
     private readonly portalAuthService: CustomerPortalAuthService,
     private readonly portalOrdersService: CustomerPortalOrdersService,
+    private readonly portalClaimsService: CustomerPortalClaimsService,
     private readonly sessionService: SessionService,
   ) {}
 
@@ -260,6 +263,52 @@ export class CustomerPortalController {
     return this.portalOrdersService.getCredit(
       req.companyId!,
       req.customerId!,
+    );
+  }
+
+  @Get('claims')
+  @UseGuards(CustomerPortalSessionGuard)
+  listClaims(
+    @Req() req: CustomerPortalRequest,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.portalClaimsService.list(req.companyId!, req.customerId!, {
+      q,
+      status,
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor,
+    });
+  }
+
+  @Get('claims/:id')
+  @UseGuards(CustomerPortalSessionGuard)
+  getClaim(
+    @Req() req: CustomerPortalRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.portalClaimsService.get(
+      req.companyId!,
+      req.customerId!,
+      id,
+    );
+  }
+
+  @Post('claims')
+  @HttpCode(201)
+  @UseGuards(CustomerPortalSessionGuard)
+  createClaim(
+    @Req() req: CustomerPortalRequest,
+    @Body() dto: PortalCreateClaimDto,
+  ) {
+    return this.portalClaimsService.create(
+      req.companyId!,
+      req.customerId!,
+      req.user!.id,
+      dto,
     );
   }
 

@@ -4,6 +4,7 @@ export const PORTAL_ORDERS_PATH = "/portal/orders";
 export const PORTAL_ORDERS_NEW_PATH = "/portal/orders/new";
 export const PORTAL_DELIVERIES_PATH = "/portal/deliveries";
 export const PORTAL_FINANCE_PATH = "/portal/finance";
+export const PORTAL_CLAIMS_PATH = "/portal/claims";
 export const PORTAL_COOKIE_NAME = "authority_customer_portal_session";
 
 export const PORTAL_API = {
@@ -16,6 +17,7 @@ export const PORTAL_API = {
   deliveries: "/api/v1/customer-portal/deliveries",
   financeOpenItems: "/api/v1/customer-portal/finance/open-items",
   financeCredit: "/api/v1/customer-portal/finance/credit",
+  claims: "/api/v1/customer-portal/claims",
 } as const;
 
 export type PortalMe = {
@@ -49,6 +51,7 @@ export type PortalDashboard = {
     openOrders: number;
     pendingDeliveries: number;
     outstandingBalance: number | null;
+    openClaims?: number;
   };
   sections: string[];
   message: string;
@@ -150,6 +153,41 @@ export type PortalCredit = {
   creditLimit: string | null;
   outstandingBalance: string;
   currency: string;
+};
+
+export type PortalClaimType =
+  | "DELIVERY"
+  | "QUALITY"
+  | "QUANTITY"
+  | "BILLING"
+  | "OTHER";
+
+export type PortalClaimStatus =
+  | "OPEN"
+  | "UNDER_REVIEW"
+  | "ACTION_REQUIRED"
+  | "RESOLVED"
+  | "CLOSED";
+
+export type PortalClaim = {
+  id: string;
+  number: string;
+  type: PortalClaimType;
+  status: PortalClaimStatus;
+  subject: string;
+  description: string;
+  orderId: string | null;
+  orderNumber: string | null;
+  shipmentId: string | null;
+  shipmentNumber: string | null;
+  resolutionNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PortalClaimList = {
+  items: PortalClaim[];
+  nextCursor: string | null;
 };
 
 /** App pages hide the portal (404) unless Customer Portal realm session is valid. */
@@ -291,6 +329,54 @@ export async function fetchPortalCredit(): Promise<{
   data: PortalCredit | null;
 }> {
   return portalFetch<PortalCredit>(PORTAL_API.financeCredit);
+}
+
+export async function fetchClaims(opts?: {
+  q?: string;
+  status?: string;
+  limit?: number;
+  cursor?: string;
+}): Promise<{ status: number; data: PortalClaimList | null }> {
+  const params = new URLSearchParams();
+  if (opts?.q?.trim()) params.set("q", opts.q.trim());
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.cursor) params.set("cursor", opts.cursor);
+  const qs = params.toString();
+  return portalFetch<PortalClaimList>(
+    `${PORTAL_API.claims}${qs ? `?${qs}` : ""}`,
+  );
+}
+
+export async function fetchClaim(
+  id: string,
+): Promise<{ status: number; data: PortalClaim | null }> {
+  return portalFetch<PortalClaim>(`${PORTAL_API.claims}/${id}`);
+}
+
+export function portalClaimTypeLabel(type: PortalClaimType): string {
+  if (type === "DELIVERY") return "Livraison";
+  if (type === "QUALITY") return "Qualité";
+  if (type === "QUANTITY") return "Quantité";
+  if (type === "BILLING") return "Facturation";
+  return "Autre";
+}
+
+export function portalClaimStatusLabel(status: PortalClaimStatus): string {
+  if (status === "UNDER_REVIEW") return "En revue";
+  if (status === "ACTION_REQUIRED") return "Action requise";
+  if (status === "RESOLVED") return "Résolue";
+  if (status === "CLOSED") return "Clôturée";
+  return "Ouverte";
+}
+
+export function portalClaimBadgeTone(
+  status: PortalClaimStatus,
+): "success" | "warning" | "accent" | "neutral" | "info" {
+  if (status === "RESOLVED" || status === "CLOSED") return "success";
+  if (status === "ACTION_REQUIRED") return "warning";
+  if (status === "UNDER_REVIEW") return "info";
+  return "accent";
 }
 
 export function portalOrderStatusLabel(status: PortalOrderStatus): string {

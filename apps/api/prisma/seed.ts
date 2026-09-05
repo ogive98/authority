@@ -901,6 +901,36 @@ async function main() {
           },
         });
       }
+
+      const existingClaim = await prisma.ptlClaim.findFirst({
+        where: {
+          companyId: company.id,
+          number: 'CLM-PORTAL-SEED',
+        },
+      });
+      if (!existingClaim) {
+        const ship = await prisma.dlvShipment.findFirst({
+          where: {
+            companyId: company.id,
+            number: 'DLV-PORTAL-SEED',
+          },
+        });
+        await prisma.ptlClaim.create({
+          data: {
+            companyId: company.id,
+            customerId: portalCustomer.id,
+            number: 'CLM-PORTAL-SEED',
+            type: 'DELIVERY',
+            status: 'OPEN',
+            subject: 'Livraison — carton endommagé (démo)',
+            description:
+              'Réclamation démo portal : carton partiellement ouvert à la réception. Documents download reportés (pas de module Documents).',
+            orderId: portalOrder.id,
+            shipmentId: ship?.id ?? null,
+            createdByUserId: portalUser.id,
+          },
+        });
+      }
     }
   }
 

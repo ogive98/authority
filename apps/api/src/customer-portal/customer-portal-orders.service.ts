@@ -22,6 +22,7 @@ import type {
   PortalReorderDto,
 } from './customer-portal.dto';
 import { CustomerPortalException } from './customer-portal.exception';
+import { CustomerPortalClaimsService } from './customer-portal-claims.service';
 
 export type PortalOrderLineDto = {
   sku: string | null;
@@ -77,6 +78,7 @@ export class CustomerPortalOrdersService {
     private readonly salesService: SalesService,
     private readonly deliveryService: DeliveryService,
     private readonly financeService: FinanceService,
+    private readonly claimsService: CustomerPortalClaimsService,
   ) {}
 
   async listOrders(
@@ -239,40 +241,43 @@ export class CustomerPortalOrdersService {
   }
 
   async getDashboardShell(companyId: string, customerId: string) {
-    const [openOrders, pendingDeliveries, outstanding] = await Promise.all([
-      this.prisma.salOrder.count({
-        where: {
-          companyId,
-          customerId,
-          deletedAt: null,
-          status: { in: [SalOrderStatus.DRAFT, SalOrderStatus.CONFIRMED] },
-        },
-      }),
-      this.prisma.dlvShipment.count({
-        where: {
-          companyId,
-          customerId,
-          deletedAt: null,
-          status: {
-            in: [
-              DlvShipmentStatus.READY,
-              DlvShipmentStatus.ASSIGNED,
-              DlvShipmentStatus.OUT,
-            ],
+    const [openOrders, pendingDeliveries, outstanding, openClaims] =
+      await Promise.all([
+        this.prisma.salOrder.count({
+          where: {
+            companyId,
+            customerId,
+            deletedAt: null,
+            status: { in: [SalOrderStatus.DRAFT, SalOrderStatus.CONFIRMED] },
           },
-        },
-      }),
-      this.financeService.sumOutstanding(companyId, customerId),
-    ]);
+        }),
+        this.prisma.dlvShipment.count({
+          where: {
+            companyId,
+            customerId,
+            deletedAt: null,
+            status: {
+              in: [
+                DlvShipmentStatus.READY,
+                DlvShipmentStatus.ASSIGNED,
+                DlvShipmentStatus.OUT,
+              ],
+            },
+          },
+        }),
+        this.financeService.sumOutstanding(companyId, customerId),
+        this.claimsService.countOpen(companyId, customerId),
+      ]);
 
     return {
       kpis: {
         openOrders,
         pendingDeliveries,
         outstandingBalance: outstanding,
+        openClaims,
       },
-      sections: ['orders', 'deliveries', 'finance'] as const,
-      message: 'Portal P4 — finance read + delivery track',
+      sections: ['orders', 'deliveries', 'finance', 'claims'] as const,
+      message: 'Portal P6 — claims + finance + delivery track',
     };
   }
 
