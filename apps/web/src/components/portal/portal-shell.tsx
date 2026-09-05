@@ -7,6 +7,7 @@ import { AButton } from "@/components/a/a-button";
 import { ASkipLink } from "@/components/a/a-skip-link";
 import {
   PORTAL_API,
+  PORTAL_DELIVERIES_PATH,
   PORTAL_HOME_PATH,
   PORTAL_LOGIN_PATH,
   PORTAL_ORDERS_PATH,
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: PORTAL_HOME_PATH, label: "Accueil" },
   { href: PORTAL_ORDERS_PATH, label: "Commandes" },
+  { href: PORTAL_DELIVERIES_PATH, label: "Livraisons" },
 ] as const;
 
 export function PortalShell({

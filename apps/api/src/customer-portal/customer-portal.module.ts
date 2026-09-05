@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { DeliveryModule } from '../delivery/delivery.module';
 import { IdentityModule } from '../identity/identity.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SalesModule } from '../sales/sales.module';
@@ -8,7 +9,7 @@ import { CustomerPortalOrdersService } from './customer-portal-orders.service';
 import { CustomerPortalSessionGuard } from './customer-portal-session.guard';
 
 @Module({
-  imports: [IdentityModule, PrismaModule, SalesModule],
+  imports: [IdentityModule, PrismaModule, SalesModule, DeliveryModule],
   controllers: [CustomerPortalController],
   providers: [
     CustomerPortalAuthService,

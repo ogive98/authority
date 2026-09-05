@@ -3,6 +3,7 @@ import { AScreenHeader } from "@/components/a/a-screen-header";
 import {
   fetchPortalDashboard,
   fetchPortalMe,
+  PORTAL_DELIVERIES_PATH,
   PORTAL_ORDERS_PATH,
 } from "@/lib/customer-portal";
 
@@ -12,9 +13,9 @@ export default async function PortalDashboardPage() {
     fetchPortalDashboard(),
   ]);
 
-  const message =
-    dashboard?.message ?? "Portal P3 — order create / reorder";
+  const message = dashboard?.message ?? "Portal P5 — delivery track";
   const openOrders = dashboard?.kpis.openOrders ?? 0;
+  const pendingDeliveries = dashboard?.kpis.pendingDeliveries ?? 0;
 
   return (
     <div>
@@ -44,20 +45,29 @@ export default async function PortalDashboardPage() {
               Voir / créer →
             </p>
           </Link>
-          <div className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3">
+          <Link
+            href={PORTAL_DELIVERIES_PATH}
+            className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
+          >
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Livraisons en cours
             </p>
-            <p className="a-mono mt-1 text-[length:var(--a-text-lg)] font-medium tabular-nums">
-              {dashboard?.kpis.pendingDeliveries ?? 0}
+            <p className="a-mono mt-1 text-[length:var(--a-text-lg)] font-medium tabular-nums text-a-accent">
+              {pendingDeliveries}
             </p>
-          </div>
+            <p className="mt-2 text-[length:var(--a-text-xs)] text-a-accent">
+              Suivre →
+            </p>
+          </Link>
           <div className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3">
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Solde
             </p>
             <p className="a-mono mt-1 text-[length:var(--a-text-lg)] font-medium tabular-nums">
               {dashboard?.kpis.outstandingBalance ?? "—"}
+            </p>
+            <p className="mt-2 text-[length:var(--a-text-xs)] text-a-fg-subtle">
+              Finance light requis (P4)
             </p>
           </div>
         </div>

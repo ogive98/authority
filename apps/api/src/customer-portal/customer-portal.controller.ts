@@ -184,6 +184,41 @@ export class CustomerPortalController {
     );
   }
 
+  @Get('deliveries')
+  @UseGuards(CustomerPortalSessionGuard)
+  listDeliveries(
+    @Req() req: CustomerPortalRequest,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.portalOrdersService.listDeliveries(
+      req.companyId!,
+      req.customerId!,
+      {
+        q,
+        status,
+        limit: Number.isFinite(limit) ? limit : undefined,
+        cursor,
+      },
+    );
+  }
+
+  @Get('deliveries/:id')
+  @UseGuards(CustomerPortalSessionGuard)
+  getDelivery(
+    @Req() req: CustomerPortalRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.portalOrdersService.getDelivery(
+      req.companyId!,
+      req.customerId!,
+      id,
+    );
+  }
+
   private setSessionCookie(res: Response, token: string, expires: Date): void {
     res.cookie(CUSTOMER_PORTAL_COOKIE_NAME, token, {
       httpOnly: true,

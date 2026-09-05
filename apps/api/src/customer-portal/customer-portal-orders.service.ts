@@ -1,5 +1,16 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { PrdProductStatus, SalOrderStatus } from '@prisma/client';
+import {
+  DlvShipmentStatus,
+  PrdProductStatus,
+  SalOrderStatus,
+} from '@prisma/client';
+import {
+  DeliveryException,
+} from '../delivery/delivery.exception';
+import {
+  DeliveryService,
+  type ShipmentDto,
+} from '../delivery/delivery.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalesException } from '../sales/sales.exception';
 import { SalesService, type SalesOrderDto } from '../sales/sales.service';
@@ -42,11 +53,27 @@ export type PortalCatalogItemDto = {
   currency: string;
 };
 
+/** External delivery track — no warehouse / company internals. No GPS ETA. */
+export type PortalDeliveryDto = {
+  id: string;
+  number: string;
+  orderId: string;
+  orderNumber: string | null;
+  status: DlvShipmentStatus;
+  driverLabel: string | null;
+  failReason: string | null;
+  assignedAt: string | null;
+  dispatchedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+};
+
 @Injectable()
 export class CustomerPortalOrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly salesService: SalesService,
+    private readonly deliveryService: DeliveryService,
   ) {}
 
   async listOrders(
@@ -209,23 +236,95 @@ export class CustomerPortalOrdersService {
   }
 
   async getDashboardShell(companyId: string, customerId: string) {
-    const openOrders = await this.prisma.salOrder.count({
-      where: {
-        companyId,
-        customerId,
-        deletedAt: null,
-        status: { in: [SalOrderStatus.DRAFT, SalOrderStatus.CONFIRMED] },
-      },
-    });
+    const [openOrders, pendingDeliveries] = await Promise.all([
+      this.prisma.salOrder.count({
+        where: {
+          companyId,
+          customerId,
+          deletedAt: null,
+          status: { in: [SalOrderStatus.DRAFT, SalOrderStatus.CONFIRMED] },
+        },
+      }),
+      this.prisma.dlvShipment.count({
+        where: {
+          companyId,
+          customerId,
+          deletedAt: null,
+          status: {
+            in: [
+              DlvShipmentStatus.READY,
+              DlvShipmentStatus.ASSIGNED,
+              DlvShipmentStatus.OUT,
+            ],
+          },
+        },
+      }),
+    ]);
 
     return {
       kpis: {
         openOrders,
-        pendingDeliveries: 0,
+        pendingDeliveries,
         outstandingBalance: null as number | null,
       },
       sections: ['orders', 'deliveries', 'finance'] as const,
-      message: 'Portal P3 — order create / reorder',
+      message: 'Portal P5 — delivery track',
+    };
+  }
+
+  async listDeliveries(
+    companyId: string,
+    customerId: string,
+    opts: { q?: string; status?: string; limit?: number; cursor?: string } = {},
+  ): Promise<{ items: PortalDeliveryDto[]; nextCursor: string | null }> {
+    const result = await this.deliveryService.list(companyId, {
+      ...opts,
+      customerId,
+    });
+    return {
+      items: result.items.map((s) => this.toPortalDelivery(s)),
+      nextCursor: result.nextCursor,
+    };
+  }
+
+  async getDelivery(
+    companyId: string,
+    customerId: string,
+    id: string,
+  ): Promise<PortalDeliveryDto> {
+    let shipment: ShipmentDto;
+    try {
+      shipment = await this.deliveryService.get(companyId, id);
+    } catch (err) {
+      if (
+        err instanceof DeliveryException &&
+        err.getStatus() === HttpStatus.NOT_FOUND
+      ) {
+        throw this.notFoundDelivery();
+      }
+      throw err;
+    }
+
+    if (shipment.customerId !== customerId) {
+      throw this.notFoundDelivery();
+    }
+
+    return this.toPortalDelivery(shipment);
+  }
+
+  toPortalDelivery(shipment: ShipmentDto): PortalDeliveryDto {
+    return {
+      id: shipment.id,
+      number: shipment.number,
+      orderId: shipment.orderId,
+      orderNumber: shipment.orderNumber,
+      status: shipment.status,
+      driverLabel: shipment.driverLabel,
+      failReason: shipment.failReason,
+      assignedAt: shipment.assignedAt,
+      dispatchedAt: shipment.dispatchedAt,
+      completedAt: shipment.completedAt,
+      createdAt: shipment.createdAt,
     };
   }
 
@@ -339,6 +438,14 @@ export class CustomerPortalOrdersService {
     return new CustomerPortalException(
       CUSTOMER_PORTAL_ERROR_CODES.NOT_FOUND,
       'Order not found.',
+      HttpStatus.NOT_FOUND,
+    );
+  }
+
+  private notFoundDelivery(): CustomerPortalException {
+    return new CustomerPortalException(
+      CUSTOMER_PORTAL_ERROR_CODES.NOT_FOUND,
+      'Delivery not found.',
       HttpStatus.NOT_FOUND,
     );
   }

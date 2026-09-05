@@ -54,12 +54,17 @@ describe('CustomerPortalOrdersService', () => {
     salOrderLine: { findMany: jest.Mock };
     invWarehouse: { findFirst: jest.Mock };
     prdProduct: { findMany: jest.Mock };
+    dlvShipment: { count: jest.Mock };
   };
   let salesService: {
     list: jest.Mock;
     get: jest.Mock;
     create: jest.Mock;
     getIntakeSettings: jest.Mock;
+  };
+  let deliveryService: {
+    list: jest.Mock;
+    get: jest.Mock;
   };
   let service: CustomerPortalOrdersService;
 
@@ -71,6 +76,7 @@ describe('CustomerPortalOrdersService', () => {
         findFirst: jest.fn().mockResolvedValue({ id: warehouseId }),
       },
       prdProduct: { findMany: jest.fn().mockResolvedValue([]) },
+      dlvShipment: { count: jest.fn().mockResolvedValue(1) },
     };
     salesService = {
       list: jest.fn(),
@@ -80,9 +86,14 @@ describe('CustomerPortalOrdersService', () => {
         .fn()
         .mockResolvedValue({ defaultCurrency: 'TND' }),
     };
+    deliveryService = {
+      list: jest.fn(),
+      get: jest.fn(),
+    };
     service = new CustomerPortalOrdersService(
       prisma as never,
       salesService as unknown as SalesService,
+      deliveryService as never,
     );
   });
 
@@ -172,8 +183,10 @@ describe('CustomerPortalOrdersService', () => {
         status: { in: [SalOrderStatus.DRAFT, SalOrderStatus.CONFIRMED] },
       },
     });
+    expect(prisma.dlvShipment.count).toHaveBeenCalled();
     expect(shell.kpis.openOrders).toBe(2);
-    expect(shell.message).toContain('P3');
+    expect(shell.kpis.pendingDeliveries).toBe(1);
+    expect(shell.message).toContain('P5');
   });
 
   it('creates draft with membership ids, last price, confirmAfter false', async () => {
@@ -273,5 +286,81 @@ describe('CustomerPortalOrdersService', () => {
       }),
     });
     expect(salesService.create).not.toHaveBeenCalled();
+  });
+
+  it('lists deliveries via membership customerId only', async () => {
+    deliveryService.list.mockResolvedValue({
+      items: [
+        {
+          id: 'ship-1',
+          companyId,
+          number: 'DLV-1',
+          orderId: orderId,
+          orderNumber: 'SO-1',
+          customerId,
+          customerCode: 'C-001',
+          customerName: 'Atlas',
+          warehouseId: 'wh-1',
+          warehouseCode: 'MAIN',
+          status: 'OUT',
+          driverLabel: 'Karim',
+          preferredDriver: null,
+          failReason: null,
+          version: 1,
+          assignedAt: null,
+          dispatchedAt: '2026-09-05T12:00:00.000Z',
+          completedAt: null,
+          createdAt: '2026-09-05T10:00:00.000Z',
+          updatedAt: '2026-09-05T12:00:00.000Z',
+        },
+      ],
+      nextCursor: null,
+    });
+
+    const result = await service.listDeliveries(companyId, customerId, {
+      status: 'OUT',
+    });
+
+    expect(deliveryService.list).toHaveBeenCalledWith(companyId, {
+      status: 'OUT',
+      customerId,
+    });
+    expect(result.items[0].number).toBe('DLV-1');
+    expect(result.items[0]).not.toHaveProperty('warehouseId');
+    expect(result.items[0]).not.toHaveProperty('companyId');
+  });
+
+  it('returns 404 POR.NOT_FOUND for another customer delivery (IDOR)', async () => {
+    deliveryService.get.mockResolvedValue({
+      id: 'ship-1',
+      companyId,
+      number: 'DLV-1',
+      orderId,
+      orderNumber: 'SO-1',
+      customerId: otherCustomerId,
+      customerCode: 'X',
+      customerName: 'Other',
+      warehouseId: 'wh-1',
+      warehouseCode: 'MAIN',
+      status: 'OUT',
+      driverLabel: 'Karim',
+      preferredDriver: null,
+      failReason: null,
+      version: 1,
+      assignedAt: null,
+      dispatchedAt: null,
+      completedAt: null,
+      createdAt: '2026-09-05T10:00:00.000Z',
+      updatedAt: '2026-09-05T10:00:00.000Z',
+    });
+
+    await expect(
+      service.getDelivery(companyId, customerId, 'ship-1'),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: CUSTOMER_PORTAL_ERROR_CODES.NOT_FOUND,
+      }),
+      status: HttpStatus.NOT_FOUND,
+    });
   });
 });

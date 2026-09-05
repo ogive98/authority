@@ -73,7 +73,13 @@ export class DeliveryService {
 
   async list(
     companyId: string,
-    opts?: { q?: string; status?: string; limit?: number; cursor?: string },
+    opts?: {
+      q?: string;
+      status?: string;
+      customerId?: string;
+      limit?: number;
+      cursor?: string;
+    },
   ): Promise<{ items: ShipmentDto[]; nextCursor: string | null }> {
     const limit = Math.min(Math.max(opts?.limit ?? 50, 1), 100);
     const q = opts?.q?.trim();
@@ -82,6 +88,7 @@ export class DeliveryService {
     const where: Prisma.DlvShipmentWhereInput = {
       companyId,
       deletedAt: null,
+      ...(opts?.customerId ? { customerId: opts.customerId } : {}),
       ...(status &&
       Object.values(DlvShipmentStatus).includes(status as DlvShipmentStatus)
         ? { status: status as DlvShipmentStatus }

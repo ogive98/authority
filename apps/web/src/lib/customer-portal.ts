@@ -2,6 +2,7 @@ export const PORTAL_LOGIN_PATH = "/portal/login";
 export const PORTAL_HOME_PATH = "/portal";
 export const PORTAL_ORDERS_PATH = "/portal/orders";
 export const PORTAL_ORDERS_NEW_PATH = "/portal/orders/new";
+export const PORTAL_DELIVERIES_PATH = "/portal/deliveries";
 export const PORTAL_COOKIE_NAME = "authority_customer_portal_session";
 
 export const PORTAL_API = {
@@ -11,6 +12,7 @@ export const PORTAL_API = {
   dashboard: "/api/v1/customer-portal/dashboard",
   catalog: "/api/v1/customer-portal/catalog",
   orders: "/api/v1/customer-portal/orders",
+  deliveries: "/api/v1/customer-portal/deliveries",
 } as const;
 
 export type PortalMe = {
@@ -88,6 +90,32 @@ export type PortalCatalogItem = {
 
 export type PortalCatalogList = {
   items: PortalCatalogItem[];
+  nextCursor: string | null;
+};
+
+export type PortalDeliveryStatus =
+  | "READY"
+  | "ASSIGNED"
+  | "OUT"
+  | "DELIVERED"
+  | "FAILED";
+
+export type PortalDelivery = {
+  id: string;
+  number: string;
+  orderId: string;
+  orderNumber: string | null;
+  status: PortalDeliveryStatus;
+  driverLabel: string | null;
+  failReason: string | null;
+  assignedAt: string | null;
+  dispatchedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+};
+
+export type PortalDeliveryList = {
+  items: PortalDelivery[];
   nextCursor: string | null;
 };
 
@@ -179,6 +207,29 @@ export async function fetchCatalog(opts?: {
   );
 }
 
+export async function fetchDeliveries(opts?: {
+  q?: string;
+  status?: string;
+  limit?: number;
+  cursor?: string;
+}): Promise<{ status: number; data: PortalDeliveryList | null }> {
+  const params = new URLSearchParams();
+  if (opts?.q?.trim()) params.set("q", opts.q.trim());
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.cursor) params.set("cursor", opts.cursor);
+  const qs = params.toString();
+  return portalFetch<PortalDeliveryList>(
+    `${PORTAL_API.deliveries}${qs ? `?${qs}` : ""}`,
+  );
+}
+
+export async function fetchDelivery(
+  id: string,
+): Promise<{ status: number; data: PortalDelivery | null }> {
+  return portalFetch<PortalDelivery>(`${PORTAL_API.deliveries}/${id}`);
+}
+
 export function portalOrderStatusLabel(status: PortalOrderStatus): string {
   if (status === "CONFIRMED") return "Confirmée";
   if (status === "CANCELLED") return "Annulée";
@@ -190,5 +241,25 @@ export function portalOrderBadgeTone(
 ): "success" | "warning" | "neutral" {
   if (status === "CONFIRMED") return "success";
   if (status === "CANCELLED") return "warning";
+  return "neutral";
+}
+
+export function portalDeliveryStatusLabel(
+  status: PortalDeliveryStatus,
+): string {
+  if (status === "READY") return "Prêt";
+  if (status === "ASSIGNED") return "Assigné";
+  if (status === "OUT") return "En route";
+  if (status === "DELIVERED") return "Livré";
+  return "Échec";
+}
+
+export function portalDeliveryBadgeTone(
+  status: PortalDeliveryStatus,
+): "success" | "warning" | "accent" | "neutral" | "info" {
+  if (status === "DELIVERED") return "success";
+  if (status === "FAILED") return "warning";
+  if (status === "OUT") return "accent";
+  if (status === "ASSIGNED") return "info";
   return "neutral";
 }
