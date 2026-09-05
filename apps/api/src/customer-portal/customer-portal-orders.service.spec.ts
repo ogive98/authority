@@ -66,6 +66,12 @@ describe('CustomerPortalOrdersService', () => {
     list: jest.Mock;
     get: jest.Mock;
   };
+  let financeService: {
+    sumOutstanding: jest.Mock;
+    list: jest.Mock;
+    get: jest.Mock;
+    creditSnapshot: jest.Mock;
+  };
   let service: CustomerPortalOrdersService;
 
   beforeEach(() => {
@@ -90,10 +96,22 @@ describe('CustomerPortalOrdersService', () => {
       list: jest.fn(),
       get: jest.fn(),
     };
+    financeService = {
+      sumOutstanding: jest.fn().mockResolvedValue(50),
+      list: jest.fn(),
+      get: jest.fn(),
+      creditSnapshot: jest.fn().mockResolvedValue({
+        customerId,
+        creditLimit: '1000.000',
+        outstandingBalance: '50.000',
+        currency: 'TND',
+      }),
+    };
     service = new CustomerPortalOrdersService(
       prisma as never,
       salesService as unknown as SalesService,
       deliveryService as never,
+      financeService as never,
     );
   });
 
@@ -184,9 +202,14 @@ describe('CustomerPortalOrdersService', () => {
       },
     });
     expect(prisma.dlvShipment.count).toHaveBeenCalled();
+    expect(financeService.sumOutstanding).toHaveBeenCalledWith(
+      companyId,
+      customerId,
+    );
     expect(shell.kpis.openOrders).toBe(2);
     expect(shell.kpis.pendingDeliveries).toBe(1);
-    expect(shell.message).toContain('P5');
+    expect(shell.kpis.outstandingBalance).toBe(50);
+    expect(shell.message).toContain('P4');
   });
 
   it('creates draft with membership ids, last price, confirmAfter false', async () => {

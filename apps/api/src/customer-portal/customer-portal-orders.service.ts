@@ -11,6 +11,8 @@ import {
   DeliveryService,
   type ShipmentDto,
 } from '../delivery/delivery.service';
+import { FinanceException } from '../finance/finance.exception';
+import { FinanceService } from '../finance/finance.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalesException } from '../sales/sales.exception';
 import { SalesService, type SalesOrderDto } from '../sales/sales.service';
@@ -74,6 +76,7 @@ export class CustomerPortalOrdersService {
     private readonly prisma: PrismaService,
     private readonly salesService: SalesService,
     private readonly deliveryService: DeliveryService,
+    private readonly financeService: FinanceService,
   ) {}
 
   async listOrders(
@@ -236,7 +239,7 @@ export class CustomerPortalOrdersService {
   }
 
   async getDashboardShell(companyId: string, customerId: string) {
-    const [openOrders, pendingDeliveries] = await Promise.all([
+    const [openOrders, pendingDeliveries, outstanding] = await Promise.all([
       this.prisma.salOrder.count({
         where: {
           companyId,
@@ -259,16 +262,93 @@ export class CustomerPortalOrdersService {
           },
         },
       }),
+      this.financeService.sumOutstanding(companyId, customerId),
     ]);
 
     return {
       kpis: {
         openOrders,
         pendingDeliveries,
-        outstandingBalance: null as number | null,
+        outstandingBalance: outstanding,
       },
       sections: ['orders', 'deliveries', 'finance'] as const,
-      message: 'Portal P5 — delivery track',
+      message: 'Portal P4 — finance read + delivery track',
+    };
+  }
+
+  async listOpenItems(
+    companyId: string,
+    customerId: string,
+    opts: { q?: string; status?: string; limit?: number; cursor?: string } = {},
+  ) {
+    const result = await this.financeService.list(companyId, {
+      ...opts,
+      customerId,
+    });
+    return {
+      items: result.items.map((item) => this.toPortalOpenItem(item)),
+      nextCursor: result.nextCursor,
+    };
+  }
+
+  async getOpenItem(companyId: string, customerId: string, id: string) {
+    let item;
+    try {
+      item = await this.financeService.get(companyId, id);
+    } catch (err) {
+      if (
+        err instanceof FinanceException &&
+        err.getStatus() === HttpStatus.NOT_FOUND
+      ) {
+        throw this.notFoundFinance();
+      }
+      throw err;
+    }
+    if (item.customerId !== customerId) {
+      throw this.notFoundFinance();
+    }
+    return this.toPortalOpenItem(item);
+  }
+
+  async getCredit(companyId: string, customerId: string) {
+    const snap = await this.financeService.creditSnapshot(
+      companyId,
+      customerId,
+    );
+    return {
+      creditLimit: snap.creditLimit,
+      outstandingBalance: snap.outstandingBalance,
+      currency: snap.currency,
+    };
+  }
+
+  toPortalOpenItem(item: {
+    id: string;
+    number: string;
+    status: string;
+    currency: string;
+    amountTotal: string;
+    amountOpen: string;
+    dueDate: string | null;
+    label: string | null;
+    createdAt: string;
+    allocations: { amount: string; paidAt: string; note: string | null }[];
+  }) {
+    return {
+      id: item.id,
+      number: item.number,
+      status: item.status,
+      currency: item.currency,
+      amountTotal: item.amountTotal,
+      amountOpen: item.amountOpen,
+      dueDate: item.dueDate,
+      label: item.label,
+      createdAt: item.createdAt,
+      allocations: item.allocations.map((a) => ({
+        amount: a.amount,
+        paidAt: a.paidAt,
+        note: a.note,
+      })),
     };
   }
 
@@ -446,6 +526,14 @@ export class CustomerPortalOrdersService {
     return new CustomerPortalException(
       CUSTOMER_PORTAL_ERROR_CODES.NOT_FOUND,
       'Delivery not found.',
+      HttpStatus.NOT_FOUND,
+    );
+  }
+
+  private notFoundFinance(): CustomerPortalException {
+    return new CustomerPortalException(
+      CUSTOMER_PORTAL_ERROR_CODES.NOT_FOUND,
+      'Open item not found.',
       HttpStatus.NOT_FOUND,
     );
   }

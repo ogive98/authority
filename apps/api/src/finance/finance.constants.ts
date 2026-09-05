@@ -1,0 +1,16 @@
+export const FINANCE_ERROR_CODES = {
+  NOT_FOUND: 'FIN.NOT_FOUND',
+  CUSTOMER_NOT_FOUND: 'FIN.CUSTOMER_NOT_FOUND',
+  INVALID_AMOUNT: 'FIN.INVALID_AMOUNT',
+  INVALID_STATUS: 'FIN.INVALID_STATUS',
+  OVER_ALLOCATE: 'FIN.OVER_ALLOCATE',
+  ORDER_NOT_FOUND: 'FIN.ORDER_NOT_FOUND',
+} as const;
+
+export type FinanceErrorCode =
+  (typeof FINANCE_ERROR_CODES)[keyof typeof FINANCE_ERROR_CODES];
+
+export const FINANCE_EVENT_TYPES = {
+  OPEN_ITEM_CREATED: 'finance.open_item.created.v1',
+  ALLOCATION_RECORDED: 'finance.allocation.recorded.v1',
+} as const;

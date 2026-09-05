@@ -57,6 +57,13 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       ],
     },
     {
+      key: "finance",
+      name: "Finance",
+      features: [
+        { id: "open-items", label: "Créances", href: "/finance" },
+      ],
+    },
+    {
       key: "settings",
       name: "Paramètres",
       features: [

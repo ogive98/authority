@@ -4,6 +4,7 @@ import {
   fetchPortalDashboard,
   fetchPortalMe,
   PORTAL_DELIVERIES_PATH,
+  PORTAL_FINANCE_PATH,
   PORTAL_ORDERS_PATH,
 } from "@/lib/customer-portal";
 
@@ -13,9 +14,15 @@ export default async function PortalDashboardPage() {
     fetchPortalDashboard(),
   ]);
 
-  const message = dashboard?.message ?? "Portal P5 — delivery track";
+  const message =
+    dashboard?.message ?? "Portal P4 — finance read + delivery track";
   const openOrders = dashboard?.kpis.openOrders ?? 0;
   const pendingDeliveries = dashboard?.kpis.pendingDeliveries ?? 0;
+  const outstanding = dashboard?.kpis.outstandingBalance;
+  const outstandingLabel =
+    outstanding == null
+      ? "—"
+      : `${Number(outstanding).toFixed(3)} TND`;
 
   return (
     <div>
@@ -59,17 +66,20 @@ export default async function PortalDashboardPage() {
               Suivre →
             </p>
           </Link>
-          <div className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3">
+          <Link
+            href={PORTAL_FINANCE_PATH}
+            className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
+          >
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Solde
             </p>
-            <p className="a-mono mt-1 text-[length:var(--a-text-lg)] font-medium tabular-nums">
-              {dashboard?.kpis.outstandingBalance ?? "—"}
+            <p className="a-mono mt-1 text-[length:var(--a-text-lg)] font-medium tabular-nums text-a-accent">
+              {outstandingLabel}
             </p>
-            <p className="mt-2 text-[length:var(--a-text-xs)] text-a-fg-subtle">
-              Finance light requis (P4)
+            <p className="mt-2 text-[length:var(--a-text-xs)] text-a-accent">
+              Créances →
             </p>
-          </div>
+          </Link>
         </div>
       </div>
     </div>

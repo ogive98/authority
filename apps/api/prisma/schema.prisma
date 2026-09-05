@@ -1027,3 +1027,64 @@ model DlvShipment {
   @@index([companyId, status])
   @@map("dlv_shipment")
 }
+
+// --- fin_* Finance light V0 (AR open items — no invented tax rates) ---
+
+enum FinOpenItemSide {
+  AR
+  AP
+}
+
+enum FinOpenItemStatus {
+  OPEN
+  PARTIAL
+  CLOSED
+}
+
+model FinOpenItem {
+  id           String            @id @default(uuid()) @db.Uuid
+  companyId    String            @map("company_id") @db.Uuid
+  number       String
+  customerId   String            @map("customer_id") @db.Uuid
+  side         FinOpenItemSide   @default(AR)
+  status       FinOpenItemStatus @default(OPEN)
+  /** Optional link to sales order — amount copied as-is (no TVA computation). */
+  salesOrderId String?           @map("sales_order_id") @db.Uuid
+  currency     String            @default("TND")
+  /** Gross amount recorded by user/system — never derived from an invented tax rate. */
+  amountTotal  Decimal           @map("amount_total") @db.Decimal(18, 3)
+  amountOpen   Decimal           @map("amount_open") @db.Decimal(18, 3)
+  dueDate      DateTime?         @map("due_date") @db.Date
+  label        String?
+  notes        String?
+  version      Int               @default(0)
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  allocations FinAllocation[]
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@index([companyId, customerId])
+  @@map("fin_open_item")
+}
+
+model FinAllocation {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  openItemId String   @map("open_item_id") @db.Uuid
+  amount     Decimal  @db.Decimal(18, 3)
+  paidAt     DateTime @map("paid_at") @db.Timestamptz(6)
+  note       String?
+  version    Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  openItem FinOpenItem @relation(fields: [openItemId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, openItemId])
+  @@index([companyId, paidAt(sort: Desc)])
+  @@map("fin_allocation")
+}

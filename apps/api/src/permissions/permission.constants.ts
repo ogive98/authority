@@ -33,6 +33,9 @@ export const PERMISSION_CATALOGUE = [
   'delivery.prepare',
   'delivery.complete',
   'delivery.fail',
+  'finance.ar.read',
+  'finance.ar.write',
+  'finance.allocate',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_CATALOGUE)[number];
@@ -72,6 +75,9 @@ export const PERMISSION_KEYS = {
   deliveryPrepare: 'delivery.prepare',
   deliveryComplete: 'delivery.complete',
   deliveryFail: 'delivery.fail',
+  financeArRead: 'finance.ar.read',
+  financeArWrite: 'finance.ar.write',
+  financeAllocate: 'finance.allocate',
 } as const satisfies Record<string, PermissionKey>;
 
 export const PERMISSION_METADATA_KEY = 'authority:permission';

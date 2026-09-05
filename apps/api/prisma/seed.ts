@@ -136,6 +136,7 @@ async function main() {
     'master_data',
     'products',
     'portals',
+    'finance',
   ] as const;
 
   for (const moduleKey of businessModules) {
@@ -146,7 +147,8 @@ async function main() {
       moduleKey === 'inventory' ||
       moduleKey === 'sales' ||
       moduleKey === 'delivery' ||
-      moduleKey === 'portals'
+      moduleKey === 'portals' ||
+      moduleKey === 'finance'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -431,6 +433,24 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'delivery.fail',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'finance.ar.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'finance.ar.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'finance.allocate',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,
@@ -853,6 +873,31 @@ async function main() {
             preferredDriver: portalOrder.preferredDriver,
             assignedAt,
             dispatchedAt,
+          },
+        });
+      }
+
+      const existingFin = await prisma.finOpenItem.findFirst({
+        where: {
+          companyId: company.id,
+          number: 'FIN-PORTAL-SEED',
+        },
+      });
+      if (!existingFin) {
+        await prisma.finOpenItem.create({
+          data: {
+            companyId: company.id,
+            number: 'FIN-PORTAL-SEED',
+            customerId: portalCustomer.id,
+            side: 'AR',
+            status: 'OPEN',
+            salesOrderId: portalOrder.id,
+            currency: 'TND',
+            amountTotal: 50,
+            amountOpen: 50,
+            dueDate: new Date(Date.now() + 14 * 86400000),
+            label: 'Créance démo portal (montant enregistré — pas de TVA calculée)',
+            notes: null,
           },
         });
       }

@@ -219,6 +219,50 @@ export class CustomerPortalController {
     );
   }
 
+  @Get('finance/open-items')
+  @UseGuards(CustomerPortalSessionGuard)
+  listOpenItems(
+    @Req() req: CustomerPortalRequest,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.portalOrdersService.listOpenItems(
+      req.companyId!,
+      req.customerId!,
+      {
+        q,
+        status,
+        limit: Number.isFinite(limit) ? limit : undefined,
+        cursor,
+      },
+    );
+  }
+
+  @Get('finance/open-items/:id')
+  @UseGuards(CustomerPortalSessionGuard)
+  getOpenItem(
+    @Req() req: CustomerPortalRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.portalOrdersService.getOpenItem(
+      req.companyId!,
+      req.customerId!,
+      id,
+    );
+  }
+
+  @Get('finance/credit')
+  @UseGuards(CustomerPortalSessionGuard)
+  getCredit(@Req() req: CustomerPortalRequest) {
+    return this.portalOrdersService.getCredit(
+      req.companyId!,
+      req.customerId!,
+    );
+  }
+
   private setSessionCookie(res: Response, token: string, expires: Date): void {
     res.cookie(CUSTOMER_PORTAL_COOKIE_NAME, token, {
       httpOnly: true,

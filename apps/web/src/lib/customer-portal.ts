@@ -3,6 +3,7 @@ export const PORTAL_HOME_PATH = "/portal";
 export const PORTAL_ORDERS_PATH = "/portal/orders";
 export const PORTAL_ORDERS_NEW_PATH = "/portal/orders/new";
 export const PORTAL_DELIVERIES_PATH = "/portal/deliveries";
+export const PORTAL_FINANCE_PATH = "/portal/finance";
 export const PORTAL_COOKIE_NAME = "authority_customer_portal_session";
 
 export const PORTAL_API = {
@@ -13,6 +14,8 @@ export const PORTAL_API = {
   catalog: "/api/v1/customer-portal/catalog",
   orders: "/api/v1/customer-portal/orders",
   deliveries: "/api/v1/customer-portal/deliveries",
+  financeOpenItems: "/api/v1/customer-portal/finance/open-items",
+  financeCredit: "/api/v1/customer-portal/finance/credit",
 } as const;
 
 export type PortalMe = {
@@ -117,6 +120,36 @@ export type PortalDelivery = {
 export type PortalDeliveryList = {
   items: PortalDelivery[];
   nextCursor: string | null;
+};
+
+export type PortalOpenItemStatus = "OPEN" | "PARTIAL" | "CLOSED";
+
+export type PortalOpenItem = {
+  id: string;
+  number: string;
+  status: PortalOpenItemStatus;
+  currency: string;
+  amountTotal: string;
+  amountOpen: string;
+  dueDate: string | null;
+  label: string | null;
+  createdAt: string;
+  allocations: {
+    amount: string;
+    paidAt: string;
+    note: string | null;
+  }[];
+};
+
+export type PortalOpenItemList = {
+  items: PortalOpenItem[];
+  nextCursor: string | null;
+};
+
+export type PortalCredit = {
+  creditLimit: string | null;
+  outstandingBalance: string;
+  currency: string;
 };
 
 /** App pages hide the portal (404) unless Customer Portal realm session is valid. */
@@ -230,6 +263,36 @@ export async function fetchDelivery(
   return portalFetch<PortalDelivery>(`${PORTAL_API.deliveries}/${id}`);
 }
 
+export async function fetchPortalOpenItems(opts?: {
+  q?: string;
+  status?: string;
+  limit?: number;
+  cursor?: string;
+}): Promise<{ status: number; data: PortalOpenItemList | null }> {
+  const params = new URLSearchParams();
+  if (opts?.q?.trim()) params.set("q", opts.q.trim());
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.cursor) params.set("cursor", opts.cursor);
+  const qs = params.toString();
+  return portalFetch<PortalOpenItemList>(
+    `${PORTAL_API.financeOpenItems}${qs ? `?${qs}` : ""}`,
+  );
+}
+
+export async function fetchPortalOpenItem(
+  id: string,
+): Promise<{ status: number; data: PortalOpenItem | null }> {
+  return portalFetch<PortalOpenItem>(`${PORTAL_API.financeOpenItems}/${id}`);
+}
+
+export async function fetchPortalCredit(): Promise<{
+  status: number;
+  data: PortalCredit | null;
+}> {
+  return portalFetch<PortalCredit>(PORTAL_API.financeCredit);
+}
+
 export function portalOrderStatusLabel(status: PortalOrderStatus): string {
   if (status === "CONFIRMED") return "Confirmée";
   if (status === "CANCELLED") return "Annulée";
@@ -262,4 +325,20 @@ export function portalDeliveryBadgeTone(
   if (status === "OUT") return "accent";
   if (status === "ASSIGNED") return "info";
   return "neutral";
+}
+
+export function portalOpenItemStatusLabel(
+  status: PortalOpenItemStatus,
+): string {
+  if (status === "CLOSED") return "Soldé";
+  if (status === "PARTIAL") return "Partiel";
+  return "Ouvert";
+}
+
+export function portalOpenItemBadgeTone(
+  status: PortalOpenItemStatus,
+): "success" | "warning" | "accent" | "neutral" {
+  if (status === "CLOSED") return "success";
+  if (status === "PARTIAL") return "warning";
+  return "accent";
 }

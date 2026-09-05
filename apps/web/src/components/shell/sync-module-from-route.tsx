@@ -50,6 +50,11 @@ export function SyncModuleFromRoute() {
       setFeatureMenuOpen(false);
       return;
     }
+    if (pathname.startsWith("/finance")) {
+      if (has("finance")) setSelectedModuleId("finance");
+      setFeatureMenuOpen(false);
+      return;
+    }
     if (pathname.startsWith("/search") || pathname.startsWith("/m/platform")) {
       if (has("platform")) setSelectedModuleId("platform");
       setFeatureMenuOpen(false);
