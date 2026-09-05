@@ -14,6 +14,7 @@ import {
   type ThunderErrorCode,
   type ThunderQueueFamily,
 } from '../thunder.constants';
+import { ThunderMetricsService } from '../observability/thunder-metrics.service';
 
 export type AuthoritySystemMode =
   | 'NORMAL'
@@ -84,6 +85,7 @@ export class AdmissionOrchestratorService {
     private readonly circuitBreaker: CircuitBreakerService,
     private readonly policies: PlanAbcPolicyService,
     private readonly redis: RedisService,
+    private readonly metrics: ThunderMetricsService,
   ) {}
 
   getSystemMode(): AuthoritySystemMode {
@@ -267,6 +269,7 @@ export class AdmissionOrchestratorService {
 
   private recordReject(reason: string): void {
     this.rejectTotals.set(reason, (this.rejectTotals.get(reason) ?? 0) + 1);
+    this.metrics.recordAdmissionReject(reason);
   }
 }
 

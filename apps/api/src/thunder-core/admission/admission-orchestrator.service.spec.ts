@@ -60,6 +60,9 @@ describe('AdmissionOrchestratorService', () => {
       setNx: jest.fn(),
       del: jest.fn(),
     };
+    const metrics = {
+      recordAdmissionReject: jest.fn(),
+    };
 
     const service = new AdmissionOrchestratorService(
       license as never,
@@ -69,9 +72,18 @@ describe('AdmissionOrchestratorService', () => {
       circuitBreaker as never,
       policies as never,
       redis as never,
+      metrics as never,
     );
 
-    return { service, license, modules, flags, resources, circuitBreaker };
+    return {
+      service,
+      license,
+      modules,
+      flags,
+      resources,
+      circuitBreaker,
+      metrics,
+    };
   }
 
   afterEach(() => {

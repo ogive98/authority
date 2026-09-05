@@ -42,6 +42,7 @@
     "dotenv": "^17.2.2",
     "ioredis": "^5.7.0",
     "otpauth": "^9.5.1",
+    "prom-client": "^15.1.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

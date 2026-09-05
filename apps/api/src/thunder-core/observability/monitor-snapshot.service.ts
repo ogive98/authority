@@ -10,6 +10,7 @@ import {
   thunderWorkersEnabled,
 } from '../thunder.constants';
 import type { ThunderMonitorSnapshot } from './monitor-snapshot.types';
+import { ThunderMetricsService } from './thunder-metrics.service';
 
 @Injectable()
 export class MonitorSnapshotService {
@@ -19,6 +20,7 @@ export class MonitorSnapshotService {
     private readonly resources: ResourceManagerService,
     private readonly circuitBreaker: CircuitBreakerService,
     private readonly admission: AdmissionOrchestratorService,
+    private readonly metrics: ThunderMetricsService,
   ) {}
 
   async snapshot(): Promise<ThunderMonitorSnapshot> {
@@ -139,6 +141,38 @@ export class MonitorSnapshotService {
     const pressure = this.resources.getPressure();
     const pgPool = Number(process.env.THUNDER_PG_POOL_USAGE ?? '');
     const apiP95 = Number(process.env.THUNDER_API_P95_MS ?? '');
+    const rejects = this.admission.getRejectSnapshot();
+    const breakerRows = breakers.map((b) => ({
+      dependencyKey: b.dependencyKey,
+      state: b.state,
+      stateGauge: breakerStateGauge(b.state),
+      failures: b.failures,
+      openedAt: b.openedAt,
+    }));
+    const workerQueues = THUNDER_QUEUE_FAMILIES.map((family) => ({
+      family,
+      concurrency: this.resources.getConcurrency(family),
+    }));
+    const queueRows = [...queueMap.values()];
+
+    this.metrics.syncGauges({
+      dlqSize: dlq,
+      outboxUnpublished: outboxLag,
+      outboxLagOldestSeconds: outboxLagStats.oldest,
+      breakers: breakerRows.map((b) => ({
+        dependencyKey: b.dependencyKey,
+        stateGauge: b.stateGauge,
+      })),
+      queues: queueRows.map((q) => ({
+        family: q.family,
+        pending: q.pending,
+        running: q.running,
+      })),
+      workers: workerQueues,
+      admissionRejectByReason: rejects.byReason,
+    });
+
+    const counterSummary = await this.metrics.summaryCounters();
 
     return {
       schemaVersion: 1,
@@ -156,12 +190,9 @@ export class MonitorSnapshotService {
       },
       workers: {
         enabled: thunderWorkersEnabled(),
-        queues: THUNDER_QUEUE_FAMILIES.map((family) => ({
-          family,
-          concurrency: this.resources.getConcurrency(family),
-        })),
+        queues: workerQueues,
       },
-      queues: [...queueMap.values()],
+      queues: queueRows,
       jobs,
       events: {
         outboxLag,
@@ -174,20 +205,19 @@ export class MonitorSnapshotService {
         publishedLastMinute,
         eventsPerSecondEstimate: publishedLastMinute / 60,
       },
-      breakers: breakers.map((b) => ({
-        dependencyKey: b.dependencyKey,
-        state: b.state,
-        stateGauge: breakerStateGauge(b.state),
-        failures: b.failures,
-        openedAt: b.openedAt,
-      })),
-      admission: (() => {
-        const rejects = this.admission.getRejectSnapshot();
-        return {
-          rejectTotal: rejects.total,
-          rejectByReason: rejects.byReason,
-        };
-      })(),
+      breakers: breakerRows,
+      admission: {
+        rejectTotal: rejects.total,
+        rejectByReason: rejects.byReason,
+      },
+      metrics: {
+        scrapePath: '/api/v1/thunder/metrics',
+        contentType: this.metrics.contentType,
+        jobSuccessTotal: counterSummary.jobSuccessTotal,
+        jobFailTotal: counterSummary.jobFailTotal,
+        jobRetryTotal: counterSummary.jobRetryTotal,
+        admissionRejectTotal: counterSummary.admissionRejectTotal,
+      },
       db: {
         ok: dbOk,
         poolUsageRatio: Number.isFinite(pgPool) ? pgPool : null,

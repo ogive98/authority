@@ -28,6 +28,7 @@ import {
   computeBackoffDelayMs,
   DEFAULT_MAX_ATTEMPTS,
 } from './retry/retry-policy';
+import { ThunderMetricsService } from '../observability/thunder-metrics.service';
 
 @Injectable()
 export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
@@ -47,6 +48,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     private readonly modules: ModuleRegistryService,
     private readonly resources: ResourceManagerService,
     private readonly policies: PlanAbcPolicyService,
+    private readonly metrics: ThunderMetricsService,
   ) {}
 
   onModuleInit(): void {
@@ -191,6 +193,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
     });
 
     const dependencyKey = registration.dependencyKey;
+    const started = process.hrtime.bigint();
 
     try {
       const result = await this.runWithTimeout(
@@ -219,9 +222,19 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
           errorJson: Prisma.DbNull,
         },
       });
+
+      const seconds = Number(process.hrtime.bigint() - started) / 1e9;
+      this.metrics.observeJobDuration({
+        jobType: row.jobType,
+        queue: row.queue,
+        status: 'success',
+        seconds,
+      });
+      this.metrics.recordJobSuccess(row.jobType, row.queue);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Thunder job failed';
+      const seconds = Number(process.hrtime.bigint() - started) / 1e9;
 
       if (dependencyKey) {
         await this.circuitBreaker.recordFailure(dependencyKey);
@@ -238,9 +251,22 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
       });
 
       if (!isRetryableJobError(error)) {
+        this.metrics.observeJobDuration({
+          jobType: row.jobType,
+          queue: row.queue,
+          status: 'fail',
+          seconds,
+        });
         throw new UnrecoverableError(message);
       }
 
+      this.metrics.observeJobDuration({
+        jobType: row.jobType,
+        queue: row.queue,
+        status: 'retry',
+        seconds,
+      });
+      this.metrics.recordJobRetry(row.jobType, row.queue);
       throw error;
     }
   }
@@ -287,6 +313,7 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
       });
 
       await this.markFailed(row.id, error.message);
+      this.metrics.recordJobFail(row.jobType, row.queue);
     } catch (handlerError) {
       this.logger.warn(
         handlerError instanceof Error

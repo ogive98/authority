@@ -65,6 +65,15 @@ export interface ThunderMonitorSnapshot {
     rejectTotal: number;
     rejectByReason: Record<string, number>;
   };
+  /** Prometheus scrape metadata + counter totals (THU-HARD-04). */
+  metrics: {
+    scrapePath: string;
+    contentType: string;
+    jobSuccessTotal: number;
+    jobFailTotal: number;
+    jobRetryTotal: number;
+    admissionRejectTotal: number;
+  };
   db: {
     ok: boolean;
     poolUsageRatio: number | null;

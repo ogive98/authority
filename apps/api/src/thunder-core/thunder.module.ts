@@ -19,6 +19,7 @@ import { JobProcessorHost } from './jobs/job-processor.host';
 import { JobQueryService } from './jobs/job-query.service';
 import { JobRegistryService } from './jobs/job-registry.service';
 import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
+import { ThunderMetricsService } from './observability/thunder-metrics.service';
 import { CircuitBreakerService } from './resilience/circuit-breaker.service';
 import { PlanAbcPolicyService } from './resilience/plan-abc/plan-abc-policy.service';
 import { PlanCRegistryService } from './resilience/plan-c-registry.service';
@@ -64,6 +65,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     WatchdogService,
     WatchdogWorker,
     AdmissionOrchestratorService,
+    ThunderMetricsService,
     MonitorSnapshotService,
     RuleDefService,
     RuleEngineService,
@@ -84,6 +86,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     WatchdogService,
     JobRegistryService,
     AdmissionOrchestratorService,
+    ThunderMetricsService,
     MonitorSnapshotService,
     RuleDefService,
     RuleEngineService,

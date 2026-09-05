@@ -10,6 +10,7 @@ import {
   Post,
   Query,
   Req,
+  Res,
   Sse,
   UseGuards,
 } from '@nestjs/common';
@@ -27,6 +28,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import type { Response } from 'express';
 import { Observable, from, interval, map, switchMap } from 'rxjs';
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from '../audit/audit.constants';
 import { AuditService } from '../audit/audit.service';
@@ -34,6 +36,7 @@ import { AuthenticatedRequest } from '../identity/session.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { DlqService } from '../thunder-core/jobs/dlq/dlq.service';
 import { MonitorSnapshotService } from '../thunder-core/observability/monitor-snapshot.service';
+import { ThunderMetricsService } from '../thunder-core/observability/thunder-metrics.service';
 import type { ThunderMonitorSnapshot } from '../thunder-core/observability/monitor-snapshot.types';
 import { CircuitBreakerService } from '../thunder-core/resilience/circuit-breaker.service';
 import { RuleDefService } from '../thunder-core/rules/rule-def.service';
@@ -149,11 +152,20 @@ export class SuperAdminThunderController {
     private readonly ruleDefs: RuleDefService,
     private readonly audit: AuditService,
     private readonly prisma: PrismaService,
+    private readonly metrics: ThunderMetricsService,
   ) {}
 
   @Get('monitor/snapshot')
   getMonitorSnapshot() {
     return this.monitorSnapshot.snapshot();
+  }
+
+  @Get('metrics')
+  async getPrometheusMetrics(@Res() res: Response): Promise<void> {
+    await this.monitorSnapshot.snapshot();
+    const body = await this.metrics.metricsText();
+    res.setHeader('Content-Type', this.metrics.contentType);
+    res.status(HttpStatus.OK).send(body);
   }
 
   @Sse('monitor/stream')

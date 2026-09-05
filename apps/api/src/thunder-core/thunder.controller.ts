@@ -7,11 +7,13 @@ import {
   HttpStatus,
   Param,
   Post,
+  Res,
   Sse,
   UseGuards,
 } from '@nestjs/common';
 import type { IamUser } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import type { Response } from 'express';
 import { Observable, from, interval, map, switchMap } from 'rxjs';
 import { CurrentUser } from '../identity/identity.decorators';
 import { SessionGuard } from '../identity/session.guard';
@@ -24,6 +26,7 @@ import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import { JobEnqueueService } from './jobs/job-enqueue.service';
 import { JobQueryService } from './jobs/job-query.service';
 import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
+import { ThunderMetricsService } from './observability/thunder-metrics.service';
 import type { ThunderMonitorSnapshot } from './observability/monitor-snapshot.types';
 import { EnqueueHelloJobDto, EnqueueTestJobDto } from './thunder.dto';
 import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
@@ -37,12 +40,23 @@ export class ThunderController {
     private readonly jobEnqueueService: JobEnqueueService,
     private readonly jobQueryService: JobQueryService,
     private readonly monitorSnapshot: MonitorSnapshotService,
+    private readonly metrics: ThunderMetricsService,
   ) {}
 
   @Get('monitor/snapshot')
   @RequirePermission(PERMISSION_KEYS.systemMonitoringView)
   getMonitorSnapshot() {
     return this.monitorSnapshot.snapshot();
+  }
+
+  @Get('metrics')
+  @RequirePermission(PERMISSION_KEYS.systemMonitoringView)
+  async getPrometheusMetrics(@Res() res: Response): Promise<void> {
+    // Refresh gauges from live snapshot before scrape.
+    await this.monitorSnapshot.snapshot();
+    const body = await this.metrics.metricsText();
+    res.setHeader('Content-Type', this.metrics.contentType);
+    res.status(HttpStatus.OK).send(body);
   }
 
   @Sse('monitor/stream')

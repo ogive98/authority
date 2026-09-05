@@ -54,6 +54,17 @@ describe('MonitorSnapshotService', () => {
     }),
   };
 
+  const metrics = {
+    contentType: 'text/plain; version=0.0.4; charset=utf-8',
+    syncGauges: jest.fn(),
+    summaryCounters: jest.fn().mockResolvedValue({
+      jobSuccessTotal: 5,
+      jobFailTotal: 1,
+      jobRetryTotal: 2,
+      admissionRejectTotal: 2,
+    }),
+  };
+
   it('builds a schemaVersion 1 snapshot with outbox lag seconds and breakers', async () => {
     const prisma = mockPrisma();
     const redis = {
@@ -73,6 +84,7 @@ describe('MonitorSnapshotService', () => {
       resources as never,
       circuitBreaker as never,
       admission as never,
+      metrics as never,
     );
 
     const snap = await service.snapshot();
@@ -101,6 +113,9 @@ describe('MonitorSnapshotService', () => {
       rejectTotal: 2,
       rejectByReason: { 'THUNDER.SHED_P4': 2 },
     });
+    expect(snap.metrics.scrapePath).toBe('/api/v1/thunder/metrics');
+    expect(snap.metrics.jobSuccessTotal).toBe(5);
+    expect(metrics.syncGauges).toHaveBeenCalled();
     expect(snap.events.eventsPerSecondEstimate).toBe(2);
     expect(snap.redis.ok).toBe(true);
     expect(snap.db.ok).toBe(true);
@@ -158,6 +173,7 @@ describe('MonitorSnapshotService', () => {
       resources as never,
       circuitBreaker as never,
       admission as never,
+      metrics as never,
     );
     const snap = await service.snapshot();
     expect(snap.cpu.usageRatio).toBe(0.42);
