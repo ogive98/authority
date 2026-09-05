@@ -128,13 +128,22 @@ export class SalesService {
 
   async list(
     companyId: string,
-    opts: { q?: string; limit?: number; cursor?: string } = {},
+    opts: {
+      q?: string;
+      limit?: number;
+      cursor?: string;
+      /** When set, scopes results to this customer (portal / IDOR-safe lists). */
+      customerId?: string;
+    } = {},
   ): Promise<{ items: SalesOrderDto[]; nextCursor: string | null }> {
     const limit = Math.min(Math.max(opts.limit ?? 50, 1), 100);
     const where: Prisma.SalOrderWhereInput = {
       companyId,
       deletedAt: null,
     };
+    if (opts.customerId) {
+      where.customerId = opts.customerId;
+    }
     if (opts.q?.trim()) {
       const q = opts.q.trim();
       where.OR = [

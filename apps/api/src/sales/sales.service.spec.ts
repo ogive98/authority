@@ -196,4 +196,21 @@ describe('SalesService', () => {
       response: { code: SALES_ERROR_CODES.STOCK_RESERVE_FAILED },
     });
   });
+
+  it('list accepts optional customerId filter', async () => {
+    const { service, prisma } = build();
+    prisma.salOrder.findMany.mockResolvedValue([]);
+
+    await service.list(companyId, { customerId, q: 'SO' });
+
+    expect(prisma.salOrder.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          companyId,
+          customerId,
+          deletedAt: null,
+        }),
+      }),
+    );
+  });
 });

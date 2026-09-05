@@ -3,7 +3,10 @@ import {
   Controller,
   Get,
   HttpCode,
+  Param,
+  ParseUUIDPipe,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -13,6 +16,7 @@ import type { Request, Response } from 'express';
 import { LoginDto } from '../identity/login.dto';
 import { SessionService } from '../identity/session.service';
 import { CustomerPortalAuthService } from './customer-portal-auth.service';
+import { CustomerPortalOrdersService } from './customer-portal-orders.service';
 import {
   CustomerPortalSessionGuard,
   type CustomerPortalRequest,
@@ -23,6 +27,7 @@ import { CUSTOMER_PORTAL_COOKIE_NAME } from './customer-portal.constants';
 export class CustomerPortalController {
   constructor(
     private readonly portalAuthService: CustomerPortalAuthService,
+    private readonly portalOrdersService: CustomerPortalOrdersService,
     private readonly sessionService: SessionService,
   ) {}
 
@@ -86,9 +91,43 @@ export class CustomerPortalController {
   @UseGuards(CustomerPortalSessionGuard)
   dashboard(@Req() req: CustomerPortalRequest) {
     // IDOR: customerId/companyId come only from session membership, never client input
-    void req.customerId;
-    void req.companyId;
-    return this.portalAuthService.getDashboardShell();
+    return this.portalOrdersService.getDashboardShell(
+      req.companyId!,
+      req.customerId!,
+    );
+  }
+
+  @Get('orders')
+  @UseGuards(CustomerPortalSessionGuard)
+  listOrders(
+    @Req() req: CustomerPortalRequest,
+    @Query('q') q?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.portalOrdersService.listOrders(
+      req.companyId!,
+      req.customerId!,
+      {
+        q,
+        limit: Number.isFinite(limit) ? limit : undefined,
+        cursor,
+      },
+    );
+  }
+
+  @Get('orders/:id')
+  @UseGuards(CustomerPortalSessionGuard)
+  getOrder(
+    @Req() req: CustomerPortalRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.portalOrdersService.getOrder(
+      req.companyId!,
+      req.customerId!,
+      id,
+    );
   }
 
   private setSessionCookie(res: Response, token: string, expires: Date): void {

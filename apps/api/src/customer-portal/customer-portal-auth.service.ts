@@ -129,18 +129,6 @@ export class CustomerPortalAuthService {
     };
   }
 
-  getDashboardShell() {
-    return {
-      kpis: {
-        openOrders: 0,
-        pendingDeliveries: 0,
-        outstandingBalance: null as number | null,
-      },
-      sections: ['orders', 'deliveries', 'finance'] as const,
-      message: 'Portal P1 — dashboard shell',
-    };
-  }
-
   toMembershipSummary(membership: PtlMembership): PortalMembershipSummary {
     return {
       id: membership.id,
