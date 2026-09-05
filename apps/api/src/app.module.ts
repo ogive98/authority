@@ -14,6 +14,7 @@ import { ThunderModule } from './thunder-core/thunder.module';
 import { ProductsModule } from './products/products.module';
 import { MasterDataModule } from './master-data/master-data.module';
 import { CustomersModule } from './customers/customers.module';
+import { InventoryModule } from './inventory/inventory.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { CustomersModule } from './customers/customers.module';
     MasterDataModule,
     ProductsModule,
     CustomersModule,
+    InventoryModule,
   ],
 })
 export class AppModule {}

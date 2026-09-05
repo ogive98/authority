@@ -753,6 +753,72 @@ model CusContact {
   @@map("cus_contact")
 }
 
+// --- inv_* Inventory light (MOD-INVENTORY) ---
+
+enum InvMovementType {
+  ADJUST
+  RESERVE
+  RELEASE
+}
+
+model InvWarehouse {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  code      String
+  name      String
+  active    Boolean   @default(true)
+  version   Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  balances InvBalance[]
+
+  @@unique([companyId, code])
+  @@index([companyId, active])
+  @@map("inv_warehouse")
+}
+
+model InvBalance {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  warehouseId String   @map("warehouse_id") @db.Uuid
+  productId   String   @map("product_id") @db.Uuid
+  onHand      Decimal  @default(0) @map("on_hand") @db.Decimal(18, 3)
+  reserved    Decimal  @default(0) @db.Decimal(18, 3)
+  version     Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  warehouse InvWarehouse  @relation(fields: [warehouseId], references: [id])
+  movements InvMovement[]
+
+  @@unique([companyId, warehouseId, productId])
+  @@index([companyId, productId])
+  @@index([companyId, warehouseId])
+  @@map("inv_balance")
+}
+
+model InvMovement {
+  id            String          @id @default(uuid()) @db.Uuid
+  companyId     String          @map("company_id") @db.Uuid
+  balanceId     String          @map("balance_id") @db.Uuid
+  type          InvMovementType
+  qty           Decimal         @db.Decimal(18, 3)
+  onHandAfter   Decimal         @map("on_hand_after") @db.Decimal(18, 3)
+  reservedAfter Decimal         @map("reserved_after") @db.Decimal(18, 3)
+  reason        String?
+  refType       String?         @map("ref_type")
+  refId         String?         @map("ref_id")
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  balance InvBalance @relation(fields: [balanceId], references: [id])
+
+  @@index([companyId, balanceId, createdAt(sort: Desc)])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("inv_movement")
+}
+
 // --- sa_* Super Admin industry packs (POLY-01) ---
 
 model SaIndustryPack {

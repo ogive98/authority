@@ -179,7 +179,7 @@ export default function CustomersPage() {
   return (
     <>
       <AScreenHeader
-        kicker="Customers"
+        kicker="Clients"
         title="Clients"
         description="Fiches liées party (master data) + contacts."
         actions={
@@ -246,33 +246,53 @@ export default function CustomersPage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-hidden rounded-[var(--a-radius-lg)] border border-a-border-subtle">
-            <table className="w-full text-left text-[length:var(--a-text-sm)]">
-              <thead className="bg-a-surface-2 text-a-fg-muted">
+          <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle">
+            <table className="w-full min-w-[36rem] border-collapse text-left text-[length:var(--a-text-sm)]">
+              <thead className="border-b border-a-border-subtle bg-a-surface-2 text-a-fg-muted">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Code</th>
-                  <th className="px-4 py-3 font-medium">Raison sociale</th>
-                  <th className="px-4 py-3 font-medium">Commercial</th>
-                  <th className="px-4 py-3 font-medium">Statut</th>
-                  <th className="px-4 py-3 font-medium" />
+                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
+                    Code
+                  </th>
+                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
+                    Raison sociale
+                  </th>
+                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
+                    Commercial
+                  </th>
+                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
+                    Statut
+                  </th>
+                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {state.items.map((row) => (
                   <tr
                     key={row.id}
-                    className="border-t border-a-border-subtle bg-a-surface-1"
+                    className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
                   >
-                    <td className="px-4 py-3 font-mono text-a-fg">{row.code}</td>
-                    <td className="px-4 py-3 text-a-fg">{row.legalName}</td>
-                    <td className="px-4 py-3 text-a-fg-muted">
+                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                      <button
+                        type="button"
+                        className="text-left text-a-accent hover:underline"
+                        onClick={() => void openEdit(row)}
+                      >
+                        {row.code}
+                      </button>
+                    </td>
+                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                      {row.legalName}
+                    </td>
+                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
                       {row.salesRep ?? "—"}
                     </td>
-                    <td className="px-4 py-3 text-a-fg-muted">
+                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
                       {STATUS_LABELS[row.status]}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
+                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                      <div className="flex flex-wrap gap-2">
                         <AButton
                           type="button"
                           variant="secondary"
@@ -303,6 +323,27 @@ export default function CustomersPage() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title={editing ? "Éditer client" : "Nouveau client"}
+        description="Party master data + contacts"
+        footer={
+          <div className="flex justify-end gap-2">
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setDrawerOpen(false)}
+            >
+              Annuler
+            </AButton>
+            <AButton
+              type="button"
+              size="sm"
+              disabled={busy || !form}
+              onClick={() => void onSave()}
+            >
+              {busy ? "…" : "Enregistrer"}
+            </AButton>
+          </div>
+        }
       >
         {form ? (
           <div className="space-y-4 p-4">
@@ -399,25 +440,6 @@ export default function CustomersPage() {
                 {formError}
               </p>
             ) : null}
-
-            <div className="flex justify-end gap-2 pt-2">
-              <AButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setDrawerOpen(false)}
-              >
-                Annuler
-              </AButton>
-              <AButton
-                type="button"
-                size="sm"
-                disabled={busy}
-                onClick={() => void onSave()}
-              >
-                Enregistrer
-              </AButton>
-            </div>
           </div>
         ) : null}
       </ADrawer>

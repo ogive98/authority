@@ -140,7 +140,8 @@ async function main() {
     const enabled =
       moduleKey === 'master_data' ||
       moduleKey === 'products' ||
-      moduleKey === 'customers'
+      moduleKey === 'customers' ||
+      moduleKey === 'inventory'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -356,6 +357,44 @@ async function main() {
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'inventory.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'inventory.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'inventory.reserve',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+
+  await prisma.invWarehouse.upsert({
+    where: {
+      companyId_code: {
+        companyId: company.id,
+        code: 'MAIN',
+      },
+    },
+    update: {
+      name: 'Entrepôt principal',
+      active: true,
+      deletedAt: null,
+    },
+    create: {
+      companyId: company.id,
+      code: 'MAIN',
+      name: 'Entrepôt principal',
+      active: true,
+    },
   });
 
   await seedSettingsDefinitions(company.id, demoUser.id);

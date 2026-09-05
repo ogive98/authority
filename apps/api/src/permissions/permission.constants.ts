@@ -21,6 +21,9 @@ export const PERMISSION_CATALOGUE = [
   'master_data.party.write',
   'customers.read',
   'customers.write',
+  'inventory.read',
+  'inventory.write',
+  'inventory.reserve',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_CATALOGUE)[number];
@@ -48,6 +51,9 @@ export const PERMISSION_KEYS = {
   masterDataPartyWrite: 'master_data.party.write',
   customersRead: 'customers.read',
   customersWrite: 'customers.write',
+  inventoryRead: 'inventory.read',
+  inventoryWrite: 'inventory.write',
+  inventoryReserve: 'inventory.reserve',
 } as const satisfies Record<string, PermissionKey>;
 
 export const PERMISSION_METADATA_KEY = 'authority:permission';

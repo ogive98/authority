@@ -24,6 +24,21 @@ export function SyncModuleFromRoute() {
       setFeatureMenuOpen(false);
       return;
     }
+    if (pathname.startsWith("/customers")) {
+      if (has("customers")) setSelectedModuleId("customers");
+      setFeatureMenuOpen(false);
+      return;
+    }
+    if (pathname.startsWith("/products")) {
+      if (has("products")) setSelectedModuleId("products");
+      setFeatureMenuOpen(false);
+      return;
+    }
+    if (pathname.startsWith("/inventory")) {
+      if (has("inventory")) setSelectedModuleId("inventory");
+      setFeatureMenuOpen(false);
+      return;
+    }
     if (pathname.startsWith("/search") || pathname.startsWith("/m/platform")) {
       if (has("platform")) setSelectedModuleId("platform");
       setFeatureMenuOpen(false);
@@ -37,7 +52,7 @@ export function SyncModuleFromRoute() {
         return;
       }
     }
-    // Shell preview + home — Accueil until inventory/sales modules exist.
+    // Shell preview + home — Accueil until sales owns /preview routes.
     if (
       pathname === "/" ||
       pathname === "" ||

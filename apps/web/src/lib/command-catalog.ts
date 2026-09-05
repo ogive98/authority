@@ -72,6 +72,33 @@ export const COMMAND_CATALOG: CommandItem[] = [
     shortcut: { keys: ["Ctrl", ","], key: ",", ctrl: true },
   },
   {
+    id: "nav-products",
+    label: "Produits",
+    group: "navigation",
+    href: "/products",
+    keywords: ["produits", "products", "catalogue", "sku"],
+    requiresModule: "products",
+    permissionKey: "products.read",
+  },
+  {
+    id: "nav-customers",
+    label: "Clients",
+    group: "navigation",
+    href: "/customers",
+    keywords: ["clients", "customers", "party"],
+    requiresModule: "customers",
+    permissionKey: "customers.read",
+  },
+  {
+    id: "nav-inventory",
+    label: "Stock",
+    group: "navigation",
+    href: "/inventory",
+    keywords: ["stock", "inventory", "entrepôt", "solde"],
+    requiresModule: "inventory",
+    permissionKey: "inventory.read",
+  },
+  {
     id: "nav-tokens",
     label: "Dev — Tokens",
     group: "navigation",
@@ -171,6 +198,8 @@ export const COMMAND_CATALOG: CommandItem[] = [
 export const DEMO_PERMISSION_GRANTS = new Set([
   "sales.read",
   "customers.read",
+  "products.read",
+  "inventory.read",
   "settings.read",
 ]);
 
@@ -182,6 +211,7 @@ export const DEMO_ENABLED_MODULES = new Set([
   "sales",
   "inventory",
   "customers",
+  "products",
 ]);
 
 export function filterCommands(

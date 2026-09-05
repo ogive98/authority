@@ -195,7 +195,7 @@ export default function ProductsPage() {
   return (
     <>
       <AScreenHeader
-        kicker="Products"
+        kicker="Produits"
         title="Catalogue"
         description="Listes paramétrables par société (industry pack)."
         actions={
