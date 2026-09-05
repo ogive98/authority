@@ -772,6 +772,57 @@ async function main() {
     });
   }
 
+  // Portal P3 — sample prior order so catalog lastUnitPrice works for create
+  const portalWh = await prisma.invWarehouse.findFirst({
+    where: { companyId: company.id, code: 'MAIN', deletedAt: null },
+  });
+  const portalProduct = await prisma.prdProduct.findFirst({
+    where: {
+      companyId: company.id,
+      sku: 'BRIE-250',
+      deletedAt: null,
+    },
+  });
+  if (portalWh && portalProduct) {
+    const existingPortalOrder = await prisma.salOrder.findFirst({
+      where: {
+        companyId: company.id,
+        customerId: portalCustomer.id,
+        number: 'SO-PORTAL-SEED',
+      },
+    });
+    if (!existingPortalOrder) {
+      await prisma.salOrder.create({
+        data: {
+          companyId: company.id,
+          number: 'SO-PORTAL-SEED',
+          customerId: portalCustomer.id,
+          warehouseId: portalWh.id,
+          requestedDate: new Date(),
+          currency: 'TND',
+          notes: null,
+          preferredDriver: null,
+          amountTotal: 50,
+          status: 'CONFIRMED',
+          confirmedAt: new Date(),
+          lines: {
+            create: [
+              {
+                companyId: company.id,
+                lineNo: 1,
+                productId: portalProduct.id,
+                qty: 10,
+                unitPrice: 5,
+                discountPct: 0,
+                lineTotal: 50,
+              },
+            ],
+          },
+        },
+      });
+    }
+  }
+
   console.log(
     `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, limited ${LIMITED_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}, portal ${PORTAL_USER_EMAIL}`,
   );

@@ -1,6 +1,7 @@
 export const PORTAL_LOGIN_PATH = "/portal/login";
 export const PORTAL_HOME_PATH = "/portal";
 export const PORTAL_ORDERS_PATH = "/portal/orders";
+export const PORTAL_ORDERS_NEW_PATH = "/portal/orders/new";
 export const PORTAL_COOKIE_NAME = "authority_customer_portal_session";
 
 export const PORTAL_API = {
@@ -8,6 +9,7 @@ export const PORTAL_API = {
   logout: "/api/v1/customer-portal/auth/logout",
   me: "/api/v1/customer-portal/me",
   dashboard: "/api/v1/customer-portal/dashboard",
+  catalog: "/api/v1/customer-portal/catalog",
   orders: "/api/v1/customer-portal/orders",
 } as const;
 
@@ -72,6 +74,20 @@ export type PortalOrder = {
 
 export type PortalOrderList = {
   items: PortalOrder[];
+  nextCursor: string | null;
+};
+
+export type PortalCatalogItem = {
+  id: string;
+  sku: string;
+  name: string;
+  uom: string;
+  lastUnitPrice: string | null;
+  currency: string;
+};
+
+export type PortalCatalogList = {
+  items: PortalCatalogItem[];
   nextCursor: string | null;
 };
 
@@ -148,6 +164,19 @@ export async function fetchOrder(
   id: string,
 ): Promise<{ status: number; data: PortalOrder | null }> {
   return portalFetch<PortalOrder>(`${PORTAL_API.orders}/${id}`);
+}
+
+export async function fetchCatalog(opts?: {
+  q?: string;
+  limit?: number;
+}): Promise<{ status: number; data: PortalCatalogList | null }> {
+  const params = new URLSearchParams();
+  if (opts?.q?.trim()) params.set("q", opts.q.trim());
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  return portalFetch<PortalCatalogList>(
+    `${PORTAL_API.catalog}${qs ? `?${qs}` : ""}`,
+  );
 }
 
 export function portalOrderStatusLabel(status: PortalOrderStatus): string {

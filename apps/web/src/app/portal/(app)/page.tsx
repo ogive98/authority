@@ -12,7 +12,8 @@ export default async function PortalDashboardPage() {
     fetchPortalDashboard(),
   ]);
 
-  const message = dashboard?.message ?? "Portal P2 — orders read";
+  const message =
+    dashboard?.message ?? "Portal P3 — order create / reorder";
   const openOrders = dashboard?.kpis.openOrders ?? 0;
 
   return (
@@ -40,7 +41,7 @@ export default async function PortalDashboardPage() {
               {openOrders}
             </p>
             <p className="mt-2 text-[length:var(--a-text-xs)] text-a-accent">
-              Voir les commandes →
+              Voir / créer →
             </p>
           </Link>
           <div className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3">

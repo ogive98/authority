@@ -11,6 +11,8 @@ describe('CustomerPortalOrdersService', () => {
   const customerId = '22222222-2222-2222-2222-222222222222';
   const otherCustomerId = '99999999-9999-9999-9999-999999999999';
   const orderId = '55555555-5555-5555-5555-555555555555';
+  const productId = 'prod-1';
+  const warehouseId = 'wh-1';
 
   const ownOrder: SalesOrderDto = {
     id: orderId,
@@ -19,7 +21,7 @@ describe('CustomerPortalOrdersService', () => {
     customerId,
     customerCode: 'C-001',
     customerName: 'Atlas',
-    warehouseId: 'wh-1',
+    warehouseId,
     warehouseCode: 'MAIN',
     status: SalOrderStatus.CONFIRMED,
     requestedDate: '2026-09-10',
@@ -36,7 +38,7 @@ describe('CustomerPortalOrdersService', () => {
       {
         id: 'line-1',
         lineNo: 1,
-        productId: 'prod-1',
+        productId,
         productSku: 'BRIE',
         productName: 'Brie',
         qty: '10.000',
@@ -47,20 +49,36 @@ describe('CustomerPortalOrdersService', () => {
     ],
   };
 
-  let prisma: { salOrder: { count: jest.Mock } };
+  let prisma: {
+    salOrder: { count: jest.Mock };
+    salOrderLine: { findMany: jest.Mock };
+    invWarehouse: { findFirst: jest.Mock };
+    prdProduct: { findMany: jest.Mock };
+  };
   let salesService: {
     list: jest.Mock;
     get: jest.Mock;
+    create: jest.Mock;
+    getIntakeSettings: jest.Mock;
   };
   let service: CustomerPortalOrdersService;
 
   beforeEach(() => {
     prisma = {
       salOrder: { count: jest.fn().mockResolvedValue(2) },
+      salOrderLine: { findMany: jest.fn().mockResolvedValue([]) },
+      invWarehouse: {
+        findFirst: jest.fn().mockResolvedValue({ id: warehouseId }),
+      },
+      prdProduct: { findMany: jest.fn().mockResolvedValue([]) },
     };
     salesService = {
       list: jest.fn(),
       get: jest.fn(),
+      create: jest.fn(),
+      getIntakeSettings: jest
+        .fn()
+        .mockResolvedValue({ defaultCurrency: 'TND' }),
     };
     service = new CustomerPortalOrdersService(
       prisma as never,
@@ -155,6 +173,105 @@ describe('CustomerPortalOrdersService', () => {
       },
     });
     expect(shell.kpis.openOrders).toBe(2);
-    expect(shell.message).toContain('P2');
+    expect(shell.message).toContain('P3');
+  });
+
+  it('creates draft with membership ids, last price, confirmAfter false', async () => {
+    prisma.salOrderLine.findMany.mockResolvedValue([
+      { productId, unitPrice: 5 },
+    ]);
+    const created = {
+      ...ownOrder,
+      id: 'new-order',
+      number: 'SO-2026-0002',
+      status: SalOrderStatus.DRAFT,
+      notes: 'INTERNAL create',
+    };
+    salesService.create.mockResolvedValue(created);
+
+    const dto = await service.createOrder(companyId, customerId, {
+      lines: [{ productId, qty: 2 }],
+      requestedDate: '2026-09-12',
+    });
+
+    expect(salesService.create).toHaveBeenCalledWith(companyId, {
+      customerId,
+      warehouseId,
+      requestedDate: '2026-09-12',
+      preferredDriver: undefined,
+      lines: [{ productId, qty: 2, unitPrice: 5 }],
+      confirmAfter: false,
+    });
+    expect(dto.id).toBe('new-order');
+    expect(dto).not.toHaveProperty('notes');
+    expect(dto).not.toHaveProperty('warehouseId');
+    expect(JSON.stringify(dto)).not.toContain('INTERNAL');
+  });
+
+  it('rejects create when no last price for product', async () => {
+    prisma.salOrderLine.findMany.mockResolvedValue([]);
+
+    await expect(
+      service.createOrder(companyId, customerId, {
+        lines: [{ productId, qty: 1 }],
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: CUSTOMER_PORTAL_ERROR_CODES.PRICE_UNAVAILABLE,
+      }),
+      status: HttpStatus.UNPROCESSABLE_ENTITY,
+    });
+    expect(salesService.create).not.toHaveBeenCalled();
+  });
+
+  it('reorders own order into new draft cloning lines', async () => {
+    salesService.get.mockResolvedValue(ownOrder);
+    const created = {
+      ...ownOrder,
+      id: 'reorder-id',
+      number: 'SO-2026-0003',
+      status: SalOrderStatus.DRAFT,
+      notes: 'INTERNAL reorder',
+    };
+    salesService.create.mockResolvedValue(created);
+
+    const dto = await service.reorderOrder(companyId, customerId, orderId, {
+      requestedDate: '2026-09-20',
+    });
+
+    expect(salesService.create).toHaveBeenCalledWith(companyId, {
+      customerId,
+      warehouseId,
+      requestedDate: '2026-09-20',
+      preferredDriver: 'Karim',
+      currency: 'TND',
+      lines: [
+        {
+          productId,
+          qty: 10,
+          unitPrice: 5,
+          discountPct: 0,
+        },
+      ],
+      confirmAfter: false,
+    });
+    expect(dto.id).toBe('reorder-id');
+    expect(JSON.stringify(dto)).not.toContain('INTERNAL');
+  });
+
+  it('rejects reorder IDOR for another customer order', async () => {
+    salesService.get.mockResolvedValue({
+      ...ownOrder,
+      customerId: otherCustomerId,
+    });
+
+    await expect(
+      service.reorderOrder(companyId, customerId, orderId),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: CUSTOMER_PORTAL_ERROR_CODES.NOT_FOUND,
+      }),
+    });
+    expect(salesService.create).not.toHaveBeenCalled();
   });
 });

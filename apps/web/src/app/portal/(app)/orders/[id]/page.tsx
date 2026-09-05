@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ABadge } from "@/components/a/a-badge";
 import { AErrorState } from "@/components/a/a-error-state";
 import { AScreenHeader } from "@/components/a/a-screen-header";
+import { PortalReorderButton } from "@/components/portal/portal-reorder-button";
 import {
   fetchOrder,
   portalOrderBadgeTone,
@@ -51,11 +52,14 @@ export default async function PortalOrderDetailPage({
         title={order.number}
         description="Détail de la commande"
         actions={
-          <Link href={PORTAL_ORDERS_PATH}>
-            <span className="text-[length:var(--a-text-sm)] text-a-accent hover:underline">
-              ← Commandes
-            </span>
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href={PORTAL_ORDERS_PATH}>
+              <span className="text-[length:var(--a-text-sm)] text-a-accent hover:underline">
+                ← Commandes
+              </span>
+            </Link>
+            <PortalReorderButton orderId={order.id} />
+          </div>
         }
       />
       <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">

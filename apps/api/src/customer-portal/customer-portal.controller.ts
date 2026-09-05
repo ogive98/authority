@@ -22,6 +22,10 @@ import {
   type CustomerPortalRequest,
 } from './customer-portal-session.guard';
 import { CUSTOMER_PORTAL_COOKIE_NAME } from './customer-portal.constants';
+import {
+  PortalCreateOrderDto,
+  PortalReorderDto,
+} from './customer-portal.dto';
 
 @Controller('api/v1/customer-portal')
 export class CustomerPortalController {
@@ -77,7 +81,7 @@ export class CustomerPortalController {
       }
     }
 
-    res.clearCookie(CUSTOMER_PORTAL_COOKIE_NAME);
+    res.clearCookie(CUSTOMER_PORTAL_COOKIE_NAME, { path: '/' });
     return { ok: true };
   }
 
@@ -94,6 +98,26 @@ export class CustomerPortalController {
     return this.portalOrdersService.getDashboardShell(
       req.companyId!,
       req.customerId!,
+    );
+  }
+
+  @Get('catalog')
+  @UseGuards(CustomerPortalSessionGuard)
+  listCatalog(
+    @Req() req: CustomerPortalRequest,
+    @Query('q') q?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.portalOrdersService.listCatalog(
+      req.companyId!,
+      req.customerId!,
+      {
+        q,
+        limit: Number.isFinite(limit) ? limit : undefined,
+        cursor,
+      },
     );
   }
 
@@ -117,6 +141,20 @@ export class CustomerPortalController {
     );
   }
 
+  @Post('orders')
+  @HttpCode(201)
+  @UseGuards(CustomerPortalSessionGuard)
+  createOrder(
+    @Req() req: CustomerPortalRequest,
+    @Body() dto: PortalCreateOrderDto,
+  ) {
+    return this.portalOrdersService.createOrder(
+      req.companyId!,
+      req.customerId!,
+      dto,
+    );
+  }
+
   @Get('orders/:id')
   @UseGuards(CustomerPortalSessionGuard)
   getOrder(
@@ -127,6 +165,22 @@ export class CustomerPortalController {
       req.companyId!,
       req.customerId!,
       id,
+    );
+  }
+
+  @Post('orders/:id/reorder')
+  @HttpCode(201)
+  @UseGuards(CustomerPortalSessionGuard)
+  reorderOrder(
+    @Req() req: CustomerPortalRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: PortalReorderDto,
+  ) {
+    return this.portalOrdersService.reorderOrder(
+      req.companyId!,
+      req.customerId!,
+      id,
+      dto,
     );
   }
 

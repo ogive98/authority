@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ABadge } from "@/components/a/a-badge";
+import { AButton } from "@/components/a/a-button";
 import { AEmptyState } from "@/components/a/a-empty-state";
 import { AErrorState } from "@/components/a/a-error-state";
 import { AScreenHeader } from "@/components/a/a-screen-header";
@@ -7,6 +8,7 @@ import {
   fetchOrders,
   portalOrderBadgeTone,
   portalOrderStatusLabel,
+  PORTAL_ORDERS_NEW_PATH,
   PORTAL_ORDERS_PATH,
 } from "@/lib/customer-portal";
 
@@ -39,12 +41,17 @@ export default async function PortalOrdersPage() {
         kicker="Customer Portal"
         title="Commandes"
         description={`${items.length} commande${items.length === 1 ? "" : "s"}`}
+        actions={
+          <Link href={PORTAL_ORDERS_NEW_PATH}>
+            <AButton type="button">Nouvelle commande</AButton>
+          </Link>
+        }
       />
       <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
         {items.length === 0 ? (
           <AEmptyState
             title="Aucune commande"
-            description="Vos commandes apparaîtront ici dès qu’elles seront créées côté AUTHORITY."
+            description="Créez un brouillon depuis le catalogue, ou recommandez une commande existante."
             canAct={false}
           />
         ) : (

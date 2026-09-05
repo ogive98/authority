@@ -10,6 +10,11 @@ export const CUSTOMER_PORTAL_ERROR_CODES = {
   FORBIDDEN: 'POR.FORBIDDEN',
   MEMBERSHIP_REQUIRED: 'POR.MEMBERSHIP_REQUIRED',
   NOT_FOUND: 'POR.NOT_FOUND',
+  /** No prior unit price for this customer+product (no price list module yet). */
+  PRICE_UNAVAILABLE: 'POR.PRICE_UNAVAILABLE',
+  /** No active warehouse for company — cannot create Sales draft. */
+  WAREHOUSE_UNAVAILABLE: 'POR.WAREHOUSE_UNAVAILABLE',
+  VALIDATION: 'POR.VALIDATION',
 } as const;
 
 export type CustomerPortalErrorCode =
