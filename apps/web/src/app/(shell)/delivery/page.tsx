@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ABadge,
   AButton,
@@ -25,6 +25,7 @@ import {
   fetchShipments,
   type DeliveryShipment,
   type EligibleOrder,
+  type ShipmentStatus,
 } from "@/lib/delivery";
 
 type LoadState =
@@ -38,6 +39,17 @@ type FormState = {
   orderLabel: string;
   driverLabel: string;
 };
+
+type FailDraft = { id: string; number: string; reason: string };
+
+const STATUS_FILTERS: Array<{ id: "" | ShipmentStatus; label: string }> = [
+  { id: "", label: "Tous" },
+  { id: "READY", label: "Prêt" },
+  { id: "ASSIGNED", label: "Assigné" },
+  { id: "OUT", label: "En route" },
+  { id: "DELIVERED", label: "Livré" },
+  { id: "FAILED", label: "Échec" },
+];
 
 function shipmentBadgeTone(
   status: DeliveryShipment["status"],
@@ -59,9 +71,16 @@ function orderToOption(o: EligibleOrder): AComboboxOption {
   };
 }
 
+function tourneeKey(row: DeliveryShipment): string {
+  const day = row.createdAt.slice(0, 10);
+  const driver = row.driverLabel?.trim() || "Sans livreur";
+  return `${day} · ${driver}`;
+}
+
 export default function DeliveryPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | ShipmentStatus>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -70,11 +89,15 @@ export default function DeliveryPage() {
   const [orderLoading, setOrderLoading] = useState(false);
   const [eligibleCache, setEligibleCache] = useState<EligibleOrder[]>([]);
   const [assignDraft, setAssignDraft] = useState<Record<string, string>>({});
+  const [failDraft, setFailDraft] = useState<FailDraft | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async (query?: string) => {
+  const load = useCallback(async (query?: string, status?: "" | ShipmentStatus) => {
     setState({ kind: "loading" });
-    const res = await fetchShipments(query);
+    const res = await fetchShipments({
+      q: query,
+      status: status || undefined,
+    });
     if (!res.ok) {
       if (res.status === 403) {
         setState({ kind: "forbidden", message: res.message });
@@ -87,8 +110,20 @@ export default function DeliveryPage() {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void load(q, statusFilter);
+  }, [load, statusFilter]);
+
+  const tourneeGroups = useMemo(() => {
+    if (state.kind !== "ok") return [];
+    const map = new Map<string, DeliveryShipment[]>();
+    for (const row of state.items) {
+      const key = tourneeKey(row);
+      const list = map.get(key) ?? [];
+      list.push(row);
+      map.set(key, list);
+    }
+    return [...map.entries()];
+  }, [state]);
 
   function openCreate() {
     setFormError(null);
@@ -134,7 +169,7 @@ export default function DeliveryPage() {
       return;
     }
     setDrawerOpen(false);
-    await load(q);
+    await load(q, statusFilter);
   }
 
   async function onAssign(row: DeliveryShipment) {
@@ -145,7 +180,7 @@ export default function DeliveryPage() {
       setState({ kind: "error", message: res.message });
       return;
     }
-    await load(q);
+    await load(q, statusFilter);
   }
 
   async function onDispatch(row: DeliveryShipment) {
@@ -154,7 +189,7 @@ export default function DeliveryPage() {
       setState({ kind: "error", message: res.message });
       return;
     }
-    await load(q);
+    await load(q, statusFilter);
   }
 
   async function onComplete(row: DeliveryShipment) {
@@ -163,24 +198,31 @@ export default function DeliveryPage() {
       setState({ kind: "error", message: res.message });
       return;
     }
-    await load(q);
+    await load(q, statusFilter);
   }
 
-  async function onFail(row: DeliveryShipment) {
-    const res = await failShipment(row.id, "Échec livraison desk");
+  async function submitFail() {
+    if (!failDraft) return;
+    setBusy(true);
+    const res = await failShipment(
+      failDraft.id,
+      failDraft.reason.trim() || "Échec livraison desk",
+    );
+    setBusy(false);
     if (!res.ok) {
       setState({ kind: "error", message: res.message });
       return;
     }
-    await load(q);
+    setFailDraft(null);
+    await load(q, statusFilter);
   }
 
   return (
     <>
       <AScreenHeader
         kicker="Logistique"
-        title="Livraisons"
-        description="Expéditions depuis commandes confirmées — livreur, en route, livré / échec (stock issue / release)."
+        title="Tournées"
+        description="Bureau livraisons — filtre statut, regroupement livreur/jour, stock issue / release."
         actions={
           <AButton type="button" size="sm" onClick={openCreate}>
             Nouvelle livraison
@@ -188,6 +230,26 @@ export default function DeliveryPage() {
         }
       />
       <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+        <div className="flex flex-wrap gap-2">
+          {STATUS_FILTERS.map((chip) => {
+            const active = statusFilter === chip.id;
+            return (
+              <button
+                key={chip.id || "all"}
+                type="button"
+                onClick={() => setStatusFilter(chip.id)}
+                className={
+                  active
+                    ? "rounded-full border border-a-accent bg-a-accent-muted px-3 py-1 text-[length:var(--a-text-xs)] font-medium text-a-accent"
+                    : "rounded-full border border-a-border-subtle bg-a-surface-2 px-3 py-1 text-[length:var(--a-text-xs)] text-a-fg-muted hover:border-a-accent/40 hover:text-a-fg"
+                }
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
             <label
@@ -202,7 +264,7 @@ export default function DeliveryPage() {
               onChange={(e) => setQ(e.target.value)}
               placeholder="N° livraison / livreur"
               onKeyDown={(e) => {
-                if (e.key === "Enter") void load(q);
+                if (e.key === "Enter") void load(q, statusFilter);
               }}
             />
           </div>
@@ -210,7 +272,7 @@ export default function DeliveryPage() {
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => void load(q)}
+            onClick={() => void load(q, statusFilter)}
           >
             Filtrer
           </AButton>
@@ -231,7 +293,7 @@ export default function DeliveryPage() {
           <AErrorState
             message={state.message}
             retryable
-            onRetry={() => void load(q)}
+            onRetry={() => void load(q, statusFilter)}
           />
         ) : null}
 
@@ -244,126 +306,138 @@ export default function DeliveryPage() {
           />
         ) : null}
 
-        {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle">
-            <table className="w-full min-w-[52rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="border-b border-a-border-subtle bg-a-surface-2 text-a-fg-muted">
-                <tr>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    N°
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Commande
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Client
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Livreur
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Statut
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
-                  >
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      {row.number}
-                    </td>
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      {row.orderNumber ?? "—"}
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      {row.customerName ?? row.customerCode ?? "—"}
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      {row.status === "READY" || row.status === "ASSIGNED" ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <AInput
-                            value={
-                              assignDraft[row.id] ?? row.driverLabel ?? ""
-                            }
-                            onChange={(e) =>
-                              setAssignDraft({
-                                ...assignDraft,
-                                [row.id]: e.target.value,
-                              })
-                            }
-                            placeholder={
-                              row.preferredDriver
-                                ? `hint: ${row.preferredDriver}`
-                                : "Livreur"
-                            }
-                          />
-                          <AButton
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => void onAssign(row)}
-                          >
-                            Assigner
-                          </AButton>
-                        </div>
-                      ) : (
-                        row.driverLabel ?? "—"
-                      )}
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      <ABadge tone={shipmentBadgeTone(row.status)}>
-                        {SHIPMENT_STATUS_LABELS[row.status]}
-                      </ABadge>
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      <div className="flex flex-wrap gap-2">
-                        {(row.status === "READY" ||
-                          row.status === "ASSIGNED") &&
-                        row.driverLabel ? (
-                          <AButton
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => void onDispatch(row)}
-                          >
-                            En route
-                          </AButton>
-                        ) : null}
-                        {row.status === "READY" ||
-                        row.status === "ASSIGNED" ||
-                        row.status === "OUT" ? (
-                          <>
-                            <AButton
-                              type="button"
-                              size="sm"
-                              onClick={() => void onComplete(row)}
-                            >
-                              Livré
-                            </AButton>
-                            <AButton
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => void onFail(row)}
-                            >
-                              Échec
-                            </AButton>
-                          </>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
+        {state.kind === "ok" && state.items.length > 0
+          ? tourneeGroups.map(([groupLabel, rows]) => (
+              <div key={groupLabel} className="space-y-2">
+                <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
+                  Tournée · {groupLabel}
+                  <span className="a-mono ml-2 font-normal normal-case tracking-normal text-a-fg-muted">
+                    {rows.length}
+                  </span>
+                </p>
+                <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2">
+                  <table className="w-full min-w-[52rem] border-collapse text-left text-[length:var(--a-text-sm)]">
+                    <thead className="border-b border-a-border-subtle bg-a-surface-3/80 text-a-fg-muted">
+                      <tr>
+                        <th className="a-table-cell font-medium">N°</th>
+                        <th className="a-table-cell font-medium">Commande</th>
+                        <th className="a-table-cell font-medium">Client</th>
+                        <th className="a-table-cell font-medium">Livreur</th>
+                        <th className="a-table-cell font-medium">Statut</th>
+                        <th className="a-table-cell font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row) => (
+                        <tr
+                          key={row.id}
+                          className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
+                        >
+                          <td className="a-mono a-table-cell">{row.number}</td>
+                          <td className="a-mono a-table-cell">
+                            {row.orderNumber ?? "—"}
+                          </td>
+                          <td className="a-table-cell">
+                            {row.customerName ?? row.customerCode ?? "—"}
+                          </td>
+                          <td className="a-table-cell">
+                            {row.status === "READY" ||
+                            row.status === "ASSIGNED" ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <AInput
+                                  value={
+                                    assignDraft[row.id] ??
+                                    row.driverLabel ??
+                                    ""
+                                  }
+                                  onChange={(e) =>
+                                    setAssignDraft({
+                                      ...assignDraft,
+                                      [row.id]: e.target.value,
+                                    })
+                                  }
+                                  placeholder={
+                                    row.preferredDriver
+                                      ? `hint: ${row.preferredDriver}`
+                                      : "Livreur"
+                                  }
+                                />
+                                <AButton
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => void onAssign(row)}
+                                >
+                                  Assigner
+                                </AButton>
+                              </div>
+                            ) : (
+                              row.driverLabel ?? "—"
+                            )}
+                          </td>
+                          <td className="a-table-cell">
+                            <div className="space-y-1">
+                              <ABadge tone={shipmentBadgeTone(row.status)}>
+                                {SHIPMENT_STATUS_LABELS[row.status]}
+                              </ABadge>
+                              {row.status === "FAILED" && row.failReason ? (
+                                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                  {row.failReason}
+                                </p>
+                              ) : null}
+                            </div>
+                          </td>
+                          <td className="a-table-cell">
+                            <div className="flex flex-wrap gap-2">
+                              {(row.status === "READY" ||
+                                row.status === "ASSIGNED") &&
+                              row.driverLabel ? (
+                                <AButton
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => void onDispatch(row)}
+                                >
+                                  En route
+                                </AButton>
+                              ) : null}
+                              {row.status === "READY" ||
+                              row.status === "ASSIGNED" ||
+                              row.status === "OUT" ? (
+                                <>
+                                  <AButton
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => void onComplete(row)}
+                                  >
+                                    Livré
+                                  </AButton>
+                                  <AButton
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() =>
+                                      setFailDraft({
+                                        id: row.id,
+                                        number: row.number,
+                                        reason: "",
+                                      })
+                                    }
+                                  >
+                                    Échec
+                                  </AButton>
+                                </>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))
+          : null}
       </div>
 
       <ADrawer
@@ -444,6 +518,60 @@ export default function DeliveryPage() {
                 disabled={busy}
               >
                 Créer
+              </AButton>
+            </div>
+          </div>
+        ) : null}
+      </ADrawer>
+
+      <ADrawer
+        open={failDraft != null}
+        onOpenChange={(open) => {
+          if (!open) setFailDraft(null);
+        }}
+        title="Marquer échec"
+        description={
+          failDraft
+            ? `Livraison ${failDraft.number} — motif (optionnel).`
+            : undefined
+        }
+      >
+        {failDraft ? (
+          <div className="space-y-[var(--a-space-4)]">
+            <div className="space-y-1">
+              <label
+                htmlFor="dlv-fail-reason"
+                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+              >
+                Motif
+              </label>
+              <AInput
+                id="dlv-fail-reason"
+                value={failDraft.reason}
+                onChange={(e) =>
+                  setFailDraft({ ...failDraft, reason: e.target.value })
+                }
+                placeholder="Client absent, adresse incorrecte…"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <AButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setFailDraft(null)}
+                disabled={busy}
+              >
+                Annuler
+              </AButton>
+              <AButton
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={() => void submitFail()}
+                disabled={busy}
+              >
+                Confirmer l’échec
               </AButton>
             </div>
           </div>

@@ -65,15 +65,18 @@ async function parseFail(res: Response): Promise<ApiFail> {
   };
 }
 
-export async function fetchShipments(
-  q?: string,
-): Promise<
+export async function fetchShipments(opts?: {
+  q?: string;
+  status?: ShipmentStatus | "";
+}): Promise<
   { ok: true; data: { items: DeliveryShipment[]; nextCursor: string | null } } | ApiFail
 > {
   try {
-    const url = q?.trim()
-      ? `/api/v1/delivery/shipments?q=${encodeURIComponent(q.trim())}`
-      : "/api/v1/delivery/shipments";
+    const params = new URLSearchParams();
+    if (opts?.q?.trim()) params.set("q", opts.q.trim());
+    if (opts?.status) params.set("status", opts.status);
+    const qs = params.toString();
+    const url = `/api/v1/delivery/shipments${qs ? `?${qs}` : ""}`;
     const res = await fetch(url, {
       credentials: "include",
       headers: { Accept: "application/json" },
