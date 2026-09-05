@@ -21,8 +21,12 @@ import { PermissionGuard } from '../permissions/permission.guard';
 import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
+  BlockCustomerDto,
   CreateContactDto,
   CreateCustomerDto,
+  CreateZoneDto,
+  SetCreditDto,
+  UnblockCustomerDto,
   UpdateContactDto,
   UpdateCustomerDto,
 } from './customers.dto';
@@ -48,6 +52,22 @@ export class CustomersController {
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor,
     });
+  }
+
+  @Get('zones')
+  @RequirePermission(PERMISSION_KEYS.customersRead)
+  listZones(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.customersService.listZones(tenancy.companyId);
+  }
+
+  @Post('zones')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  createZone(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateZoneDto,
+  ) {
+    return this.customersService.createZone(tenancy.companyId, dto);
   }
 
   @Get(':id')
@@ -77,6 +97,36 @@ export class CustomersController {
     @Body() dto: UpdateCustomerDto,
   ) {
     return this.customersService.update(tenancy.companyId, id, dto);
+  }
+
+  @Patch(':id/credit')
+  @RequirePermission(PERMISSION_KEYS.customersCreditSet)
+  setCredit(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetCreditDto,
+  ) {
+    return this.customersService.setCredit(tenancy.companyId, id, dto);
+  }
+
+  @Post(':id/block')
+  @RequirePermission(PERMISSION_KEYS.customersBlock)
+  block(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: BlockCustomerDto,
+  ) {
+    return this.customersService.block(tenancy.companyId, id, dto);
+  }
+
+  @Post(':id/unblock')
+  @RequirePermission(PERMISSION_KEYS.customersBlock)
+  unblock(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UnblockCustomerDto,
+  ) {
+    return this.customersService.unblock(tenancy.companyId, id, dto);
   }
 
   @Delete(':id')

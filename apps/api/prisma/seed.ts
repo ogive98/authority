@@ -362,6 +362,18 @@ async function main() {
     companyId: company.id,
   });
   await upsertGrant({
+    permissionKey: 'customers.block',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'customers.credit.set',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
     permissionKey: 'inventory.read',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
@@ -421,6 +433,31 @@ async function main() {
     subjectId: demoUser.id,
     companyId: company.id,
   });
+
+  for (const zone of [
+    { code: 'SF-NORD', name: 'Zone Nord' },
+    { code: 'SF-SUD', name: 'Zone Sud' },
+  ] as const) {
+    await prisma.cusZone.upsert({
+      where: {
+        companyId_code: {
+          companyId: company.id,
+          code: zone.code,
+        },
+      },
+      update: {
+        name: zone.name,
+        active: true,
+        deletedAt: null,
+      },
+      create: {
+        companyId: company.id,
+        code: zone.code,
+        name: zone.name,
+        active: true,
+      },
+    });
+  }
 
   await prisma.invWarehouse.upsert({
     where: {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  ABadge,
   AButton,
   ADrawer,
   AEmptyState,
@@ -15,12 +16,20 @@ import {
   STATUS_LABELS,
   addCustomerContact,
   archiveCustomer,
+  blockCustomer,
   createCustomer,
   fetchCustomer,
+  fetchCustomerZones,
   fetchCustomers,
+  setCustomerCredit,
+  unblockCustomer,
   updateCustomer,
   type Customer,
+  type CustomerZone,
 } from "@/lib/customers";
+
+const selectClass =
+  "flex h-9 w-full rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-3 text-[length:var(--a-text-sm)] text-a-fg";
 
 type LoadState =
   | { kind: "loading" }
@@ -35,6 +44,8 @@ type FormState = {
   taxId: string;
   salesRep: string;
   paymentTerms: string;
+  creditLimit: string;
+  zoneId: string;
   contactName: string;
   contactPhone: string;
   contactEmail: string;
@@ -43,6 +54,7 @@ type FormState = {
 export default function CustomersPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
+  const [zones, setZones] = useState<CustomerZone[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
@@ -57,12 +69,19 @@ export default function CustomersPage() {
       taxId: "",
       salesRep: "",
       paymentTerms: "",
+      creditLimit: "",
+      zoneId: "",
       contactName: "",
       contactPhone: "",
       contactEmail: "",
     }),
     [],
   );
+
+  const loadZones = useCallback(async () => {
+    const res = await fetchCustomerZones();
+    if (res.ok) setZones(res.data);
+  }, []);
 
   const load = useCallback(async (query?: string) => {
     setState({ kind: "loading" });
@@ -80,7 +99,8 @@ export default function CustomersPage() {
 
   useEffect(() => {
     void load();
-  }, [load]);
+    void loadZones();
+  }, [load, loadZones]);
 
   function openCreate() {
     setEditing(null);
@@ -104,6 +124,8 @@ export default function CustomersPage() {
       taxId: detail.data.taxId ?? "",
       salesRep: detail.data.salesRep ?? "",
       paymentTerms: detail.data.paymentTerms ?? "",
+      creditLimit: detail.data.creditLimit ?? "",
+      zoneId: detail.data.zoneId ?? "",
       contactName: "",
       contactPhone: "",
       contactEmail: "",
@@ -116,6 +138,9 @@ export default function CustomersPage() {
     setBusy(true);
     setFormError(null);
     try {
+      const zoneId = form.zoneId.trim() || null;
+      const creditLimit = form.creditLimit.trim() || undefined;
+
       if (!editing) {
         const contacts =
           form.contactName.trim().length > 0
@@ -134,6 +159,8 @@ export default function CustomersPage() {
           taxId: form.taxId.trim() || undefined,
           salesRep: form.salesRep.trim() || undefined,
           paymentTerms: form.paymentTerms.trim() || undefined,
+          creditLimit,
+          zoneId,
           contacts,
         });
         if (!res.ok) {
@@ -141,18 +168,39 @@ export default function CustomersPage() {
           return;
         }
       } else {
+        let version = editing.version;
         const res = await updateCustomer(editing.id, {
           legalName: form.legalName.trim(),
           nickname: form.nickname.trim() || undefined,
           taxId: form.taxId.trim() || undefined,
           salesRep: form.salesRep.trim() || undefined,
           paymentTerms: form.paymentTerms.trim() || undefined,
-          version: editing.version,
+          zoneId,
+          version,
         });
         if (!res.ok) {
           setFormError(res.message);
           return;
         }
+        version = res.data.version;
+
+        const nextCredit = form.creditLimit.trim();
+        const prevCredit = editing.creditLimit ?? "";
+        if (nextCredit !== prevCredit && nextCredit.length > 0) {
+          const creditRes = await setCustomerCredit(editing.id, {
+            creditLimit: nextCredit,
+            version,
+          });
+          if (!creditRes.ok) {
+            setFormError(creditRes.message);
+            return;
+          }
+          version = creditRes.data.version;
+          setEditing(creditRes.data);
+        } else {
+          setEditing(res.data);
+        }
+
         if (form.contactName.trim()) {
           const contactRes = await addCustomerContact(editing.id, {
             name: form.contactName.trim(),
@@ -181,12 +229,34 @@ export default function CustomersPage() {
     await load(q);
   }
 
+  async function onToggleBlock() {
+    if (!editing || !form) return;
+    setBusy(true);
+    setFormError(null);
+    try {
+      const res = editing.blocked
+        ? await unblockCustomer(editing.id, { version: editing.version })
+        : await blockCustomer(editing.id, {
+            reason: "Bloqué depuis fiche client",
+            version: editing.version,
+          });
+      if (!res.ok) {
+        setFormError(res.message);
+        return;
+      }
+      setEditing(res.data);
+      await load(q);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
       <AScreenHeader
         kicker="Clients"
         title="Clients"
-        description="Fiches liées party (master data) + contacts."
+        description="Fiches liées party (master data) + contacts, zones et crédit."
         actions={
           <AButton type="button" size="sm" onClick={openCreate}>
             Nouveau client
@@ -252,7 +322,7 @@ export default function CustomersPage() {
 
         {state.kind === "ok" && state.items.length > 0 ? (
           <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle">
-            <table className="w-full min-w-[36rem] border-collapse text-left text-[length:var(--a-text-sm)]">
+            <table className="w-full min-w-[44rem] border-collapse text-left text-[length:var(--a-text-sm)]">
               <thead className="border-b border-a-border-subtle bg-a-surface-2 text-a-fg-muted">
                 <tr>
                   <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
@@ -265,7 +335,10 @@ export default function CustomersPage() {
                     Raison sociale
                   </th>
                   <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Commercial
+                    Zone
+                  </th>
+                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
+                    Crédit
                   </th>
                   <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
                     Statut
@@ -297,10 +370,19 @@ export default function CustomersPage() {
                       {row.legalName}
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
-                      {row.salesRep ?? "—"}
+                      {row.zoneCode ?? "—"}
                     </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
-                      {STATUS_LABELS[row.status]}
+                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                      {row.creditLimit ?? "—"}
+                    </td>
+                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                      {row.blocked ? (
+                        <ABadge tone="danger">Bloqué</ABadge>
+                      ) : (
+                        <ABadge tone="success">
+                          {STATUS_LABELS[row.status]}
+                        </ABadge>
+                      )}
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
                       <div className="flex flex-wrap gap-2">
@@ -334,25 +416,40 @@ export default function CustomersPage() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title={editing ? "Éditer client" : "Nouveau client"}
-        description="Party master data + contacts"
+        description="Party master data + contacts, zone et crédit"
         footer={
-          <div className="flex justify-end gap-2">
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => setDrawerOpen(false)}
-            >
-              Annuler
-            </AButton>
-            <AButton
-              type="button"
-              size="sm"
-              disabled={busy || !form}
-              onClick={() => void onSave()}
-            >
-              {busy ? "…" : "Enregistrer"}
-            </AButton>
+          <div className="flex flex-wrap justify-between gap-2">
+            {editing ? (
+              <AButton
+                type="button"
+                variant={editing.blocked ? "secondary" : "ghost"}
+                size="sm"
+                disabled={busy}
+                onClick={() => void onToggleBlock()}
+              >
+                {editing.blocked ? "Débloquer" : "Bloquer"}
+              </AButton>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <AButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setDrawerOpen(false)}
+              >
+                Annuler
+              </AButton>
+              <AButton
+                type="button"
+                size="sm"
+                disabled={busy || !form}
+                onClick={() => void onSave()}
+              >
+                {busy ? "…" : "Enregistrer"}
+              </AButton>
+            </div>
           </div>
         }
       >
@@ -407,6 +504,40 @@ export default function CustomersPage() {
                 }
               />
             </Field>
+            <Field label="Plafond crédit (TND)">
+              <AInput
+                className="a-mono"
+                value={form.creditLimit}
+                onChange={(e) =>
+                  setForm({ ...form, creditLimit: e.target.value })
+                }
+                placeholder="Ex. 5000.000"
+                inputMode="decimal"
+              />
+            </Field>
+            <Field label="Zone">
+              <select
+                className={selectClass}
+                value={form.zoneId}
+                onChange={(e) =>
+                  setForm({ ...form, zoneId: e.target.value })
+                }
+              >
+                <option value="">— Aucune —</option>
+                {zones.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.code} · {z.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            {editing?.blocked ? (
+              <p className="text-[length:var(--a-text-sm)] text-[color:var(--a-danger)]">
+                Client bloqué
+                {editing.blockedReason ? ` — ${editing.blockedReason}` : ""}
+              </p>
+            ) : null}
 
             <div className="border-t border-a-border-subtle pt-4">
               <p className="mb-3 text-[length:var(--a-text-sm)] text-a-fg-muted">

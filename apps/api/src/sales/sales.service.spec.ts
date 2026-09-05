@@ -10,7 +10,11 @@ describe('SalesService', () => {
   const productId = '44444444-4444-4444-4444-444444444444';
   const orderId = '55555555-5555-5555-5555-555555555555';
 
-  function build(opts?: { status?: SalOrderStatus; partyStatus?: MdPartyStatus }) {
+  function build(opts?: {
+    status?: SalOrderStatus;
+    partyStatus?: MdPartyStatus;
+    customerBlocked?: boolean;
+  }) {
     const line = {
       id: '66666666-6666-6666-6666-666666666666',
       companyId,
@@ -52,6 +56,7 @@ describe('SalesService', () => {
       companyId,
       code: 'C-001',
       status: CusCustomerStatus.ACTIVE,
+      blocked: opts?.customerBlocked ?? false,
       deletedAt: null,
       party: {
         legalName: 'Atlas',
@@ -162,6 +167,15 @@ describe('SalesService', () => {
 
   it('confirm denied when party blocked', async () => {
     const { service, inventory } = build({ partyStatus: MdPartyStatus.BLOCKED });
+    await expect(service.confirm(companyId, orderId)).rejects.toMatchObject({
+      response: { code: SALES_ERROR_CODES.CUSTOMER_BLOCKED },
+      status: HttpStatus.CONFLICT,
+    });
+    expect(inventory.reserve).not.toHaveBeenCalled();
+  });
+
+  it('confirm denied when customer.blocked', async () => {
+    const { service, inventory } = build({ customerBlocked: true });
     await expect(service.confirm(companyId, orderId)).rejects.toMatchObject({
       response: { code: SALES_ERROR_CODES.CUSTOMER_BLOCKED },
       status: HttpStatus.CONFLICT,

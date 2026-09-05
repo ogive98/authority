@@ -702,28 +702,52 @@ model MdParty {
   @@map("md_party")
 }
 
-// --- cus_* Customers V1a ---
+// --- cus_* Customers V1a + V1b (credit / block / zone) ---
 
 enum CusCustomerStatus {
   ACTIVE
   INACTIVE
 }
 
+model CusZone {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  code      String
+  name      String
+  active    Boolean   @default(true)
+  version   Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  customers CusCustomer[]
+
+  @@unique([companyId, code])
+  @@index([companyId, active])
+  @@map("cus_zone")
+}
+
 model CusCustomer {
-  id           String            @id @default(uuid()) @db.Uuid
-  companyId    String            @map("company_id") @db.Uuid
-  partyId      String            @map("party_id") @db.Uuid
-  code         String
-  nickname     String?           @map("nickname")
-  salesRep     String?           @map("sales_rep")
-  paymentTerms String?           @map("payment_terms")
-  status       CusCustomerStatus @default(ACTIVE)
-  version      Int               @default(0)
-  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt    DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  id             String            @id @default(uuid()) @db.Uuid
+  companyId      String            @map("company_id") @db.Uuid
+  partyId        String            @map("party_id") @db.Uuid
+  code           String
+  nickname       String?           @map("nickname")
+  salesRep       String?           @map("sales_rep")
+  paymentTerms   String?           @map("payment_terms")
+  creditLimit    Decimal?          @map("credit_limit") @db.Decimal(18, 3)
+  zoneId         String?           @map("zone_id") @db.Uuid
+  blocked        Boolean           @default(false)
+  blockedAt      DateTime?         @map("blocked_at") @db.Timestamptz(6)
+  blockedReason  String?           @map("blocked_reason")
+  status         CusCustomerStatus @default(ACTIVE)
+  version        Int               @default(0)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
   party    MdParty      @relation(fields: [partyId], references: [id])
+  zone     CusZone?     @relation(fields: [zoneId], references: [id])
   contacts CusContact[]
 
   @@unique([companyId, code])
@@ -731,6 +755,8 @@ model CusCustomer {
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, status])
   @@index([companyId, nickname])
+  @@index([companyId, blocked])
+  @@index([companyId, zoneId])
   @@map("cus_customer")
 }
 

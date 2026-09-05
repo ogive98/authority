@@ -568,13 +568,20 @@ export class SalesService {
     return customer;
   }
 
-  /** V0 credit stub: deny only if customer inactive or party blocked. */
+  /** Credit / block policy: inactive, customer.blocked, or party blocked. */
   private async assertCreditPolicy(companyId: string, customerId: string) {
     const customer = await this.assertCustomer(companyId, customerId);
     if (customer.status !== CusCustomerStatus.ACTIVE) {
       throw new SalesException(
         SALES_ERROR_CODES.CREDIT_DENIED,
         'Customer is inactive — confirm denied (credit stub).',
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (customer.blocked === true) {
+      throw new SalesException(
+        SALES_ERROR_CODES.CUSTOMER_BLOCKED,
+        'Customer is blocked — confirm denied.',
         HttpStatus.CONFLICT,
       );
     }

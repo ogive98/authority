@@ -12,6 +12,17 @@ export type CustomerContact = {
   version: number;
 };
 
+export type CustomerZone = {
+  id: string;
+  companyId: string;
+  code: string;
+  name: string;
+  active: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Customer = {
   id: string;
   companyId: string;
@@ -22,6 +33,13 @@ export type Customer = {
   taxId: string | null;
   salesRep: string | null;
   paymentTerms: string | null;
+  creditLimit: string | null;
+  zoneId: string | null;
+  zoneCode: string | null;
+  zoneName: string | null;
+  blocked: boolean;
+  blockedAt: string | null;
+  blockedReason: string | null;
   status: CustomerStatus;
   version: number;
   createdAt: string;
@@ -41,6 +59,8 @@ export type CustomerWriteBody = {
   taxId?: string;
   salesRep?: string;
   paymentTerms?: string;
+  creditLimit?: string;
+  zoneId?: string | null;
   contacts?: Array<{
     name: string;
     phone?: string;
@@ -111,6 +131,43 @@ export async function fetchCustomer(
   }
 }
 
+export async function fetchCustomerZones(): Promise<
+  { ok: true; data: CustomerZone[] } | ApiError
+> {
+  try {
+    const res = await fetch("/api/v1/customers/zones", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as CustomerZone[] };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function createCustomerZone(body: {
+  code: string;
+  name: string;
+}): Promise<{ ok: true; data: CustomerZone } | ApiError> {
+  try {
+    const res = await fetch("/api/v1/customers/zones", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as CustomerZone };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function createCustomer(
   body: CustomerWriteBody,
 ): Promise<{ ok: true; data: Customer } | ApiError> {
@@ -138,6 +195,69 @@ export async function updateCustomer(
   try {
     const res = await fetch(`/api/v1/customers/${id}`, {
       method: "PATCH",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as Customer };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function setCustomerCredit(
+  id: string,
+  body: { creditLimit: string; version: number },
+): Promise<{ ok: true; data: Customer } | ApiError> {
+  try {
+    const res = await fetch(`/api/v1/customers/${id}/credit`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as Customer };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function blockCustomer(
+  id: string,
+  body: { reason?: string; version: number },
+): Promise<{ ok: true; data: Customer } | ApiError> {
+  try {
+    const res = await fetch(`/api/v1/customers/${id}/block`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as Customer };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function unblockCustomer(
+  id: string,
+  body: { version: number },
+): Promise<{ ok: true; data: Customer } | ApiError> {
+  try {
+    const res = await fetch(`/api/v1/customers/${id}/unblock`, {
+      method: "POST",
       credentials: "include",
       headers: {
         Accept: "application/json",

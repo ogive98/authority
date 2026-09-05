@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsEmail,
   IsInt,
+  IsNumberString,
   IsOptional,
   IsString,
   IsUUID,
@@ -78,6 +79,14 @@ export class CreateCustomerDto {
   paymentTerms?: string;
 
   @IsOptional()
+  @IsNumberString()
+  creditLimit?: string;
+
+  @IsOptional()
+  @IsUUID()
+  zoneId?: string | null;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateContactDto)
@@ -111,9 +120,51 @@ export class UpdateCustomerDto {
   @MaxLength(64)
   paymentTerms?: string | null;
 
+  @IsOptional()
+  @IsUUID()
+  zoneId?: string | null;
+
   @IsInt()
   @Min(0)
   version!: number;
+}
+
+export class SetCreditDto {
+  @IsNumberString()
+  creditLimit!: string;
+
+  @IsInt()
+  @Min(0)
+  version!: number;
+}
+
+export class BlockCustomerDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  reason?: string;
+
+  @IsInt()
+  @Min(0)
+  version!: number;
+}
+
+export class UnblockCustomerDto {
+  @IsInt()
+  @Min(0)
+  version!: number;
+}
+
+export class CreateZoneDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(32)
+  code!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  name!: string;
 }
 
 export class UpdateContactDto {

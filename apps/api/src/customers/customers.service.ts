@@ -3,6 +3,7 @@ import {
   CusContact,
   CusCustomer,
   CusCustomerStatus,
+  CusZone,
   MdParty,
   MdPartyType,
   Prisma,
@@ -12,8 +13,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CUSTOMERS_ERROR_CODES } from './customers.constants';
 import { CustomersException } from './customers.exception';
 import type {
+  BlockCustomerDto,
   CreateContactDto,
   CreateCustomerDto,
+  CreateZoneDto,
+  SetCreditDto,
+  UnblockCustomerDto,
   UpdateContactDto,
   UpdateCustomerDto,
 } from './customers.dto';
@@ -32,6 +37,17 @@ export type ContactDto = {
   updatedAt: string;
 };
 
+export type ZoneDto = {
+  id: string;
+  companyId: string;
+  code: string;
+  name: string;
+  active: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CustomerDto = {
   id: string;
   companyId: string;
@@ -42,6 +58,13 @@ export type CustomerDto = {
   taxId: string | null;
   salesRep: string | null;
   paymentTerms: string | null;
+  creditLimit: string | null;
+  zoneId: string | null;
+  zoneCode: string | null;
+  zoneName: string | null;
+  blocked: boolean;
+  blockedAt: string | null;
+  blockedReason: string | null;
   status: CusCustomerStatus;
   version: number;
   createdAt: string;
@@ -49,7 +72,10 @@ export type CustomerDto = {
   contacts?: ContactDto[];
 };
 
-type CustomerWithParty = CusCustomer & { party: MdParty };
+type CustomerWithParty = CusCustomer & {
+  party: MdParty;
+  zone?: CusZone | null;
+};
 
 @Injectable()
 export class CustomersService {
@@ -79,7 +105,7 @@ export class CustomersService {
 
     const rows = await this.prisma.cusCustomer.findMany({
       where,
-      include: { party: true },
+      include: { party: true, zone: true },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
       ...(opts.cursor
@@ -107,6 +133,44 @@ export class CustomersService {
     };
   }
 
+  async listZones(companyId: string): Promise<ZoneDto[]> {
+    const rows = await this.prisma.cusZone.findMany({
+      where: { companyId, deletedAt: null },
+      orderBy: [{ code: 'asc' }, { id: 'asc' }],
+    });
+    return rows.map(serializeZone);
+  }
+
+  async createZone(
+    companyId: string,
+    dto: CreateZoneDto,
+  ): Promise<ZoneDto> {
+    const code = dto.code.trim().toUpperCase();
+    try {
+      const row = await this.prisma.cusZone.create({
+        data: {
+          companyId,
+          code,
+          name: dto.name.trim(),
+          active: true,
+        },
+      });
+      return serializeZone(row);
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw new CustomersException(
+          CUSTOMERS_ERROR_CODES.ZONE_CODE_DUP,
+          'Zone code already exists for this company.',
+          HttpStatus.CONFLICT,
+        );
+      }
+      throw err;
+    }
+  }
+
   async create(companyId: string, dto: CreateCustomerDto): Promise<CustomerDto> {
     const code = dto.code.trim();
     if (!dto.partyId && !dto.legalName?.trim()) {
@@ -115,6 +179,10 @@ export class CustomersService {
         'legalName or partyId is required.',
         HttpStatus.BAD_REQUEST,
       );
+    }
+
+    if (dto.zoneId) {
+      await this.requireZone(companyId, dto.zoneId);
     }
 
     try {
@@ -157,9 +225,14 @@ export class CustomersService {
             nickname: dto.nickname?.trim() || null,
             salesRep: dto.salesRep?.trim() || null,
             paymentTerms: dto.paymentTerms?.trim() || null,
+            creditLimit:
+              dto.creditLimit !== undefined
+                ? new Prisma.Decimal(dto.creditLimit)
+                : null,
+            zoneId: dto.zoneId ?? null,
             status: CusCustomerStatus.ACTIVE,
           },
-          include: { party: true },
+          include: { party: true, zone: true },
         });
 
         const contactInputs = dto.contacts ?? [];
@@ -221,6 +294,10 @@ export class CustomersService {
       );
     }
 
+    if (dto.zoneId) {
+      await this.requireZone(companyId, dto.zoneId);
+    }
+
     await this.prisma.$transaction(async (tx) => {
       if (dto.legalName !== undefined || dto.taxId !== undefined) {
         await tx.mdParty.update({
@@ -249,6 +326,7 @@ export class CustomersService {
           ...(dto.paymentTerms !== undefined
             ? { paymentTerms: dto.paymentTerms?.trim() || null }
             : {}),
+          ...(dto.zoneId !== undefined ? { zoneId: dto.zoneId } : {}),
           version: { increment: 1 },
         },
       });
@@ -261,6 +339,129 @@ export class CustomersService {
       }
     });
 
+    return this.get(companyId, id);
+  }
+
+  async setCredit(
+    companyId: string,
+    id: string,
+    dto: SetCreditDto,
+  ): Promise<CustomerDto> {
+    const row = await this.findActive(companyId, id);
+    if (row.version !== dto.version) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.VERSION_CONFLICT,
+        'Customer version conflict.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const updated = await this.prisma.cusCustomer.updateMany({
+      where: { id, companyId, version: dto.version, deletedAt: null },
+      data: {
+        creditLimit: new Prisma.Decimal(dto.creditLimit),
+        version: { increment: 1 },
+      },
+    });
+    if (updated.count !== 1) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.VERSION_CONFLICT,
+        'Customer version conflict.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    return this.get(companyId, id);
+  }
+
+  async block(
+    companyId: string,
+    id: string,
+    dto: BlockCustomerDto,
+  ): Promise<CustomerDto> {
+    const row = await this.findActive(companyId, id);
+    if (row.version !== dto.version) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.VERSION_CONFLICT,
+        'Customer version conflict.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (row.blocked) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.ALREADY_BLOCKED,
+        'Customer is already blocked.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const updated = await this.prisma.cusCustomer.updateMany({
+      where: {
+        id,
+        companyId,
+        version: dto.version,
+        deletedAt: null,
+        blocked: false,
+      },
+      data: {
+        blocked: true,
+        blockedAt: new Date(),
+        blockedReason: dto.reason?.trim() || null,
+        version: { increment: 1 },
+      },
+    });
+    if (updated.count !== 1) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.VERSION_CONFLICT,
+        'Customer version conflict.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    return this.get(companyId, id);
+  }
+
+  async unblock(
+    companyId: string,
+    id: string,
+    dto: UnblockCustomerDto,
+  ): Promise<CustomerDto> {
+    const row = await this.findActive(companyId, id);
+    if (row.version !== dto.version) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.VERSION_CONFLICT,
+        'Customer version conflict.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (!row.blocked) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.NOT_BLOCKED,
+        'Customer is not blocked.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const updated = await this.prisma.cusCustomer.updateMany({
+      where: {
+        id,
+        companyId,
+        version: dto.version,
+        deletedAt: null,
+        blocked: true,
+      },
+      data: {
+        blocked: false,
+        blockedAt: null,
+        blockedReason: null,
+        version: { increment: 1 },
+      },
+    });
+    if (updated.count !== 1) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.VERSION_CONFLICT,
+        'Customer version conflict.',
+        HttpStatus.CONFLICT,
+      );
+    }
     return this.get(companyId, id);
   }
 
@@ -380,13 +581,27 @@ export class CustomersService {
     });
   }
 
+  private async requireZone(companyId: string, zoneId: string): Promise<CusZone> {
+    const zone = await this.prisma.cusZone.findFirst({
+      where: { id: zoneId, companyId, deletedAt: null },
+    });
+    if (!zone) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.ZONE_NOT_FOUND,
+        'Zone not found for this company.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return zone;
+  }
+
   private async findActive(
     companyId: string,
     id: string,
   ): Promise<CustomerWithParty> {
     const row = await this.prisma.cusCustomer.findFirst({
       where: { id, companyId, deletedAt: null },
-      include: { party: true },
+      include: { party: true, zone: true },
     });
     if (!row || row.party.deletedAt) {
       throw new CustomersException(
@@ -410,7 +625,27 @@ function serializeCustomer(row: CustomerWithParty): CustomerDto {
     taxId: row.party.taxId,
     salesRep: row.salesRep,
     paymentTerms: row.paymentTerms,
+    creditLimit: row.creditLimit != null ? row.creditLimit.toString() : null,
+    zoneId: row.zoneId,
+    zoneCode: row.zone?.code ?? null,
+    zoneName: row.zone?.name ?? null,
+    blocked: row.blocked,
+    blockedAt: row.blockedAt ? row.blockedAt.toISOString() : null,
+    blockedReason: row.blockedReason,
     status: row.status,
+    version: row.version,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function serializeZone(row: CusZone): ZoneDto {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    code: row.code,
+    name: row.name,
+    active: row.active,
     version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
