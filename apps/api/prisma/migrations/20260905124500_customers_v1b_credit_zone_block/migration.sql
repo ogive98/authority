@@ -1,4 +1,4 @@
-﻿-- Customers V1b: delivery zones, credit limit, block flag
+-- Customers V1b: delivery zones, credit limit, block flag
 
 CREATE TABLE "cus_zone" (
     "id" UUID NOT NULL,
