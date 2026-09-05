@@ -821,6 +821,42 @@ async function main() {
         },
       });
     }
+
+    const portalOrder = await prisma.salOrder.findFirst({
+      where: {
+        companyId: company.id,
+        customerId: portalCustomer.id,
+        number: 'SO-PORTAL-SEED',
+      },
+    });
+    if (portalOrder) {
+      const existingShip = await prisma.dlvShipment.findFirst({
+        where: {
+          companyId: company.id,
+          number: 'DLV-PORTAL-SEED',
+        },
+      });
+      if (!existingShip) {
+        const assignedAt = new Date();
+        assignedAt.setHours(assignedAt.getHours() - 3);
+        const dispatchedAt = new Date();
+        dispatchedAt.setHours(dispatchedAt.getHours() - 1);
+        await prisma.dlvShipment.create({
+          data: {
+            companyId: company.id,
+            number: 'DLV-PORTAL-SEED',
+            orderId: portalOrder.id,
+            customerId: portalCustomer.id,
+            warehouseId: portalWh.id,
+            status: 'OUT',
+            driverLabel: 'Karim Ben Salah',
+            preferredDriver: portalOrder.preferredDriver,
+            assignedAt,
+            dispatchedAt,
+          },
+        });
+      }
+    }
   }
 
   console.log(

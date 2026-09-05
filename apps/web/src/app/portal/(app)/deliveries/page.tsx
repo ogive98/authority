@@ -40,12 +40,20 @@ export default async function PortalDeliveriesPage() {
         kicker="Customer Portal"
         title="Livraisons"
         description={`${items.length} expédition${items.length === 1 ? "" : "s"} · suivi statut (pas d’ETA GPS)`}
+        actions={
+          <Link
+            href="/portal/preview/journey"
+            className="text-[length:var(--a-text-sm)] text-a-accent hover:underline"
+          >
+            Voir un exemple →
+          </Link>
+        }
       />
       <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
         {items.length === 0 ? (
           <AEmptyState
             title="Aucune livraison"
-            description="Les expéditions liées à vos commandes apparaîtront ici."
+            description="Les expéditions liées à vos commandes apparaîtront ici. Un exemple fictif est disponible pour visualiser le parcours."
             canAct={false}
           />
         ) : (

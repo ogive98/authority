@@ -175,10 +175,24 @@ export default function PortalLoginPage() {
               Rempli après{" "}
               <span className="a-mono">prisma db seed</span> (API démarrée).
             </p>
+            <p className="mt-2">
+              <Link
+                href="/portal/preview/journey"
+                className="text-a-accent hover:underline"
+              >
+                Voir l’exemple parcours colis →
+              </Link>
+            </p>
           </div>
         ) : (
           <p className="text-center text-[length:var(--a-text-xs)] text-a-fg-subtle">
-            Problème d’accès ? Contactez votre interlocuteur commercial.
+            Problème d’accès ? Contactez votre interlocuteur commercial.{" "}
+            <Link
+              href="/portal/preview/journey"
+              className="text-a-accent hover:underline"
+            >
+              Exemple parcours
+            </Link>
           </p>
         )}
       </main>
