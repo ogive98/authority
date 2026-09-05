@@ -39,6 +39,11 @@ export function SyncModuleFromRoute() {
       setFeatureMenuOpen(false);
       return;
     }
+    if (pathname.startsWith("/sales")) {
+      if (has("sales")) setSelectedModuleId("sales");
+      setFeatureMenuOpen(false);
+      return;
+    }
     if (pathname.startsWith("/search") || pathname.startsWith("/m/platform")) {
       if (has("platform")) setSelectedModuleId("platform");
       setFeatureMenuOpen(false);

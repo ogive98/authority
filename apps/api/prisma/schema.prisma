@@ -852,3 +852,59 @@ model SaIndustryPackItem {
   @@index([packId, kind])
   @@map("sa_industry_pack_item")
 }
+
+// --- sal_* Sales Order V0 ---
+
+enum SalOrderStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+model SalOrder {
+  id            String         @id @default(uuid()) @db.Uuid
+  companyId     String         @map("company_id") @db.Uuid
+  number        String
+  customerId    String         @map("customer_id") @db.Uuid
+  warehouseId   String         @map("warehouse_id") @db.Uuid
+  status        SalOrderStatus @default(DRAFT)
+  requestedDate DateTime?      @map("requested_date") @db.Date
+  currency      String         @default("TND")
+  notes         String?
+  amountTotal   Decimal        @default(0) @map("amount_total") @db.Decimal(18, 3)
+  version       Int            @default(0)
+  confirmedAt   DateTime?      @map("confirmed_at") @db.Timestamptz(6)
+  cancelledAt   DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  lines SalOrderLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@index([companyId, customerId])
+  @@map("sal_order")
+}
+
+model SalOrderLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  orderId     String   @map("order_id") @db.Uuid
+  lineNo      Int      @map("line_no")
+  productId   String   @map("product_id") @db.Uuid
+  qty         Decimal  @db.Decimal(18, 3)
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(18, 3)
+  discountPct Decimal  @default(0) @map("discount_pct") @db.Decimal(5, 2)
+  lineTotal   Decimal  @map("line_total") @db.Decimal(18, 3)
+  version     Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  order SalOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, lineNo])
+  @@index([companyId, orderId])
+  @@map("sal_order_line")
+}

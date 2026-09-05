@@ -141,7 +141,8 @@ async function main() {
       moduleKey === 'master_data' ||
       moduleKey === 'products' ||
       moduleKey === 'customers' ||
-      moduleKey === 'inventory'
+      moduleKey === 'inventory' ||
+      moduleKey === 'sales'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -372,6 +373,24 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'inventory.reserve',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'sales.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'sales.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'sales.confirm',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,

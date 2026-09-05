@@ -99,6 +99,15 @@ export const COMMAND_CATALOG: CommandItem[] = [
     permissionKey: "inventory.read",
   },
   {
+    id: "nav-sales",
+    label: "Commandes",
+    group: "navigation",
+    href: "/sales",
+    keywords: ["commandes", "sales", "order", "vente"],
+    requiresModule: "sales",
+    permissionKey: "sales.read",
+  },
+  {
     id: "nav-tokens",
     label: "Dev — Tokens",
     group: "navigation",
@@ -155,7 +164,7 @@ export const COMMAND_CATALOG: CommandItem[] = [
     id: "search-so",
     label: "SO-2026-0042 — Commande Sfax",
     group: "search",
-    href: "/",
+    href: "/sales",
     keywords: ["commande", "sales", "order"],
     requiresModule: "sales",
     permissionKey: "sales.read",
@@ -197,6 +206,8 @@ export const COMMAND_CATALOG: CommandItem[] = [
 /** Demo grants — payroll.export intentionally absent (gate: hidden). */
 export const DEMO_PERMISSION_GRANTS = new Set([
   "sales.read",
+  "sales.write",
+  "sales.confirm",
   "customers.read",
   "products.read",
   "inventory.read",
