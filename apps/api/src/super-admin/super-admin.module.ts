@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { AuditModule } from '../audit/audit.module';
 import { IdentityModule } from '../identity/identity.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
+import { PrismaModule } from '../prisma/prisma.module';
 import { ThunderModule } from '../thunder-core/thunder.module';
 import { SuperAdminAuthService } from './super-admin-auth.service';
 import { SuperAdminSessionGuard } from './super-admin-session.guard';
@@ -17,6 +19,8 @@ import { MasterDataModule } from '../master-data/master-data.module';
     ThunderModule,
     ModulesRegistryModule,
     MasterDataModule,
+    AuditModule,
+    PrismaModule,
   ],
   controllers: [
     SuperAdminController,

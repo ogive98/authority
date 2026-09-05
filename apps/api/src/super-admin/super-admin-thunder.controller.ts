@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   Sse,
   UseGuards,
 } from '@nestjs/common';
@@ -27,6 +28,10 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Observable, from, interval, map, switchMap } from 'rxjs';
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from '../audit/audit.constants';
+import { AuditService } from '../audit/audit.service';
+import { AuthenticatedRequest } from '../identity/session.guard';
+import { PrismaService } from '../prisma/prisma.service';
 import { DlqService } from '../thunder-core/jobs/dlq/dlq.service';
 import { MonitorSnapshotService } from '../thunder-core/observability/monitor-snapshot.service';
 import type { ThunderMonitorSnapshot } from '../thunder-core/observability/monitor-snapshot.types';
@@ -142,6 +147,8 @@ export class SuperAdminThunderController {
     private readonly circuitBreaker: CircuitBreakerService,
     private readonly monitorSnapshot: MonitorSnapshotService,
     private readonly ruleDefs: RuleDefService,
+    private readonly audit: AuditService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get('monitor/snapshot')
@@ -218,14 +225,64 @@ export class SuperAdminThunderController {
 
   @Post('breakers/:dependencyKey/open')
   @HttpCode(HttpStatus.OK)
-  forceOpenBreaker(@Param('dependencyKey') dependencyKey: string) {
-    return this.circuitBreaker.forceOpen(dependencyKey);
+  async forceOpenBreaker(
+    @Req() req: AuthenticatedRequest & Request,
+    @Param('dependencyKey') dependencyKey: string,
+  ) {
+    const before = await this.circuitBreaker.getSnapshot(dependencyKey);
+    const after = await this.circuitBreaker.forceOpen(dependencyKey);
+    await this.prisma.$transaction(async (tx) => {
+      await this.audit.append(tx, {
+        actorUserId: req.user!.id,
+        action: AUDIT_ACTIONS.thunderBreakerForceOpen,
+        entityType: AUDIT_ENTITY_TYPES.thunderCircuitBreaker,
+        entityId: dependencyKey,
+        beforeJson: {
+          state: before.state,
+          failures: before.failures,
+          openedAt: before.openedAt,
+        },
+        afterJson: {
+          state: after.state,
+          failures: after.failures,
+          openedAt: after.openedAt,
+        },
+        ip: req.ip,
+        device: req.headers['user-agent'],
+      });
+    });
+    return after;
   }
 
   @Post('breakers/:dependencyKey/reset')
   @HttpCode(HttpStatus.OK)
-  resetBreaker(@Param('dependencyKey') dependencyKey: string) {
-    return this.circuitBreaker.reset(dependencyKey);
+  async resetBreaker(
+    @Req() req: AuthenticatedRequest & Request,
+    @Param('dependencyKey') dependencyKey: string,
+  ) {
+    const before = await this.circuitBreaker.getSnapshot(dependencyKey);
+    const after = await this.circuitBreaker.reset(dependencyKey);
+    await this.prisma.$transaction(async (tx) => {
+      await this.audit.append(tx, {
+        actorUserId: req.user!.id,
+        action: AUDIT_ACTIONS.thunderBreakerReset,
+        entityType: AUDIT_ENTITY_TYPES.thunderCircuitBreaker,
+        entityId: dependencyKey,
+        beforeJson: {
+          state: before.state,
+          failures: before.failures,
+          openedAt: before.openedAt,
+        },
+        afterJson: {
+          state: after.state,
+          failures: after.failures,
+          openedAt: after.openedAt,
+        },
+        ip: req.ip,
+        device: req.headers['user-agent'],
+      });
+    });
+    return after;
   }
 }
 

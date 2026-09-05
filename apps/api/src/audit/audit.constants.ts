@@ -4,6 +4,8 @@ export const AUDIT_ACTIONS = {
   settingsValueUpdate: 'settings.value.update',
   moduleEnable: 'module.enable',
   moduleDisable: 'module.disable',
+  thunderBreakerForceOpen: 'thunder.breaker.force_open',
+  thunderBreakerReset: 'thunder.breaker.reset',
 } as const;
 
 export const OUTBOX_EVENT_TYPES = {
@@ -21,4 +23,5 @@ export const AUDIT_ENTITY_TYPES = {
   orgSite: 'org_site',
   setValue: 'set_value',
   modModuleState: 'mod_module_state',
+  thunderCircuitBreaker: 'thunder_circuit_breaker',
 } as const;

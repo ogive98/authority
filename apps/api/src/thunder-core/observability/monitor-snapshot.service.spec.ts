@@ -33,7 +33,21 @@ describe('MonitorSnapshotService', () => {
     };
   }
 
-  it('builds a schemaVersion 1 snapshot with outbox lag seconds', async () => {
+  const circuitBreaker = {
+    listBreakers: jest.fn().mockResolvedValue([
+      {
+        dependencyKey: 'external_api_stub',
+        state: 'CLOSED',
+        failures: 0,
+        openedAt: null,
+        halfOpenProbeInFlight: false,
+        window: [],
+        halfOpenSuccesses: 0,
+      },
+    ]),
+  };
+
+  it('builds a schemaVersion 1 snapshot with outbox lag seconds and breakers', async () => {
     const prisma = mockPrisma();
     const redis = {
       ping: jest.fn().mockResolvedValue(true),
@@ -50,6 +64,7 @@ describe('MonitorSnapshotService', () => {
       prisma as never,
       redis as never,
       resources as never,
+      circuitBreaker as never,
     );
 
     const snap = await service.snapshot();
@@ -65,6 +80,15 @@ describe('MonitorSnapshotService', () => {
       p95: 10,
       p99: 11,
     });
+    expect(snap.breakers).toEqual([
+      {
+        dependencyKey: 'external_api_stub',
+        state: 'CLOSED',
+        stateGauge: 0,
+        failures: 0,
+        openedAt: null,
+      },
+    ]);
     expect(snap.events.eventsPerSecondEstimate).toBe(2);
     expect(snap.redis.ok).toBe(true);
     expect(snap.db.ok).toBe(true);
@@ -120,6 +144,7 @@ describe('MonitorSnapshotService', () => {
       prisma as never,
       redis as never,
       resources as never,
+      circuitBreaker as never,
     );
     const snap = await service.snapshot();
     expect(snap.cpu.usageRatio).toBe(0.42);

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { cpus, freemem, loadavg, totalmem } from 'node:os';
 import { RedisService } from '../../infrastructure/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CircuitBreakerService } from '../resilience/circuit-breaker.service';
 import { ResourceManagerService } from '../resources/resource-manager.service';
 import {
   THUNDER_QUEUE_FAMILIES,
@@ -15,6 +16,7 @@ export class MonitorSnapshotService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly resources: ResourceManagerService,
+    private readonly circuitBreaker: CircuitBreakerService,
   ) {}
 
   async snapshot(): Promise<ThunderMonitorSnapshot> {
@@ -27,6 +29,7 @@ export class MonitorSnapshotService {
       redisOk,
       redisMemory,
       dbOk,
+      breakers,
     ] = await Promise.all([
       this.prisma.thunderJob.groupBy({
         by: ['status', 'queue'],
@@ -42,6 +45,7 @@ export class MonitorSnapshotService {
       this.redis.ping(),
       this.redis.getUsedMemoryBytes(),
       this.pingDb(),
+      this.circuitBreaker.listBreakers(),
     ]);
 
     const outboxLag = outboxLagStats.unpublished;
@@ -168,6 +172,13 @@ export class MonitorSnapshotService {
         publishedLastMinute,
         eventsPerSecondEstimate: publishedLastMinute / 60,
       },
+      breakers: breakers.map((b) => ({
+        dependencyKey: b.dependencyKey,
+        state: b.state,
+        stateGauge: breakerStateGauge(b.state),
+        failures: b.failures,
+        openedAt: b.openedAt,
+      })),
       db: {
         ok: dbOk,
         poolUsageRatio: Number.isFinite(pgPool) ? pgPool : null,
@@ -268,4 +279,14 @@ function toFiniteOrNull(value: number | null | undefined): number | null {
   }
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function breakerStateGauge(state: 'CLOSED' | 'OPEN' | 'HALF_OPEN'): 0 | 1 | 2 {
+  if (state === 'OPEN') {
+    return 1;
+  }
+  if (state === 'HALF_OPEN') {
+    return 2;
+  }
+  return 0;
 }

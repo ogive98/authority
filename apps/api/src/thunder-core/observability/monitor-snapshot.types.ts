@@ -52,6 +52,14 @@ export interface ThunderMonitorSnapshot {
     publishedLastMinute: number;
     eventsPerSecondEstimate: number;
   };
+  /** Circuit breakers (THU-HARD-02). stateGauge: 0=closed 1=open 2=half_open */
+  breakers: Array<{
+    dependencyKey: string;
+    state: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+    stateGauge: 0 | 1 | 2;
+    failures: number;
+    openedAt: string | null;
+  }>;
   db: {
     ok: boolean;
     poolUsageRatio: number | null;
