@@ -18,6 +18,7 @@ export const BUSINESS_MODULE_KEYS = [
   'portals',
   'finance',
   'documents',
+  'accounting',
 ] as const;
 
 export const FLAG_KEYS = {

@@ -19,6 +19,7 @@ import { SalesModule } from './sales/sales.module';
 import { DeliveryModule } from './delivery/delivery.module';
 import { FinanceModule } from './finance/finance.module';
 import { DocumentsModule } from './documents/documents.module';
+import { AccountingModule } from './accounting/accounting.module';
 import { CustomerPortalModule } from './customer-portal/customer-portal.module';
 
 @Module({
@@ -42,6 +43,7 @@ import { CustomerPortalModule } from './customer-portal/customer-portal.module';
     DeliveryModule,
     FinanceModule,
     DocumentsModule,
+    AccountingModule,
     CustomerPortalModule,
   ],
 })

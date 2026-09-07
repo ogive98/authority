@@ -138,6 +138,7 @@ async function main() {
     'portals',
     'finance',
     'documents',
+    'accounting',
   ] as const;
 
   for (const moduleKey of businessModules) {
@@ -150,7 +151,8 @@ async function main() {
       moduleKey === 'delivery' ||
       moduleKey === 'portals' ||
       moduleKey === 'finance' ||
-      moduleKey === 'documents'
+      moduleKey === 'documents' ||
+      moduleKey === 'accounting'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -481,6 +483,24 @@ async function main() {
     subjectId: demoUser.id,
     companyId: company.id,
   });
+  await upsertGrant({
+    permissionKey: 'accounting.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'accounting.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'accounting.post',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
 
   for (const zone of [
     { code: 'SF-NORD', name: 'Zone Nord' },
@@ -596,6 +616,7 @@ async function main() {
   });
 
   await seedSettingsDefinitions(company.id, demoUser.id);
+  await seedAccountingGl(company.id);
 
   const currentYear = new Date().getFullYear();
   for (const year of [currentYear - 1, currentYear, currentYear + 1]) {
@@ -1270,6 +1291,88 @@ async function seedPortalDocument(input: {
       }`,
     );
   }
+}
+
+async function seedAccountingGl(companyId: string): Promise<void> {
+  for (const account of [
+    { code: '411', name: 'Clients', type: 'ASSET' as const },
+    { code: '512', name: 'Banque', type: 'ASSET' as const },
+    { code: '701', name: 'Ventes', type: 'REVENUE' as const },
+  ]) {
+    await prisma.accAccount.upsert({
+      where: {
+        companyId_code: { companyId, code: account.code },
+      },
+      update: {
+        name: account.name,
+        type: account.type,
+        active: true,
+        deletedAt: null,
+      },
+      create: {
+        companyId,
+        code: account.code,
+        name: account.name,
+        type: account.type,
+        active: true,
+      },
+    });
+  }
+
+  await prisma.accJournal.upsert({
+    where: {
+      companyId_code: { companyId, code: 'VEN' },
+    },
+    update: {
+      name: 'Journal des ventes',
+      active: true,
+      deletedAt: null,
+    },
+    create: {
+      companyId,
+      code: 'VEN',
+      name: 'Journal des ventes',
+      active: true,
+    },
+  });
+
+  const year = await prisma.accFiscalYear.upsert({
+    where: {
+      companyId_code: { companyId, code: '2026' },
+    },
+    update: {
+      startDate: new Date('2026-01-01T00:00:00.000Z'),
+      endDate: new Date('2026-12-31T00:00:00.000Z'),
+      deletedAt: null,
+    },
+    create: {
+      companyId,
+      code: '2026',
+      startDate: new Date('2026-01-01T00:00:00.000Z'),
+      endDate: new Date('2026-12-31T00:00:00.000Z'),
+    },
+  });
+
+  await prisma.accFiscalPeriod.upsert({
+    where: {
+      companyId_code: { companyId, code: '2026-01' },
+    },
+    update: {
+      fiscalYearId: year.id,
+      startDate: new Date('2026-01-01T00:00:00.000Z'),
+      endDate: new Date('2026-01-31T00:00:00.000Z'),
+      status: 'OPEN',
+      deletedAt: null,
+    },
+    create: {
+      companyId,
+      fiscalYearId: year.id,
+      code: '2026-01',
+      startDate: new Date('2026-01-01T00:00:00.000Z'),
+      endDate: new Date('2026-01-31T00:00:00.000Z'),
+      status: 'OPEN',
+    },
+  });
 }
 
 async function clearLicenseCache(): Promise<void> {

@@ -4,11 +4,8 @@ import { IdentityModule } from '../identity/identity.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
-import { AllocationEngineService } from './allocation-engine.service';
-import { FinanceController } from './finance.controller';
-import { FinanceService } from './finance.service';
-import { InvoiceService } from './invoice.service';
-import { PaymentService } from './payment.service';
+import { AccountingController } from './accounting.controller';
+import { AccountingService } from './accounting.service';
 
 @Module({
   imports: [
@@ -18,13 +15,8 @@ import { PaymentService } from './payment.service';
     ModulesRegistryModule,
     AuditModule,
   ],
-  controllers: [FinanceController],
-  providers: [
-    FinanceService,
-    InvoiceService,
-    PaymentService,
-    AllocationEngineService,
-  ],
-  exports: [FinanceService, InvoiceService, PaymentService],
+  controllers: [AccountingController],
+  providers: [AccountingService],
+  exports: [AccountingService],
 })
-export class FinanceModule {}
+export class AccountingModule {}

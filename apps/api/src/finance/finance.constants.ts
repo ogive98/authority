@@ -5,6 +5,12 @@ export const FINANCE_ERROR_CODES = {
   INVALID_STATUS: 'FIN.INVALID_STATUS',
   OVER_ALLOCATE: 'FIN.OVER_ALLOCATE',
   ORDER_NOT_FOUND: 'FIN.ORDER_NOT_FOUND',
+  INVOICE_NOT_FOUND: 'FIN.INVOICE_NOT_FOUND',
+  PAYMENT_NOT_FOUND: 'FIN.PAYMENT_NOT_FOUND',
+  INSTRUMENT_NOT_FOUND: 'FIN.INSTRUMENT_NOT_FOUND',
+  INVALID_POLICY: 'FIN.INVALID_POLICY',
+  INSTRUMENT_REQUIRED: 'FIN.INSTRUMENT_REQUIRED',
+  ALREADY_ALLOCATED: 'FIN.ALREADY_ALLOCATED',
 } as const;
 
 export type FinanceErrorCode =
@@ -13,4 +19,9 @@ export type FinanceErrorCode =
 export const FINANCE_EVENT_TYPES = {
   OPEN_ITEM_CREATED: 'finance.open_item.created.v1',
   ALLOCATION_RECORDED: 'finance.allocation.recorded.v1',
+  INVOICE_ISSUED: 'finance.invoice.issued.v1',
+  PAYMENT_POSTED: 'finance.payment.posted.v1',
+  PAYMENT_ALLOCATED: 'finance.payment.allocated.v1',
+  INSTRUMENT_STATUS: 'finance.instrument.status.v1',
+  INSTRUMENT_REJECTED: 'finance.instrument.rejected.v1',
 } as const;

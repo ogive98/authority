@@ -61,6 +61,16 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       name: "Finance",
       features: [
         { id: "open-items", label: "Créances", href: "/finance" },
+        { id: "invoices", label: "Factures", href: "/finance/invoices" },
+        { id: "payments", label: "Encaissements", href: "/finance/payments" },
+        { id: "instruments", label: "Instruments", href: "/finance/instruments" },
+      ],
+    },
+    {
+      key: "accounting",
+      name: "Comptabilité",
+      features: [
+        { id: "gl", label: "Grand livre", href: "/accounting" },
       ],
     },
     {

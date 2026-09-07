@@ -27,6 +27,7 @@ describe('FinanceService', () => {
       side: FinOpenItemSide.AR,
       status: opts?.status ?? FinOpenItemStatus.OPEN,
       salesOrderId: null as string | null,
+      invoiceId: null as string | null,
       currency: 'TND',
       amountTotal: new Prisma.Decimal(50),
       amountOpen: new Prisma.Decimal(opts?.amountOpen ?? 50),
@@ -46,6 +47,15 @@ describe('FinanceService', () => {
     };
 
     const outbox = { enqueue: jest.fn().mockResolvedValue({ id: 'o1' }) };
+    const invoices = {
+      ensureIssuedForSalesOrder: jest.fn().mockResolvedValue({
+        outcome: 'existing',
+        invoice: {
+          id: '66666666-6666-6666-6666-666666666666',
+          openItemId,
+        },
+      }),
+    };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const prisma: any = {
@@ -144,8 +154,12 @@ describe('FinanceService', () => {
       ),
     };
 
-    const service = new FinanceService(prisma as never, outbox as never);
-    return { service, prisma, outbox, getItem: () => item };
+    const service = new FinanceService(
+      prisma as never,
+      outbox as never,
+      invoices as never,
+    );
+    return { service, prisma, outbox, invoices, getItem: () => item };
   }
 
   it('creates an AR open item with amount as recorded', async () => {
@@ -242,7 +256,7 @@ describe('FinanceService', () => {
   });
 
   it('ensureArForSalesOrder is idempotent by salesOrderId', async () => {
-    const { service, prisma } = build();
+    const { service, prisma, invoices } = build();
     prisma.finOpenItem.findFirst = jest.fn().mockResolvedValue({
       id: openItemId,
       companyId,
@@ -251,6 +265,7 @@ describe('FinanceService', () => {
       side: FinOpenItemSide.AR,
       status: FinOpenItemStatus.OPEN,
       salesOrderId: orderId,
+      invoiceId: '66666666-6666-6666-6666-666666666666',
       currency: 'TND',
       amountTotal: new Prisma.Decimal(50),
       amountOpen: new Prisma.Decimal(50),
@@ -270,6 +285,7 @@ describe('FinanceService', () => {
       orderNumber: 'SO-1',
     });
     expect(result.outcome).toBe('existing');
+    expect(invoices.ensureIssuedForSalesOrder).toHaveBeenCalled();
     expect(prisma.finOpenItem.create).not.toHaveBeenCalled();
   });
 });

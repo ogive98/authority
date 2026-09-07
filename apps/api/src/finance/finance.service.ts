@@ -14,6 +14,7 @@ import {
 } from './finance.constants';
 import type { AllocateOpenItemDto, CreateOpenItemDto } from './finance.dto';
 import { FinanceException } from './finance.exception';
+import { InvoiceService } from './invoice.service';
 
 export type OpenItemDto = {
   id: string;
@@ -25,6 +26,7 @@ export type OpenItemDto = {
   side: FinOpenItemSide;
   status: FinOpenItemStatus;
   salesOrderId: string | null;
+  invoiceId: string | null;
   currency: string;
   amountTotal: string;
   amountOpen: string;
@@ -54,6 +56,7 @@ export class FinanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly invoices: InvoiceService,
   ) {}
 
   async list(
@@ -173,7 +176,7 @@ export class FinanceService {
 
   /**
    * Idempotent AR open item for a delivered sales order (amount as-recorded).
-   * Returns existing row when salesOrderId already linked.
+   * Issues commercial invoice + links/creates open item (D072).
    */
   async ensureArForSalesOrder(
     companyId: string,
@@ -183,35 +186,41 @@ export class FinanceService {
       amountTotal: number;
       orderNumber?: string | null;
       currency?: string | null;
+      shipmentId?: string | null;
     },
   ): Promise<{ outcome: 'created' | 'existing'; item: OpenItemDto }> {
+    const { outcome, invoice } =
+      await this.invoices.ensureIssuedForSalesOrder(companyId, input);
+
+    const or: Prisma.FinOpenItemWhereInput[] = [
+      { salesOrderId: input.salesOrderId },
+    ];
+    if (invoice.openItemId) {
+      or.push({ id: invoice.openItemId });
+    } else if (invoice.id) {
+      or.push({ invoiceId: invoice.id });
+    }
+
     const existing = await this.prisma.finOpenItem.findFirst({
       where: {
         companyId,
-        salesOrderId: input.salesOrderId,
         deletedAt: null,
         side: FinOpenItemSide.AR,
+        OR: or,
       },
       include: { allocations: { orderBy: { paidAt: 'desc' } } },
     });
-    if (existing) {
-      return {
-        outcome: 'existing',
-        item: await this.enrichOne(companyId, existing),
-      };
+    if (!existing) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.NOT_FOUND,
+        'Open item missing after invoice issue.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
-
-    const item = await this.create(companyId, {
-      customerId: input.customerId,
-      salesOrderId: input.salesOrderId,
-      amountTotal: input.amountTotal,
-      currency: input.currency ?? 'TND',
-      label: input.orderNumber
-        ? `Livraison ${input.orderNumber}`
-        : 'Livraison commandée',
-      notes: 'Auto-created on delivery complete (amount as recorded).',
-    });
-    return { outcome: 'created', item };
+    return {
+      outcome,
+      item: await this.enrichOne(companyId, existing),
+    };
   }
 
   async allocate(
@@ -498,6 +507,7 @@ function serialize(
     side: row.side,
     status: row.status,
     salesOrderId: row.salesOrderId,
+    invoiceId: row.invoiceId,
     currency: row.currency,
     amountTotal: row.amountTotal.toFixed(3),
     amountOpen: row.amountOpen.toFixed(3),

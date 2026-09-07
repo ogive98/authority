@@ -16,9 +16,9 @@ describe('ModuleCatalogService', () => {
     catalog.onModuleInit();
   });
 
-  it('loads exactly 16 seeded manifests', () => {
-    expect(catalog.list()).toHaveLength(15);
-    expect(STATIC_MODULE_MANIFESTS).toHaveLength(15);
+  it('loads exactly 17 seeded manifests', () => {
+    expect(catalog.list()).toHaveLength(17);
+    expect(STATIC_MODULE_MANIFESTS).toHaveLength(17);
   });
 
   it('resolves getByKey and capabilitiesFor', () => {

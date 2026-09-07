@@ -55,6 +55,11 @@ export function SyncModuleFromRoute() {
       setFeatureMenuOpen(false);
       return;
     }
+    if (pathname.startsWith("/accounting")) {
+      if (has("accounting")) setSelectedModuleId("accounting");
+      setFeatureMenuOpen(false);
+      return;
+    }
     if (pathname.startsWith("/documents")) {
       if (has("documents")) setSelectedModuleId("documents");
       setFeatureMenuOpen(false);

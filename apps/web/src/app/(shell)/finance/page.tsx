@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   ABadge,
   AButton,
@@ -187,9 +188,23 @@ export default function FinancePage() {
         title="Créances"
         description="Open items AR — montants enregistrés tels quels (pas de calcul TVA)."
         actions={
-          <AButton type="button" size="sm" onClick={openCreate}>
-            Nouvelle créance
-          </AButton>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/finance/invoices"
+              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
+            >
+              Factures
+            </Link>
+            <Link
+              href="/finance/payments"
+              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
+            >
+              Encaissements
+            </Link>
+            <AButton type="button" size="sm" onClick={openCreate}>
+              Nouvelle créance
+            </AButton>
+          </div>
         }
       />
       <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">

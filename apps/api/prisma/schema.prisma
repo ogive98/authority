@@ -1181,7 +1181,7 @@ model DlvShipment {
   @@map("dlv_shipment")
 }
 
-// --- fin_* Finance light V0 (AR open items — no invented tax rates) ---
+// --- fin_* Finance (AR deepen D072 — Invoice / Payment / Allocation / Instruments) ---
 
 enum FinOpenItemSide {
   AR
@@ -1194,6 +1194,81 @@ enum FinOpenItemStatus {
   CLOSED
 }
 
+enum FinInvoiceStatus {
+  DRAFT
+  ISSUED
+  CANCELLED
+}
+
+enum FinPaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CARD
+  CHEQUE
+  BILL_OF_EXCHANGE
+  OTHER
+}
+
+enum FinPaymentStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+
+/** A–G allocation policies (simulate then confirm). */
+enum FinAllocationPolicy {
+  OLDEST_FIRST      // A
+  NEWEST_FIRST      // B
+  PROPORTIONAL      // C
+  COMPLETION_FIRST  // D — smallest open first
+  LARGEST_FIRST     // E
+  OVERDUE_FIRST     // F
+  MANUAL            // G
+}
+
+enum FinInstrumentType {
+  CHEQUE
+  BILL_OF_EXCHANGE
+}
+
+enum FinInstrumentStatus {
+  RECEIVED
+  DEPOSITED
+  PRESENTED
+  CLEARED
+  REJECTED
+  CANCELLED
+}
+
+model FinInvoice {
+  id           String          @id @default(uuid()) @db.Uuid
+  companyId    String          @map("company_id") @db.Uuid
+  number       String
+  customerId   String          @map("customer_id") @db.Uuid
+  status       FinInvoiceStatus @default(DRAFT)
+  salesOrderId String?         @map("sales_order_id") @db.Uuid
+  shipmentId   String?         @map("shipment_id") @db.Uuid
+  currency     String          @default("TND")
+  /** Gross as-recorded — never derived from invented tax rates. */
+  amountTotal  Decimal         @map("amount_total") @db.Decimal(18, 3)
+  dueDate      DateTime?       @map("due_date") @db.Date
+  issuedAt     DateTime?       @map("issued_at") @db.Timestamptz(6)
+  label        String?
+  notes        String?
+  version      Int             @default(0)
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?       @map("deleted_at") @db.Timestamptz(6)
+
+  openItems FinOpenItem[]
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, customerId, status])
+  @@index([companyId, salesOrderId])
+  @@map("fin_invoice")
+}
+
 model FinOpenItem {
   id           String            @id @default(uuid()) @db.Uuid
   companyId    String            @map("company_id") @db.Uuid
@@ -1201,10 +1276,9 @@ model FinOpenItem {
   customerId   String            @map("customer_id") @db.Uuid
   side         FinOpenItemSide   @default(AR)
   status       FinOpenItemStatus @default(OPEN)
-  /** Optional link to sales order — amount copied as-is (no TVA computation). */
   salesOrderId String?           @map("sales_order_id") @db.Uuid
+  invoiceId    String?           @map("invoice_id") @db.Uuid
   currency     String            @default("TND")
-  /** Gross amount recorded by user/system — never derived from an invented tax rate. */
   amountTotal  Decimal           @map("amount_total") @db.Decimal(18, 3)
   amountOpen   Decimal           @map("amount_open") @db.Decimal(18, 3)
   dueDate      DateTime?         @map("due_date") @db.Date
@@ -1215,19 +1289,50 @@ model FinOpenItem {
   updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt    DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
+  invoice     FinInvoice?     @relation(fields: [invoiceId], references: [id])
   allocations FinAllocation[]
 
   @@unique([companyId, number])
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, status])
   @@index([companyId, customerId])
+  @@index([companyId, invoiceId])
   @@map("fin_open_item")
+}
+
+model FinPayment {
+  id                 String           @id @default(uuid()) @db.Uuid
+  companyId          String           @map("company_id") @db.Uuid
+  number             String
+  customerId         String           @map("customer_id") @db.Uuid
+  amount             Decimal          @db.Decimal(18, 3)
+  amountUnallocated  Decimal          @map("amount_unallocated") @db.Decimal(18, 3)
+  currency           String           @default("TND")
+  method             FinPaymentMethod @default(OTHER)
+  status             FinPaymentStatus @default(POSTED)
+  paymentDate        DateTime         @map("payment_date") @db.Date
+  accountingDate     DateTime         @map("accounting_date") @db.Date
+  reference          String?
+  notes              String?
+  version            Int              @default(0)
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime?        @map("deleted_at") @db.Timestamptz(6)
+
+  allocations FinAllocation[]
+  instruments FinPaymentInstrument[]
+
+  @@unique([companyId, number])
+  @@index([companyId, customerId, paymentDate(sort: Desc)])
+  @@index([companyId, status])
+  @@map("fin_payment")
 }
 
 model FinAllocation {
   id         String   @id @default(uuid()) @db.Uuid
   companyId  String   @map("company_id") @db.Uuid
   openItemId String   @map("open_item_id") @db.Uuid
+  paymentId  String?  @map("payment_id") @db.Uuid
   amount     Decimal  @db.Decimal(18, 3)
   paidAt     DateTime @map("paid_at") @db.Timestamptz(6)
   note       String?
@@ -1236,8 +1341,184 @@ model FinAllocation {
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   openItem FinOpenItem @relation(fields: [openItemId], references: [id], onDelete: Cascade)
+  payment  FinPayment? @relation(fields: [paymentId], references: [id])
 
   @@index([companyId, openItemId])
+  @@index([companyId, paymentId])
   @@index([companyId, paidAt(sort: Desc)])
   @@map("fin_allocation")
+}
+
+model FinPaymentInstrument {
+  id          String              @id @default(uuid()) @db.Uuid
+  companyId   String              @map("company_id") @db.Uuid
+  paymentId   String              @map("payment_id") @db.Uuid
+  type        FinInstrumentType
+  status      FinInstrumentStatus @default(RECEIVED)
+  number      String
+  bankName    String?             @map("bank_name")
+  holder      String?
+  amount      Decimal             @db.Decimal(18, 3)
+  issueDate   DateTime?           @map("issue_date") @db.Date
+  receiveDate DateTime?           @map("receive_date") @db.Date
+  dueDate     DateTime?           @map("due_date") @db.Date
+  depositDate DateTime?           @map("deposit_date") @db.Date
+  clearedAt   DateTime?           @map("cleared_at") @db.Timestamptz(6)
+  rejectedAt  DateTime?           @map("rejected_at") @db.Timestamptz(6)
+  rejectReason String?            @map("reject_reason")
+  version     Int                 @default(0)
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?           @map("deleted_at") @db.Timestamptz(6)
+
+  payment FinPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, paymentId])
+  @@index([companyId, status, dueDate])
+  @@map("fin_payment_instrument")
+}
+
+// --- acc_* Accounting GL V0 (D072) — no invented tax rates ---
+
+enum AccAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum AccPeriodStatus {
+  OPEN
+  SOFT_CLOSED
+  CLOSED
+  LOCKED
+}
+
+enum AccEntryStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+
+model AccFiscalYear {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  code      String
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime  @map("end_date") @db.Date
+  version   Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  periods AccFiscalPeriod[]
+
+  @@unique([companyId, code])
+  @@map("acc_fiscal_year")
+}
+
+model AccFiscalPeriod {
+  id           String          @id @default(uuid()) @db.Uuid
+  companyId    String          @map("company_id") @db.Uuid
+  fiscalYearId String          @map("fiscal_year_id") @db.Uuid
+  code         String
+  startDate    DateTime        @map("start_date") @db.Date
+  endDate      DateTime        @map("end_date") @db.Date
+  status       AccPeriodStatus @default(OPEN)
+  version      Int             @default(0)
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?       @map("deleted_at") @db.Timestamptz(6)
+
+  fiscalYear AccFiscalYear     @relation(fields: [fiscalYearId], references: [id])
+  entries    AccJournalEntry[]
+
+  @@unique([companyId, code])
+  @@index([companyId, status])
+  @@map("acc_fiscal_period")
+}
+
+model AccAccount {
+  id          String         @id @default(uuid()) @db.Uuid
+  companyId   String         @map("company_id") @db.Uuid
+  code        String
+  name        String
+  type        AccAccountType
+  active      Boolean        @default(true)
+  version     Int            @default(0)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  lines AccJournalLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId, type])
+  @@map("acc_account")
+}
+
+model AccJournal {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  code      String
+  name      String
+  active    Boolean   @default(true)
+  version   Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  entries AccJournalEntry[]
+
+  @@unique([companyId, code])
+  @@map("acc_journal")
+}
+
+model AccJournalEntry {
+  id          String         @id @default(uuid()) @db.Uuid
+  companyId   String         @map("company_id") @db.Uuid
+  journalId   String         @map("journal_id") @db.Uuid
+  periodId    String         @map("period_id") @db.Uuid
+  number      String
+  status      AccEntryStatus @default(DRAFT)
+  entryDate   DateTime       @map("entry_date") @db.Date
+  description String?
+  sourceType  String?        @map("source_type")
+  sourceId    String?        @map("source_id") @db.Uuid
+  postedAt    DateTime?      @map("posted_at") @db.Timestamptz(6)
+  version     Int            @default(0)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  journal AccJournal       @relation(fields: [journalId], references: [id])
+  period  AccFiscalPeriod  @relation(fields: [periodId], references: [id])
+  lines   AccJournalLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, periodId, status])
+  @@index([companyId, journalId])
+  @@map("acc_journal_entry")
+}
+
+model AccJournalLine {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  entryId   String   @map("entry_id") @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  debit     Decimal  @default(0) @db.Decimal(18, 3)
+  credit    Decimal  @default(0) @db.Decimal(18, 3)
+  memo      String?
+  lineNo    Int      @map("line_no")
+  version   Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  entry   AccJournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  account AccAccount      @relation(fields: [accountId], references: [id])
+
+  @@index([companyId, entryId])
+  @@index([companyId, accountId])
+  @@map("acc_journal_line")
 }

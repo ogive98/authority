@@ -5,6 +5,7 @@ import {
   HttpCode,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -18,14 +19,28 @@ import { RequireModule } from '../modules-registry/modules.decorators';
 import { PermissionGuard } from '../permissions/permission.guard';
 import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
-import { AllocateOpenItemDto, CreateOpenItemDto } from './finance.dto';
+import {
+  AllocateOpenItemDto,
+  ConfirmAllocationDto,
+  CreateInvoiceDto,
+  CreateOpenItemDto,
+  CreatePaymentDto,
+  SimulateAllocationDto,
+  TransitionInstrumentDto,
+} from './finance.dto';
 import { FinanceService } from './finance.service';
+import { InvoiceService } from './invoice.service';
+import { PaymentService } from './payment.service';
 
 @Controller('api/v1/finance')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
 @RequireModule('finance')
 export class FinanceController {
-  constructor(private readonly financeService: FinanceService) {}
+  constructor(
+    private readonly financeService: FinanceService,
+    private readonly invoiceService: InvoiceService,
+    private readonly paymentService: PaymentService,
+  ) {}
 
   @Get('open-items')
   @RequirePermission(PERMISSION_KEYS.financeArRead)
@@ -84,5 +99,144 @@ export class FinanceController {
     @Body() dto: AllocateOpenItemDto,
   ) {
     return this.financeService.allocate(tenancy.companyId, id, dto);
+  }
+
+  @Get('invoices')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  listInvoices(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('customerId') customerId?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.invoiceService.list(tenancy.companyId, {
+      q,
+      status,
+      customerId,
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor,
+    });
+  }
+
+  @Get('invoices/:id')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  getInvoice(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.invoiceService.get(tenancy.companyId, id);
+  }
+
+  @Post('invoices')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  createInvoice(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateInvoiceDto,
+  ) {
+    return this.invoiceService.create(tenancy.companyId, dto);
+  }
+
+  @Post('invoices/:id/issue')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  issueInvoice(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.invoiceService.issue(tenancy.companyId, id);
+  }
+
+  @Get('payments')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  listPayments(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('customerId') customerId?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.paymentService.list(tenancy.companyId, {
+      q,
+      status,
+      customerId,
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor,
+    });
+  }
+
+  @Get('payments/:id')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  getPayment(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.paymentService.get(tenancy.companyId, id);
+  }
+
+  @Post('payments')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.financeAllocate)
+  createPayment(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreatePaymentDto,
+  ) {
+    return this.paymentService.create(tenancy.companyId, dto);
+  }
+
+  @Post('payments/:id/allocate/simulate')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeAllocate)
+  simulateAllocation(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SimulateAllocationDto,
+  ) {
+    return this.paymentService.simulate(tenancy.companyId, id, dto);
+  }
+
+  @Post('payments/:id/allocate/confirm')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeAllocate)
+  confirmAllocation(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ConfirmAllocationDto,
+  ) {
+    return this.paymentService.confirm(tenancy.companyId, id, dto);
+  }
+
+  @Get('instruments')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  listInstruments(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.paymentService.listInstruments(tenancy.companyId, {
+      status,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Patch('instruments/:id/status')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeAllocate)
+  transitionInstrument(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TransitionInstrumentDto,
+  ) {
+    return this.paymentService.transitionInstrument(
+      tenancy.companyId,
+      id,
+      dto,
+    );
   }
 }
