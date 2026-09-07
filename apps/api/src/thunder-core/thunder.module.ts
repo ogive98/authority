@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { FinanceModule } from '../finance/finance.module';
+import { AccountingModule } from '../accounting/accounting.module';
 import { IdentityModule } from '../identity/identity.module';
 import { InfrastructureModule } from '../infrastructure/infrastructure.module';
 import { InventoryModule } from '../inventory/inventory.module';
@@ -59,6 +60,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     AuditModule,
     InventoryModule,
     FinanceModule,
+    AccountingModule,
   ],
   controllers: [ThunderController],
   providers: [

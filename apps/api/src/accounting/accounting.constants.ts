@@ -21,3 +21,12 @@ export const ACCOUNTING_EVENT_TYPES = {
   ACCOUNT_CREATED: 'accounting.account.created.v1',
   ENTRY_POSTED: 'accounting.entry.posted.v1',
 } as const;
+
+/** Seed / posting defaults — codes are data, not invented tax rates. */
+export const DEFAULT_GL_CODES = {
+  ar: '411',
+  bank: '512',
+  revenue: '701',
+  salesJournal: 'VEN',
+  bankJournal: 'BQ',
+} as const;

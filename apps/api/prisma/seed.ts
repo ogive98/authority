@@ -1336,6 +1336,23 @@ async function seedAccountingGl(companyId: string): Promise<void> {
     },
   });
 
+  await prisma.accJournal.upsert({
+    where: {
+      companyId_code: { companyId, code: 'BQ' },
+    },
+    update: {
+      name: 'Journal de banque',
+      active: true,
+      deletedAt: null,
+    },
+    create: {
+      companyId,
+      code: 'BQ',
+      name: 'Journal de banque',
+      active: true,
+    },
+  });
+
   const year = await prisma.accFiscalYear.upsert({
     where: {
       companyId_code: { companyId, code: '2026' },
@@ -1353,26 +1370,31 @@ async function seedAccountingGl(companyId: string): Promise<void> {
     },
   });
 
-  await prisma.accFiscalPeriod.upsert({
-    where: {
-      companyId_code: { companyId, code: '2026-01' },
-    },
-    update: {
-      fiscalYearId: year.id,
-      startDate: new Date('2026-01-01T00:00:00.000Z'),
-      endDate: new Date('2026-01-31T00:00:00.000Z'),
-      status: 'OPEN',
-      deletedAt: null,
-    },
-    create: {
-      companyId,
-      fiscalYearId: year.id,
-      code: '2026-01',
-      startDate: new Date('2026-01-01T00:00:00.000Z'),
-      endDate: new Date('2026-01-31T00:00:00.000Z'),
-      status: 'OPEN',
-    },
-  });
+  for (let month = 1; month <= 12; month += 1) {
+    const code = `2026-${String(month).padStart(2, '0')}`;
+    const startDate = new Date(Date.UTC(2026, month - 1, 1));
+    const endDate = new Date(Date.UTC(2026, month, 0));
+    await prisma.accFiscalPeriod.upsert({
+      where: {
+        companyId_code: { companyId, code },
+      },
+      update: {
+        fiscalYearId: year.id,
+        startDate,
+        endDate,
+        status: 'OPEN',
+        deletedAt: null,
+      },
+      create: {
+        companyId,
+        fiscalYearId: year.id,
+        code,
+        startDate,
+        endDate,
+        status: 'OPEN',
+      },
+    });
+  }
 }
 
 async function clearLicenseCache(): Promise<void> {

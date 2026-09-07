@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InvMovementType, SalOrderStatus } from '@prisma/client';
+import { FinanceGlPostingService } from '../../accounting/finance-gl-posting.service';
 import { FinanceService } from '../../finance/finance.service';
 import { InventoryService } from '../../inventory/inventory.service';
 import { ModuleRegistryService } from '../../modules-registry/module-registry.service';
@@ -26,6 +27,7 @@ export class ThunderDomainRegistrar implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly inventory: InventoryService,
     private readonly finance: FinanceService,
+    private readonly financeGl: FinanceGlPostingService,
   ) {}
 
   onModuleInit(): void {
@@ -38,6 +40,17 @@ export class ThunderDomainRegistrar implements OnModuleInit {
       THUNDER_DOMAIN_CONSUMERS.financeOpenItemFromDelivery,
       (envelope) => this.onShipmentDeliveredAr(envelope),
       { consumes: [THUNDER_DOMAIN_EVENT_TYPES.shipmentDelivered] },
+    );
+    this.registry.register(
+      THUNDER_DOMAIN_CONSUMERS.accountingPostFromFinance,
+      (envelope) => this.onFinanceToGl(envelope),
+      {
+        consumes: [
+          THUNDER_DOMAIN_EVENT_TYPES.financeInvoiceIssued,
+          THUNDER_DOMAIN_EVENT_TYPES.financePaymentAllocated,
+          THUNDER_DOMAIN_EVENT_TYPES.financeInstrumentRejected,
+        ],
+      },
     );
   }
 
@@ -161,6 +174,89 @@ export class ThunderDomainRegistrar implements OnModuleInit {
     );
   }
 
+  async onFinanceToGl(envelope: AuthorityEventEnvelope): Promise<void> {
+    const companyId = envelope.companyId;
+    if (!companyId) return;
+    if (!(await this.modules.isEnabled(companyId, 'accounting'))) {
+      return;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    if (envelope.eventType === THUNDER_DOMAIN_EVENT_TYPES.financeInvoiceIssued) {
+      const invoiceId =
+        stringPayload(envelope.payload, 'invoiceId') || envelope.aggregateId;
+      const amount = numberPayload(envelope.payload, 'amountTotal');
+      if (!invoiceId || amount == null) {
+        this.logger.warn('accounting.postFromFinance invoice: missing fields');
+        return;
+      }
+      const result = await this.financeGl.postInvoiceIssued(companyId, {
+        sourceId: envelope.eventId,
+        invoiceId,
+        amount,
+        entryDate: today,
+        description: `invoice:${invoiceId}`,
+      });
+      this.logger.log(
+        `accounting.postFromFinance invoice ${result.outcome} ${
+          'number' in result ? result.number : result.reason
+        }`,
+      );
+      return;
+    }
+
+    if (
+      envelope.eventType === THUNDER_DOMAIN_EVENT_TYPES.financePaymentAllocated
+    ) {
+      const paymentId =
+        stringPayload(envelope.payload, 'paymentId') || envelope.aggregateId;
+      const amount =
+        numberPayload(envelope.payload, 'amountAllocated') ??
+        numberPayload(envelope.payload, 'amount');
+      if (!paymentId || amount == null) {
+        this.logger.warn('accounting.postFromFinance payment: missing fields');
+        return;
+      }
+      const result = await this.financeGl.postPaymentAllocated(companyId, {
+        sourceId: envelope.eventId,
+        paymentId,
+        amount,
+        entryDate: today,
+      });
+      this.logger.log(
+        `accounting.postFromFinance payment ${result.outcome} ${
+          'number' in result ? result.number : result.reason
+        }`,
+      );
+      return;
+    }
+
+    if (
+      envelope.eventType === THUNDER_DOMAIN_EVENT_TYPES.financeInstrumentRejected
+    ) {
+      const paymentId = stringPayload(envelope.payload, 'paymentId');
+      if (!paymentId) {
+        this.logger.warn(
+          'accounting.postFromFinance reject: missing paymentId',
+        );
+        return;
+      }
+      const result = await this.financeGl.reversePaymentOnInstrumentReject(
+        companyId,
+        {
+          paymentId,
+          rejectSourceId: envelope.eventId,
+        },
+      );
+      this.logger.log(
+        `accounting.postFromFinance reject ${result.outcome} ${
+          'number' in result ? result.number : result.reason
+        }`,
+      );
+    }
+  }
+
   private async isReserveOnConfirm(companyId: string): Promise<boolean> {
     const row = await this.prisma.setValue.findFirst({
       where: {
@@ -183,4 +279,17 @@ function stringPayload(
 ): string | null {
   const v = payload[key];
   return typeof v === 'string' && v.trim() ? v.trim() : null;
+}
+
+function numberPayload(
+  payload: Record<string, unknown>,
+  key: string,
+): number | null {
+  const v = payload[key];
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string' && v.trim()) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
 }

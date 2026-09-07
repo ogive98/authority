@@ -99,5 +99,14 @@ export class ThunderModuleHooksRegistrar implements OnModuleInit {
         this.logger.log(`finance disabled company=${ctx.companyId}`);
       },
     });
+
+    this.hooks.register('accounting', {
+      contribution: {
+        moduleKey: 'accounting',
+        consumers: ['accounting.postFromFinance'],
+        description:
+          'accounting.postFromFinance on finance invoice/payment/instrument events',
+      },
+    });
   }
 }

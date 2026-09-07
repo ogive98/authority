@@ -140,6 +140,7 @@ export class CreateJournalEntryDto {
   @MaxLength(64)
   sourceType?: string;
 
+  /** Event / aggregate id — UUID preferred; validated loosely for Thunder sources. */
   @IsOptional()
   @IsUUID()
   sourceId?: string;

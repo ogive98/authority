@@ -6,6 +6,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { AccountingController } from './accounting.controller';
 import { AccountingService } from './accounting.service';
+import { FinanceGlPostingService } from './finance-gl-posting.service';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { AccountingService } from './accounting.service';
     AuditModule,
   ],
   controllers: [AccountingController],
-  providers: [AccountingService],
-  exports: [AccountingService],
+  providers: [AccountingService, FinanceGlPostingService],
+  exports: [AccountingService, FinanceGlPostingService],
 })
 export class AccountingModule {}

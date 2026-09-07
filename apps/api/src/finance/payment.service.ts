@@ -430,6 +430,9 @@ export class PaymentService {
           paymentId,
           policy: dto.policy,
           lineCount: plan.lines.length,
+          amountAllocated: round3(
+            plan.lines.reduce((s, l) => s + l.amount, 0),
+          ),
           amountUnallocated: Math.max(0, remainingUnalloc),
         },
       });

@@ -62,8 +62,12 @@ export const accountingManifest: ModuleManifest = {
     'accounting.account.created.v1',
     'accounting.entry.posted.v1',
   ],
-  consumedEvents: [],
+  consumedEvents: [
+    'finance.invoice.issued.v1',
+    'finance.payment.allocated.v1',
+    'finance.instrument.rejected.v1',
+  ],
   navigationEntries: [
-    { id: 'gl', label: 'Comptabilité', href: '/accounting' },
+    { id: 'gl', label: 'Grand livre', href: '/accounting' },
   ],
 };

@@ -7,6 +7,15 @@ describe('ThunderDomainRegistrar', () => {
   const customerId = '22222222-2222-2222-2222-222222222222';
   const warehouseId = '33333333-3333-3333-3333-333333333333';
   const productId = '44444444-4444-4444-4444-444444444444';
+  const gl = {
+    postInvoiceIssued: jest.fn(),
+    postPaymentAllocated: jest.fn(),
+    reversePaymentOnInstrumentReject: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   it('registers named domain consumers', () => {
     const registry = { register: jest.fn() };
@@ -16,6 +25,7 @@ describe('ThunderDomainRegistrar', () => {
       {} as never,
       {} as never,
       {} as never,
+      gl as never,
     ).onModuleInit();
 
     expect(registry.register).toHaveBeenCalledWith(
@@ -27,6 +37,17 @@ describe('ThunderDomainRegistrar', () => {
       'finance.openItemFromDelivery',
       expect.any(Function),
       { consumes: ['delivery.shipment.delivered.v1'] },
+    );
+    expect(registry.register).toHaveBeenCalledWith(
+      'accounting.postFromFinance',
+      expect.any(Function),
+      {
+        consumes: [
+          'finance.invoice.issued.v1',
+          'finance.payment.allocated.v1',
+          'finance.instrument.rejected.v1',
+        ],
+      },
     );
   });
 
@@ -56,6 +77,7 @@ describe('ThunderDomainRegistrar', () => {
       prisma as never,
       inventory as never,
       { ensureArForSalesOrder: jest.fn() } as never,
+      gl as never,
     );
 
     await registrar.onSalesConfirmedReserve({
@@ -107,6 +129,7 @@ describe('ThunderDomainRegistrar', () => {
       prisma as never,
       { reserve: jest.fn() } as never,
       finance as never,
+      gl as never,
     );
 
     await registrar.onShipmentDeliveredAr({
@@ -140,6 +163,7 @@ describe('ThunderDomainRegistrar', () => {
       {} as never,
       {} as never,
       finance as never,
+      gl as never,
     );
     await registrar.onShipmentDeliveredAr({
       eventId: 'e3',
@@ -154,5 +178,42 @@ describe('ThunderDomainRegistrar', () => {
       payload: { orderId, customerId },
     });
     expect(finance.ensureArForSalesOrder).not.toHaveBeenCalled();
+  });
+
+  it('posts GL from finance.invoice.issued when accounting enabled', async () => {
+    gl.postInvoiceIssued.mockResolvedValue({
+      outcome: 'posted',
+      entryId: 'je-1',
+      number: 'JE-1',
+    });
+    const registrar = new ThunderDomainRegistrar(
+      { register: jest.fn() } as never,
+      { isEnabled: jest.fn().mockResolvedValue(true) } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      gl as never,
+    );
+    const invoiceId = '66666666-6666-6666-6666-666666666666';
+    await registrar.onFinanceToGl({
+      eventId: '77777777-7777-7777-7777-777777777777',
+      eventType: 'finance.invoice.issued.v1',
+      eventVersion: 1,
+      occurredAt: new Date().toISOString(),
+      source: 'finance',
+      companyId,
+      correlationId: 'c4',
+      aggregateType: 'fin_invoice',
+      aggregateId: invoiceId,
+      payload: { invoiceId, amountTotal: '120.500' },
+    });
+    expect(gl.postInvoiceIssued).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        invoiceId,
+        amount: 120.5,
+        sourceId: '77777777-7777-7777-7777-777777777777',
+      }),
+    );
   });
 });
