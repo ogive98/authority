@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { IdentityModule } from '../identity/identity.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -21,7 +22,13 @@ import { ModulesController } from './modules.controller';
 import { SalesSurfaceController } from './sales-surface.controller';
 
 @Module({
-  imports: [IdentityModule, PermissionsModule, PrismaModule, AuditModule],
+  imports: [
+    IdentityModule,
+    PermissionsModule,
+    PrismaModule,
+    AuditModule,
+    EntitlementsModule,
+  ],
   controllers: [
     ModulesController,
     CapabilitiesController,

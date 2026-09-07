@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { IdentityModule } from '../identity/identity.module';
 import { InfrastructureModule } from '../infrastructure/infrastructure.module';
 import { LicenseModule } from '../license/license.module';
@@ -7,6 +8,8 @@ import { ModulesRegistryModule } from '../modules-registry/modules-registry.modu
 import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { AdapterRegistryService } from './adapters/adapter.registry';
+import { ThunderAdaptersRegistrar } from './adapters/thunder-adapters.registrar';
 import { AdmissionOrchestratorService } from './admission/admission-orchestrator.service';
 import { ConsumerRegistryService } from './events/consumer-registry.service';
 import { EventConsumerHost } from './events/event-consumer.host';
@@ -49,11 +52,14 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     PermissionsModule,
     ModulesRegistryModule,
     LicenseModule,
+    EntitlementsModule,
     AuditModule,
   ],
   controllers: [ThunderController],
   providers: [
     ThunderDevOnlyGuard,
+    AdapterRegistryService,
+    ThunderAdaptersRegistrar,
     JobRegistryService,
     JobEnqueueService,
     JobProcessorHost,
@@ -107,6 +113,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     RuleEngineService,
     SignalService,
     RecommendationService,
+    AdapterRegistryService,
   ],
 })
 export class ThunderModule {}

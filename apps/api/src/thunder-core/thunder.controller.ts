@@ -29,6 +29,8 @@ import { RecommendationService } from './intel/recommendation.service';
 import { SignalService } from './intel/signal.service';
 import { getDefaultEventContractRegistry } from '../modules-registry/catalog/event-contract.registry';
 import { ModuleHookRegistry } from '../modules-registry/catalog/module-hook.registry';
+import { EntitlementEvaluatorService } from '../entitlements/entitlement-evaluator.service';
+import { AdapterRegistryService } from './adapters/adapter.registry';
 import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
 import { ThunderMetricsService } from './observability/thunder-metrics.service';
 import type { ThunderMonitorSnapshot } from './observability/monitor-snapshot.types';
@@ -48,6 +50,8 @@ export class ThunderController {
     private readonly signals: SignalService,
     private readonly recommendations: RecommendationService,
     private readonly moduleHooks: ModuleHookRegistry,
+    private readonly adapters: AdapterRegistryService,
+    private readonly entitlements: EntitlementEvaluatorService,
   ) {}
 
   @Get('monitor/snapshot')
@@ -250,5 +254,32 @@ export class ThunderController {
     @Param('id') id: string,
   ) {
     return this.recommendations.apply(tenancy.companyId, id, user.id);
+  }
+
+  @Get('adapters')
+  @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
+  listAdapters() {
+    return this.adapters.list();
+  }
+
+  @Get('adapters/health')
+  @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
+  adaptersHealth() {
+    return this.adapters.healthAll();
+  }
+
+  @Get('entitlements/snapshot')
+  @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
+  entitlementSnapshot(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.entitlements.getSnapshot(tenancy.companyId);
+  }
+
+  @Get('entitlements/modules/:moduleKey')
+  @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
+  entitlementModule(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('moduleKey') moduleKey: string,
+  ) {
+    return this.entitlements.assertModule(tenancy.companyId, moduleKey);
   }
 }

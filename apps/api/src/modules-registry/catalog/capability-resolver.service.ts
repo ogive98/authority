@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EntitlementEvaluatorService } from '../../entitlements/entitlement-evaluator.service';
 import { PermissionService } from '../../permissions/permission.service';
 import { ModuleRegistryService } from '../module-registry.service';
 import { CAPABILITY_ERROR_CODES } from '../modules.constants';
@@ -10,7 +11,7 @@ import type {
 
 /**
  * CAP-02 capability resolution.
- * License check is intentionally STUB (always permit) until Pack 3 entitlements.
+ * Entitlements via EntitlementEvaluatorService (license-stub until Control).
  */
 @Injectable()
 export class CapabilityResolverService {
@@ -18,6 +19,7 @@ export class CapabilityResolverService {
     private readonly catalog: ModuleCatalogService,
     private readonly modules: ModuleRegistryService,
     private readonly permissions: PermissionService,
+    private readonly entitlements: EntitlementEvaluatorService,
   ) {}
 
   async resolve(
@@ -56,12 +58,15 @@ export class CapabilityResolverService {
       );
     }
 
-    // CAP-02 license stub — always OK (Pack 3 entitlements later)
-    const licenseOk = true;
-    if (!licenseOk) {
+    const entitled = await this.entitlements.assertCapability(
+      context.companyId,
+      capabilityKey,
+      capability.moduleId,
+    );
+    if (!entitled.allowed) {
       return deny(
         CAPABILITY_ERROR_CODES.LICENSE_DENIED,
-        `License denies capability: ${capabilityKey}`,
+        entitled.reason ?? `Entitlement denies capability: ${capabilityKey}`,
         capabilityKey,
         capability.moduleId,
       );

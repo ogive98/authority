@@ -11,6 +11,7 @@ describe('AdmissionOrchestratorService', () => {
     licenseStatus?: string;
     moduleEnabled?: boolean;
     flagEnabled?: boolean;
+    entitlementAllowed?: boolean;
     admitBudget?: { allowed: boolean; reason?: string };
     breakerAllowed?: boolean;
   }) {
@@ -18,6 +19,18 @@ describe('AdmissionOrchestratorService', () => {
       getStatus: jest.fn().mockResolvedValue({
         status: overrides?.licenseStatus ?? LICENSE_STATUSES.active,
       }),
+    };
+    const entitlements = {
+      assertModule: jest.fn().mockResolvedValue(
+        overrides?.entitlementAllowed === false
+          ? {
+              allowed: false,
+              reason: 'denied by stub',
+              code: 'ENT.DENIED',
+              snapshot: {},
+            }
+          : { allowed: true, snapshot: {} },
+      ),
     };
     const modules = {
       isEnabled: jest.fn().mockResolvedValue(overrides?.moduleEnabled ?? true),
@@ -66,6 +79,7 @@ describe('AdmissionOrchestratorService', () => {
 
     const service = new AdmissionOrchestratorService(
       license as never,
+      entitlements as never,
       modules as never,
       flags as never,
       resources as never,
@@ -78,6 +92,7 @@ describe('AdmissionOrchestratorService', () => {
     return {
       service,
       license,
+      entitlements,
       modules,
       flags,
       resources,
@@ -159,6 +174,21 @@ describe('AdmissionOrchestratorService', () => {
       allowed: false,
       kind: 'reject',
       code: THUNDER_ERROR_CODES.MODULE_DISABLED,
+    });
+  });
+
+  it('rejects when entitlement stub denies module', async () => {
+    const { service } = build({ entitlementAllowed: false });
+    const result = await service.admitEnqueue({
+      jobType: 'thunder.module-gated.v1',
+      companyId,
+      queue: 'ops',
+      idempotencyKey: 'k-ent',
+    });
+    expect(result).toMatchObject({
+      allowed: false,
+      kind: 'reject',
+      code: THUNDER_ERROR_CODES.ENTITLEMENT_DENIED,
     });
   });
 

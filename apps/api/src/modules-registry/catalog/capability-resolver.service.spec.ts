@@ -3,6 +3,7 @@ import { CapabilityResolverService } from './capability-resolver.service';
 import type { ModuleCatalogService } from './module-catalog.service';
 import type { ModuleRegistryService } from '../module-registry.service';
 import type { PermissionService } from '../../permissions/permission.service';
+import type { EntitlementEvaluatorService } from '../../entitlements/entitlement-evaluator.service';
 
 describe('CapabilityResolverService', () => {
   const companyId = 'company-demo';
@@ -14,6 +15,7 @@ describe('CapabilityResolverService', () => {
   };
   let modules: { isEnabled: jest.Mock };
   let permissions: { evaluate: jest.Mock };
+  let entitlements: { assertCapability: jest.Mock };
   let resolver: CapabilityResolverService;
 
   beforeEach(() => {
@@ -23,10 +25,14 @@ describe('CapabilityResolverService', () => {
     };
     modules = { isEnabled: jest.fn() };
     permissions = { evaluate: jest.fn() };
+    entitlements = {
+      assertCapability: jest.fn().mockResolvedValue({ allowed: true }),
+    };
     resolver = new CapabilityResolverService(
       catalog as unknown as ModuleCatalogService,
       modules as unknown as ModuleRegistryService,
       permissions as unknown as PermissionService,
+      entitlements as unknown as EntitlementEvaluatorService,
     );
   });
 
@@ -73,7 +79,7 @@ describe('CapabilityResolverService', () => {
     });
   });
 
-  it('allows when registered, ENABLED, and no permissionKey (license stub OK)', async () => {
+  it('allows when registered, ENABLED, and entitlement stub OK', async () => {
     catalog.getCapability.mockReturnValue({
       key: 'sales.ping',
       moduleId: 'sales',
@@ -87,7 +93,27 @@ describe('CapabilityResolverService', () => {
       capabilityKey: 'sales.ping',
       moduleId: 'sales',
     });
+    expect(entitlements.assertCapability).toHaveBeenCalled();
     expect(permissions.evaluate).not.toHaveBeenCalled();
+  });
+
+  it('denies when entitlement stub rejects', async () => {
+    catalog.getCapability.mockReturnValue({
+      key: 'sales.ping',
+      moduleId: 'sales',
+      version: '1',
+    });
+    catalog.getByKey.mockReturnValue({ id: 'sales' });
+    modules.isEnabled.mockResolvedValue(true);
+    entitlements.assertCapability.mockResolvedValue({
+      allowed: false,
+      reason: 'denied',
+    });
+    const result = await resolver.resolve('sales.ping', { companyId, userId });
+    expect(result).toMatchObject({
+      allowed: false,
+      code: CAPABILITY_ERROR_CODES.LICENSE_DENIED,
+    });
   });
 
   it('checks permissionKey when present and denies if missing grant', async () => {

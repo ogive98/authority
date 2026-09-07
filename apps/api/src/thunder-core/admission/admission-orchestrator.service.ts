@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { EntitlementEvaluatorService } from '../../entitlements/entitlement-evaluator.service';
 import { RedisService } from '../../infrastructure/redis.service';
 import { LicenseException } from '../../license/license.exception';
 import { LICENSE_STATUSES } from '../../license/license.constants';
@@ -80,6 +81,7 @@ export class AdmissionOrchestratorService {
 
   constructor(
     private readonly license: LicenseService,
+    private readonly entitlements: EntitlementEvaluatorService,
     private readonly modules: ModuleRegistryService,
     private readonly flags: FeatureFlagService,
     private readonly resources: ResourceManagerService,
@@ -196,6 +198,19 @@ export class AdmissionOrchestratorService {
           THUNDER_ERROR_CODES.MODULE_DISABLED,
           `Module disabled: ${moduleKey}`,
           HttpStatus.SERVICE_UNAVAILABLE,
+          correlationId,
+        );
+      }
+
+      const entitled = await this.entitlements.assertModule(
+        input.companyId,
+        moduleKey,
+      );
+      if (!entitled.allowed) {
+        return this.reject(
+          THUNDER_ERROR_CODES.ENTITLEMENT_DENIED,
+          entitled.reason ?? `Entitlement denied: ${moduleKey}`,
+          HttpStatus.FORBIDDEN,
           correlationId,
         );
       }
