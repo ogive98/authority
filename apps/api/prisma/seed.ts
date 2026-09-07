@@ -934,6 +934,7 @@ async function main() {
           number: 'CLM-PORTAL-SEED',
         },
       });
+      let portalClaimId = existingClaim?.id ?? null;
       if (!existingClaim) {
         const ship = await prisma.dlvShipment.findFirst({
           where: {
@@ -941,7 +942,7 @@ async function main() {
             number: 'DLV-PORTAL-SEED',
           },
         });
-        await prisma.ptlClaim.create({
+        const created = await prisma.ptlClaim.create({
           data: {
             companyId: company.id,
             customerId: portalCustomer.id,
@@ -950,13 +951,21 @@ async function main() {
             status: 'OPEN',
             subject: 'Livraison — carton endommagé (démo)',
             description:
-              'Réclamation démo portal : carton partiellement ouvert à la réception. Documents download reportés (pas de module Documents).',
+              'Réclamation démo portal : carton partiellement ouvert. Pièce DOC-PORTAL-SEED visible sur /portal/documents.',
             orderId: portalOrder.id,
             shipmentId: ship?.id ?? null,
             createdByUserId: portalUser.id,
           },
         });
+        portalClaimId = created.id;
       }
+
+      await seedPortalDocument({
+        companyId: company.id,
+        customerId: portalCustomer.id,
+        claimId: portalClaimId,
+        actorUserId: demoUser.id,
+      });
     }
   }
 
@@ -1157,6 +1166,110 @@ async function upsertGrant(params: {
       status: IamLifecycleStatus.ACTIVE,
     },
   });
+}
+
+async function seedPortalDocument(input: {
+  companyId: string;
+  customerId: string;
+  claimId: string | null;
+  actorUserId: string;
+}): Promise<void> {
+  if (!input.claimId) {
+    return;
+  }
+
+  const existing = await prisma.docDocument.findFirst({
+    where: {
+      companyId: input.companyId,
+      number: 'DOC-PORTAL-SEED',
+    },
+  });
+  if (existing) {
+    return;
+  }
+
+  const {
+    CreateBucketCommand,
+    HeadBucketCommand,
+    PutObjectCommand,
+    S3Client,
+  } = await import('@aws-sdk/client-s3');
+  const { randomUUID } = await import('node:crypto');
+
+  const endpoint = process.env.MINIO_ENDPOINT ?? 'localhost';
+  const port = process.env.MINIO_PORT ?? '9000';
+  const useSsl = process.env.MINIO_USE_SSL === 'true';
+  const accessKey = process.env.MINIO_ACCESS_KEY ?? 'authority';
+  const secretKey = process.env.MINIO_SECRET_KEY ?? 'authoritydev';
+  const bucket = process.env.MINIO_BUCKET ?? 'authority';
+
+  const client = new S3Client({
+    endpoint: `${useSsl ? 'https' : 'http'}://${endpoint}:${port}`,
+    region: 'us-east-1',
+    credentials: {
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
+    },
+    forcePathStyle: true,
+  });
+
+  try {
+    try {
+      await client.send(new HeadBucketCommand({ Bucket: bucket }));
+    } catch {
+      await client.send(new CreateBucketCommand({ Bucket: bucket }));
+    }
+
+    const fileId = randomUUID();
+    const key = `companies/${input.companyId}/${fileId}`;
+    const body = Buffer.from(
+      'AUTHORITY portal demo document\nLinked to CLM-PORTAL-SEED\n',
+      'utf8',
+    );
+    const mime = 'text/plain';
+
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: body,
+        ContentType: mime,
+      }),
+    );
+
+    await prisma.coreFile.create({
+      data: {
+        id: fileId,
+        companyId: input.companyId,
+        bucket,
+        key,
+        mime,
+        size: BigInt(body.length),
+      },
+    });
+
+    await prisma.docDocument.create({
+      data: {
+        companyId: input.companyId,
+        number: 'DOC-PORTAL-SEED',
+        title: 'Preuve réclamation (démo portal)',
+        mime,
+        size: BigInt(body.length),
+        coreFileId: fileId,
+        visibility: 'CUSTOMER_PORTAL',
+        linkType: 'CLAIM',
+        linkId: input.claimId,
+        customerId: input.customerId,
+        createdByUserId: input.actorUserId,
+      },
+    });
+  } catch (error) {
+    console.warn(
+      `Seed DOC-PORTAL-SEED skipped (MinIO?): ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
 }
 
 async function clearLicenseCache(): Promise<void> {

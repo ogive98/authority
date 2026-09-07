@@ -125,4 +125,17 @@ describe('DocumentsService', () => {
       response: { code: DOCUMENTS_ERROR_CODES.TITLE_REQUIRED },
     });
   });
+
+  it('lists claim link targets', async () => {
+    const { service, prisma } = build();
+    prisma.ptlClaim.findMany = jest.fn().mockResolvedValue([
+      { id: claimId, number: 'CLM-1', subject: 'Carton' },
+    ]);
+    const result = await service.listLinkTargets(companyId, {
+      linkType: 'CLAIM',
+    });
+    expect(result.items).toEqual([
+      { id: claimId, number: 'CLM-1', label: 'CLM-1 · Carton' },
+    ]);
+  });
 });

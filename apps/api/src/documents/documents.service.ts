@@ -248,6 +248,94 @@ export class DocumentsService {
     });
   }
 
+  async listLinkTargets(
+    companyId: string,
+    opts: { linkType?: string; q?: string; limit?: number },
+  ): Promise<{ items: Array<{ id: string; label: string; number: string }> }> {
+    const linkType = opts.linkType?.trim().toUpperCase();
+    if (
+      !linkType ||
+      !Object.values(DocLinkType).includes(linkType as DocLinkType) ||
+      linkType === DocLinkType.NONE
+    ) {
+      throw new DocumentsException(
+        DOCUMENTS_ERROR_CODES.INVALID_META,
+        'linkType must be CLAIM, ORDER, or SHIPMENT.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const limit = Math.min(Math.max(opts.limit ?? 30, 1), 50);
+    const q = opts.q?.trim();
+
+    if (linkType === DocLinkType.CLAIM) {
+      const rows = await this.prisma.ptlClaim.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          ...(q
+            ? {
+                OR: [
+                  { number: { contains: q, mode: 'insensitive' } },
+                  { subject: { contains: q, mode: 'insensitive' } },
+                ],
+              }
+            : {}),
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: limit,
+        select: { id: true, number: true, subject: true },
+      });
+      return {
+        items: rows.map((r) => ({
+          id: r.id,
+          number: r.number,
+          label: `${r.number} · ${r.subject}`,
+        })),
+      };
+    }
+
+    if (linkType === DocLinkType.ORDER) {
+      const rows = await this.prisma.salOrder.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          ...(q
+            ? { number: { contains: q, mode: 'insensitive' } }
+            : {}),
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: limit,
+        select: { id: true, number: true, status: true },
+      });
+      return {
+        items: rows.map((r) => ({
+          id: r.id,
+          number: r.number,
+          label: `${r.number} · ${r.status}`,
+        })),
+      };
+    }
+
+    const rows = await this.prisma.dlvShipment.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        ...(q ? { number: { contains: q, mode: 'insensitive' } } : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }],
+      take: limit,
+      select: { id: true, number: true, status: true },
+    });
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        number: r.number,
+        label: `${r.number} · ${r.status}`,
+      })),
+    };
+  }
+
   async getDownloadForCustomer(
     companyId: string,
     customerId: string,

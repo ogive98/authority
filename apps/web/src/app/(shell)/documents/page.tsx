@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  ABadge,
   AButton,
   ADrawer,
   AEmptyState,
@@ -11,6 +12,7 @@ import {
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
+import { cn } from "@/lib/utils";
 
 type DocRow = {
   id: string;
@@ -20,8 +22,12 @@ type DocRow = {
   size: string;
   visibility: string;
   linkType: string;
+  linkId: string | null;
+  customerId: string | null;
   createdAt: string;
 };
+
+type LinkTarget = { id: string; number: string; label: string };
 
 type LoadState =
   | { kind: "loading" }
@@ -29,48 +35,102 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
+const VIS_FILTERS: Array<{ id: ""; label: string }> = [
+  { id: "", label: "Tous" },
+  { id: "INTERNAL", label: "Interne" },
+  { id: "CUSTOMER_PORTAL", label: "Portal" },
+];
+
+const LINK_TYPES = ["NONE", "CLAIM", "ORDER", "SHIPMENT"] as const;
+
+const selectClass =
+  "h-9 w-full rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-1 px-3 text-[length:var(--a-text-sm)]";
+
+function visibilityTone(visibility: string) {
+  return visibility === "CUSTOMER_PORTAL" ? "accent" : "neutral";
+}
+
 export default function DocumentsPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
+  const [visFilter, setVisFilter] = useState<"" | "INTERNAL" | "CUSTOMER_PORTAL">(
+    "",
+  );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [visibility, setVisibility] = useState("INTERNAL");
+  const [linkType, setLinkType] = useState<(typeof LINK_TYPES)[number]>("NONE");
+  const [linkId, setLinkId] = useState("");
+  const [linkTargets, setLinkTargets] = useState<LinkTarget[]>([]);
+  const [linkLoading, setLinkLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
 
-  const load = useCallback(async (query?: string) => {
-    setState({ kind: "loading" });
-    try {
-      const params = new URLSearchParams();
-      if (query?.trim()) params.set("q", query.trim());
-      const qs = params.toString();
-      const res = await fetch(`/api/v1/documents${qs ? `?${qs}` : ""}`, {
+  const load = useCallback(
+    async (query?: string, visibility?: string) => {
+      setState({ kind: "loading" });
+      try {
+        const params = new URLSearchParams();
+        if (query?.trim()) params.set("q", query.trim());
+        if (visibility) params.set("visibility", visibility);
+        const qs = params.toString();
+        const res = await fetch(`/api/v1/documents${qs ? `?${qs}` : ""}`, {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
+        if (res.status === 403) {
+          setState({
+            kind: "forbidden",
+            message: "Permission documents.read requise.",
+          });
+          return;
+        }
+        if (!res.ok) {
+          setState({ kind: "error", message: `HTTP ${res.status}` });
+          return;
+        }
+        const body = (await res.json()) as { items: DocRow[] };
+        setState({ kind: "ok", items: body.items });
+      } catch {
+        setState({ kind: "error", message: "Réseau indisponible." });
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    void load(q, visFilter);
+  }, [load, visFilter]);
+
+  useEffect(() => {
+    if (!drawerOpen || linkType === "NONE") {
+      setLinkTargets([]);
+      return;
+    }
+    let cancelled = false;
+    setLinkLoading(true);
+    void (async () => {
+      const params = new URLSearchParams({ linkType, limit: "30" });
+      const res = await fetch(`/api/v1/documents/link-targets?${params}`, {
         credentials: "include",
         headers: { Accept: "application/json" },
         cache: "no-store",
       });
-      if (res.status === 403) {
-        setState({
-          kind: "forbidden",
-          message: "Permission documents.read requise.",
-        });
-        return;
-      }
+      if (cancelled) return;
+      setLinkLoading(false);
       if (!res.ok) {
-        setState({ kind: "error", message: `HTTP ${res.status}` });
+        setLinkTargets([]);
         return;
       }
-      const body = (await res.json()) as { items: DocRow[] };
-      setState({ kind: "ok", items: body.items });
-    } catch {
-      setState({ kind: "error", message: "Réseau indisponible." });
-    }
-  }, []);
-
-  useEffect(() => {
-    void load(q);
-  }, [load]);
+      const body = (await res.json()) as { items: LinkTarget[] };
+      setLinkTargets(body.items);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [drawerOpen, linkType]);
 
   async function onDownload(id: string) {
     const res = await fetch(`/api/v1/documents/${id}/download`, {
@@ -85,9 +145,22 @@ export default function DocumentsPage() {
     window.open(body.downloadUrl, "_blank", "noopener,noreferrer");
   }
 
+  function resetForm() {
+    setTitle("");
+    setVisibility("INTERNAL");
+    setLinkType("NONE");
+    setLinkId("");
+    setFile(null);
+    setFormError(null);
+  }
+
   async function submitUpload() {
     if (!title.trim() || !file) {
       setFormError("Titre et fichier requis.");
+      return;
+    }
+    if (linkType !== "NONE" && !linkId) {
+      setFormError("Sélectionnez une cible de lien.");
       return;
     }
     setBusy(true);
@@ -95,6 +168,8 @@ export default function DocumentsPage() {
     const form = new FormData();
     form.set("title", title.trim());
     form.set("visibility", visibility);
+    form.set("linkType", linkType);
+    if (linkId) form.set("linkId", linkId);
     form.set("file", file);
     const res = await fetch("/api/v1/documents", {
       method: "POST",
@@ -103,14 +178,16 @@ export default function DocumentsPage() {
     });
     setBusy(false);
     if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { message?: string };
-      setFormError(body.message ?? `HTTP ${res.status}`);
+      const body = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        code?: string;
+      };
+      setFormError(body.message ?? body.code ?? `HTTP ${res.status}`);
       return;
     }
     setDrawerOpen(false);
-    setTitle("");
-    setFile(null);
-    await load(q);
+    resetForm();
+    await load(q, visFilter);
   }
 
   return (
@@ -118,7 +195,7 @@ export default function DocumentsPage() {
       <AScreenHeader
         kicker="Documents"
         title="Bibliothèque"
-        description="Fichiers SOC-09 · visibilité portal · signed URL."
+        description="Fichiers SOC-09 · lien CLAIM/ORDER/SHIPMENT · signed URL portal."
         actions={
           <AButton type="button" size="sm" onClick={() => setDrawerOpen(true)}>
             Déposer un fichier
@@ -126,6 +203,37 @@ export default function DocumentsPage() {
         }
       />
       <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+        <div
+          role="tablist"
+          aria-label="Filtre visibilité"
+          className="flex flex-wrap gap-1 border-b border-a-border-subtle"
+        >
+          {VIS_FILTERS.map((chip) => {
+            const active = visFilter === chip.id;
+            return (
+              <button
+                key={chip.id || "all"}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() =>
+                  setVisFilter(
+                    chip.id as "" | "INTERNAL" | "CUSTOMER_PORTAL",
+                  )
+                }
+                className={cn(
+                  "border-b-2 px-3 py-2 text-[length:var(--a-text-sm)]",
+                  active
+                    ? "border-a-accent text-a-fg"
+                    : "border-transparent text-a-fg-muted hover:text-a-fg",
+                )}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
             <label
@@ -140,7 +248,7 @@ export default function DocumentsPage() {
               onChange={(e) => setQ(e.target.value)}
               placeholder="N° / titre"
               onKeyDown={(e) => {
-                if (e.key === "Enter") void load(q);
+                if (e.key === "Enter") void load(q, visFilter);
               }}
             />
           </div>
@@ -148,7 +256,7 @@ export default function DocumentsPage() {
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => void load(q)}
+            onClick={() => void load(q, visFilter)}
           >
             Filtrer
           </AButton>
@@ -167,20 +275,20 @@ export default function DocumentsPage() {
           <AErrorState
             message={state.message}
             retryable
-            onRetry={() => void load(q)}
+            onRetry={() => void load(q, visFilter)}
           />
         ) : null}
         {state.kind === "ok" && state.items.length === 0 ? (
           <AEmptyState
             title="Aucun document"
-            description="Déposez un PDF ou une pièce jointe (visibilité INTERNAL ou CUSTOMER_PORTAL)."
+            description="Déposez un fichier et liez-le à une réclamation, commande ou livraison pour le portal."
             actionLabel="Déposer un fichier"
             onAction={() => setDrawerOpen(true)}
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
           <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2">
-            <table className="w-full min-w-[44rem] border-collapse text-left text-[length:var(--a-text-sm)]">
+            <table className="w-full min-w-[48rem] border-collapse text-left text-[length:var(--a-text-sm)]">
               <thead className="border-b border-a-border-subtle bg-a-surface-3/80 text-a-fg-muted">
                 <tr>
                   <th className="a-table-cell font-medium">N°</th>
@@ -198,8 +306,25 @@ export default function DocumentsPage() {
                   >
                     <td className="a-mono a-table-cell">{row.number}</td>
                     <td className="a-table-cell">{row.title}</td>
-                    <td className="a-table-cell">{row.visibility}</td>
-                    <td className="a-table-cell">{row.linkType}</td>
+                    <td className="a-table-cell">
+                      <ABadge tone={visibilityTone(row.visibility)}>
+                        {row.visibility === "CUSTOMER_PORTAL"
+                          ? "Portal"
+                          : "Interne"}
+                      </ABadge>
+                    </td>
+                    <td className="a-table-cell">
+                      {row.linkType === "NONE" ? (
+                        <span className="text-a-fg-muted">—</span>
+                      ) : (
+                        <span className="a-mono text-[length:var(--a-text-xs)]">
+                          {row.linkType}
+                          {row.linkId
+                            ? ` · ${row.linkId.slice(0, 8)}…`
+                            : ""}
+                        </span>
+                      )}
+                    </td>
                     <td className="a-table-cell">
                       <AButton
                         type="button"
@@ -220,9 +345,12 @@ export default function DocumentsPage() {
 
       <ADrawer
         open={drawerOpen}
-        onOpenChange={setDrawerOpen}
+        onOpenChange={(open) => {
+          setDrawerOpen(open);
+          if (!open) resetForm();
+        }}
         title="Déposer un fichier"
-        description="Stockage MinIO via core_file · métadata doc_document."
+        description="Lier une cible renseigne customerId pour le partage portal."
       >
         <div className="space-y-[var(--a-space-4)]">
           {formError ? (
@@ -255,12 +383,75 @@ export default function DocumentsPage() {
               id="doc-vis"
               value={visibility}
               onChange={(e) => setVisibility(e.target.value)}
-              className="h-9 w-full rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-1 px-3 text-[length:var(--a-text-sm)]"
+              className={selectClass}
             >
               <option value="INTERNAL">INTERNAL</option>
               <option value="CUSTOMER_PORTAL">CUSTOMER_PORTAL</option>
             </select>
           </div>
+          <div className="space-y-1">
+            <label
+              htmlFor="doc-link-type"
+              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+            >
+              Lien
+            </label>
+            <select
+              id="doc-link-type"
+              value={linkType}
+              onChange={(e) => {
+                const next = e.target.value as (typeof LINK_TYPES)[number];
+                setLinkType(next);
+                setLinkId("");
+                if (next === "CLAIM" || next === "ORDER" || next === "SHIPMENT") {
+                  setVisibility("CUSTOMER_PORTAL");
+                }
+              }}
+              className={selectClass}
+            >
+              {LINK_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          {linkType !== "NONE" ? (
+            <div className="space-y-1">
+              <label
+                htmlFor="doc-link-id"
+                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+              >
+                Cible {linkType}
+              </label>
+              <select
+                id="doc-link-id"
+                value={linkId}
+                onChange={(e) => setLinkId(e.target.value)}
+                className={selectClass}
+                disabled={linkLoading}
+              >
+                <option value="">
+                  {linkLoading ? "Chargement…" : "Choisir…"}
+                </option>
+                {linkTargets.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              {visibility === "CUSTOMER_PORTAL" ? (
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                  Le client lié verra ce fichier sur /portal/documents.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {visibility === "CUSTOMER_PORTAL" && linkType === "NONE" ? (
+            <p className="text-[length:var(--a-text-xs)] text-a-warning">
+              Sans lien, pas de customerId — le portal ne verra pas ce fichier.
+            </p>
+          ) : null}
           <div className="space-y-1">
             <label
               htmlFor="doc-file"

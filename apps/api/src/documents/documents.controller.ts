@@ -58,6 +58,22 @@ export class DocumentsController {
     });
   }
 
+  @Get('link-targets')
+  @RequirePermission(PERMISSION_KEYS.documentsRead)
+  linkTargets(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('linkType') linkType?: string,
+    @Query('q') q?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.documents.listLinkTargets(tenancy.companyId, {
+      linkType,
+      q,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
   @Get(':id')
   @RequirePermission(PERMISSION_KEYS.documentsRead)
   get(
