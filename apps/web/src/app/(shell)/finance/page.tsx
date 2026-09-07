@@ -14,6 +14,7 @@ import {
   ASkeleton,
   type AComboboxOption,
 } from "@/components/a";
+import { cn } from "@/lib/utils";
 import { fetchCustomers } from "@/lib/customers";
 import {
   OPEN_ITEM_STATUS_LABELS,
@@ -192,19 +193,26 @@ export default function FinancePage() {
         }
       />
       <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
-        <div className="flex flex-wrap gap-2">
+        <div
+          className="flex flex-wrap gap-1 border-b border-a-border-subtle"
+          role="tablist"
+          aria-label="Filtrer par statut"
+        >
           {STATUS_FILTERS.map((chip) => {
             const active = statusFilter === chip.id;
             return (
               <button
                 key={chip.id || "all"}
                 type="button"
+                role="tab"
+                aria-selected={active}
                 onClick={() => setStatusFilter(chip.id)}
-                className={
+                className={cn(
+                  "border-b-2 px-3 py-2 text-[length:var(--a-text-sm)]",
                   active
-                    ? "rounded-full border border-a-accent bg-a-accent-muted px-3 py-1 text-[length:var(--a-text-xs)] font-medium text-a-accent"
-                    : "rounded-full border border-a-border-subtle bg-a-surface-2 px-3 py-1 text-[length:var(--a-text-xs)] text-a-fg-muted hover:border-a-accent/40 hover:text-a-fg"
-                }
+                    ? "border-a-accent text-a-fg"
+                    : "border-transparent text-a-fg-muted hover:text-a-fg",
+                )}
               >
                 {chip.label}
               </button>
