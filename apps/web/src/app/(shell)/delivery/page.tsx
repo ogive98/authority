@@ -18,11 +18,14 @@ import {
   SHIPMENT_STATUS_LABELS,
   assignShipmentDriver,
   completeShipment,
+  createRound,
   createShipment,
   dispatchShipment,
   failShipment,
   fetchEligibleOrders,
+  fetchRounds,
   fetchShipments,
+  type DeliveryRound,
   type DeliveryShipment,
   type EligibleOrder,
   type ShipmentStatus,
@@ -38,6 +41,14 @@ type FormState = {
   orderId: string | null;
   orderLabel: string;
   driverLabel: string;
+  roundId: string | null;
+  roundLabel: string;
+};
+
+type RoundForm = {
+  date: string;
+  driverLabel: string;
+  notes: string;
 };
 
 type FailDraft = { id: string; number: string; reason: string };
@@ -71,10 +82,25 @@ function orderToOption(o: EligibleOrder): AComboboxOption {
   };
 }
 
+function roundToOption(r: DeliveryRound): AComboboxOption {
+  return {
+    id: r.id,
+    label: `${r.date} · ${r.driverLabel}`,
+    hint: `${r.status} · ${r.shipmentCount} liv.`,
+  };
+}
+
 function tourneeKey(row: DeliveryShipment): string {
+  if (row.roundId) {
+    return `${row.roundDate ?? "—"} · ${row.roundDriverLabel ?? row.driverLabel ?? "Sans livreur"}`;
+  }
   const day = row.createdAt.slice(0, 10);
   const driver = row.driverLabel?.trim() || "Sans livreur";
-  return `${day} · ${driver}`;
+  return `${day} · ${driver} (soft)`;
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export default function DeliveryPage() {
@@ -82,10 +108,14 @@ export default function DeliveryPage() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | ShipmentStatus>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [roundDrawerOpen, setRoundDrawerOpen] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
+  const [roundForm, setRoundForm] = useState<RoundForm | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [roundError, setRoundError] = useState<string | null>(null);
   const [orderOpts, setOrderOpts] = useState<AComboboxOption[]>([]);
+  const [roundOpts, setRoundOpts] = useState<AComboboxOption[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
   const [eligibleCache, setEligibleCache] = useState<EligibleOrder[]>([]);
   const [assignDraft, setAssignDraft] = useState<Record<string, string>>({});
@@ -125,11 +155,33 @@ export default function DeliveryPage() {
     return [...map.entries()];
   }, [state]);
 
+  async function refreshRounds() {
+    const res = await fetchRounds();
+    if (!res.ok) {
+      setRoundOpts([]);
+      return;
+    }
+    setRoundOpts(res.items.map(roundToOption));
+  }
+
   function openCreate() {
     setFormError(null);
-    setForm({ orderId: null, orderLabel: "", driverLabel: "" });
+    setForm({
+      orderId: null,
+      orderLabel: "",
+      driverLabel: "",
+      roundId: null,
+      roundLabel: "",
+    });
     setOrderOpts([]);
+    void refreshRounds();
     setDrawerOpen(true);
+  }
+
+  function openRoundCreate() {
+    setRoundError(null);
+    setRoundForm({ date: todayIso(), driverLabel: "", notes: "" });
+    setRoundDrawerOpen(true);
   }
 
   const refreshOrders = useCallback(async (query: string) => {
@@ -162,6 +214,7 @@ export default function DeliveryPage() {
     const res = await createShipment({
       orderId: form.orderId,
       driverLabel: form.driverLabel.trim() || undefined,
+      roundId: form.roundId ?? undefined,
     });
     setBusy(false);
     if (!res.ok) {
@@ -170,6 +223,27 @@ export default function DeliveryPage() {
     }
     setDrawerOpen(false);
     await load(q, statusFilter);
+  }
+
+  async function submitRound() {
+    if (!roundForm?.driverLabel.trim()) {
+      setRoundError("Indiquez le livreur de la tournée.");
+      return;
+    }
+    setBusy(true);
+    setRoundError(null);
+    const res = await createRound({
+      date: roundForm.date || todayIso(),
+      driverLabel: roundForm.driverLabel.trim(),
+      notes: roundForm.notes.trim() || undefined,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setRoundError(res.message);
+      return;
+    }
+    setRoundDrawerOpen(false);
+    await refreshRounds();
   }
 
   async function onAssign(row: DeliveryShipment) {
@@ -222,11 +296,21 @@ export default function DeliveryPage() {
       <AScreenHeader
         kicker="Logistique"
         title="Tournées"
-        description="Bureau livraisons — filtre statut, regroupement livreur/jour, stock issue / release."
+        description="Rounds CRUD · livraisons · stock issue/release · AR auto à la livraison."
         actions={
-          <AButton type="button" size="sm" onClick={openCreate}>
-            Nouvelle livraison
-          </AButton>
+          <div className="flex flex-wrap gap-2">
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={openRoundCreate}
+            >
+              Nouvelle tournée
+            </AButton>
+            <AButton type="button" size="sm" onClick={openCreate}>
+              Nouvelle livraison
+            </AButton>
+          </div>
         }
       />
       <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
@@ -300,7 +384,7 @@ export default function DeliveryPage() {
         {state.kind === "ok" && state.items.length === 0 ? (
           <AEmptyState
             title="Aucune livraison"
-            description="Créez une expédition à partir d’une commande confirmée, assignez le livreur, puis livrez ou marquez l’échec."
+            description="Créez une tournée, puis une expédition liée à une commande confirmée."
             actionLabel="Nouvelle livraison"
             onAction={openCreate}
           />
@@ -444,7 +528,7 @@ export default function DeliveryPage() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title="Nouvelle livraison"
-        description="Choisir une commande confirmée sans expédition."
+        description="Commande confirmée · tournée optionnelle."
       >
         {form ? (
           <div className="space-y-[var(--a-space-4)]">
@@ -485,6 +569,29 @@ export default function DeliveryPage() {
               emptyText="Aucune commande confirmée disponible"
             />
 
+            <ACombobox
+              label="Tournée (optionnel)"
+              valueId={form.roundId}
+              displayValue={form.roundLabel}
+              onDisplayChange={(text) => {
+                setForm({ ...form, roundLabel: text, roundId: null });
+              }}
+              onSelect={(opt) => {
+                const driverFromRound =
+                  String(opt.label).split(" · ")[1]?.trim() || "";
+                setForm({
+                  ...form,
+                  roundId: opt.id,
+                  roundLabel: opt.label,
+                  driverLabel: form.driverLabel.trim() || driverFromRound,
+                });
+              }}
+              onOpen={() => void refreshRounds()}
+              options={roundOpts}
+              placeholder="Choisir une tournée…"
+              emptyText="Aucune tournée — créez-en une"
+            />
+
             <div className="space-y-1">
               <label
                 htmlFor="dlv-driver"
@@ -518,6 +625,90 @@ export default function DeliveryPage() {
                 disabled={busy}
               >
                 Créer
+              </AButton>
+            </div>
+          </div>
+        ) : null}
+      </ADrawer>
+
+      <ADrawer
+        open={roundDrawerOpen}
+        onOpenChange={setRoundDrawerOpen}
+        title="Nouvelle tournée"
+        description="Planifier une tournée (date + livreur)."
+      >
+        {roundForm ? (
+          <div className="space-y-[var(--a-space-4)]">
+            {roundError ? (
+              <p className="text-[length:var(--a-text-sm)] text-a-warning">
+                {roundError}
+              </p>
+            ) : null}
+            <div className="space-y-1">
+              <label
+                htmlFor="dlv-round-date"
+                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+              >
+                Date
+              </label>
+              <AInput
+                id="dlv-round-date"
+                type="date"
+                value={roundForm.date}
+                onChange={(e) =>
+                  setRoundForm({ ...roundForm, date: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <label
+                htmlFor="dlv-round-driver"
+                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+              >
+                Livreur
+              </label>
+              <AInput
+                id="dlv-round-driver"
+                value={roundForm.driverLabel}
+                onChange={(e) =>
+                  setRoundForm({ ...roundForm, driverLabel: e.target.value })
+                }
+                placeholder="Nom du livreur"
+              />
+            </div>
+            <div className="space-y-1">
+              <label
+                htmlFor="dlv-round-notes"
+                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+              >
+                Notes
+              </label>
+              <AInput
+                id="dlv-round-notes"
+                value={roundForm.notes}
+                onChange={(e) =>
+                  setRoundForm({ ...roundForm, notes: e.target.value })
+                }
+                placeholder="Optionnel"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <AButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setRoundDrawerOpen(false)}
+                disabled={busy}
+              >
+                Annuler
+              </AButton>
+              <AButton
+                type="button"
+                size="sm"
+                onClick={() => void submitRound()}
+                disabled={busy}
+              >
+                Créer la tournée
               </AButton>
             </div>
           </div>

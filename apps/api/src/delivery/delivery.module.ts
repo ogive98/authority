@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { FinanceModule } from '../finance/finance.module';
 import { IdentityModule } from '../identity/identity.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { OrganizationModule } from '../organization/organization.module';
@@ -16,6 +17,7 @@ import { DeliveryService } from './delivery.service';
     ModulesRegistryModule,
     AuditModule,
     InventoryModule,
+    FinanceModule,
   ],
   controllers: [DeliveryController],
   providers: [DeliveryService],

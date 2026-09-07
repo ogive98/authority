@@ -12,6 +12,7 @@ describe('FinanceService', () => {
   const customerId = '22222222-2222-2222-2222-222222222222';
   const otherCustomerId = '33333333-3333-3333-3333-333333333333';
   const openItemId = '44444444-4444-4444-4444-444444444444';
+  const orderId = '55555555-5555-5555-5555-555555555555';
 
   function build(opts?: {
     amountOpen?: number;
@@ -238,5 +239,37 @@ describe('FinanceService', () => {
       status: HttpStatus.NOT_FOUND,
       response: { code: FINANCE_ERROR_CODES.NOT_FOUND },
     });
+  });
+
+  it('ensureArForSalesOrder is idempotent by salesOrderId', async () => {
+    const { service, prisma } = build();
+    prisma.finOpenItem.findFirst = jest.fn().mockResolvedValue({
+      id: openItemId,
+      companyId,
+      number: 'FIN-2026-0001',
+      customerId,
+      side: FinOpenItemSide.AR,
+      status: FinOpenItemStatus.OPEN,
+      salesOrderId: orderId,
+      currency: 'TND',
+      amountTotal: new Prisma.Decimal(50),
+      amountOpen: new Prisma.Decimal(50),
+      dueDate: null,
+      label: 'existing',
+      notes: null,
+      version: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+      allocations: [],
+    });
+    const result = await service.ensureArForSalesOrder(companyId, {
+      customerId,
+      salesOrderId: orderId,
+      amountTotal: 50,
+      orderNumber: 'SO-1',
+    });
+    expect(result.outcome).toBe('existing');
+    expect(prisma.finOpenItem.create).not.toHaveBeenCalled();
   });
 });

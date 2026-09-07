@@ -45,12 +45,19 @@ export const deliveryManifest: ModuleManifest = {
     },
   ],
   commands: [
+    'delivery.round.create',
     'delivery.shipment.create',
     'delivery.shipment.assign',
+    'delivery.shipment.attach_round',
     'delivery.shipment.complete',
     'delivery.shipment.fail',
   ],
-  queries: ['delivery.shipments.list', 'delivery.shipments.get'],
+  queries: [
+    'delivery.rounds.list',
+    'delivery.rounds.get',
+    'delivery.shipments.list',
+    'delivery.shipments.get',
+  ],
   permissions: [
     'delivery.read',
     'delivery.prepare',
@@ -70,6 +77,6 @@ export const deliveryManifest: ModuleManifest = {
   ],
   consumedEvents: [],
   navigationEntries: [
-    { id: 'shipments', label: 'Livraisons', href: '/delivery' },
+    { id: 'shipments', label: 'Tournées', href: '/delivery' },
   ],
 };

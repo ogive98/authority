@@ -16,6 +16,9 @@ export type DeliveryShipment = {
   customerName: string | null;
   warehouseId: string;
   warehouseCode: string | null;
+  roundId: string | null;
+  roundDate: string | null;
+  roundDriverLabel: string | null;
   status: ShipmentStatus;
   driverLabel: string | null;
   preferredDriver: string | null;
@@ -24,6 +27,19 @@ export type DeliveryShipment = {
   assignedAt: string | null;
   dispatchedAt: string | null;
   completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DeliveryRound = {
+  id: string;
+  companyId: string;
+  date: string;
+  driverLabel: string;
+  status: "PLANNED" | "IN_PROGRESS" | "DONE";
+  notes: string | null;
+  version: number;
+  shipmentCount: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -118,6 +134,7 @@ export async function fetchEligibleOrders(
 export async function createShipment(body: {
   orderId: string;
   driverLabel?: string;
+  roundId?: string;
 }): Promise<{ ok: true; data: DeliveryShipment } | ApiFail> {
   try {
     const res = await fetch("/api/v1/delivery/shipments", {
@@ -131,6 +148,48 @@ export async function createShipment(body: {
     });
     if (!res.ok) return parseFail(res);
     return { ok: true, data: (await res.json()) as DeliveryShipment };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchRounds(opts?: {
+  date?: string;
+}): Promise<{ ok: true; items: DeliveryRound[] } | ApiFail> {
+  try {
+    const params = new URLSearchParams();
+    if (opts?.date?.trim()) params.set("date", opts.date.trim());
+    const qs = params.toString();
+    const res = await fetch(`/api/v1/delivery/rounds${qs ? `?${qs}` : ""}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    const body = (await res.json()) as { items: DeliveryRound[] };
+    return { ok: true, items: body.items };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function createRound(body: {
+  date: string;
+  driverLabel: string;
+  notes?: string;
+}): Promise<{ ok: true; data: DeliveryRound } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/delivery/rounds", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as DeliveryRound };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }

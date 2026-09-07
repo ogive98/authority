@@ -171,6 +171,49 @@ export class FinanceService {
     return this.enrichOne(companyId, row);
   }
 
+  /**
+   * Idempotent AR open item for a delivered sales order (amount as-recorded).
+   * Returns existing row when salesOrderId already linked.
+   */
+  async ensureArForSalesOrder(
+    companyId: string,
+    input: {
+      customerId: string;
+      salesOrderId: string;
+      amountTotal: number;
+      orderNumber?: string | null;
+      currency?: string | null;
+    },
+  ): Promise<{ outcome: 'created' | 'existing'; item: OpenItemDto }> {
+    const existing = await this.prisma.finOpenItem.findFirst({
+      where: {
+        companyId,
+        salesOrderId: input.salesOrderId,
+        deletedAt: null,
+        side: FinOpenItemSide.AR,
+      },
+      include: { allocations: { orderBy: { paidAt: 'desc' } } },
+    });
+    if (existing) {
+      return {
+        outcome: 'existing',
+        item: await this.enrichOne(companyId, existing),
+      };
+    }
+
+    const item = await this.create(companyId, {
+      customerId: input.customerId,
+      salesOrderId: input.salesOrderId,
+      amountTotal: input.amountTotal,
+      currency: input.currency ?? 'TND',
+      label: input.orderNumber
+        ? `Livraison ${input.orderNumber}`
+        : 'Livraison commandée',
+      notes: 'Auto-created on delivery complete (amount as recorded).',
+    });
+    return { outcome: 'created', item };
+  }
+
   async allocate(
     companyId: string,
     id: string,

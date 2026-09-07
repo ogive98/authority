@@ -1,5 +1,7 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import {
+  DlvRound,
+  DlvRoundStatus,
   DlvShipment,
   DlvShipmentStatus,
   Prisma,
@@ -8,7 +10,9 @@ import {
   SalOrderStatus,
 } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
+import { FinanceService } from '../finance/finance.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { ModuleRegistryService } from '../modules-registry/module-registry.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SALES_SETTING_KEYS } from '../sales/sales.constants';
 import {
@@ -20,9 +24,24 @@ import {
 import { DeliveryException } from './delivery.exception';
 import type {
   AssignDriverDto,
+  AttachRoundDto,
+  CreateRoundDto,
   CreateShipmentDto,
   FailShipmentDto,
 } from './delivery.dto';
+
+export type RoundDto = {
+  id: string;
+  companyId: string;
+  date: string;
+  driverLabel: string;
+  status: DlvRoundStatus;
+  notes: string | null;
+  version: number;
+  shipmentCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type ShipmentDto = {
   id: string;
@@ -35,6 +54,9 @@ export type ShipmentDto = {
   customerName: string | null;
   warehouseId: string;
   warehouseCode: string | null;
+  roundId: string | null;
+  roundDate: string | null;
+  roundDriverLabel: string | null;
   status: DlvShipmentStatus;
   driverLabel: string | null;
   preferredDriver: string | null;
@@ -65,11 +87,65 @@ type OrderWithLines = SalOrder & { lines: SalOrderLine[] };
 
 @Injectable()
 export class DeliveryService {
+  private readonly logger = new Logger(DeliveryService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly inventory: InventoryService,
+    private readonly finance: FinanceService,
+    private readonly modules: ModuleRegistryService,
   ) {}
+
+  async listRounds(
+    companyId: string,
+    opts?: { date?: string; limit?: number },
+  ): Promise<{ items: RoundDto[] }> {
+    const limit = Math.min(Math.max(opts?.limit ?? 50, 1), 100);
+    const dateFilter = opts?.date?.trim();
+    const rows = await this.prisma.dlvRound.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        ...(dateFilter
+          ? { date: new Date(`${dateFilter.slice(0, 10)}T00:00:00.000Z`) }
+          : {}),
+      },
+      include: {
+        _count: { select: { shipments: { where: { deletedAt: null } } } },
+      },
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      take: limit,
+    });
+    return {
+      items: rows.map((row) => serializeRound(row, row._count.shipments)),
+    };
+  }
+
+  async getRound(companyId: string, id: string): Promise<RoundDto> {
+    const row = await this.findActiveRound(companyId, id);
+    const shipmentCount = await this.prisma.dlvShipment.count({
+      where: { companyId, roundId: id, deletedAt: null },
+    });
+    return serializeRound(row, shipmentCount);
+  }
+
+  async createRound(
+    companyId: string,
+    dto: CreateRoundDto,
+  ): Promise<RoundDto> {
+    const day = dto.date.slice(0, 10);
+    const row = await this.prisma.dlvRound.create({
+      data: {
+        companyId,
+        date: new Date(`${day}T00:00:00.000Z`),
+        driverLabel: dto.driverLabel.trim(),
+        notes: dto.notes?.trim() || null,
+        status: DlvRoundStatus.PLANNED,
+      },
+    });
+    return serializeRound(row, 0);
+  }
 
   async list(
     companyId: string,
@@ -77,6 +153,7 @@ export class DeliveryService {
       q?: string;
       status?: string;
       customerId?: string;
+      roundId?: string;
       limit?: number;
       cursor?: string;
     },
@@ -89,6 +166,7 @@ export class DeliveryService {
       companyId,
       deletedAt: null,
       ...(opts?.customerId ? { customerId: opts.customerId } : {}),
+      ...(opts?.roundId ? { roundId: opts.roundId } : {}),
       ...(status &&
       Object.values(DlvShipmentStatus).includes(status as DlvShipmentStatus)
         ? { status: status as DlvShipmentStatus }
@@ -112,7 +190,8 @@ export class DeliveryService {
     });
 
     const page = rows.slice(0, limit);
-    const nextCursor = rows.length > limit ? page[page.length - 1]?.id ?? null : null;
+    const nextCursor =
+      rows.length > limit ? (page[page.length - 1]?.id ?? null) : null;
     return { items: await this.enrichMany(companyId, page), nextCursor };
   }
 
@@ -192,8 +271,16 @@ export class DeliveryService {
       );
     }
 
+    let round: DlvRound | null = null;
+    if (dto.roundId) {
+      round = await this.findActiveRound(companyId, dto.roundId);
+    }
+
     const driver =
-      dto.driverLabel?.trim() || order.preferredDriver?.trim() || null;
+      dto.driverLabel?.trim() ||
+      round?.driverLabel?.trim() ||
+      order.preferredDriver?.trim() ||
+      null;
     const status = driver
       ? DlvShipmentStatus.ASSIGNED
       : DlvShipmentStatus.READY;
@@ -206,6 +293,7 @@ export class DeliveryService {
         orderId: order.id,
         customerId: order.customerId,
         warehouseId: order.warehouseId,
+        roundId: round?.id ?? null,
         status,
         driverLabel: driver,
         preferredDriver: order.preferredDriver,
@@ -213,7 +301,51 @@ export class DeliveryService {
       },
     });
 
+    if (round && round.status === DlvRoundStatus.PLANNED) {
+      await this.prisma.dlvRound.update({
+        where: { id: round.id },
+        data: { status: DlvRoundStatus.IN_PROGRESS, version: { increment: 1 } },
+      });
+    }
+
     return this.enrichOne(companyId, row);
+  }
+
+  async attachRound(
+    companyId: string,
+    id: string,
+    dto: AttachRoundDto,
+  ): Promise<ShipmentDto> {
+    const row = await this.findActive(companyId, id);
+    if (
+      row.status !== DlvShipmentStatus.READY &&
+      row.status !== DlvShipmentStatus.ASSIGNED
+    ) {
+      throw new DeliveryException(
+        DELIVERY_ERROR_CODES.INVALID_STATUS,
+        'Round can only be attached on READY or ASSIGNED shipments.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    const round = await this.findActiveRound(companyId, dto.roundId);
+    const driver = row.driverLabel?.trim() || round.driverLabel;
+    const updated = await this.prisma.dlvShipment.update({
+      where: { id: row.id },
+      data: {
+        roundId: round.id,
+        driverLabel: driver,
+        status: driver ? DlvShipmentStatus.ASSIGNED : row.status,
+        assignedAt: driver ? (row.assignedAt ?? new Date()) : row.assignedAt,
+        version: { increment: 1 },
+      },
+    });
+    if (round.status === DlvRoundStatus.PLANNED) {
+      await this.prisma.dlvRound.update({
+        where: { id: round.id },
+        data: { status: DlvRoundStatus.IN_PROGRESS, version: { increment: 1 } },
+      });
+    }
+    return this.enrichOne(companyId, updated);
   }
 
   async assign(
@@ -272,6 +404,17 @@ export class DeliveryService {
         version: { increment: 1 },
       },
     });
+    if (row.roundId) {
+      await this.prisma.dlvRound.updateMany({
+        where: {
+          id: row.roundId,
+          companyId,
+          status: DlvRoundStatus.PLANNED,
+          deletedAt: null,
+        },
+        data: { status: DlvRoundStatus.IN_PROGRESS, version: { increment: 1 } },
+      });
+    }
     return this.enrichOne(companyId, updated);
   }
 
@@ -394,6 +537,9 @@ export class DeliveryService {
       return fresh;
     });
 
+    await this.maybeCreateArForDelivered(companyId, order);
+    await this.maybeCloseRound(companyId, updated.roundId);
+
     return this.enrichOne(companyId, updated);
   }
 
@@ -480,7 +626,91 @@ export class DeliveryService {
       return fresh;
     });
 
+    await this.maybeCloseRound(companyId, updated.roundId);
+
     return this.enrichOne(companyId, updated);
+  }
+
+  private async maybeCreateArForDelivered(
+    companyId: string,
+    order: OrderWithLines,
+  ): Promise<void> {
+    const financeOn = await this.modules.isEnabled(companyId, 'finance');
+    if (!financeOn) {
+      return;
+    }
+    const amount = Number(order.amountTotal.toString());
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return;
+    }
+    try {
+      const result = await this.finance.ensureArForSalesOrder(companyId, {
+        customerId: order.customerId,
+        salesOrderId: order.id,
+        amountTotal: amount,
+        orderNumber: order.number,
+        currency: order.currency,
+      });
+      if (result.outcome === 'created') {
+        this.logger.log(
+          `AR open item ${result.item.number} created for order ${order.number}`,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        error instanceof Error
+          ? `AR create after delivery failed: ${error.message}`
+          : 'AR create after delivery failed',
+      );
+    }
+  }
+
+  private async maybeCloseRound(
+    companyId: string,
+    roundId: string | null,
+  ): Promise<void> {
+    if (!roundId) return;
+    const open = await this.prisma.dlvShipment.count({
+      where: {
+        companyId,
+        roundId,
+        deletedAt: null,
+        status: {
+          in: [
+            DlvShipmentStatus.READY,
+            DlvShipmentStatus.ASSIGNED,
+            DlvShipmentStatus.OUT,
+          ],
+        },
+      },
+    });
+    if (open > 0) return;
+    await this.prisma.dlvRound.updateMany({
+      where: {
+        id: roundId,
+        companyId,
+        deletedAt: null,
+        status: { in: [DlvRoundStatus.PLANNED, DlvRoundStatus.IN_PROGRESS] },
+      },
+      data: { status: DlvRoundStatus.DONE, version: { increment: 1 } },
+    });
+  }
+
+  private async findActiveRound(
+    companyId: string,
+    id: string,
+  ): Promise<DlvRound> {
+    const row = await this.prisma.dlvRound.findFirst({
+      where: { id, companyId, deletedAt: null },
+    });
+    if (!row) {
+      throw new DeliveryException(
+        DELIVERY_ERROR_CODES.ROUND_NOT_FOUND,
+        'Round not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return row;
   }
 
   private async findActive(
@@ -550,8 +780,11 @@ export class DeliveryService {
     const orderIds = [...new Set(rows.map((r) => r.orderId))];
     const customerIds = [...new Set(rows.map((r) => r.customerId))];
     const warehouseIds = [...new Set(rows.map((r) => r.warehouseId))];
+    const roundIds = [
+      ...new Set(rows.map((r) => r.roundId).filter((id): id is string => !!id)),
+    ];
 
-    const [orders, customers, warehouses] = await Promise.all([
+    const [orders, customers, warehouses, rounds] = await Promise.all([
       this.prisma.salOrder.findMany({
         where: { companyId, id: { in: orderIds } },
         select: { id: true, number: true },
@@ -563,16 +796,23 @@ export class DeliveryService {
       this.prisma.invWarehouse.findMany({
         where: { companyId, id: { in: warehouseIds } },
       }),
+      roundIds.length
+        ? this.prisma.dlvRound.findMany({
+            where: { companyId, id: { in: roundIds }, deletedAt: null },
+          })
+        : Promise.resolve([] as DlvRound[]),
     ]);
 
     const orderMap = new Map(orders.map((o) => [o.id, o]));
     const customerMap = new Map(customers.map((c) => [c.id, c]));
     const warehouseMap = new Map(warehouses.map((w) => [w.id, w]));
+    const roundMap = new Map(rounds.map((r) => [r.id, r]));
 
     return rows.map((row) => {
       const customer = customerMap.get(row.customerId);
       const warehouse = warehouseMap.get(row.warehouseId);
       const order = orderMap.get(row.orderId);
+      const round = row.roundId ? roundMap.get(row.roundId) : undefined;
       return {
         id: row.id,
         companyId: row.companyId,
@@ -584,6 +824,9 @@ export class DeliveryService {
         customerName: customer?.party.legalName ?? null,
         warehouseId: row.warehouseId,
         warehouseCode: warehouse?.code ?? null,
+        roundId: row.roundId,
+        roundDate: round ? round.date.toISOString().slice(0, 10) : null,
+        roundDriverLabel: round?.driverLabel ?? null,
         status: row.status,
         driverLabel: row.driverLabel,
         preferredDriver: row.preferredDriver,
@@ -643,4 +886,19 @@ export class DeliveryService {
       };
     });
   }
+}
+
+function serializeRound(row: DlvRound, shipmentCount: number): RoundDto {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    date: row.date.toISOString().slice(0, 10),
+    driverLabel: row.driverLabel,
+    status: row.status,
+    notes: row.notes,
+    version: row.version,
+    shipmentCount,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }

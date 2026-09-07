@@ -99,6 +99,15 @@ describe('DeliveryService', () => {
       adjust: jest.fn().mockResolvedValue({}),
       reserve: jest.fn().mockResolvedValue({}),
     };
+    const finance = {
+      ensureArForSalesOrder: jest.fn().mockResolvedValue({
+        outcome: 'created',
+        item: { number: 'FIN-2026-0001' },
+      }),
+    };
+    const modules = {
+      isEnabled: jest.fn().mockResolvedValue(true),
+    };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const prisma: any = {
@@ -147,6 +156,13 @@ describe('DeliveryService', () => {
           return Promise.resolve({ count: 1 });
         }),
       },
+      dlvRound: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+        create: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
       salOrder: {
         findFirst: jest.fn().mockResolvedValue(order),
         findMany: jest.fn().mockResolvedValue([order]),
@@ -177,9 +193,20 @@ describe('DeliveryService', () => {
       prisma as never,
       outbox as never,
       inventory as never,
+      finance as never,
+      modules as never,
     );
 
-    return { service, prisma, inventory, outbox, order, getShipment: () => shipment };
+    return {
+      service,
+      prisma,
+      inventory,
+      outbox,
+      finance,
+      modules,
+      order,
+      getShipment: () => shipment,
+    };
   }
 
   it('creates shipment from confirmed order using preferred driver', async () => {
@@ -199,7 +226,7 @@ describe('DeliveryService', () => {
   });
 
   it('completes shipment and issues stock', async () => {
-    const { service, inventory, outbox } = build({
+    const { service, inventory, outbox, finance, modules } = build({
       shipmentStatus: DlvShipmentStatus.OUT,
     });
     const dto = await service.complete(companyId, shipmentId);
@@ -214,6 +241,47 @@ describe('DeliveryService', () => {
         eventType: 'delivery.shipment.delivered.v1',
       }),
     );
+    expect(modules.isEnabled).toHaveBeenCalledWith(companyId, 'finance');
+    expect(finance.ensureArForSalesOrder).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        salesOrderId: orderId,
+        customerId,
+        amountTotal: 50,
+      }),
+    );
+  });
+
+  it('skips AR when finance module is disabled', async () => {
+    const { service, finance, modules } = build({
+      shipmentStatus: DlvShipmentStatus.OUT,
+    });
+    modules.isEnabled.mockResolvedValue(false);
+    await service.complete(companyId, shipmentId);
+    expect(finance.ensureArForSalesOrder).not.toHaveBeenCalled();
+  });
+
+  it('creates a planned round', async () => {
+    const { service, prisma } = build();
+    prisma.dlvRound.create = jest.fn().mockResolvedValue({
+      id: '88888888-8888-8888-8888-888888888888',
+      companyId,
+      date: new Date('2026-09-07T00:00:00.000Z'),
+      driverLabel: 'Karim',
+      status: 'PLANNED',
+      notes: null,
+      version: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    });
+    const round = await service.createRound(companyId, {
+      date: '2026-09-07',
+      driverLabel: 'Karim',
+    });
+    expect(round.driverLabel).toBe('Karim');
+    expect(round.status).toBe('PLANNED');
+    expect(round.shipmentCount).toBe(0);
   });
 
   it('fails shipment and releases reserved stock', async () => {

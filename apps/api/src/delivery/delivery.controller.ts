@@ -20,6 +20,8 @@ import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
   AssignDriverDto,
+  AttachRoundDto,
+  CreateRoundDto,
   CreateShipmentDto,
   FailShipmentDto,
 } from './delivery.dto';
@@ -31,12 +33,46 @@ import { DeliveryService } from './delivery.service';
 export class DeliveryController {
   constructor(private readonly deliveryService: DeliveryService) {}
 
+  @Get('rounds')
+  @RequirePermission(PERMISSION_KEYS.deliveryRead)
+  listRounds(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('date') date?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.deliveryService.listRounds(tenancy.companyId, {
+      date,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Get('rounds/:id')
+  @RequirePermission(PERMISSION_KEYS.deliveryRead)
+  getRound(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.deliveryService.getRound(tenancy.companyId, id);
+  }
+
+  @Post('rounds')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.deliveryPrepare)
+  createRound(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateRoundDto,
+  ) {
+    return this.deliveryService.createRound(tenancy.companyId, dto);
+  }
+
   @Get('shipments')
   @RequirePermission(PERMISSION_KEYS.deliveryRead)
   list(
     @CurrentTenancy() tenancy: TenancyContext,
     @Query('q') q?: string,
     @Query('status') status?: string,
+    @Query('roundId') roundId?: string,
     @Query('limit') limitRaw?: string,
     @Query('cursor') cursor?: string,
   ) {
@@ -44,6 +80,7 @@ export class DeliveryController {
     return this.deliveryService.list(tenancy.companyId, {
       q,
       status,
+      roundId,
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor,
     });
@@ -80,6 +117,17 @@ export class DeliveryController {
     @Body() dto: CreateShipmentDto,
   ) {
     return this.deliveryService.create(tenancy.companyId, dto);
+  }
+
+  @Post('shipments/:id/attach-round')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.deliveryPrepare)
+  attachRound(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AttachRoundDto,
+  ) {
+    return this.deliveryService.attachRound(tenancy.companyId, id, dto);
   }
 
   @Post('shipments/:id/assign')
