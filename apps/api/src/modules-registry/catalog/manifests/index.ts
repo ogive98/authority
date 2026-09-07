@@ -14,6 +14,7 @@ import { platformManifest } from './platform.manifest';
 import { portalsManifest } from './portals.manifest';
 import { productionManifest } from './production.manifest';
 import { productsManifest } from './products.manifest';
+import { repairManifest } from './repair.manifest';
 import { salesManifest } from './sales.manifest';
 import { settingsManifest } from './settings.manifest';
 import { taxManifest } from './tax.manifest';
@@ -34,6 +35,7 @@ export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   productionManifest,
   payrollManifest,
   taxManifest,
+  repairManifest,
   customersManifest,
   masterDataManifest,
   productsManifest,

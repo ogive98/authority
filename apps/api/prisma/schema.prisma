@@ -1522,3 +1522,205 @@ model AccJournalLine {
   @@index([companyId, accountId])
   @@map("acc_journal_line")
 }
+
+// ─── Repair / Thunder Control (D079) ─────────────────────────────────────────
+
+enum RepScanStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+enum RepFindingSeverity {
+  INFO
+  WARN
+  ERROR
+  CRITICAL
+}
+
+enum RepFindingState {
+  OPEN
+  ACKED
+  RESOLVED
+  IGNORED
+}
+
+enum RepRiskLevel {
+  NONE
+  SAFE
+  LOW
+  MEDIUM
+  HIGH
+  BLOCKED
+}
+
+enum RepExecutionStatus {
+  PLANNED
+  DRY_RUN
+  APPROVED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  ROLLED_BACK
+  BLOCKED
+}
+
+enum RepReportStatus {
+  PENDING
+  QUEUED
+  SENT
+  ACKED
+  FAILED
+}
+
+model RepScanExecution {
+  id           String        @id @default(uuid()) @db.Uuid
+  companyId    String?       @map("company_id") @db.Uuid
+  depth        String
+  domainsJson  Json          @map("domains_json")
+  status       RepScanStatus @default(PENDING)
+  startedAt    DateTime?     @map("started_at") @db.Timestamptz(6)
+  completedAt  DateTime?     @map("completed_at") @db.Timestamptz(6)
+  findingCount Int           @default(0) @map("finding_count")
+  errorCount   Int           @default(0) @map("error_count")
+  summaryJson  Json?         @map("summary_json")
+  createdBy    String?       @map("created_by") @db.Uuid
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  findings RepDiagnosticFinding[]
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@map("rep_scan_execution")
+}
+
+model RepDiagnosticFinding {
+  id                  String             @id @default(uuid()) @db.Uuid
+  companyId           String?            @map("company_id") @db.Uuid
+  scanId              String             @map("scan_id") @db.Uuid
+  component           String
+  category            String
+  severity            RepFindingSeverity @default(WARN)
+  confidence          String             @default("PROBABLE")
+  signatureId         String?            @map("signature_id")
+  evidenceSummary     String             @map("evidence_summary")
+  evidenceFingerprint String             @map("evidence_fingerprint")
+  occurrenceCount     Int                @default(1) @map("occurrence_count")
+  state               RepFindingState    @default(OPEN)
+  repairability       String?            @default("unknown")
+  recommendedJson     Json?              @map("recommended_json")
+  risk                RepRiskLevel       @default(NONE)
+  firstSeenAt         DateTime           @default(now()) @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt          DateTime           @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  scan        RepScanExecution     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  executions  RepRepairExecution[]
+
+  @@index([scanId])
+  @@index([companyId, state])
+  @@index([evidenceFingerprint])
+  @@map("rep_diagnostic_finding")
+}
+
+model RepDiagnosticIncident {
+  id                 String             @id @default(uuid()) @db.Uuid
+  companyId          String?            @map("company_id") @db.Uuid
+  fingerprint        String
+  status             RepFindingState    @default(OPEN)
+  severity           RepFindingSeverity @default(WARN)
+  signatureId        String?            @map("signature_id")
+  title              String
+  count              Int                @default(1)
+  firstSeenAt        DateTime           @default(now()) @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt         DateTime           @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  centralIncidentId  String?            @map("central_incident_id")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status, lastSeenAt(sort: Desc)])
+  @@index([fingerprint])
+  @@map("rep_diagnostic_incident")
+}
+
+model RepRepairExecution {
+  id              String             @id @default(uuid()) @db.Uuid
+  companyId       String?            @map("company_id") @db.Uuid
+  findingId       String?            @map("finding_id") @db.Uuid
+  scenarioId      String             @map("scenario_id")
+  risk            RepRiskLevel
+  status          RepExecutionStatus @default(PLANNED)
+  dryRun          Boolean            @default(true) @map("dry_run")
+  planJson        Json               @map("plan_json")
+  resultJson      Json?              @map("result_json")
+  snapshotRef     String?            @map("snapshot_ref")
+  verificationJson Json?             @map("verification_json")
+  rollbackJson    Json?              @map("rollback_json")
+  approvedBy      String?            @map("approved_by") @db.Uuid
+  executedBy      String?            @map("executed_by") @db.Uuid
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  finding RepDiagnosticFinding? @relation(fields: [findingId], references: [id])
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@map("rep_repair_execution")
+}
+
+model RepResetExecution {
+  id          String             @id @default(uuid()) @db.Uuid
+  companyId   String?            @map("company_id") @db.Uuid
+  scope       String
+  previewJson Json               @map("preview_json")
+  status      RepExecutionStatus @default(PLANNED)
+  dryRun      Boolean            @default(true) @map("dry_run")
+  resultJson  Json?              @map("result_json")
+  createdBy   String?            @map("created_by") @db.Uuid
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("rep_reset_execution")
+}
+
+model RepCentralReport {
+  id              String          @id @default(uuid()) @db.Uuid
+  companyId       String?         @map("company_id") @db.Uuid
+  reportType      String          @map("report_type")
+  fingerprint     String
+  schemaVersion   Int             @default(1) @map("schema_version")
+  payloadJson     Json            @map("payload_json")
+  status          RepReportStatus @default(PENDING)
+  attempts        Int             @default(0)
+  centralId       String?         @map("central_id")
+  lastError       String?         @map("last_error")
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  outbox RepDiagnosticOutbox?
+
+  @@index([status, createdAt])
+  @@index([fingerprint])
+  @@map("rep_central_report")
+}
+
+model RepDiagnosticOutbox {
+  id            String          @id @default(uuid()) @db.Uuid
+  reportId      String          @unique @map("report_id") @db.Uuid
+  state         RepReportStatus @default(QUEUED)
+  nextAttemptAt DateTime        @default(now()) @map("next_attempt_at") @db.Timestamptz(6)
+  attempts      Int             @default(0)
+  lastError     String?         @map("last_error")
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  report RepCentralReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([state, nextAttemptAt])
+  @@map("rep_diagnostic_outbox")
+}

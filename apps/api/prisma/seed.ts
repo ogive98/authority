@@ -140,6 +140,7 @@ async function main() {
     'finance',
     'documents',
     'accounting',
+    'repair',
   ] as const;
 
   for (const moduleKey of businessModules) {
@@ -153,7 +154,8 @@ async function main() {
       moduleKey === 'portals' ||
       moduleKey === 'finance' ||
       moduleKey === 'documents' ||
-      moduleKey === 'accounting'
+      moduleKey === 'accounting' ||
+      moduleKey === 'repair'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
