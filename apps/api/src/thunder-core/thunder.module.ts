@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
+import { FinanceModule } from '../finance/finance.module';
 import { IdentityModule } from '../identity/identity.module';
 import { InfrastructureModule } from '../infrastructure/infrastructure.module';
+import { InventoryModule } from '../inventory/inventory.module';
 import { LicenseModule } from '../license/license.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { OrganizationModule } from '../organization/organization.module';
@@ -11,6 +13,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { AdapterRegistryService } from './adapters/adapter.registry';
 import { ThunderAdaptersRegistrar } from './adapters/thunder-adapters.registrar';
 import { AdmissionOrchestratorService } from './admission/admission-orchestrator.service';
+import { ThunderDomainRegistrar } from './domain/thunder-domain.registrar';
 import { ConsumerRegistryService } from './events/consumer-registry.service';
 import { EventConsumerHost } from './events/event-consumer.host';
 import { EventConsumerWorker } from './events/event-consumer.worker';
@@ -26,6 +29,8 @@ import { JobEnqueueService } from './jobs/job-enqueue.service';
 import { JobProcessorHost } from './jobs/job-processor.host';
 import { JobQueryService } from './jobs/job-query.service';
 import { JobRegistryService } from './jobs/job-registry.service';
+import { ModuleHookBootstrap } from './module-hooks/module-hook.bootstrap';
+import { ThunderModuleHooksRegistrar } from './module-hooks/thunder-module-hooks.registrar';
 import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
 import { ThunderMetricsService } from './observability/thunder-metrics.service';
 import { CircuitBreakerService } from './resilience/circuit-breaker.service';
@@ -38,8 +43,6 @@ import { WatchdogWorker } from './resources/watchdog.worker';
 import { RuleDefService } from './rules/rule-def.service';
 import { RuleEngineService } from './rules/rule-engine.service';
 import { ThunderRulesRegistrar } from './rules/thunder-rules.registrar';
-import { ModuleHookBootstrap } from './module-hooks/module-hook.bootstrap';
-import { ThunderModuleHooksRegistrar } from './module-hooks/thunder-module-hooks.registrar';
 import { ThunderController } from './thunder.controller';
 import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
 
@@ -54,6 +57,8 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     LicenseModule,
     EntitlementsModule,
     AuditModule,
+    InventoryModule,
+    FinanceModule,
   ],
   controllers: [ThunderController],
   providers: [
@@ -88,6 +93,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     SignalService,
     RecommendationService,
     ThunderIntelRegistrar,
+    ThunderDomainRegistrar,
     ThunderModuleHooksRegistrar,
     ModuleHookBootstrap,
   ],
@@ -114,6 +120,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     SignalService,
     RecommendationService,
     AdapterRegistryService,
+    ConsumerRegistryService,
   ],
 })
 export class ThunderModule {}

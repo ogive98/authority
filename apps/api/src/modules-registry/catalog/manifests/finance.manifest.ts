@@ -55,7 +55,7 @@ export const financeManifest: ModuleManifest = {
     'finance.open_item.created.v1',
     'finance.allocation.recorded.v1',
   ],
-  consumedEvents: [],
+  consumedEvents: ['delivery.shipment.delivered.v1'],
   navigationEntries: [
     { id: 'open-items', label: 'Créances', href: '/finance' },
   ],

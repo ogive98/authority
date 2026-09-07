@@ -69,28 +69,34 @@ export class ThunderModuleHooksRegistrar implements OnModuleInit {
       },
     });
 
+    this.hooks.register('inventory', {
+      contribution: {
+        moduleKey: 'inventory',
+        consumers: ['inventory.reserveFromOrder'],
+        jobTypes: [
+          THUNDER_JOB_TYPES.importBulk,
+          THUNDER_JOB_TYPES.moduleGated,
+        ],
+        description:
+          'inventory.reserveFromOrder on sales.order.confirmed.v1 + gated jobs',
+      },
+    });
+
     this.hooks.register('finance', {
       contribution: {
         moduleKey: 'finance',
-        consumers: [THUNDER_INTEL_CONSUMER_ID],
-        description: 'Intel observes finance.allocation.recorded.v1',
+        consumers: [
+          THUNDER_INTEL_CONSUMER_ID,
+          'finance.openItemFromDelivery',
+        ],
+        description:
+          'Intel + finance.openItemFromDelivery on delivery.shipment.delivered.v1',
       },
       onEnable: (ctx) => {
         this.logger.log(`finance enabled company=${ctx.companyId}`);
       },
       onDisable: (ctx) => {
         this.logger.log(`finance disabled company=${ctx.companyId}`);
-      },
-    });
-
-    this.hooks.register('inventory', {
-      contribution: {
-        moduleKey: 'inventory',
-        jobTypes: [
-          THUNDER_JOB_TYPES.importBulk,
-          THUNDER_JOB_TYPES.moduleGated,
-        ],
-        description: 'Inventory-gated Thunder job types (simulated + ops)',
       },
     });
   }
