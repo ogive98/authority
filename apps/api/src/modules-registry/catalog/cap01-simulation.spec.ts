@@ -40,10 +40,10 @@ describe('CAP-01 catalog stress simulations', () => {
           ],
         },
       ]),
-    ).toThrow(/exactly 15/);
+    ).toThrow(/exactly 16/);
   });
 
-  it('detects dependency cycle candidates among the 14 (none expected)', () => {
+  it('detects dependency cycle candidates among the 16 (none expected)', () => {
     const byId = new Map(
       STATIC_MODULE_MANIFESTS.map((m) => [m.id, m] as const),
     );
