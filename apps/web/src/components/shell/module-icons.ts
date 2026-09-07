@@ -43,6 +43,7 @@ const ICONS: Record<string, LucideIcon> = {
   usine: Factory,
   payroll: Users,
   rh: Users,
+  tax: Landmark,
   finance: Wallet,
   accounting: Landmark,
   customers: Users,

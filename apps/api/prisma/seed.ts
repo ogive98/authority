@@ -132,6 +132,7 @@ async function main() {
     'delivery',
     'production',
     'payroll',
+    'tax',
     'customers',
     'master_data',
     'products',

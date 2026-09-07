@@ -16,6 +16,7 @@ import { productionManifest } from './production.manifest';
 import { productsManifest } from './products.manifest';
 import { salesManifest } from './sales.manifest';
 import { settingsManifest } from './settings.manifest';
+import { taxManifest } from './tax.manifest';
 
 /** Static catalog — exactly the seeded runtime module keys. */
 export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
@@ -32,6 +33,7 @@ export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   accountingManifest,
   productionManifest,
   payrollManifest,
+  taxManifest,
   customersManifest,
   masterDataManifest,
   productsManifest,
