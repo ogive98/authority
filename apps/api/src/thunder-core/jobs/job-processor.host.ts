@@ -104,10 +104,10 @@ export class JobProcessorHost implements OnModuleInit, OnModuleDestroy {
       try {
         if (pause && !worker.isPaused()) {
           await worker.pause();
-          this.logger.log(`Thunder lane paused ${family} (shed P4)`);
+          this.logger.debug(`Thunder lane paused ${family} (shed P4)`);
         } else if (!pause && worker.isPaused()) {
           await worker.resume();
-          this.logger.log(`Thunder lane resumed ${family}`);
+          this.logger.debug(`Thunder lane resumed ${family}`);
         }
       } catch (error) {
         this.logger.warn(
