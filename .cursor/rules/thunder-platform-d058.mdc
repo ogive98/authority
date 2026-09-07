@@ -9,8 +9,8 @@ globs:
 # Thunder Platform (D058)
 
 - Track docs: AUTHORITY-DOCUMENTATION `17_IMPLEMENTATION/18_TRACK_THUNDER_PLATFORM.md`
-- Next lot: **THU-PLAT-01** — `thu_signal` / `thu_recommendation` / domain consumers (not fixtures-only)
+- Next lot: **THU-PLAT-01b** — event contract registry (Thunder-only terrain)
 - HOW only: no business posting inside kernel; Apply → module capability + audit
 - No TVA/CNSS invention; no CQRS CommandBus; no silent mutations
-- Control entitlements later (CTRL-01); Repair Mode = THU-PLAT-02
-- Consumers today mostly `audit.tap` + `thunder.echo` — domain wiring is the gap
+- **D060:** do NOT build Control app / Repair Mode / Marketplace now — only kernel prep (hooks, stubs, contracts)
+- Consumers: `audit.tap` + `thunder.echo` + **`thunder.intel`** (PLAT-01)
