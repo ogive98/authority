@@ -18,6 +18,7 @@ import { SessionService } from '../identity/session.service';
 import { RequireModule } from '../modules-registry/modules.decorators';
 import { CustomerPortalAuthService } from './customer-portal-auth.service';
 import { CustomerPortalClaimsService } from './customer-portal-claims.service';
+import { CustomerPortalInsightsService } from './customer-portal-insights.service';
 import { CustomerPortalModuleGuard } from './customer-portal-module.guard';
 import { CustomerPortalOrdersService } from './customer-portal-orders.service';
 import {
@@ -37,6 +38,7 @@ export class CustomerPortalController {
     private readonly portalAuthService: CustomerPortalAuthService,
     private readonly portalOrdersService: CustomerPortalOrdersService,
     private readonly portalClaimsService: CustomerPortalClaimsService,
+    private readonly portalInsightsService: CustomerPortalInsightsService,
     private readonly sessionService: SessionService,
   ) {}
 
@@ -101,6 +103,15 @@ export class CustomerPortalController {
   dashboard(@Req() req: CustomerPortalRequest) {
     // IDOR: customerId/companyId come only from session membership, never client input
     return this.portalOrdersService.getDashboardShell(
+      req.companyId!,
+      req.customerId!,
+    );
+  }
+
+  @Get('insights')
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  insights(@Req() req: CustomerPortalRequest) {
+    return this.portalInsightsService.listInsights(
       req.companyId!,
       req.customerId!,
     );

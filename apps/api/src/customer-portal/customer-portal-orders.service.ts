@@ -23,6 +23,7 @@ import type {
 } from './customer-portal.dto';
 import { CustomerPortalException } from './customer-portal.exception';
 import { CustomerPortalClaimsService } from './customer-portal-claims.service';
+import { CustomerPortalInsightsService } from './customer-portal-insights.service';
 
 export type PortalOrderLineDto = {
   sku: string | null;
@@ -79,6 +80,7 @@ export class CustomerPortalOrdersService {
     private readonly deliveryService: DeliveryService,
     private readonly financeService: FinanceService,
     private readonly claimsService: CustomerPortalClaimsService,
+    private readonly insightsService: CustomerPortalInsightsService,
   ) {}
 
   async listOrders(
@@ -241,7 +243,7 @@ export class CustomerPortalOrdersService {
   }
 
   async getDashboardShell(companyId: string, customerId: string) {
-    const [openOrders, pendingDeliveries, outstanding, openClaims] =
+    const [openOrders, pendingDeliveries, outstanding, openClaims, insights] =
       await Promise.all([
         this.prisma.salOrder.count({
           where: {
@@ -267,6 +269,7 @@ export class CustomerPortalOrdersService {
         }),
         this.financeService.sumOutstanding(companyId, customerId),
         this.claimsService.countOpen(companyId, customerId),
+        this.insightsService.listInsights(companyId, customerId),
       ]);
 
     return {
@@ -276,8 +279,9 @@ export class CustomerPortalOrdersService {
         outstandingBalance: outstanding,
         openClaims,
       },
-      sections: ['orders', 'deliveries', 'finance', 'claims'] as const,
-      message: 'Portal P6 — claims + finance + delivery track',
+      insights,
+      sections: ['orders', 'deliveries', 'finance', 'claims', 'insights'] as const,
+      message: 'Portal P7 — insights rules (reorder / crédit / ops)',
     };
   }
 

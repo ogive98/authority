@@ -12,6 +12,7 @@ export const PORTAL_API = {
   logout: "/api/v1/customer-portal/auth/logout",
   me: "/api/v1/customer-portal/me",
   dashboard: "/api/v1/customer-portal/dashboard",
+  insights: "/api/v1/customer-portal/insights",
   catalog: "/api/v1/customer-portal/catalog",
   orders: "/api/v1/customer-portal/orders",
   deliveries: "/api/v1/customer-portal/deliveries",
@@ -46,6 +47,25 @@ export type PortalMe = {
   realm: "customer_portal";
 };
 
+export type PortalInsightSeverity = "info" | "warn" | "critical";
+
+export type PortalInsightType =
+  | "CREDIT_PRESSURE"
+  | "OVERDUE_OPEN_ITEM"
+  | "REORDER_DUE"
+  | "OPEN_CLAIMS"
+  | "DELIVERY_FAILED";
+
+export type PortalInsight = {
+  id: string;
+  type: PortalInsightType;
+  severity: PortalInsightSeverity;
+  title: string;
+  message: string;
+  href: string;
+  evidence: Record<string, unknown>;
+};
+
 export type PortalDashboard = {
   kpis: {
     openOrders: number;
@@ -53,6 +73,7 @@ export type PortalDashboard = {
     outstandingBalance: number | null;
     openClaims?: number;
   };
+  insights?: PortalInsight[];
   sections: string[];
   message: string;
 };
@@ -427,4 +448,20 @@ export function portalOpenItemBadgeTone(
   if (status === "CLOSED") return "success";
   if (status === "PARTIAL") return "warning";
   return "accent";
+}
+
+export function portalInsightSeverityLabel(
+  severity: PortalInsightSeverity,
+): string {
+  if (severity === "critical") return "Critique";
+  if (severity === "warn") return "Attention";
+  return "Info";
+}
+
+export function portalInsightBadgeTone(
+  severity: PortalInsightSeverity,
+): "danger" | "warning" | "info" {
+  if (severity === "critical") return "danger";
+  if (severity === "warn") return "warning";
+  return "info";
 }

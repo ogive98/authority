@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ABadge } from "@/components/a/a-badge";
 import { AScreenHeader } from "@/components/a/a-screen-header";
 import {
   fetchPortalDashboard,
@@ -7,6 +8,9 @@ import {
   PORTAL_DELIVERIES_PATH,
   PORTAL_FINANCE_PATH,
   PORTAL_ORDERS_PATH,
+  portalInsightBadgeTone,
+  portalInsightSeverityLabel,
+  type PortalInsight,
 } from "@/lib/customer-portal";
 
 export default async function PortalDashboardPage() {
@@ -16,11 +20,12 @@ export default async function PortalDashboardPage() {
   ]);
 
   const message =
-    dashboard?.message ?? "Portal P6 — claims + finance + delivery track";
+    dashboard?.message ?? "Portal P7 — insights rules (reorder / crédit / ops)";
   const openOrders = dashboard?.kpis.openOrders ?? 0;
   const pendingDeliveries = dashboard?.kpis.pendingDeliveries ?? 0;
   const openClaims = dashboard?.kpis.openClaims ?? 0;
   const outstanding = dashboard?.kpis.outstandingBalance;
+  const insights = dashboard?.insights ?? [];
   const outstandingLabel =
     outstanding == null
       ? "—"
@@ -97,7 +102,57 @@ export default async function PortalDashboardPage() {
             </p>
           </Link>
         </div>
+
+        <InsightsPanel insights={insights} />
       </div>
     </div>
+  );
+}
+
+function InsightsPanel({ insights }: { insights: PortalInsight[] }) {
+  if (insights.length === 0) {
+    return (
+      <section className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3">
+        <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+          Alertes
+        </h2>
+        <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
+          Aucune alerte pour le moment.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-2">
+      <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+        Alertes
+      </h2>
+      <ul className="space-y-2">
+        {insights.map((insight) => (
+          <li key={insight.id}>
+            <Link
+              href={insight.href}
+              className="flex items-start gap-3 rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
+            >
+              <ABadge tone={portalInsightBadgeTone(insight.severity)}>
+                {portalInsightSeverityLabel(insight.severity)}
+              </ABadge>
+              <div className="min-w-0 flex-1">
+                <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                  {insight.title}
+                </p>
+                <p className="mt-0.5 text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  {insight.message}
+                </p>
+              </div>
+              <span className="shrink-0 text-[length:var(--a-text-xs)] text-a-accent">
+                →
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

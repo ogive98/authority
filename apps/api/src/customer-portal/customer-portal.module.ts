@@ -9,6 +9,7 @@ import { SalesModule } from '../sales/sales.module';
 import { CustomerPortalAuthService } from './customer-portal-auth.service';
 import { CustomerPortalClaimsService } from './customer-portal-claims.service';
 import { CustomerPortalController } from './customer-portal.controller';
+import { CustomerPortalInsightsService } from './customer-portal-insights.service';
 import { CustomerPortalModuleGuard } from './customer-portal-module.guard';
 import { CustomerPortalOrdersService } from './customer-portal-orders.service';
 import { CustomerPortalSessionGuard } from './customer-portal-session.guard';
@@ -28,6 +29,7 @@ import { CustomerPortalSessionGuard } from './customer-portal-session.guard';
     CustomerPortalAuthService,
     CustomerPortalOrdersService,
     CustomerPortalClaimsService,
+    CustomerPortalInsightsService,
     CustomerPortalSessionGuard,
     CustomerPortalModuleGuard,
   ],
