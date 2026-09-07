@@ -45,4 +45,40 @@ describe('ProcessedEventService', () => {
       true,
     );
   });
+
+  it('prunes expired rows in batches', async () => {
+    const prisma = {
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValue([{ id: 'a' }, { id: 'b' }]),
+      coreProcessedEvent: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 2 }),
+        count: jest.fn(),
+        create: jest.fn(),
+        findFirst: jest.fn(),
+      },
+    };
+    const service = new ProcessedEventService(prisma as never);
+    const result = await service.pruneExpired({
+      retentionDays: 7,
+      batchSize: 100,
+    });
+    expect(result.deleted).toBe(2);
+    expect(prisma.coreProcessedEvent.deleteMany).toHaveBeenCalledWith({
+      where: { id: { in: ['a', 'b'] } },
+    });
+  });
+
+  it('prune returns 0 when nothing to delete', async () => {
+    const prisma = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      coreProcessedEvent: {
+        deleteMany: jest.fn(),
+      },
+    };
+    const service = new ProcessedEventService(prisma as never);
+    const result = await service.pruneExpired();
+    expect(result.deleted).toBe(0);
+    expect(prisma.coreProcessedEvent.deleteMany).not.toHaveBeenCalled();
+  });
 });

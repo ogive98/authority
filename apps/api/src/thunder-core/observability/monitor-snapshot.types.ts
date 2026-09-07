@@ -53,6 +53,8 @@ export interface ThunderMonitorSnapshot {
     outboxDlq: number;
     publishedLastMinute: number;
     eventsPerSecondEstimate: number;
+    /** core_processed_event row count (THU-PLAT-04). */
+    processedEventRows: number;
   };
   /** Circuit breakers (THU-HARD-02). stateGauge: 0=closed 1=open 2=half_open */
   breakers: Array<{

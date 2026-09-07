@@ -55,6 +55,7 @@ model CoreProcessedEvent {
   processedAt DateTime @default(now()) @map("processed_at") @db.Timestamptz(6)
 
   @@unique([consumer, eventId])
+  @@index([processedAt])
   @@map("core_processed_event")
 }
 

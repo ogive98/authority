@@ -32,6 +32,7 @@ export class MonitorSnapshotService {
       outboxDlq,
       outboxLagStats,
       publishedLastMinute,
+      processedEventRows,
       redisOk,
       redisMemory,
       dbOk,
@@ -49,6 +50,7 @@ export class MonitorSnapshotService {
           publishedAt: { gte: new Date(Date.now() - 60_000) },
         },
       }),
+      this.prisma.coreProcessedEvent.count(),
       this.redis.ping(),
       this.redis.getUsedMemoryBytes(),
       this.pingDb(),
@@ -209,6 +211,7 @@ export class MonitorSnapshotService {
         outboxDlq,
         publishedLastMinute,
         eventsPerSecondEstimate: publishedLastMinute / 60,
+        processedEventRows,
       },
       breakers: breakerRows,
       admission: {

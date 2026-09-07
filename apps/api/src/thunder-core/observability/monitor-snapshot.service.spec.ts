@@ -19,6 +19,7 @@ describe('MonitorSnapshotService', () => {
       },
       thunderDlqEntry: { count: jest.fn().mockResolvedValue(3) },
       coreOutboxDlq: { count: jest.fn().mockResolvedValue(1) },
+      coreProcessedEvent: { count: jest.fn().mockResolvedValue(42) },
       coreOutbox: {
         count: jest.fn().mockResolvedValue(120),
       },
@@ -96,6 +97,7 @@ describe('MonitorSnapshotService', () => {
     expect(snap.jobs.dlq).toBe(3);
     expect(snap.events.outboxLag).toBe(4);
     expect(snap.events.outboxDlq).toBe(1);
+    expect(snap.events.processedEventRows).toBe(42);
     expect(snap.events.outboxLagSeconds).toEqual({
       oldest: 12.5,
       p50: 5,
@@ -133,6 +135,7 @@ describe('MonitorSnapshotService', () => {
       thunderJob: { groupBy: jest.fn().mockResolvedValue([]) },
       thunderDlqEntry: { count: jest.fn().mockResolvedValue(0) },
       coreOutboxDlq: { count: jest.fn().mockResolvedValue(0) },
+      coreProcessedEvent: { count: jest.fn().mockResolvedValue(0) },
       coreOutbox: {
         count: jest.fn().mockResolvedValue(0),
       },

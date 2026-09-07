@@ -22,6 +22,11 @@ export class EventConsumerHost implements OnModuleDestroy {
     private readonly processedEvents: ProcessedEventService,
   ) {}
 
+  /**
+   * Poll all consumer groups. Parallelism across groups via
+   * THUNDER_CONSUMER_PARALLEL (default 4). Batch size via
+   * THUNDER_CONSUMER_BATCH_SIZE (default 10).
+   */
   async pollOnce(): Promise<number> {
     if (!thunderConsumersEnabled()) {
       return 0;
@@ -33,14 +38,18 @@ export class EventConsumerHost implements OnModuleDestroy {
     }
 
     const streamKey = thunderEventStreamKey();
+    const consumers = this.registry.list();
+    const parallel = readPositiveInt(process.env.THUNDER_CONSUMER_PARALLEL, 4);
     let handled = 0;
 
-    for (const consumer of this.registry.list()) {
-      handled += await this.pollConsumer(
-        connection,
-        streamKey,
-        consumer.consumerId,
+    for (let i = 0; i < consumers.length; i += parallel) {
+      const chunk = consumers.slice(i, i + parallel);
+      const counts = await Promise.all(
+        chunk.map((consumer) =>
+          this.pollConsumer(connection, streamKey, consumer.consumerId),
+        ),
       );
+      handled += counts.reduce((sum, n) => sum + n, 0);
     }
 
     return handled;
@@ -58,12 +67,20 @@ export class EventConsumerHost implements OnModuleDestroy {
       return 0;
     }
 
+    const batchSize = readPositiveInt(
+      process.env.THUNDER_CONSUMER_BATCH_SIZE,
+      10,
+    );
+    const workerName =
+      process.env.THUNDER_CONSUMER_WORKER_ID?.trim() ||
+      `worker-${process.pid}`;
+
     const response = (await connection.xreadgroup(
       'GROUP',
       consumerGroup,
-      'worker-1',
+      workerName,
       'COUNT',
-      10,
+      batchSize,
       'STREAMS',
       streamKey,
       '>',
@@ -97,9 +114,9 @@ export class EventConsumerHost implements OnModuleDestroy {
                 return;
               }
 
-              const registration = this.registry.get(consumerGroup);
+              const current = this.registry.get(consumerGroup);
               const accepts = getDefaultEventContractRegistry().consumerAccepts(
-                registration?.consumes,
+                current?.consumes,
                 envelope.eventType,
               );
               if (!accepts) {
@@ -111,7 +128,7 @@ export class EventConsumerHost implements OnModuleDestroy {
                 return;
               }
 
-              await registration!.handler(envelope);
+              await current!.handler(envelope);
               await this.processedEvents.markProcessed(
                 consumerGroup,
                 envelope.eventId,
@@ -170,4 +187,12 @@ export class EventConsumerHost implements OnModuleDestroy {
       this.consumerRedis = null;
     }
   }
+}
+
+function readPositiveInt(raw: string | undefined, fallback: number): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) {
+    return fallback;
+  }
+  return Math.floor(n);
 }
