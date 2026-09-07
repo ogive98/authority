@@ -18,6 +18,7 @@ import {
   Truck,
   Users,
   Wallet,
+  Wrench,
 } from "lucide-react";
 
 /**
@@ -44,7 +45,7 @@ const ICONS: Record<string, LucideIcon> = {
   payroll: Users,
   rh: Users,
   tax: Landmark,
-  repair: Activity,
+  repair: Wrench,
   finance: Wallet,
   accounting: Landmark,
   customers: Users,

@@ -9,92 +9,21 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import {
-  IsArray,
-  IsBoolean,
-  IsIn,
-  IsOptional,
-  IsString,
-  IsUUID,
-} from 'class-validator';
 import type { Request } from 'express';
 import type { AuthenticatedRequest } from '../identity/session.guard';
 import { SuperAdminSessionGuard } from '../super-admin/super-admin-session.guard';
+import {
+  ExecuteDto,
+  HealthScanDto,
+  PlanDto,
+  ResetScopeDto,
+  RollbackDto,
+  SnapshotDto,
+  VerifyDto,
+} from './repair.dto';
 import { RepairFacade } from './repair.facade';
 
-class HealthScanDto {
-  @IsIn(['L0', 'L1', 'L2', 'L3', 'L4'])
-  depth!: 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  domains?: string[];
-
-  @IsOptional()
-  @IsUUID()
-  companyId?: string;
-}
-
-class PlanDto {
-  @IsOptional()
-  @IsUUID()
-  findingId?: string;
-
-  @IsOptional()
-  @IsString()
-  scenarioId?: string;
-
-  @IsOptional()
-  @IsUUID()
-  companyId?: string;
-}
-
-class ExecuteDto {
-  @IsUUID()
-  executionId!: string;
-
-  @IsBoolean()
-  confirm!: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  dryRun?: boolean;
-}
-
-class RollbackDto {
-  @IsUUID()
-  executionId!: string;
-}
-
-class ResetScopeDto {
-  @IsString()
-  scope!: string;
-
-  @IsOptional()
-  @IsUUID()
-  companyId?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  confirm?: boolean;
-}
-
-class SnapshotDto {
-  @IsOptional()
-  @IsUUID()
-  companyId?: string;
-
-  @IsOptional()
-  @IsString()
-  label?: string;
-}
-
-class VerifyDto {
-  @IsUUID()
-  executionId!: string;
-}
-
+/** Legacy Control Console surface — product path is `/api/v1/repair` (ERP). */
 @Controller('api/super-admin/v1/repair')
 @UseGuards(SuperAdminSessionGuard)
 export class RepairController {
@@ -218,7 +147,12 @@ export class RepairController {
       companyId: body.companyId,
       label: body.label,
     });
-    return { id: snap.ref, ref: snap.ref, label: snap.label, createdAt: snap.createdAt };
+    return {
+      id: snap.ref,
+      ref: snap.ref,
+      label: snap.label,
+      createdAt: snap.createdAt,
+    };
   }
 
   @Get('backups')
@@ -258,7 +192,6 @@ export class RepairController {
   @Post('reporting/flush')
   @HttpCode(HttpStatus.OK)
   async reportingFlush() {
-    const result = await this.facade.reportingFlush();
-    return result;
+    return this.facade.reportingFlush();
   }
 }

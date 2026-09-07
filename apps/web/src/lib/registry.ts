@@ -74,6 +74,18 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       ],
     },
     {
+      key: "repair",
+      name: "Scan & Repair",
+      features: [
+        { id: "repair-home", label: "Scan & Repair", href: "/repair" },
+        {
+          id: "repair-diagnostics",
+          label: "Diagnostics",
+          href: "/repair#diagnostics",
+        },
+      ],
+    },
+    {
       key: "documents",
       name: "Documents",
       features: [

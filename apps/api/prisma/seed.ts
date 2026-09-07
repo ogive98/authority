@@ -504,6 +504,30 @@ async function main() {
     subjectId: demoUser.id,
     companyId: company.id,
   });
+  await upsertGrant({
+    permissionKey: 'repair.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'repair.scan',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'repair.execute',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'repair.reset',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
 
   for (const zone of [
     { code: 'SF-NORD', name: 'Zone Nord' },

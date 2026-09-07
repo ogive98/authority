@@ -1,16 +1,16 @@
 import type { ModuleManifest } from '../manifest.types';
 
 /**
- * Repair / Thunder Control — scan · diagnose · repair · report (D079).
+ * Repair — scan · diagnose · repair · report (ERP module).
  * Ops module: no business mutation; registry-first scenarios.
  */
 export const repairManifest: ModuleManifest = {
   id: 'repair',
-  name: 'Repair',
+  name: 'Scan & Repair',
   version: '1.0.0',
   apiVersion: '1',
   description:
-    'Thunder Control Repair — scan, diagnostic, allowlisted repair, reporting',
+    'Scan, diagnostic et réparation allowlistée d’AUTHORITY (pas de mutation métier)',
   capabilities: [
     {
       key: 'repair.dashboard.read',
@@ -105,9 +105,14 @@ export const repairManifest: ModuleManifest = {
   healthChecks: ['repair.kernel'],
   navigationEntries: [
     {
-      id: 'repair-console',
-      label: 'Repair',
-      href: '/super-admin/repair',
+      id: 'repair-home',
+      label: 'Scan & Repair',
+      href: '/repair',
+    },
+    {
+      id: 'repair-diagnostics',
+      label: 'Diagnostics',
+      href: '/repair#diagnostics',
     },
   ],
 };

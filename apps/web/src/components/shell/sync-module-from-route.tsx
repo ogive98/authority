@@ -60,6 +60,11 @@ export function SyncModuleFromRoute() {
       setFeatureMenuOpen(false);
       return;
     }
+    if (pathname.startsWith("/repair")) {
+      if (has("repair")) setSelectedModuleId("repair");
+      setFeatureMenuOpen(false);
+      return;
+    }
     if (pathname.startsWith("/documents")) {
       if (has("documents")) setSelectedModuleId("documents");
       setFeatureMenuOpen(false);

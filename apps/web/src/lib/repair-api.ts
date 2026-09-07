@@ -1,6 +1,6 @@
-/** Client for Super Admin Repair / Thunder Control APIs (D079). */
+/** Client for ERP Repair APIs (`/api/v1/repair`) — Utility Cube module. */
 
-const REPAIR_API = "/api/super-admin/v1/repair";
+const REPAIR_API = "/api/v1/repair";
 
 async function repairFetch<T>(
   path: string,
