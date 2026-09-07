@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { IdentityModule } from '../identity/identity.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SuperAdminModule } from '../super-admin/super-admin.module';
 import { HealthCheckersService } from './checkers/health-checkers.service';
@@ -15,7 +16,7 @@ import { RepairController } from './repair.controller';
 import { RepairFacade } from './repair.facade';
 
 @Module({
-  imports: [PrismaModule, AuditModule, SuperAdminModule],
+  imports: [PrismaModule, AuditModule, IdentityModule, SuperAdminModule],
   controllers: [RepairController],
   providers: [
     RepairRegistryService,
