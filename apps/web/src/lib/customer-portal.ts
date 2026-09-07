@@ -213,7 +213,7 @@ export type PortalClaimList = {
   nextCursor: string | null;
 };
 
-/** App pages hide the portal (404) unless Customer Portal realm session is valid. */
+/** True when Customer Portal session is missing/invalid (redirect to login). */
 export function shouldHidePortal(httpStatus: number): boolean {
   return httpStatus !== 200;
 }

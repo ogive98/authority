@@ -1,7 +1,8 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { PortalShell } from "@/components/portal/portal-shell";
 import {
   fetchPortalMe,
+  PORTAL_LOGIN_PATH,
   shouldHidePortal,
 } from "@/lib/customer-portal";
 
@@ -12,7 +13,7 @@ export default async function PortalAppLayout({
 }) {
   const { status, data } = await fetchPortalMe();
   if (shouldHidePortal(status) || !data) {
-    notFound();
+    redirect(PORTAL_LOGIN_PATH);
   }
 
   const customerLabel = `${data.customer.code} · ${data.customer.legalName}`;
