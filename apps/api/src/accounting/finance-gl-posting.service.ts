@@ -180,10 +180,17 @@ export class FinanceGlPostingService {
       return { outcome: 'skipped', reason: 'no posted payment GL to reverse' };
     }
 
-    let last = targets[0]!;
+    let last: { id: string; number: string } = {
+      id: targets[0]!.id,
+      number: targets[0]!.number,
+    };
     for (const entry of targets) {
       try {
-        last = await this.accounting.reverseEntry(companyId, entry.id);
+        const reversed = await this.accounting.reverseEntry(
+          companyId,
+          entry.id,
+        );
+        last = { id: reversed.id, number: reversed.number };
       } catch (error) {
         this.logger.warn(
           `GL reverse failed for ${entry.number}: ${
