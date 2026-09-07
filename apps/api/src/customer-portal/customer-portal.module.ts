@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { DeliveryModule } from '../delivery/delivery.module';
 import { FinanceModule } from '../finance/finance.module';
+import { DocumentsModule } from '../documents/documents.module';
 import { IdentityModule } from '../identity/identity.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -21,6 +22,7 @@ import { CustomerPortalSessionGuard } from './customer-portal-session.guard';
     SalesModule,
     DeliveryModule,
     FinanceModule,
+    DocumentsModule,
     AuditModule,
     ModulesRegistryModule,
   ],

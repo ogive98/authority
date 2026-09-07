@@ -16,6 +16,7 @@ import type { Request, Response } from 'express';
 import { LoginDto } from '../identity/login.dto';
 import { SessionService } from '../identity/session.service';
 import { RequireModule } from '../modules-registry/modules.decorators';
+import { DocumentsService } from '../documents/documents.service';
 import { CustomerPortalAuthService } from './customer-portal-auth.service';
 import { CustomerPortalClaimsService } from './customer-portal-claims.service';
 import { CustomerPortalInsightsService } from './customer-portal-insights.service';
@@ -39,6 +40,7 @@ export class CustomerPortalController {
     private readonly portalOrdersService: CustomerPortalOrdersService,
     private readonly portalClaimsService: CustomerPortalClaimsService,
     private readonly portalInsightsService: CustomerPortalInsightsService,
+    private readonly documentsService: DocumentsService,
     private readonly sessionService: SessionService,
   ) {}
 
@@ -325,6 +327,41 @@ export class CustomerPortalController {
       req.customerId!,
       req.user!.id,
       dto,
+    );
+  }
+
+  @Get('documents')
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('documents')
+  listDocuments(
+    @Req() req: CustomerPortalRequest,
+    @Query('q') q?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.documentsService.listForCustomer(
+      req.companyId!,
+      req.customerId!,
+      {
+        q,
+        limit: Number.isFinite(limit) ? limit : undefined,
+        cursor,
+      },
+    );
+  }
+
+  @Get('documents/:id/download')
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('documents')
+  downloadDocument(
+    @Req() req: CustomerPortalRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.documentsService.getDownloadForCustomer(
+      req.companyId!,
+      req.customerId!,
+      id,
     );
   }
 

@@ -39,7 +39,7 @@ export default async function PortalClaimsPage() {
       <AScreenHeader
         kicker="Customer Portal"
         title="Réclamations"
-        description={`${items.length} dossier${items.length === 1 ? "" : "s"} · téléchargements Documents reportés`}
+        description={`${items.length} dossier${items.length === 1 ? "" : "s"} · documents partagés sur /portal/documents`}
         actions={
           <Link
             href={`${PORTAL_CLAIMS_PATH}/new`}

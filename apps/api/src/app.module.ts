@@ -18,6 +18,7 @@ import { InventoryModule } from './inventory/inventory.module';
 import { SalesModule } from './sales/sales.module';
 import { DeliveryModule } from './delivery/delivery.module';
 import { FinanceModule } from './finance/finance.module';
+import { DocumentsModule } from './documents/documents.module';
 import { CustomerPortalModule } from './customer-portal/customer-portal.module';
 
 @Module({
@@ -40,6 +41,7 @@ import { CustomerPortalModule } from './customer-portal/customer-portal.module';
     SalesModule,
     DeliveryModule,
     FinanceModule,
+    DocumentsModule,
     CustomerPortalModule,
   ],
 })

@@ -64,6 +64,13 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       ],
     },
     {
+      key: "documents",
+      name: "Documents",
+      features: [
+        { id: "library", label: "Documents", href: "/documents" },
+      ],
+    },
+    {
       key: "settings",
       name: "Paramètres",
       features: [

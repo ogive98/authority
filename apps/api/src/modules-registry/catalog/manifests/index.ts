@@ -1,6 +1,7 @@
 import type { ModuleManifest } from '../manifest.types';
 import { customersManifest } from './customers.manifest';
 import { deliveryManifest } from './delivery.manifest';
+import { documentsManifest } from './documents.manifest';
 import { financeManifest } from './finance.manifest';
 import { identityManifest } from './identity.manifest';
 import { inventoryManifest } from './inventory.manifest';
@@ -26,6 +27,7 @@ export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   inventoryManifest,
   deliveryManifest,
   financeManifest,
+  documentsManifest,
   productionManifest,
   payrollManifest,
   customersManifest,

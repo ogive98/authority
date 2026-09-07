@@ -5,6 +5,7 @@ export const PORTAL_ORDERS_NEW_PATH = "/portal/orders/new";
 export const PORTAL_DELIVERIES_PATH = "/portal/deliveries";
 export const PORTAL_FINANCE_PATH = "/portal/finance";
 export const PORTAL_CLAIMS_PATH = "/portal/claims";
+export const PORTAL_DOCUMENTS_PATH = "/portal/documents";
 export const PORTAL_COOKIE_NAME = "authority_customer_portal_session";
 
 export const PORTAL_API = {
@@ -19,6 +20,7 @@ export const PORTAL_API = {
   financeOpenItems: "/api/v1/customer-portal/finance/open-items",
   financeCredit: "/api/v1/customer-portal/finance/credit",
   claims: "/api/v1/customer-portal/claims",
+  documents: "/api/v1/customer-portal/documents",
 } as const;
 
 export type PortalMe = {
@@ -373,6 +375,50 @@ export async function fetchClaim(
   id: string,
 ): Promise<{ status: number; data: PortalClaim | null }> {
   return portalFetch<PortalClaim>(`${PORTAL_API.claims}/${id}`);
+}
+
+export type PortalDocument = {
+  id: string;
+  number: string;
+  title: string;
+  mime: string;
+  size: string;
+  linkType: string;
+  linkId: string | null;
+  createdAt: string;
+};
+
+export type PortalDocumentList = {
+  items: PortalDocument[];
+  nextCursor: string | null;
+};
+
+export async function fetchPortalDocuments(opts?: {
+  q?: string;
+  limit?: number;
+}): Promise<{ status: number; data: PortalDocumentList | null }> {
+  const params = new URLSearchParams();
+  if (opts?.q?.trim()) params.set("q", opts.q.trim());
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  return portalFetch<PortalDocumentList>(
+    `${PORTAL_API.documents}${qs ? `?${qs}` : ""}`,
+  );
+}
+
+export async function fetchPortalDocumentDownload(
+  id: string,
+): Promise<{
+  status: number;
+  data: {
+    id: string;
+    number: string;
+    title: string;
+    downloadUrl: string;
+    expiresInSeconds: number;
+  } | null;
+}> {
+  return portalFetch(`${PORTAL_API.documents}/${id}/download`);
 }
 
 export function portalClaimTypeLabel(type: PortalClaimType): string {

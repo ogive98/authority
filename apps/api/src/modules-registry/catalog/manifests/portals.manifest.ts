@@ -3,10 +3,10 @@ import type { ModuleManifest } from '../manifest.types';
 export const portalsManifest: ModuleManifest = {
   id: 'portals',
   name: 'Portals',
-  version: '0.6.0',
+  version: '0.7.0',
   apiVersion: '1',
   description:
-    'External portals — Customer Portal P1–P6 (access, orders, finance read, delivery track, claims)',
+    'External portals — Customer Portal P1–P7 + P6b documents signed download',
   capabilities: [
     {
       key: 'customer_portal.access',
@@ -41,6 +41,14 @@ export const portalsManifest: ModuleManifest = {
       riskLevel: 'medium',
       requiresAudit: true,
     },
+    {
+      key: 'customer_portal.documents.read',
+      moduleId: 'portals',
+      version: '1',
+      description: 'List and download CUSTOMER_PORTAL documents for membership',
+      permissionKey: 'customer_portal.documents.read',
+      riskLevel: 'low',
+    },
   ],
   commands: ['customer_portal.claims.create'],
   queries: [
@@ -48,12 +56,15 @@ export const portalsManifest: ModuleManifest = {
     'customer_portal.dashboard',
     'customer_portal.claims.list',
     'customer_portal.claims.get',
+    'customer_portal.documents.list',
+    'customer_portal.documents.download',
   ],
   permissions: [
     'customer_portal.access',
     'customer_portal.dashboard.read',
     'customer_portal.claims.read',
     'customer_portal.claims.create',
+    'customer_portal.documents.read',
   ],
   dependencies: [
     'platform',
@@ -62,6 +73,7 @@ export const portalsManifest: ModuleManifest = {
     'sales',
     'delivery',
     'finance',
+    'documents',
   ],
   publishedEvents: ['portals.claim.created.v1'],
   navigationEntries: [],

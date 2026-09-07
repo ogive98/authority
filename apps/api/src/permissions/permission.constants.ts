@@ -38,10 +38,13 @@ export const PERMISSION_CATALOGUE = [
   'finance.ar.read',
   'finance.ar.write',
   'finance.allocate',
+  'documents.read',
+  'documents.write',
   'customer_portal.access',
   'customer_portal.dashboard.read',
   'customer_portal.claims.read',
   'customer_portal.claims.create',
+  'customer_portal.documents.read',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_CATALOGUE)[number];
@@ -86,10 +89,13 @@ export const PERMISSION_KEYS = {
   financeArRead: 'finance.ar.read',
   financeArWrite: 'finance.ar.write',
   financeAllocate: 'finance.allocate',
+  documentsRead: 'documents.read',
+  documentsWrite: 'documents.write',
   customerPortalAccess: 'customer_portal.access',
   customerPortalDashboardRead: 'customer_portal.dashboard.read',
   customerPortalClaimsRead: 'customer_portal.claims.read',
   customerPortalClaimsCreate: 'customer_portal.claims.create',
+  customerPortalDocumentsRead: 'customer_portal.documents.read',
 } as const satisfies Record<string, PermissionKey>;
 
 export const PERMISSION_METADATA_KEY = 'authority:permission';

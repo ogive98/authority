@@ -897,6 +897,46 @@ model PtlClaim {
   @@map("ptl_claim")
 }
 
+// --- doc_* Documents light V0 (metadata over SOC-09 core_file) ---
+
+enum DocVisibility {
+  INTERNAL
+  CUSTOMER_PORTAL
+}
+
+enum DocLinkType {
+  NONE
+  CLAIM
+  ORDER
+  SHIPMENT
+}
+
+model DocDocument {
+  id              String        @id @default(uuid()) @db.Uuid
+  companyId       String        @map("company_id") @db.Uuid
+  number          String
+  title           String
+  mime            String
+  size            BigInt
+  coreFileId      String        @map("core_file_id") @db.Uuid
+  visibility      DocVisibility @default(INTERNAL)
+  linkType        DocLinkType   @default(NONE) @map("link_type")
+  linkId          String?       @map("link_id") @db.Uuid
+  /** Denormalized for portal membership scoping. */
+  customerId      String?       @map("customer_id") @db.Uuid
+  createdByUserId String?       @map("created_by_user_id") @db.Uuid
+  version         Int           @default(0)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?     @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, customerId, visibility])
+  @@index([companyId, linkType, linkId])
+  @@map("doc_document")
+}
+
 model CusContact {
   id         String    @id @default(uuid()) @db.Uuid
   companyId  String    @map("company_id") @db.Uuid

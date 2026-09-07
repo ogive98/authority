@@ -8,6 +8,7 @@ import { ASkipLink } from "@/components/a/a-skip-link";
 import {
   PORTAL_API,
   PORTAL_CLAIMS_PATH,
+  PORTAL_DOCUMENTS_PATH,
   PORTAL_DELIVERIES_PATH,
   PORTAL_FINANCE_PATH,
   PORTAL_HOME_PATH,
@@ -22,6 +23,7 @@ const NAV = [
   { href: PORTAL_DELIVERIES_PATH, label: "Livraisons" },
   { href: PORTAL_FINANCE_PATH, label: "Finance" },
   { href: PORTAL_CLAIMS_PATH, label: "Réclamations" },
+  { href: PORTAL_DOCUMENTS_PATH, label: "Documents" },
 ] as const;
 
 export function PortalShell({
