@@ -1,4 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { FinOpenItemSide, FinOpenItemStatus } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthorityEventEnvelope } from '../events/event-envelope';
 import { ConsumerRegistryService } from '../events/consumer-registry.service';
 import {
@@ -17,6 +19,7 @@ export class ThunderIntelRegistrar implements OnModuleInit {
     private readonly registry: ConsumerRegistryService,
     private readonly signals: SignalService,
     private readonly recommendations: RecommendationService,
+    private readonly prisma: PrismaService,
   ) {}
 
   onModuleInit(): void {
@@ -28,6 +31,7 @@ export class ThunderIntelRegistrar implements OnModuleInit {
           THUNDER_INTEL_EVENT_TYPES.deliveryFailed,
           THUNDER_INTEL_EVENT_TYPES.salesConfirmed,
           THUNDER_INTEL_EVENT_TYPES.financeAllocation,
+          THUNDER_INTEL_EVENT_TYPES.financeOpenItemCreated,
         ],
       },
     );
@@ -47,6 +51,10 @@ export class ThunderIntelRegistrar implements OnModuleInit {
         return;
       case THUNDER_INTEL_EVENT_TYPES.financeAllocation:
         await this.onFinanceAllocation(envelope);
+        await this.maybeEmitOverdue(envelope);
+        return;
+      case THUNDER_INTEL_EVENT_TYPES.financeOpenItemCreated:
+        await this.maybeEmitOverdue(envelope);
         return;
       default:
         return;
@@ -140,5 +148,77 @@ export class ThunderIntelRegistrar implements OnModuleInit {
       },
       occurredAt: new Date(envelope.occurredAt),
     });
+  }
+
+  /** Collections V0: if customer still has overdue AR, emit WARN + reco. */
+  private async maybeEmitOverdue(
+    envelope: AuthorityEventEnvelope,
+  ): Promise<void> {
+    const companyId = envelope.companyId!;
+    const customerId =
+      typeof envelope.payload.customerId === 'string'
+        ? envelope.payload.customerId
+        : null;
+    if (!customerId) return;
+
+    const today = new Date();
+    const start = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+    );
+    const overdueCount = await this.prisma.finOpenItem.count({
+      where: {
+        companyId,
+        customerId,
+        deletedAt: null,
+        side: FinOpenItemSide.AR,
+        status: { in: [FinOpenItemStatus.OPEN, FinOpenItemStatus.PARTIAL] },
+        dueDate: { lt: start },
+      },
+    });
+    if (overdueCount <= 0) return;
+
+    const signal = await this.signals.create({
+      companyId,
+      siteId: envelope.siteId,
+      type: THUNDER_SIGNAL_TYPES.FinanceOverdueOpenItems,
+      severity: 'WARN',
+      source: THUNDER_INTEL_CONSUMER_ID,
+      sourceEventId: envelope.eventId,
+      sourceEventType: envelope.eventType,
+      correlationId: envelope.correlationId,
+      evidence: {
+        customerId,
+        overdueCount,
+        aggregateType: envelope.aggregateType,
+        aggregateId: envelope.aggregateId,
+      },
+      occurredAt: new Date(envelope.occurredAt),
+    });
+
+    await this.recommendations.create({
+      companyId,
+      signalId: signal.id,
+      problem: `Customer has ${overdueCount} overdue AR open item(s) — review collections`,
+      evidence: {
+        signalId: signal.id,
+        customerId,
+        overdueCount,
+      },
+      options: [
+        { id: 'review_finance', label: 'Open Créances (Échues)' },
+        { id: 'ack', label: 'Acknowledge without action' },
+      ],
+      autonomyLevel: 2,
+      proposedAction: {
+        type: 'record_only',
+        capabilityHint: 'finance.ar.read',
+        aggregateId: customerId,
+      },
+      correlationId: envelope.correlationId,
+    });
+
+    this.logger.log(
+      `signal FinanceOverdueOpenItems customer=${customerId} count=${overdueCount}`,
+    );
   }
 }

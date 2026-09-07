@@ -49,14 +49,20 @@ export class FinanceController {
     @Query('q') q?: string,
     @Query('status') status?: string,
     @Query('customerId') customerId?: string,
+    @Query('overdue') overdueRaw?: string,
     @Query('limit') limitRaw?: string,
     @Query('cursor') cursor?: string,
   ) {
     const limit = limitRaw ? Number(limitRaw) : undefined;
+    const overdue =
+      overdueRaw === '1' ||
+      overdueRaw?.toLowerCase() === 'true' ||
+      overdueRaw?.toLowerCase() === 'yes';
     return this.financeService.list(tenancy.companyId, {
       q,
       status,
       customerId,
+      overdue: overdue || undefined,
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor,
     });

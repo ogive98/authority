@@ -101,6 +101,7 @@ describe('SalesService', () => {
       },
       setValue: {
         findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
       },
       cusCustomer: {
         findFirst: jest.fn().mockResolvedValue(customer),
@@ -145,6 +146,14 @@ describe('SalesService', () => {
       prisma as never,
       outbox as never,
       inventory as never,
+      {
+        creditSnapshot: jest.fn().mockResolvedValue({
+          customerId,
+          creditLimit: null,
+          outstandingBalance: '0.000',
+          currency: 'TND',
+        }),
+      } as never,
     );
     return { service, inventory, outbox, prisma, setOrder: (o: typeof order) => { order = o; } };
   }
@@ -181,6 +190,34 @@ describe('SalesService', () => {
       status: HttpStatus.CONFLICT,
     });
     expect(inventory.reserve).not.toHaveBeenCalled();
+  });
+
+  it('confirm denied when credit enforce on and exposure exceeds limit', async () => {
+    const finance = {
+      creditSnapshot: jest.fn().mockResolvedValue({
+        customerId,
+        creditLimit: '40.000',
+        outstandingBalance: '10.000',
+        currency: 'TND',
+      }),
+    };
+    const { inventory, outbox, prisma } = build();
+    const service = new SalesService(
+      prisma as never,
+      outbox as never,
+      inventory as never,
+      finance as never,
+    );
+    prisma.setValue.findFirst = jest.fn().mockResolvedValue({
+      valueJson: true,
+    });
+
+    await expect(service.confirm(companyId, orderId)).rejects.toMatchObject({
+      response: { code: SALES_ERROR_CODES.CREDIT_DENIED },
+      status: HttpStatus.CONFLICT,
+    });
+    expect(inventory.reserve).not.toHaveBeenCalled();
+    expect(finance.creditSnapshot).toHaveBeenCalled();
   });
 
   it('confirm compensates when reserve fails mid-way', async () => {

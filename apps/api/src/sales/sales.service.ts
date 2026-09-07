@@ -9,6 +9,11 @@ import {
   SalOrderStatus,
 } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
+import { FinanceService } from '../finance/finance.service';
+import {
+  FINANCE_SETTING_DEFAULTS,
+  FINANCE_SETTING_KEYS,
+} from '../finance/finance.constants';
 import { InventoryService } from '../inventory/inventory.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -76,6 +81,7 @@ export class SalesService {
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly inventory: InventoryService,
+    private readonly finance: FinanceService,
   ) {}
 
   async getIntakeSettings(companyId: string): Promise<SalesIntakeSettings> {
@@ -377,7 +383,11 @@ export class SalesService {
       );
     }
 
-    await this.assertCreditPolicy(companyId, order.customerId);
+    await this.assertCreditPolicy(
+      companyId,
+      order.customerId,
+      Number(order.amountTotal.toString()),
+    );
     await this.assertWarehouse(companyId, order.warehouseId);
 
     const settings = await this.getIntakeSettings(companyId);
@@ -577,13 +587,20 @@ export class SalesService {
     return customer;
   }
 
-  /** Credit / block policy: inactive, customer.blocked, or party blocked. */
-  private async assertCreditPolicy(companyId: string, customerId: string) {
+  /**
+   * Credit policy: inactive / blocked always.
+   * Optional exposure vs limit when finance.credit.enforce is true.
+   */
+  private async assertCreditPolicy(
+    companyId: string,
+    customerId: string,
+    orderAmount: number,
+  ) {
     const customer = await this.assertCustomer(companyId, customerId);
     if (customer.status !== CusCustomerStatus.ACTIVE) {
       throw new SalesException(
         SALES_ERROR_CODES.CREDIT_DENIED,
-        'Customer is inactive — confirm denied (credit stub).',
+        'Customer is inactive — confirm denied.',
         HttpStatus.CONFLICT,
       );
     }
@@ -601,6 +618,46 @@ export class SalesService {
         HttpStatus.CONFLICT,
       );
     }
+
+    const enforce = await this.isCreditEnforceEnabled(companyId);
+    if (!enforce) return;
+
+    const snap = await this.finance.creditSnapshot(companyId, customerId);
+    if (snap.creditLimit == null) return;
+
+    const outstanding = Number(snap.outstandingBalance);
+    const limit = Number(snap.creditLimit);
+    const exposure = round3(outstanding + Math.max(0, orderAmount));
+    if (exposure > limit + 1e-9) {
+      throw new SalesException(
+        SALES_ERROR_CODES.CREDIT_DENIED,
+        `Credit limit exceeded (outstanding ${outstanding.toFixed(3)} + order ${orderAmount.toFixed(3)} > limit ${limit.toFixed(3)} ${snap.currency}).`,
+        HttpStatus.CONFLICT,
+        {
+          outstanding: outstanding.toFixed(3),
+          orderAmount: orderAmount.toFixed(3),
+          creditLimit: limit.toFixed(3),
+          currency: snap.currency,
+        },
+      );
+    }
+  }
+
+  private async isCreditEnforceEnabled(companyId: string): Promise<boolean> {
+    const row = await this.prisma.setValue.findFirst({
+      where: {
+        defKey: FINANCE_SETTING_KEYS.CREDIT_ENFORCE,
+        scopeKey: `company:${companyId}`,
+        deletedAt: null,
+      },
+    });
+    if (!row) {
+      return FINANCE_SETTING_DEFAULTS[FINANCE_SETTING_KEYS.CREDIT_ENFORCE];
+    }
+    const raw = row.valueJson;
+    if (typeof raw === 'boolean') return raw;
+    if (typeof raw === 'string') return raw === 'true' || raw === '1';
+    return Boolean(raw);
   }
 
   private async assertWarehouse(companyId: string, warehouseId: string) {
@@ -786,4 +843,8 @@ function serializeOrder(
       };
     }),
   };
+}
+
+function round3(n: number): number {
+  return Math.round(n * 1000) / 1000;
 }

@@ -192,6 +192,7 @@ export async function fetchOpenItems(opts?: {
   q?: string;
   status?: OpenItemStatus | "";
   customerId?: string;
+  overdue?: boolean;
 }): Promise<
   | { ok: true; data: { items: FinOpenItem[]; nextCursor: string | null } }
   | ApiFail
@@ -201,6 +202,7 @@ export async function fetchOpenItems(opts?: {
     if (opts?.q?.trim()) params.set("q", opts.q.trim());
     if (opts?.status) params.set("status", opts.status);
     if (opts?.customerId) params.set("customerId", opts.customerId);
+    if (opts?.overdue) params.set("overdue", "1");
     const qs = params.toString();
     const res = await fetch(`/api/v1/finance/open-items${qs ? `?${qs}` : ""}`, {
       credentials: "include",
@@ -508,6 +510,19 @@ export function openItemBadgeTone(
   if (status === "PARTIAL") return "warning";
   if (status === "OPEN") return "accent";
   return "neutral";
+}
+
+export function isOpenItemOverdue(
+  item: Pick<FinOpenItem, "dueDate" | "status">,
+  today = new Date(),
+): boolean {
+  if (!item.dueDate) return false;
+  if (item.status === "CLOSED") return false;
+  const due = new Date(`${item.dueDate}T00:00:00.000Z`);
+  const start = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+  );
+  return due.getTime() < start.getTime();
 }
 
 export function invoiceBadgeTone(

@@ -1056,6 +1056,14 @@ async function seedSettingsDefinitions(
       description: 'Default currency for sales orders',
       isPrefOnly: false,
     },
+    {
+      key: 'finance.credit.enforce',
+      valueType: 'boolean',
+      defaultJson: false,
+      description:
+        'When true, deny sales confirm if outstanding + order exceeds customer creditLimit',
+      isPrefOnly: false,
+    },
   ] as const;
 
   for (const definition of definitions) {
@@ -1086,6 +1094,14 @@ async function seedSettingsDefinitions(
   });
   await upsertSettingValue({
     defKey: 'sales.auto_confirm_on_create',
+    level: SetLevel.COMPANY,
+    companyId,
+    subjectId: companyId,
+    valueJson: false,
+  });
+
+  await upsertSettingValue({
+    defKey: 'finance.credit.enforce',
     level: SetLevel.COMPANY,
     companyId,
     subjectId: companyId,

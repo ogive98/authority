@@ -25,3 +25,12 @@ export const FINANCE_EVENT_TYPES = {
   INSTRUMENT_STATUS: 'finance.instrument.status.v1',
   INSTRUMENT_REJECTED: 'finance.instrument.rejected.v1',
 } as const;
+
+/** Company settings — credit exposure check on sales confirm (default off). */
+export const FINANCE_SETTING_KEYS = {
+  CREDIT_ENFORCE: 'finance.credit.enforce',
+} as const;
+
+export const FINANCE_SETTING_DEFAULTS = {
+  [FINANCE_SETTING_KEYS.CREDIT_ENFORCE]: false,
+} as const;

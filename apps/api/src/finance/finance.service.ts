@@ -65,6 +65,7 @@ export class FinanceService {
       q?: string;
       status?: string;
       customerId?: string;
+      overdue?: boolean;
       limit?: number;
       cursor?: string;
     },
@@ -72,6 +73,7 @@ export class FinanceService {
     const limit = Math.min(Math.max(opts?.limit ?? 50, 1), 100);
     const q = opts?.q?.trim();
     const status = opts?.status?.trim().toUpperCase();
+    const today = startOfUtcDay(new Date());
 
     const where: Prisma.FinOpenItemWhereInput = {
       companyId,
@@ -81,6 +83,14 @@ export class FinanceService {
       ...(status &&
       Object.values(FinOpenItemStatus).includes(status as FinOpenItemStatus)
         ? { status: status as FinOpenItemStatus }
+        : {}),
+      ...(opts?.overdue
+        ? {
+            status: {
+              in: [FinOpenItemStatus.OPEN, FinOpenItemStatus.PARTIAL],
+            },
+            dueDate: { lt: today },
+          }
         : {}),
       ...(q
         ? {
@@ -317,6 +327,7 @@ export class FinanceService {
         eventType: FINANCE_EVENT_TYPES.ALLOCATION_RECORDED,
         payloadJson: {
           openItemId: id,
+          customerId: existing.customerId,
           amount: pay,
           amountOpen: updated.amountOpen.toString(),
           status: updated.status,
@@ -526,4 +537,8 @@ function serialize(
       note: a.note,
     })),
   };
+}
+
+function startOfUtcDay(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }

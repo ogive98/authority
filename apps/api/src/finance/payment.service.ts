@@ -405,6 +405,7 @@ export class PaymentService {
           eventType: FINANCE_EVENT_TYPES.ALLOCATION_RECORDED,
           payloadJson: {
             openItemId: openItem.id,
+            customerId: payment.customerId,
             paymentId,
             amount: take,
             amountOpen: Math.max(0, nextOpen),

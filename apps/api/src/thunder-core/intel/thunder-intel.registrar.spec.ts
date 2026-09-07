@@ -24,6 +24,9 @@ describe('ThunderIntelRegistrar', () => {
       registry as never,
       signals as never,
       recommendations as never,
+      {
+        finOpenItem: { count: jest.fn().mockResolvedValue(0) },
+      } as never,
     );
   });
 

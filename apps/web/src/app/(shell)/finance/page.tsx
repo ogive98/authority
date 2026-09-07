@@ -22,6 +22,7 @@ import {
   allocateOpenItem,
   createOpenItem,
   fetchOpenItems,
+  isOpenItemOverdue,
   openItemBadgeTone,
   type FinOpenItem,
   type OpenItemStatus,
@@ -49,17 +50,20 @@ type AllocateDraft = {
   note: string;
 };
 
-const STATUS_FILTERS: Array<{ id: "" | OpenItemStatus; label: string }> = [
+type FilterMode = "" | OpenItemStatus | "OVERDUE";
+
+const STATUS_FILTERS: Array<{ id: FilterMode; label: string }> = [
   { id: "", label: "Tous" },
   { id: "OPEN", label: "Ouvert" },
   { id: "PARTIAL", label: "Partiel" },
   { id: "CLOSED", label: "Soldé" },
+  { id: "OVERDUE", label: "Échues" },
 ];
 
 export default function FinancePage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | OpenItemStatus>("");
+  const [statusFilter, setStatusFilter] = useState<FilterMode>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<CreateForm | null>(null);
   const [busy, setBusy] = useState(false);
@@ -72,11 +76,13 @@ export default function FinancePage() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(
-    async (query?: string, status?: "" | OpenItemStatus) => {
+    async (query?: string, filter?: FilterMode) => {
       setState({ kind: "loading" });
+      const overdue = filter === "OVERDUE";
       const res = await fetchOpenItems({
         q: query,
-        status: status || undefined,
+        status: overdue ? undefined : filter || undefined,
+        overdue: overdue || undefined,
       });
       if (!res.ok) {
         if (res.status === 403) {
@@ -327,6 +333,11 @@ export default function FinancePage() {
                     </td>
                     <td className="a-mono a-table-cell text-a-fg-muted">
                       {row.dueDate ?? "—"}
+                      {isOpenItemOverdue(row) ? (
+                        <span className="ml-2 inline-block">
+                          <ABadge tone="warning">Échue</ABadge>
+                        </span>
+                      ) : null}
                     </td>
                     <td className="a-table-cell">
                       <ABadge tone={openItemBadgeTone(row.status)}>
