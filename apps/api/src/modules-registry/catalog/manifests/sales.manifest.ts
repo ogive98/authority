@@ -63,6 +63,7 @@ export const salesManifest: ModuleManifest = {
     'sales.order.confirmed.v1',
     'sales.order.cancelled.v1',
   ],
+  consumedEvents: [],
   navigationEntries: [
     { id: 'orders', label: 'Commandes', href: '/sales' },
   ],

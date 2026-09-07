@@ -10,8 +10,10 @@ export class ThunderRulesRegistrar implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.registry.register('thunder.rules', (envelope) =>
-      this.engine.handleEvent(envelope),
+    this.registry.register(
+      'thunder.rules',
+      (envelope) => this.engine.handleEvent(envelope),
+      { consumes: ['*'] },
     );
   }
 }

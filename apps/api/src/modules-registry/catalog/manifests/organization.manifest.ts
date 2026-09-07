@@ -19,4 +19,5 @@ export const organizationManifest: ModuleManifest = {
   queries: ['organization.context'],
   permissions: [],
   dependencies: ['platform', 'identity'],
+  publishedEvents: ['organization.site.created.v1'],
 };

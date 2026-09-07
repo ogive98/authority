@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import type Redis from 'ioredis';
+import { getDefaultEventContractRegistry } from '../../modules-registry/catalog/event-contract.registry';
 import { RedisService } from '../../infrastructure/redis.service';
 import {
   thunderConsumersEnabled,
@@ -96,7 +97,21 @@ export class EventConsumerHost implements OnModuleDestroy {
                 return;
               }
 
-              await registration.handler(envelope);
+              const registration = this.registry.get(consumerGroup);
+              const accepts = getDefaultEventContractRegistry().consumerAccepts(
+                registration?.consumes,
+                envelope.eventType,
+              );
+              if (!accepts) {
+                await this.processedEvents.markProcessed(
+                  consumerGroup,
+                  envelope.eventId,
+                );
+                await connection.xack(streamKey, consumerGroup, messageId);
+                return;
+              }
+
+              await registration!.handler(envelope);
               await this.processedEvents.markProcessed(
                 consumerGroup,
                 envelope.eventId,

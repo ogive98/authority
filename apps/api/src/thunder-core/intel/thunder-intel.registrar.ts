@@ -20,8 +20,16 @@ export class ThunderIntelRegistrar implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.registry.register(THUNDER_INTEL_CONSUMER_ID, (envelope) =>
-      this.handle(envelope),
+    this.registry.register(
+      THUNDER_INTEL_CONSUMER_ID,
+      (envelope) => this.handle(envelope),
+      {
+        consumes: [
+          THUNDER_INTEL_EVENT_TYPES.deliveryFailed,
+          THUNDER_INTEL_EVENT_TYPES.salesConfirmed,
+          THUNDER_INTEL_EVENT_TYPES.financeAllocation,
+        ],
+      },
     );
   }
 

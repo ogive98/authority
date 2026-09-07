@@ -27,6 +27,7 @@ import { JobEnqueueService } from './jobs/job-enqueue.service';
 import { JobQueryService } from './jobs/job-query.service';
 import { RecommendationService } from './intel/recommendation.service';
 import { SignalService } from './intel/signal.service';
+import { getDefaultEventContractRegistry } from '../modules-registry/catalog/event-contract.registry';
 import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
 import { ThunderMetricsService } from './observability/thunder-metrics.service';
 import type { ThunderMonitorSnapshot } from './observability/monitor-snapshot.types';
@@ -177,6 +178,12 @@ export class ThunderController {
   @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
   listSignals(@CurrentTenancy() tenancy: TenancyContext) {
     return this.signals.list(tenancy.companyId);
+  }
+
+  @Get('event-contracts')
+  @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
+  listEventContracts() {
+    return getDefaultEventContractRegistry().list();
   }
 
   @Post('signals/:id/ack')

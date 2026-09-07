@@ -27,6 +27,12 @@ export const platformManifest: ModuleManifest = {
   queries: ['platform.modules.list', 'platform.capabilities.list'],
   permissions: [],
   dependencies: [],
+  publishedEvents: [
+    'platform.number.allocated.v1',
+    'platform.file.uploaded.v1',
+    'module.enabled.v1',
+    'module.disabled.v1',
+  ],
   navigationEntries: [],
   dashboardWidgets: [],
 };

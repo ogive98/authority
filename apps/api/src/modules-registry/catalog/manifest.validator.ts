@@ -5,12 +5,16 @@ import {
   type CapabilityDef,
   type ModuleManifest,
 } from './manifest.types';
+import { EVENT_TYPE_PATTERN } from './event-contract.types';
+import { EventContractRegistry } from './event-contract.registry';
 
 export const CATALOG_ERROR_CODES = {
   INVALID_MANIFEST: 'CATALOG.INVALID_MANIFEST',
   DUPLICATE_MODULE: 'CATALOG.DUPLICATE_MODULE',
   DUPLICATE_CAPABILITY: 'CATALOG.DUPLICATE_CAPABILITY',
   UNKNOWN_DEPENDENCY: 'CATALOG.UNKNOWN_DEPENDENCY',
+  UNKNOWN_CONSUMED_EVENT: 'CATALOG.UNKNOWN_CONSUMED_EVENT',
+  INVALID_EVENT_TYPE: 'CATALOG.INVALID_EVENT_TYPE',
 } as const;
 
 export class CatalogValidationError extends Error {
@@ -273,6 +277,35 @@ export function assertCatalogIntegrity(manifests: ModuleManifest[]): void {
           `Module ${manifest.id} optionally depends on unknown module ${dep}`,
         );
       }
+    }
+  }
+
+  for (const manifest of manifests) {
+    for (const eventType of manifest.publishedEvents ?? []) {
+      if (!EVENT_TYPE_PATTERN.test(eventType)) {
+        throw new CatalogValidationError(
+          CATALOG_ERROR_CODES.INVALID_EVENT_TYPE,
+          `Module ${manifest.id} publishedEvents invalid type: ${eventType}`,
+        );
+      }
+    }
+  }
+
+  const registry = EventContractRegistry.fromManifests(manifests, 'off');
+  for (const manifest of manifests) {
+    try {
+      registry.assertConsumedEventsDeclared(
+        manifest.id,
+        manifest.consumedEvents ?? [],
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new CatalogValidationError(
+          CATALOG_ERROR_CODES.UNKNOWN_CONSUMED_EVENT,
+          error.message,
+        );
+      }
+      throw error;
     }
   }
 }

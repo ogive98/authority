@@ -32,6 +32,11 @@ describe('ThunderIntelRegistrar', () => {
     expect(registry.register).toHaveBeenCalledWith(
       THUNDER_INTEL_CONSUMER_ID,
       expect.any(Function),
+      expect.objectContaining({
+        consumes: expect.arrayContaining([
+          THUNDER_INTEL_EVENT_TYPES.deliveryFailed,
+        ]),
+      }),
     );
   });
 

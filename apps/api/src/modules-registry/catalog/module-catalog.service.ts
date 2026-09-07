@@ -9,6 +9,10 @@ import {
   CatalogValidationError,
   CATALOG_ERROR_CODES,
 } from './manifest.validator';
+import {
+  getDefaultEventContractRegistry,
+  resetDefaultEventContractRegistry,
+} from './event-contract.registry';
 import { STATIC_MODULE_MANIFESTS } from './manifests';
 
 const SEEDED_MODULE_KEYS = [
@@ -45,6 +49,9 @@ export class ModuleCatalogService implements OnModuleInit {
         this.capabilitiesByKey.set(cap.key, cap);
       }
     }
+
+    resetDefaultEventContractRegistry();
+    getDefaultEventContractRegistry(manifests);
   }
 
   getByKey(moduleId: string): ModuleManifest | undefined {

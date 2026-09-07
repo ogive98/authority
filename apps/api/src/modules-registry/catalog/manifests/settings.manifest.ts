@@ -19,4 +19,5 @@ export const settingsManifest: ModuleManifest = {
   queries: ['settings.effective'],
   permissions: [],
   dependencies: ['platform', 'identity', 'organization'],
+  publishedEvents: ['settings.value.updated.v1'],
 };

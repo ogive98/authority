@@ -23,4 +23,10 @@ export type EventConsumerHandler = (
 export interface RegisteredEventConsumer {
   consumerId: string;
   handler: EventConsumerHandler;
+  /** Event types or patterns (`sales.*`, `*`). Empty/`*` = all. */
+  consumes?: string[];
 }
+
+export type RegisterConsumerOptions = {
+  consumes?: string[];
+};

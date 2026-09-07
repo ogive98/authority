@@ -63,6 +63,7 @@ export const inventoryManifest: ModuleManifest = {
     'inventory.stock.released.v1',
     'inventory.stock.issued.v1',
   ],
+  consumedEvents: ['sales.order.confirmed.v1'],
   navigationEntries: [
     { id: 'stock', label: 'Stock', href: '/inventory' },
   ],

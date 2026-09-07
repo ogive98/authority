@@ -19,4 +19,5 @@ export const identityManifest: ModuleManifest = {
   queries: ['identity.me'],
   permissions: [],
   dependencies: ['platform'],
+  publishedEvents: ['identity.user.updated.v1'],
 };
