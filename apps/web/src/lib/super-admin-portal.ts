@@ -13,9 +13,10 @@ export function shouldHideSuperAdminPortal(httpStatus: number): boolean {
 }
 
 export const SA_NAV = [
-  { href: "/super-admin", label: "Accueil" },
-  { href: "/super-admin/modules", label: "Modules" },
-  { href: "/super-admin/flags", label: "Flags" },
-  { href: "/super-admin/license", label: "Licence" },
-  { href: "/super-admin/jobs", label: "Jobs / DLQ" },
+  { href: "/super-admin", label: "Accueil", icon: "home" },
+  { href: "/super-admin/repair", label: "Repair", icon: "repair" },
+  { href: "/super-admin/modules", label: "Modules", icon: "modules" },
+  { href: "/super-admin/flags", label: "Flags", icon: "flags" },
+  { href: "/super-admin/license", label: "Licence", icon: "license" },
+  { href: "/super-admin/jobs", label: "Jobs / DLQ", icon: "jobs" },
 ] as const;
