@@ -1,5 +1,6 @@
 export const SA_LOGIN_PATH = "/super-admin/login";
 export const SA_HOME_PATH = "/super-admin";
+export const SA_REPAIR_PATH = "/super-admin/repair";
 
 export type SaHealth = {
   status: string;
@@ -7,9 +8,18 @@ export type SaHealth = {
   timestamp: string;
 };
 
-/** CC pages hide the portal (404) unless Super Admin realm session is valid. */
+/** CC pages redirect to login unless Super Admin realm session is valid. */
 export function shouldHideSuperAdminPortal(httpStatus: number): boolean {
   return httpStatus !== 200;
+}
+
+/** Safe post-login redirect within Control Center only. */
+export function safeSuperAdminNext(raw: string | null | undefined): string {
+  if (!raw) return SA_HOME_PATH;
+  const path = raw.trim();
+  if (!path.startsWith("/super-admin")) return SA_HOME_PATH;
+  if (path.startsWith("//") || path.includes("://")) return SA_HOME_PATH;
+  return path;
 }
 
 export const SA_NAV = [
