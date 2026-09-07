@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ABadge } from "@/components/a/a-badge";
+import { AEmptyState } from "@/components/a/a-empty-state";
 import { AErrorState } from "@/components/a/a-error-state";
 import { AScreenHeader } from "@/components/a/a-screen-header";
+import { PortalDocumentDownloadButton } from "@/components/portal/portal-document-download-button";
 import {
   fetchClaim,
+  fetchPortalDocuments,
   portalClaimBadgeTone,
   portalClaimStatusLabel,
   portalClaimTypeLabel,
   PORTAL_CLAIMS_PATH,
   PORTAL_DELIVERIES_PATH,
+  PORTAL_DOCUMENTS_PATH,
   PORTAL_ORDERS_PATH,
   shouldHidePortal,
 } from "@/lib/customer-portal";
@@ -39,6 +43,14 @@ export default async function PortalClaimDetailPage({
       </div>
     );
   }
+
+  const docsRes = await fetchPortalDocuments({
+    linkType: "CLAIM",
+    linkId: data.id,
+    limit: 50,
+  });
+  const docs =
+    docsRes.status === 200 && docsRes.data ? docsRes.data.items : [];
 
   return (
     <div>
@@ -96,6 +108,57 @@ export default async function PortalClaimDetailPage({
             </p>
           ) : null}
         </div>
+
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+              Pièces jointes
+            </h2>
+            <Link
+              href={PORTAL_DOCUMENTS_PATH}
+              className="text-[length:var(--a-text-xs)] text-a-accent hover:underline"
+            >
+              Tous les documents →
+            </Link>
+          </div>
+          {docsRes.status === 401 || docsRes.status === 403 ? (
+            <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+              Documents indisponibles pour cette session.
+            </p>
+          ) : docs.length === 0 ? (
+            <AEmptyState
+              title="Aucune pièce"
+              description="Les fichiers partagés par votre ADV pour ce dossier apparaîtront ici."
+              canAct={false}
+            />
+          ) : (
+            <div className="a-card overflow-hidden">
+              <table className="w-full border-collapse text-left text-[length:var(--a-text-sm)]">
+                <thead className="bg-a-surface-3/80 text-a-fg-muted">
+                  <tr>
+                    <th className="a-table-cell font-medium">N°</th>
+                    <th className="a-table-cell font-medium">Titre</th>
+                    <th className="a-table-cell font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {docs.map((row) => (
+                    <tr
+                      key={row.id}
+                      className="border-t border-a-border-subtle"
+                    >
+                      <td className="a-mono a-table-cell">{row.number}</td>
+                      <td className="a-table-cell">{row.title}</td>
+                      <td className="a-table-cell">
+                        <PortalDocumentDownloadButton id={row.id} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

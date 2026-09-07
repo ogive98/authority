@@ -76,7 +76,7 @@ export default async function PortalFinancePage() {
         {items.length === 0 ? (
           <AEmptyState
             title="Aucune créance"
-            description="Les open items AR liés à votre compte apparaîtront ici."
+            description="Les créances ouvertes liées à votre compte apparaîtront ici."
             canAct={false}
           />
         ) : (

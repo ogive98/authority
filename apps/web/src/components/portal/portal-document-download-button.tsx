@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AButton } from "@/components/a/a-button";
-import { fetchPortalDocumentDownload } from "@/lib/customer-portal";
+import { fetchPortalDocumentDownloadClient } from "@/lib/customer-portal";
 
 export function PortalDocumentDownloadButton({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
@@ -11,13 +11,13 @@ export function PortalDocumentDownloadButton({ id }: { id: string }) {
   async function onClick() {
     setBusy(true);
     setError(null);
-    const { status, data } = await fetchPortalDocumentDownload(id);
+    const { status, downloadUrl } = await fetchPortalDocumentDownloadClient(id);
     setBusy(false);
-    if (status !== 200 || !data?.downloadUrl) {
+    if (status !== 200 || !downloadUrl) {
       setError("Téléchargement refusé.");
       return;
     }
-    window.open(data.downloadUrl, "_blank", "noopener,noreferrer");
+    window.open(downloadUrl, "_blank", "noopener,noreferrer");
   }
 
   return (

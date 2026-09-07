@@ -87,7 +87,7 @@ export function PortalNewClaimForm({
       <AScreenHeader
         kicker="Customer Portal"
         title="Nouvelle réclamation"
-        description="Création membership-scoped — pas de pièce jointe Documents (reporté)"
+        description="Décrivez le problème. Les pièces jointes sont déposées par votre ADV et visibles sur le dossier."
         actions={
           <Link
             href={PORTAL_CLAIMS_PATH}

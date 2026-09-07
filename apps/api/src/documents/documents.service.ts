@@ -239,7 +239,13 @@ export class DocumentsService {
   async listForCustomer(
     companyId: string,
     customerId: string,
-    opts?: { q?: string; limit?: number; cursor?: string },
+    opts?: {
+      q?: string;
+      limit?: number;
+      cursor?: string;
+      linkType?: string;
+      linkId?: string;
+    },
   ): Promise<{ items: DocumentDto[]; nextCursor: string | null }> {
     return this.list(companyId, {
       ...opts,

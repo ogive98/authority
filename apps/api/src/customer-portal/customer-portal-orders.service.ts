@@ -280,8 +280,9 @@ export class CustomerPortalOrdersService {
         openClaims,
       },
       insights,
-      sections: ['orders', 'deliveries', 'finance', 'claims', 'insights'] as const,
-      message: 'Portal P7 — insights rules (reorder / crédit / ops)',
+      sections: ['orders', 'deliveries', 'finance', 'claims', 'documents', 'insights'] as const,
+      message:
+        'Suivez vos commandes, livraisons, créances et pièces partagées.',
     };
   }
 

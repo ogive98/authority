@@ -336,6 +336,8 @@ export class CustomerPortalController {
   listDocuments(
     @Req() req: CustomerPortalRequest,
     @Query('q') q?: string,
+    @Query('linkType') linkType?: string,
+    @Query('linkId') linkId?: string,
     @Query('limit') limitRaw?: string,
     @Query('cursor') cursor?: string,
   ) {
@@ -345,6 +347,8 @@ export class CustomerPortalController {
       req.customerId!,
       {
         q,
+        linkType,
+        linkId,
         limit: Number.isFinite(limit) ? limit : undefined,
         cursor,
       },

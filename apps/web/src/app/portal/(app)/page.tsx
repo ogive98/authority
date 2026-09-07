@@ -6,7 +6,9 @@ import {
   fetchPortalMe,
   PORTAL_CLAIMS_PATH,
   PORTAL_DELIVERIES_PATH,
+  PORTAL_DOCUMENTS_PATH,
   PORTAL_FINANCE_PATH,
+  PORTAL_ORDERS_NEW_PATH,
   PORTAL_ORDERS_PATH,
   portalInsightBadgeTone,
   portalInsightSeverityLabel,
@@ -19,17 +21,13 @@ export default async function PortalDashboardPage() {
     fetchPortalDashboard(),
   ]);
 
-  const message =
-    dashboard?.message ?? "Portal P7 — insights rules (reorder / crédit / ops)";
   const openOrders = dashboard?.kpis.openOrders ?? 0;
   const pendingDeliveries = dashboard?.kpis.pendingDeliveries ?? 0;
   const openClaims = dashboard?.kpis.openClaims ?? 0;
   const outstanding = dashboard?.kpis.outstandingBalance;
   const insights = dashboard?.insights ?? [];
   const outstandingLabel =
-    outstanding == null
-      ? "—"
-      : `${Number(outstanding).toFixed(3)} TND`;
+    outstanding == null ? "—" : `${Number(outstanding).toFixed(3)} TND`;
 
   return (
     <div>
@@ -39,12 +37,27 @@ export default async function PortalDashboardPage() {
         description={
           me
             ? `${me.customer.legalName} · rôle ${me.membership.role}`
-            : message
+            : "Espace client"
+        }
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={PORTAL_ORDERS_NEW_PATH}
+              className="rounded-[var(--a-radius-sm)] bg-a-accent px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium text-a-accent-fg hover:bg-a-accent-hover"
+            >
+              Nouvelle commande
+            </Link>
+            <Link
+              href={`${PORTAL_CLAIMS_PATH}/new`}
+              className="rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-2 px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium text-a-fg hover:bg-a-surface-3"
+            >
+              Réclamation
+            </Link>
+          </div>
         }
       />
       <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
-        <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">{message}</p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Link
             href={PORTAL_ORDERS_PATH}
             className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
@@ -99,6 +112,20 @@ export default async function PortalDashboardPage() {
             </p>
             <p className="mt-2 text-[length:var(--a-text-xs)] text-a-accent">
               Voir / ouvrir →
+            </p>
+          </Link>
+          <Link
+            href={PORTAL_DOCUMENTS_PATH}
+            className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
+          >
+            <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+              Documents
+            </p>
+            <p className="mt-1 text-[length:var(--a-text-lg)] font-medium text-a-accent">
+              Bibliothèque
+            </p>
+            <p className="mt-2 text-[length:var(--a-text-xs)] text-a-accent">
+              Pièces partagées →
             </p>
           </Link>
         </div>

@@ -35,7 +35,10 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-const VIS_FILTERS: Array<{ id: ""; label: string }> = [
+const VIS_FILTERS: Array<{
+  id: "" | "INTERNAL" | "CUSTOMER_PORTAL";
+  label: string;
+}> = [
   { id: "", label: "Tous" },
   { id: "INTERNAL", label: "Interne" },
   { id: "CUSTOMER_PORTAL", label: "Portal" },

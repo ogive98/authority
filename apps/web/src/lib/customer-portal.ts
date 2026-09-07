@@ -396,14 +396,37 @@ export type PortalDocumentList = {
 export async function fetchPortalDocuments(opts?: {
   q?: string;
   limit?: number;
+  linkType?: string;
+  linkId?: string;
 }): Promise<{ status: number; data: PortalDocumentList | null }> {
   const params = new URLSearchParams();
   if (opts?.q?.trim()) params.set("q", opts.q.trim());
   if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.linkType?.trim()) params.set("linkType", opts.linkType.trim());
+  if (opts?.linkId?.trim()) params.set("linkId", opts.linkId.trim());
   const qs = params.toString();
   return portalFetch<PortalDocumentList>(
     `${PORTAL_API.documents}${qs ? `?${qs}` : ""}`,
   );
+}
+
+/** Browser-side download (client components). Do not use portalFetch (next/headers). */
+export async function fetchPortalDocumentDownloadClient(
+  id: string,
+): Promise<{
+  status: number;
+  downloadUrl: string | null;
+}> {
+  const res = await fetch(`${PORTAL_API.documents}/${id}/download`, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    return { status: res.status, downloadUrl: null };
+  }
+  const body = (await res.json()) as { downloadUrl?: string };
+  return { status: res.status, downloadUrl: body.downloadUrl ?? null };
 }
 
 export async function fetchPortalDocumentDownload(

@@ -229,7 +229,8 @@ describe('CustomerPortalOrdersService', () => {
       companyId,
       customerId,
     );
-    expect(shell.message).toContain('P7');
+    expect(shell.message).toContain('commandes');
+    expect(shell.sections).toContain('documents');
   });
 
   it('creates draft with membership ids, last price, confirmAfter false', async () => {

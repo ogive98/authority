@@ -3,7 +3,6 @@ import { AErrorState } from "@/components/a/a-error-state";
 import { AScreenHeader } from "@/components/a/a-screen-header";
 import {
   fetchPortalDocuments,
-  PORTAL_DOCUMENTS_PATH,
 } from "@/lib/customer-portal";
 import { PortalDocumentDownloadButton } from "@/components/portal/portal-document-download-button";
 
@@ -35,13 +34,13 @@ export default async function PortalDocumentsPage() {
       <AScreenHeader
         kicker="Customer Portal"
         title="Documents"
-        description={`${items.length} fichier${items.length === 1 ? "" : "s"} partagé${items.length === 1 ? "" : "s"} · téléchargement signed URL`}
+        description={`${items.length} fichier${items.length === 1 ? "" : "s"} partagé${items.length === 1 ? "" : "s"}`}
       />
       <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
         {items.length === 0 ? (
           <AEmptyState
             title="Aucun document"
-            description="Les pièces partagées (visibilité portal) apparaîtront ici."
+            description="Les pièces partagées par votre ADV apparaîtront ici."
             canAct={false}
           />
         ) : (
@@ -75,9 +74,6 @@ export default async function PortalDocumentsPage() {
             </div>
           </div>
         )}
-        <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-          Espace {PORTAL_DOCUMENTS_PATH} · IDOR → DOC.NOT_FOUND
-        </p>
       </div>
     </div>
   );
