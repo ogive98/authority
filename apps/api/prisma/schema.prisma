@@ -611,6 +611,77 @@ model ThunderRuleDef {
   @@map("thunder_rule_def")
 }
 
+// --- THU-PLAT-01 signals / recommendations (non-AI) ---
+
+enum ThuSignalSeverity {
+  INFO
+  WARN
+  CRITICAL
+}
+
+enum ThuSignalStatus {
+  OPEN
+  ACK
+  CLOSED
+}
+
+enum ThuRecommendationStatus {
+  OPEN
+  IGNORED
+  APPROVED
+  APPLIED
+  REJECTED
+}
+
+model ThuSignal {
+  id              String            @id @default(uuid()) @db.Uuid
+  companyId       String            @map("company_id") @db.Uuid
+  siteId          String?           @map("site_id") @db.Uuid
+  type            String
+  severity        ThuSignalSeverity @default(INFO)
+  status          ThuSignalStatus   @default(OPEN)
+  source          String
+  sourceEventId   String?           @map("source_event_id")
+  sourceEventType String?           @map("source_event_type")
+  correlationId   String            @map("correlation_id")
+  evidenceJson    Json              @map("evidence_json")
+  occurredAt      DateTime          @map("occurred_at") @db.Timestamptz(6)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  recommendations ThuRecommendation[]
+
+  @@unique([companyId, type, sourceEventId])
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@index([companyId, type])
+  @@index([correlationId])
+  @@map("thu_signal")
+}
+
+model ThuRecommendation {
+  id              String                   @id @default(uuid()) @db.Uuid
+  companyId       String                   @map("company_id") @db.Uuid
+  signalId        String?                  @map("signal_id") @db.Uuid
+  problem         String
+  evidenceJson    Json                     @map("evidence_json")
+  optionsJson     Json                     @map("options_json")
+  autonomyLevel   Int                      @default(2) @map("autonomy_level")
+  proposedAction  Json                     @map("proposed_action_json")
+  status          ThuRecommendationStatus  @default(OPEN)
+  correlationId   String                   @map("correlation_id")
+  decidedByUserId String?                  @map("decided_by_user_id") @db.Uuid
+  decidedAt       DateTime?                @map("decided_at") @db.Timestamptz(6)
+  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  signal ThuSignal? @relation(fields: [signalId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@index([signalId])
+  @@index([correlationId])
+  @@map("thu_recommendation")
+}
+
 // --- prd_* products catalogue (MOD-PRODUCTS V0 + POLY-01) ---
 
 enum PrdProductStatus {

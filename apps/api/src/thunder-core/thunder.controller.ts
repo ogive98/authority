@@ -25,6 +25,8 @@ import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import { JobEnqueueService } from './jobs/job-enqueue.service';
 import { JobQueryService } from './jobs/job-query.service';
+import { RecommendationService } from './intel/recommendation.service';
+import { SignalService } from './intel/signal.service';
 import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
 import { ThunderMetricsService } from './observability/thunder-metrics.service';
 import type { ThunderMonitorSnapshot } from './observability/monitor-snapshot.types';
@@ -41,6 +43,8 @@ export class ThunderController {
     private readonly jobQueryService: JobQueryService,
     private readonly monitorSnapshot: MonitorSnapshotService,
     private readonly metrics: ThunderMetricsService,
+    private readonly signals: SignalService,
+    private readonly recommendations: RecommendationService,
   ) {}
 
   @Get('monitor/snapshot')
@@ -167,5 +171,60 @@ export class ThunderController {
     @Param('id') jobId: string,
   ) {
     return this.jobQueryService.getJob(jobId, tenancy.companyId);
+  }
+
+  @Get('signals')
+  @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
+  listSignals(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.signals.list(tenancy.companyId);
+  }
+
+  @Post('signals/:id/ack')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(PERMISSION_KEYS.thunderIntelWrite)
+  ackSignal(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id') id: string,
+  ) {
+    return this.signals.ack(tenancy.companyId, id);
+  }
+
+  @Get('recommendations')
+  @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
+  listRecommendations(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.recommendations.list(tenancy.companyId);
+  }
+
+  @Post('recommendations/:id/ignore')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(PERMISSION_KEYS.thunderIntelWrite)
+  ignoreRecommendation(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id') id: string,
+  ) {
+    return this.recommendations.ignore(tenancy.companyId, id, user.id);
+  }
+
+  @Post('recommendations/:id/approve')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(PERMISSION_KEYS.thunderIntelWrite)
+  approveRecommendation(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id') id: string,
+  ) {
+    return this.recommendations.approve(tenancy.companyId, id, user.id);
+  }
+
+  @Post('recommendations/:id/apply')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(PERMISSION_KEYS.thunderIntelWrite)
+  applyRecommendation(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id') id: string,
+  ) {
+    return this.recommendations.apply(tenancy.companyId, id, user.id);
   }
 }

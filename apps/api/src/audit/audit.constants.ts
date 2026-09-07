@@ -6,6 +6,7 @@ export const AUDIT_ACTIONS = {
   moduleDisable: 'module.disable',
   thunderBreakerForceOpen: 'thunder.breaker.force_open',
   thunderBreakerReset: 'thunder.breaker.reset',
+  thunderRecoApply: 'thunder.recommendation.apply',
 } as const;
 
 export const OUTBOX_EVENT_TYPES = {
@@ -24,4 +25,5 @@ export const AUDIT_ENTITY_TYPES = {
   setValue: 'set_value',
   modModuleState: 'mod_module_state',
   thunderCircuitBreaker: 'thunder_circuit_breaker',
+  thuRecommendation: 'thu_recommendation',
 } as const;

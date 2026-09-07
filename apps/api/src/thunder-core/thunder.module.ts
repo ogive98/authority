@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuditModule } from '../audit/audit.module';
 import { IdentityModule } from '../identity/identity.module';
 import { InfrastructureModule } from '../infrastructure/infrastructure.module';
 import { LicenseModule } from '../license/license.module';
@@ -14,6 +15,9 @@ import { OutboxDlqService } from './events/outbox-dlq.service';
 import { OutboxPublisherService } from './events/outbox-publisher.service';
 import { OutboxPublisherWorker } from './events/outbox-publisher.worker';
 import { ProcessedEventService } from './events/processed-event.service';
+import { RecommendationService } from './intel/recommendation.service';
+import { SignalService } from './intel/signal.service';
+import { ThunderIntelRegistrar } from './intel/thunder-intel.registrar';
 import { DlqService } from './jobs/dlq/dlq.service';
 import { JobEnqueueService } from './jobs/job-enqueue.service';
 import { JobProcessorHost } from './jobs/job-processor.host';
@@ -43,6 +47,7 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     PermissionsModule,
     ModulesRegistryModule,
     LicenseModule,
+    AuditModule,
   ],
   controllers: [ThunderController],
   providers: [
@@ -72,6 +77,9 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     RuleDefService,
     RuleEngineService,
     ThunderRulesRegistrar,
+    SignalService,
+    RecommendationService,
+    ThunderIntelRegistrar,
   ],
   exports: [
     JobEnqueueService,
@@ -93,6 +101,8 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     MonitorSnapshotService,
     RuleDefService,
     RuleEngineService,
+    SignalService,
+    RecommendationService,
   ],
 })
 export class ThunderModule {}

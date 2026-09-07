@@ -312,6 +312,18 @@ async function main() {
     companyId: company.id,
   });
   await upsertGrant({
+    permissionKey: 'thunder.intel.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'thunder.intel.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
     permissionKey: 'system_monitoring.view',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
