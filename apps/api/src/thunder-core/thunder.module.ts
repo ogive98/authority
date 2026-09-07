@@ -35,6 +35,8 @@ import { WatchdogWorker } from './resources/watchdog.worker';
 import { RuleDefService } from './rules/rule-def.service';
 import { RuleEngineService } from './rules/rule-engine.service';
 import { ThunderRulesRegistrar } from './rules/thunder-rules.registrar';
+import { ModuleHookBootstrap } from './module-hooks/module-hook.bootstrap';
+import { ThunderModuleHooksRegistrar } from './module-hooks/thunder-module-hooks.registrar';
 import { ThunderController } from './thunder.controller';
 import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
 
@@ -80,6 +82,8 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
     SignalService,
     RecommendationService,
     ThunderIntelRegistrar,
+    ThunderModuleHooksRegistrar,
+    ModuleHookBootstrap,
   ],
   exports: [
     JobEnqueueService,

@@ -9,9 +9,5 @@ globs:
 # Thunder Platform (D058)
 
 - Track docs: AUTHORITY-DOCUMENTATION `17_IMPLEMENTATION/18_TRACK_THUNDER_PLATFORM.md`
-- Next lot: **THU-PLAT-01c** — module enable hooks (Thunder-only terrain)
-- HOW only: no business posting inside kernel; Apply → module capability + audit
-- No TVA/CNSS invention; no CQRS CommandBus; no silent mutations
-- **D060:** do NOT build Control app / Repair Mode / Marketplace now — only kernel prep
-- **D061:** EventContractRegistry — outbox publish enforce + consumer `consumes` filter
-- Consumers: `audit.tap` + `thunder.echo` + `thunder.rules` + **`thunder.intel`**
+- Next lot: **THU-PLAT-01d** — adapter interfaces + entitlement stub (Thunder-only)
+- **D062:** ModuleHookRegistry — onEnable/onDisable/onRegister/health + contributions

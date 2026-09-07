@@ -6,6 +6,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { CapabilityGuard } from './capability.guard';
 import { CapabilityResolverService } from './catalog/capability-resolver.service';
 import { ModuleCatalogService } from './catalog/module-catalog.service';
+import { ModuleHookRegistry } from './catalog/module-hook.registry';
 import { ModuleLifecycleService } from './catalog/module-lifecycle.service';
 import { CapabilitiesController } from './capabilities.controller';
 import { FeatureFlagService } from './feature-flag.service';
@@ -31,6 +32,7 @@ import { SalesSurfaceController } from './sales-surface.controller';
     ModuleRegistryService,
     ModuleCatalogService,
     ModuleLifecycleService,
+    ModuleHookRegistry,
     ModuleActivationService,
     CapabilityResolverService,
     FeatureFlagService,
@@ -44,6 +46,7 @@ import { SalesSurfaceController } from './sales-surface.controller';
     ModuleRegistryService,
     ModuleCatalogService,
     ModuleLifecycleService,
+    ModuleHookRegistry,
     ModuleActivationService,
     CapabilityResolverService,
     FeatureFlagService,

@@ -28,6 +28,7 @@ import { JobQueryService } from './jobs/job-query.service';
 import { RecommendationService } from './intel/recommendation.service';
 import { SignalService } from './intel/signal.service';
 import { getDefaultEventContractRegistry } from '../modules-registry/catalog/event-contract.registry';
+import { ModuleHookRegistry } from '../modules-registry/catalog/module-hook.registry';
 import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
 import { ThunderMetricsService } from './observability/thunder-metrics.service';
 import type { ThunderMonitorSnapshot } from './observability/monitor-snapshot.types';
@@ -46,6 +47,7 @@ export class ThunderController {
     private readonly metrics: ThunderMetricsService,
     private readonly signals: SignalService,
     private readonly recommendations: RecommendationService,
+    private readonly moduleHooks: ModuleHookRegistry,
   ) {}
 
   @Get('monitor/snapshot')
@@ -184,6 +186,21 @@ export class ThunderController {
   @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
   listEventContracts() {
     return getDefaultEventContractRegistry().list();
+  }
+
+  @Get('module-hooks')
+  @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
+  listModuleHooks() {
+    return {
+      contributions: this.moduleHooks.listContributions(),
+      lastRuns: this.moduleHooks.listLastRuns(50),
+    };
+  }
+
+  @Get('module-hooks/health')
+  @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
+  async moduleHooksHealth() {
+    return this.moduleHooks.runHealthChecks();
   }
 
   @Post('signals/:id/ack')

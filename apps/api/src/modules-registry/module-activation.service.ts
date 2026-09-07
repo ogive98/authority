@@ -9,6 +9,7 @@ import { AuditService } from '../audit/audit.service';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ModuleCatalogService } from './catalog/module-catalog.service';
+import { ModuleHookRegistry } from './catalog/module-hook.registry';
 import { ModuleLifecycleService } from './catalog/module-lifecycle.service';
 import { MODULE_ERROR_CODES } from './modules.constants';
 import { ModulesException } from './modules.exception';
@@ -36,6 +37,7 @@ export class ModuleActivationService {
     private readonly lifecycle: ModuleLifecycleService,
     private readonly audit: AuditService,
     private readonly outbox: OutboxService,
+    private readonly hooks: ModuleHookRegistry,
   ) {}
 
   async listForCompany(companyId: string) {
@@ -142,6 +144,13 @@ export class ModuleActivationService {
       });
 
       return upserted;
+    });
+
+    await this.hooks.runEnable({
+      companyId,
+      moduleKey,
+      actorUserId: actor.userId,
+      correlationId: actor.correlationId,
     });
 
     const health = await this.lifecycle.evaluateCompanyHealth(
@@ -265,6 +274,13 @@ export class ModuleActivationService {
       });
 
       return updated;
+    });
+
+    await this.hooks.runDisable({
+      companyId,
+      moduleKey,
+      actorUserId: actor.userId,
+      correlationId: actor.correlationId,
     });
 
     return {

@@ -87,6 +87,10 @@ describe('ModuleActivationService', () => {
     };
     const audit = { append: jest.fn().mockResolvedValue({ id: 'aud-1' }) };
     const outbox = { enqueue: jest.fn().mockResolvedValue({ id: 'ob-1' }) };
+    const hooks = {
+      runEnable: jest.fn().mockResolvedValue(undefined),
+      runDisable: jest.fn().mockResolvedValue(undefined),
+    };
 
     const service = new ModuleActivationService(
       prisma as never,
@@ -94,9 +98,10 @@ describe('ModuleActivationService', () => {
       lifecycle as never,
       audit as never,
       outbox as never,
+      hooks as never,
     );
 
-    return { service, prisma, lifecycle, audit, outbox };
+    return { service, prisma, lifecycle, audit, outbox, hooks };
   }
 
   it('enable is idempotent when already ENABLED', async () => {
@@ -132,7 +137,7 @@ describe('ModuleActivationService', () => {
   });
 
   it('enable writes audit + outbox when flipping DISABLED → ENABLED', async () => {
-    const { service, audit, outbox } = build({
+    const { service, audit, outbox, hooks } = build({
       targetKey: 'sales',
       existing: { id: 'row-1', status: ModModuleStatus.DISABLED },
     });
@@ -140,6 +145,9 @@ describe('ModuleActivationService', () => {
     expect(result.changed).toBe(true);
     expect(audit.append).toHaveBeenCalled();
     expect(outbox.enqueue).toHaveBeenCalled();
+    expect(hooks.runEnable).toHaveBeenCalledWith(
+      expect.objectContaining({ companyId, moduleKey: 'sales' }),
+    );
   });
 
   it('disable refuses when dependents ENABLED unless force', async () => {
@@ -157,6 +165,17 @@ describe('ModuleActivationService', () => {
       force: true,
     });
     expect(forced.changed).toBe(true);
+  });
+
+  it('disable runs onDisable hook when flipping ENABLED → DISABLED', async () => {
+    const { service, hooks } = build({
+      targetKey: 'sales',
+      existing: { id: 'row-1', status: ModModuleStatus.ENABLED },
+    });
+    await service.disable(companyId, 'sales', actor);
+    expect(hooks.runDisable).toHaveBeenCalledWith(
+      expect.objectContaining({ companyId, moduleKey: 'sales' }),
+    );
   });
 
   it('disable is idempotent when already DISABLED', async () => {
