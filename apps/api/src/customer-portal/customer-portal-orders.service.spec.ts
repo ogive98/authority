@@ -72,6 +72,10 @@ describe('CustomerPortalOrdersService', () => {
     get: jest.Mock;
     creditSnapshot: jest.Mock;
   };
+  let invoiceService: {
+    list: jest.Mock;
+    get: jest.Mock;
+  };
   let claimsService: {
     countOpen: jest.Mock;
   };
@@ -113,6 +117,10 @@ describe('CustomerPortalOrdersService', () => {
         currency: 'TND',
       }),
     };
+    invoiceService = {
+      list: jest.fn(),
+      get: jest.fn(),
+    };
     claimsService = {
       countOpen: jest.fn().mockResolvedValue(1),
     };
@@ -124,6 +132,7 @@ describe('CustomerPortalOrdersService', () => {
       salesService as unknown as SalesService,
       deliveryService as never,
       financeService as never,
+      invoiceService as never,
       claimsService as never,
       insightsService as never,
     );
@@ -405,6 +414,119 @@ describe('CustomerPortalOrdersService', () => {
         code: CUSTOMER_PORTAL_ERROR_CODES.NOT_FOUND,
       }),
       status: HttpStatus.NOT_FOUND,
+    });
+  });
+
+  it('lists invoices scoped to membership customer and strips notes', async () => {
+    invoiceService.list.mockResolvedValue({
+      items: [
+        {
+          id: 'inv-1',
+          companyId,
+          number: 'INV-PORTAL-SEED',
+          customerId,
+          customerCode: 'C-1',
+          customerName: 'Client',
+          status: 'ISSUED',
+          salesOrderId: orderId,
+          shipmentId: null,
+          currency: 'TND',
+          amountTotal: '50.000',
+          dueDate: '2026-09-21',
+          issuedAt: '2026-09-07T10:00:00.000Z',
+          label: 'Facture démo',
+          notes: 'INTERNAL STAFF NOTE',
+          openItemId: 'oi-1',
+          version: 1,
+          createdAt: '2026-09-07T10:00:00.000Z',
+          updatedAt: '2026-09-07T10:00:00.000Z',
+        },
+      ],
+      nextCursor: null,
+    });
+
+    const result = await service.listInvoices(companyId, customerId, {
+      limit: 20,
+    });
+
+    expect(invoiceService.list).toHaveBeenCalledWith(companyId, {
+      q: undefined,
+      status: undefined,
+      customerId,
+      limit: 20,
+      cursor: undefined,
+      excludeDraft: true,
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].number).toBe('INV-PORTAL-SEED');
+    expect(result.items[0].openItemId).toBe('oi-1');
+    expect(result.items[0]).not.toHaveProperty('notes');
+    expect(result.items[0]).not.toHaveProperty('companyId');
+    expect(JSON.stringify(result)).not.toContain('INTERNAL');
+  });
+
+  it('returns 404 POR.NOT_FOUND for another customer invoice (IDOR)', async () => {
+    invoiceService.get.mockResolvedValue({
+      id: 'inv-1',
+      companyId,
+      number: 'INV-X',
+      customerId: otherCustomerId,
+      customerCode: null,
+      customerName: null,
+      status: 'ISSUED',
+      salesOrderId: null,
+      shipmentId: null,
+      currency: 'TND',
+      amountTotal: '10.000',
+      dueDate: null,
+      issuedAt: '2026-09-07T10:00:00.000Z',
+      label: null,
+      notes: null,
+      openItemId: null,
+      version: 1,
+      createdAt: '2026-09-07T10:00:00.000Z',
+      updatedAt: '2026-09-07T10:00:00.000Z',
+    });
+
+    await expect(
+      service.getInvoice(companyId, customerId, 'inv-1'),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: CUSTOMER_PORTAL_ERROR_CODES.NOT_FOUND,
+      }),
+      status: HttpStatus.NOT_FOUND,
+    });
+  });
+
+  it('hides DRAFT invoices from portal get', async () => {
+    invoiceService.get.mockResolvedValue({
+      id: 'inv-draft',
+      companyId,
+      number: 'INV-DRAFT',
+      customerId,
+      customerCode: null,
+      customerName: null,
+      status: 'DRAFT',
+      salesOrderId: null,
+      shipmentId: null,
+      currency: 'TND',
+      amountTotal: '10.000',
+      dueDate: null,
+      issuedAt: null,
+      label: null,
+      notes: 'draft',
+      openItemId: null,
+      version: 1,
+      createdAt: '2026-09-07T10:00:00.000Z',
+      updatedAt: '2026-09-07T10:00:00.000Z',
+    });
+
+    await expect(
+      service.getInvoice(companyId, customerId, 'inv-draft'),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: CUSTOMER_PORTAL_ERROR_CODES.NOT_FOUND,
+      }),
     });
   });
 });

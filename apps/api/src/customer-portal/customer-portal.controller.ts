@@ -293,6 +293,43 @@ export class CustomerPortalController {
     );
   }
 
+  @Get('finance/invoices')
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('finance')
+  listInvoices(
+    @Req() req: CustomerPortalRequest,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.portalOrdersService.listInvoices(
+      req.companyId!,
+      req.customerId!,
+      {
+        q,
+        status,
+        limit: Number.isFinite(limit) ? limit : undefined,
+        cursor,
+      },
+    );
+  }
+
+  @Get('finance/invoices/:id')
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('finance')
+  getInvoice(
+    @Req() req: CustomerPortalRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.portalOrdersService.getInvoice(
+      req.companyId!,
+      req.customerId!,
+      id,
+    );
+  }
+
   @Get('claims')
   @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
   listClaims(

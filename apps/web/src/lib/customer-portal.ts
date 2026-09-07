@@ -4,6 +4,7 @@ export const PORTAL_ORDERS_PATH = "/portal/orders";
 export const PORTAL_ORDERS_NEW_PATH = "/portal/orders/new";
 export const PORTAL_DELIVERIES_PATH = "/portal/deliveries";
 export const PORTAL_FINANCE_PATH = "/portal/finance";
+export const PORTAL_FINANCE_INVOICES_PATH = "/portal/finance/invoices";
 export const PORTAL_CLAIMS_PATH = "/portal/claims";
 export const PORTAL_DOCUMENTS_PATH = "/portal/documents";
 export const PORTAL_COOKIE_NAME = "authority_customer_portal_session";
@@ -18,6 +19,7 @@ export const PORTAL_API = {
   orders: "/api/v1/customer-portal/orders",
   deliveries: "/api/v1/customer-portal/deliveries",
   financeOpenItems: "/api/v1/customer-portal/finance/open-items",
+  financeInvoices: "/api/v1/customer-portal/finance/invoices",
   financeCredit: "/api/v1/customer-portal/finance/credit",
   claims: "/api/v1/customer-portal/claims",
   documents: "/api/v1/customer-portal/documents",
@@ -169,6 +171,26 @@ export type PortalOpenItem = {
 
 export type PortalOpenItemList = {
   items: PortalOpenItem[];
+  nextCursor: string | null;
+};
+
+export type PortalInvoiceStatus = "ISSUED" | "CANCELLED";
+
+export type PortalInvoice = {
+  id: string;
+  number: string;
+  status: PortalInvoiceStatus;
+  currency: string;
+  amountTotal: string;
+  dueDate: string | null;
+  issuedAt: string | null;
+  label: string | null;
+  createdAt: string;
+  openItemId: string | null;
+};
+
+export type PortalInvoiceList = {
+  items: PortalInvoice[];
   nextCursor: string | null;
 };
 
@@ -356,6 +378,29 @@ export async function fetchPortalCredit(): Promise<{
   return portalFetch<PortalCredit>(PORTAL_API.financeCredit);
 }
 
+export async function fetchPortalInvoices(opts?: {
+  q?: string;
+  status?: string;
+  limit?: number;
+  cursor?: string;
+}): Promise<{ status: number; data: PortalInvoiceList | null }> {
+  const params = new URLSearchParams();
+  if (opts?.q?.trim()) params.set("q", opts.q.trim());
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.cursor) params.set("cursor", opts.cursor);
+  const qs = params.toString();
+  return portalFetch<PortalInvoiceList>(
+    `${PORTAL_API.financeInvoices}${qs ? `?${qs}` : ""}`,
+  );
+}
+
+export async function fetchPortalInvoice(
+  id: string,
+): Promise<{ status: number; data: PortalInvoice | null }> {
+  return portalFetch<PortalInvoice>(`${PORTAL_API.financeInvoices}/${id}`);
+}
+
 export async function fetchClaims(opts?: {
   q?: string;
   status?: string;
@@ -519,6 +564,18 @@ export function portalOpenItemBadgeTone(
   if (status === "CLOSED") return "success";
   if (status === "PARTIAL") return "warning";
   return "accent";
+}
+
+export function portalInvoiceStatusLabel(status: PortalInvoiceStatus): string {
+  if (status === "CANCELLED") return "Annulée";
+  return "Émise";
+}
+
+export function portalInvoiceBadgeTone(
+  status: PortalInvoiceStatus,
+): "success" | "warning" | "neutral" {
+  if (status === "CANCELLED") return "warning";
+  return "success";
 }
 
 export function portalInsightSeverityLabel(

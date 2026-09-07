@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   DlvShipmentStatus,
+  FinInvoiceStatus,
   PrdProductStatus,
   SalOrderStatus,
 } from '@prisma/client';
@@ -13,6 +14,10 @@ import {
 } from '../delivery/delivery.service';
 import { FinanceException } from '../finance/finance.exception';
 import { FinanceService } from '../finance/finance.service';
+import {
+  InvoiceService,
+  type InvoiceDto,
+} from '../finance/invoice.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalesException } from '../sales/sales.exception';
 import { SalesService, type SalesOrderDto } from '../sales/sales.service';
@@ -72,6 +77,20 @@ export type PortalDeliveryDto = {
   createdAt: string;
 };
 
+/** Customer-facing invoice — no notes / company / draft drafts. */
+export type PortalInvoiceDto = {
+  id: string;
+  number: string;
+  status: FinInvoiceStatus;
+  currency: string;
+  amountTotal: string;
+  dueDate: string | null;
+  issuedAt: string | null;
+  label: string | null;
+  createdAt: string;
+  openItemId: string | null;
+};
+
 @Injectable()
 export class CustomerPortalOrdersService {
   constructor(
@@ -79,6 +98,7 @@ export class CustomerPortalOrdersService {
     private readonly salesService: SalesService,
     private readonly deliveryService: DeliveryService,
     private readonly financeService: FinanceService,
+    private readonly invoiceService: InvoiceService,
     private readonly claimsService: CustomerPortalClaimsService,
     private readonly insightsService: CustomerPortalInsightsService,
   ) {}
@@ -282,7 +302,7 @@ export class CustomerPortalOrdersService {
       insights,
       sections: ['orders', 'deliveries', 'finance', 'claims', 'documents', 'insights'] as const,
       message:
-        'Suivez vos commandes, livraisons, créances et pièces partagées.',
+        'Suivez vos commandes, livraisons, factures, créances et pièces partagées.',
     };
   }
 
@@ -329,6 +349,74 @@ export class CustomerPortalOrdersService {
       creditLimit: snap.creditLimit,
       outstandingBalance: snap.outstandingBalance,
       currency: snap.currency,
+    };
+  }
+
+  async listInvoices(
+    companyId: string,
+    customerId: string,
+    opts: { q?: string; status?: string; limit?: number; cursor?: string } = {},
+  ): Promise<{ items: PortalInvoiceDto[]; nextCursor: string | null }> {
+    const status = opts.status?.trim().toUpperCase();
+    if (status === FinInvoiceStatus.DRAFT) {
+      return { items: [], nextCursor: null };
+    }
+    const result = await this.invoiceService.list(companyId, {
+      q: opts.q,
+      status:
+        status === FinInvoiceStatus.ISSUED ||
+        status === FinInvoiceStatus.CANCELLED
+          ? status
+          : undefined,
+      customerId,
+      limit: opts.limit,
+      cursor: opts.cursor,
+      excludeDraft: true,
+    });
+    return {
+      items: result.items.map((inv) => this.toPortalInvoice(inv)),
+      nextCursor: result.nextCursor,
+    };
+  }
+
+  async getInvoice(
+    companyId: string,
+    customerId: string,
+    id: string,
+  ): Promise<PortalInvoiceDto> {
+    let invoice: InvoiceDto;
+    try {
+      invoice = await this.invoiceService.get(companyId, id);
+    } catch (err) {
+      if (
+        err instanceof FinanceException &&
+        err.getStatus() === HttpStatus.NOT_FOUND
+      ) {
+        throw this.notFoundInvoice();
+      }
+      throw err;
+    }
+    if (
+      invoice.customerId !== customerId ||
+      invoice.status === FinInvoiceStatus.DRAFT
+    ) {
+      throw this.notFoundInvoice();
+    }
+    return this.toPortalInvoice(invoice);
+  }
+
+  toPortalInvoice(invoice: InvoiceDto): PortalInvoiceDto {
+    return {
+      id: invoice.id,
+      number: invoice.number,
+      status: invoice.status,
+      currency: invoice.currency,
+      amountTotal: invoice.amountTotal,
+      dueDate: invoice.dueDate,
+      issuedAt: invoice.issuedAt,
+      label: invoice.label,
+      createdAt: invoice.createdAt,
+      openItemId: invoice.openItemId,
     };
   }
 
@@ -550,6 +638,14 @@ export class CustomerPortalOrdersService {
     return new CustomerPortalException(
       CUSTOMER_PORTAL_ERROR_CODES.NOT_FOUND,
       'Open item not found.',
+      HttpStatus.NOT_FOUND,
+    );
+  }
+
+  private notFoundInvoice(): CustomerPortalException {
+    return new CustomerPortalException(
+      CUSTOMER_PORTAL_ERROR_CODES.NOT_FOUND,
+      'Invoice not found.',
       HttpStatus.NOT_FOUND,
     );
   }

@@ -53,20 +53,28 @@ export class InvoiceService {
       customerId?: string;
       limit?: number;
       cursor?: string;
+      /** When true and no explicit status, hide DRAFT (portal customer read). */
+      excludeDraft?: boolean;
     },
   ): Promise<{ items: InvoiceDto[]; nextCursor: string | null }> {
     const limit = Math.min(Math.max(opts?.limit ?? 50, 1), 100);
     const q = opts?.q?.trim();
     const status = opts?.status?.trim().toUpperCase();
+    const statusFilter =
+      status &&
+      Object.values(FinInvoiceStatus).includes(status as FinInvoiceStatus)
+        ? (status as FinInvoiceStatus)
+        : null;
 
     const where: Prisma.FinInvoiceWhereInput = {
       companyId,
       deletedAt: null,
       ...(opts?.customerId ? { customerId: opts.customerId } : {}),
-      ...(status &&
-      Object.values(FinInvoiceStatus).includes(status as FinInvoiceStatus)
-        ? { status: status as FinInvoiceStatus }
-        : {}),
+      ...(statusFilter
+        ? { status: statusFilter }
+        : opts?.excludeDraft
+          ? { status: { not: FinInvoiceStatus.DRAFT } }
+          : {}),
       ...(q
         ? {
             OR: [

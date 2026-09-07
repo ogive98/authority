@@ -949,6 +949,45 @@ async function main() {
         });
       }
 
+      const portalOpenItem = await prisma.finOpenItem.findFirst({
+        where: {
+          companyId: company.id,
+          number: 'FIN-PORTAL-SEED',
+        },
+      });
+
+      const existingInv = await prisma.finInvoice.findFirst({
+        where: {
+          companyId: company.id,
+          number: 'INV-PORTAL-SEED',
+        },
+      });
+      if (!existingInv) {
+        const issuedAt = new Date();
+        const dueDate = new Date(Date.now() + 14 * 86400000);
+        const invoice = await prisma.finInvoice.create({
+          data: {
+            companyId: company.id,
+            number: 'INV-PORTAL-SEED',
+            customerId: portalCustomer.id,
+            status: 'ISSUED',
+            salesOrderId: portalOrder.id,
+            currency: 'TND',
+            amountTotal: 50,
+            dueDate,
+            issuedAt,
+            label: 'Facture démo portal (montant enregistré — pas de TVA calculée)',
+            notes: 'INTERNAL — never returned to portal',
+          },
+        });
+        if (portalOpenItem && !portalOpenItem.invoiceId) {
+          await prisma.finOpenItem.update({
+            where: { id: portalOpenItem.id },
+            data: { invoiceId: invoice.id },
+          });
+        }
+      }
+
       const existingClaim = await prisma.ptlClaim.findFirst({
         where: {
           companyId: company.id,
