@@ -22,7 +22,7 @@ export default async function PortalOrderDetailPage({
   const { id } = await params;
   const [{ status, data: order }, deliveriesRes] = await Promise.all([
     fetchOrder(id),
-    fetchDeliveries({ limit: 50 }),
+    fetchDeliveries({ orderId: id, limit: 5 }),
   ]);
 
   if (status === 404) {
@@ -53,7 +53,7 @@ export default async function PortalOrderDetailPage({
 
   const linkedDelivery =
     deliveriesRes.status === 200 && deliveriesRes.data
-      ? (deliveriesRes.data.items.find((d) => d.orderId === order.id) ?? null)
+      ? (deliveriesRes.data.items[0] ?? null)
       : null;
 
   return (

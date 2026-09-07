@@ -87,7 +87,7 @@ export function PortalNewClaimForm({
       <AScreenHeader
         kicker="Customer Portal"
         title="Nouvelle réclamation"
-        description="Décrivez le problème. Les pièces jointes sont déposées par votre ADV et visibles sur le dossier."
+        description="Décrivez le problème. Vous pourrez joindre des fichiers sur le dossier après création."
         actions={
           <Link
             href={PORTAL_CLAIMS_PATH}

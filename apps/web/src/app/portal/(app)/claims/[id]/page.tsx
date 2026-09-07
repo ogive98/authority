@@ -5,6 +5,7 @@ import { AEmptyState } from "@/components/a/a-empty-state";
 import { AErrorState } from "@/components/a/a-error-state";
 import { AScreenHeader } from "@/components/a/a-screen-header";
 import { PortalDocumentDownloadButton } from "@/components/portal/portal-document-download-button";
+import { PortalClaimDocumentUpload } from "@/components/portal/portal-claim-document-upload";
 import {
   fetchClaim,
   fetchPortalDocuments,
@@ -128,7 +129,7 @@ export default async function PortalClaimDetailPage({
           ) : docs.length === 0 ? (
             <AEmptyState
               title="Aucune pièce"
-              description="Les fichiers partagés par votre ADV pour ce dossier apparaîtront ici."
+              description="Ajoutez une photo ou un PDF ci-dessous, ou attendez un partage ADV."
               canAct={false}
             />
           ) : (
@@ -158,6 +159,7 @@ export default async function PortalClaimDetailPage({
               </table>
             </div>
           )}
+          <PortalClaimDocumentUpload claimId={data.id} />
         </section>
       </div>
     </div>

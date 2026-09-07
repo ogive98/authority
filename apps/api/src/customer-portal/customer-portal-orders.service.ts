@@ -365,7 +365,13 @@ export class CustomerPortalOrdersService {
   async listDeliveries(
     companyId: string,
     customerId: string,
-    opts: { q?: string; status?: string; limit?: number; cursor?: string } = {},
+    opts: {
+      q?: string;
+      status?: string;
+      orderId?: string;
+      limit?: number;
+      cursor?: string;
+    } = {},
   ): Promise<{ items: PortalDeliveryDto[]; nextCursor: string | null }> {
     const result = await this.deliveryService.list(companyId, {
       ...opts,

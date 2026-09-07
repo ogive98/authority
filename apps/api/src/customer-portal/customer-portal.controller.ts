@@ -9,14 +9,18 @@ import {
   Query,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { IamSessionRealm } from '@prisma/client';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { DocLinkType, IamSessionRealm } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { LoginDto } from '../identity/login.dto';
 import { SessionService } from '../identity/session.service';
 import { RequireModule } from '../modules-registry/modules.decorators';
 import { DocumentsService } from '../documents/documents.service';
+import { DEFAULT_MAX_UPLOAD_MB } from '../platform/platform.constants';
 import { CustomerPortalAuthService } from './customer-portal-auth.service';
 import { CustomerPortalClaimsService } from './customer-portal-claims.service';
 import { CustomerPortalInsightsService } from './customer-portal-insights.service';
@@ -32,6 +36,9 @@ import {
   PortalCreateOrderDto,
   PortalReorderDto,
 } from './customer-portal.dto';
+
+const maxUploadBytes =
+  Number(process.env.MAX_UPLOAD_MB ?? DEFAULT_MAX_UPLOAD_MB) * 1024 * 1024;
 
 @Controller('api/v1/customer-portal')
 export class CustomerPortalController {
@@ -208,6 +215,7 @@ export class CustomerPortalController {
     @Req() req: CustomerPortalRequest,
     @Query('q') q?: string,
     @Query('status') status?: string,
+    @Query('orderId') orderId?: string,
     @Query('limit') limitRaw?: string,
     @Query('cursor') cursor?: string,
   ) {
@@ -218,6 +226,7 @@ export class CustomerPortalController {
       {
         q,
         status,
+        orderId,
         limit: Number.isFinite(limit) ? limit : undefined,
         cursor,
       },
@@ -351,6 +360,32 @@ export class CustomerPortalController {
         linkId,
         limit: Number.isFinite(limit) ? limit : undefined,
         cursor,
+      },
+    );
+  }
+
+  @Post('documents')
+  @HttpCode(201)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('documents')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: maxUploadBytes } }),
+  )
+  uploadDocument(
+    @Req() req: CustomerPortalRequest,
+    @UploadedFile()
+    file: { buffer: Buffer; mimetype: string; originalname?: string },
+    @Body() body: Record<string, string>,
+  ) {
+    return this.documentsService.createFromPortalUpload(
+      req.companyId!,
+      req.customerId!,
+      req.user!.id,
+      file,
+      {
+        title: body.title,
+        linkType: (body.linkType as DocLinkType) || DocLinkType.CLAIM,
+        linkId: body.linkId,
       },
     );
   }

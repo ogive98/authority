@@ -39,7 +39,7 @@ export default async function PortalDeliveriesPage() {
       <AScreenHeader
         kicker="Customer Portal"
         title="Livraisons"
-        description={`${items.length} expédition${items.length === 1 ? "" : "s"} · suivi statut (pas d’ETA GPS)`}
+        description={`${items.length} expédition${items.length === 1 ? "" : "s"} · ouvrez une ligne pour le parcours interactif`}
         actions={
           <Link
             href="/portal/preview/journey"
@@ -51,11 +51,21 @@ export default async function PortalDeliveriesPage() {
       />
       <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
         {items.length === 0 ? (
-          <AEmptyState
-            title="Aucune livraison"
-            description="Les expéditions liées à vos commandes apparaîtront ici. Un exemple fictif est disponible pour visualiser le parcours."
-            canAct={false}
-          />
+          <div className="space-y-3">
+            <AEmptyState
+              title="Aucune livraison"
+              description="Les expéditions liées à vos commandes apparaîtront ici."
+              canAct={false}
+            />
+            <p className="text-[length:var(--a-text-sm)]">
+              <Link
+                href="/portal/preview/journey"
+                className="text-a-accent hover:underline"
+              >
+                Ouvrir le parcours exemple (schéma interactif) →
+              </Link>
+            </p>
+          </div>
         ) : (
           <div className="a-card overflow-hidden">
             <div className="overflow-x-auto">

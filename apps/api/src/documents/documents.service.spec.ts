@@ -138,4 +138,49 @@ describe('DocumentsService', () => {
       { id: claimId, number: 'CLM-1', label: 'CLM-1 · Carton' },
     ]);
   });
+
+  it('portal upload attaches file to membership claim', async () => {
+    const { service, prisma, files } = build();
+    prisma.ptlClaim.findFirst = jest.fn().mockResolvedValue({ id: claimId });
+    const dto = await service.createFromPortalUpload(
+      companyId,
+      customerId,
+      userId,
+      {
+        buffer: Buffer.from('photo'),
+        mimetype: 'image/jpeg',
+        originalname: 'photo.jpg',
+      },
+      {
+        title: 'Photo carton',
+        linkType: DocLinkType.CLAIM,
+        linkId: claimId,
+      },
+    );
+    expect(dto.visibility).toBe(DocVisibility.CUSTOMER_PORTAL);
+    expect(dto.customerId).toBe(customerId);
+    expect(dto.linkType).toBe(DocLinkType.CLAIM);
+    expect(files.upload).toHaveBeenCalled();
+  });
+
+  it('portal upload IDOR on foreign claim', async () => {
+    const { service, prisma } = build();
+    prisma.ptlClaim.findFirst = jest.fn().mockResolvedValue(null);
+    await expect(
+      service.createFromPortalUpload(
+        companyId,
+        customerId,
+        userId,
+        { buffer: Buffer.from('x'), mimetype: 'text/plain' },
+        {
+          title: 'x',
+          linkType: DocLinkType.CLAIM,
+          linkId: claimId,
+        },
+      ),
+    ).rejects.toMatchObject({
+      status: HttpStatus.NOT_FOUND,
+      response: { code: DOCUMENTS_ERROR_CODES.NOT_FOUND },
+    });
+  });
 });

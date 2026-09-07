@@ -373,6 +373,117 @@ export class DocumentsService {
     };
   }
 
+  /**
+   * Portal upload: membership customer only, forced CUSTOMER_PORTAL visibility.
+   * V0: CLAIM links only (assert claim belongs to customer).
+   */
+  async createFromPortalUpload(
+    companyId: string,
+    customerId: string,
+    actorUserId: string,
+    file: { buffer: Buffer; mimetype: string; originalname?: string },
+    meta: { title: string; linkType: DocLinkType; linkId: string },
+  ): Promise<DocumentDto> {
+    if (!file?.buffer?.length) {
+      throw new DocumentsException(
+        DOCUMENTS_ERROR_CODES.FILE_REQUIRED,
+        'File is required.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const title = meta.title?.trim();
+    if (!title) {
+      throw new DocumentsException(
+        DOCUMENTS_ERROR_CODES.TITLE_REQUIRED,
+        'Title is required.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (meta.linkType !== DocLinkType.CLAIM || !meta.linkId) {
+      throw new DocumentsException(
+        DOCUMENTS_ERROR_CODES.INVALID_LINK,
+        'Portal upload requires a CLAIM link.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const claim = await this.prisma.ptlClaim.findFirst({
+      where: {
+        id: meta.linkId,
+        companyId,
+        customerId,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    if (!claim) {
+      throw new DocumentsException(
+        DOCUMENTS_ERROR_CODES.NOT_FOUND,
+        'Document not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    let uploaded;
+    try {
+      uploaded = await this.files.upload({
+        companyId,
+        actorUserId,
+        buffer: file.buffer,
+        mime: file.mimetype || 'application/octet-stream',
+        originalName: file.originalname,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Storage unavailable.';
+      throw new DocumentsException(
+        DOCUMENTS_ERROR_CODES.STORAGE_UNAVAILABLE,
+        message,
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    const number = await this.nextNumber(companyId);
+    const row = await this.prisma.$transaction(async (tx) => {
+      const doc = await tx.docDocument.create({
+        data: {
+          companyId,
+          number,
+          title,
+          mime: uploaded.mime,
+          size: BigInt(uploaded.size),
+          coreFileId: uploaded.id,
+          visibility: DocVisibility.CUSTOMER_PORTAL,
+          linkType: DocLinkType.CLAIM,
+          linkId: claim.id,
+          customerId,
+          createdByUserId: actorUserId,
+        },
+      });
+
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'doc_document',
+        aggregateId: doc.id,
+        eventType: DOCUMENTS_EVENT_TYPES.CREATED,
+        payloadJson: {
+          documentId: doc.id,
+          number: doc.number,
+          coreFileId: doc.coreFileId,
+          visibility: doc.visibility,
+          linkType: doc.linkType,
+          linkId: doc.linkId,
+          customerId: doc.customerId,
+          source: 'customer_portal',
+        },
+      });
+
+      return doc;
+    });
+
+    return serialize(row);
+  }
+
   private async resolveCustomerId(
     companyId: string,
     linkType: DocLinkType,

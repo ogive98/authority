@@ -153,6 +153,7 @@ export class DeliveryService {
       q?: string;
       status?: string;
       customerId?: string;
+      orderId?: string;
       roundId?: string;
       limit?: number;
       cursor?: string;
@@ -166,6 +167,7 @@ export class DeliveryService {
       companyId,
       deletedAt: null,
       ...(opts?.customerId ? { customerId: opts.customerId } : {}),
+      ...(opts?.orderId ? { orderId: opts.orderId } : {}),
       ...(opts?.roundId ? { roundId: opts.roundId } : {}),
       ...(status &&
       Object.values(DlvShipmentStatus).includes(status as DlvShipmentStatus)

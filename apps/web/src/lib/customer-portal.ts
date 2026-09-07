@@ -304,12 +304,14 @@ export async function fetchCatalog(opts?: {
 export async function fetchDeliveries(opts?: {
   q?: string;
   status?: string;
+  orderId?: string;
   limit?: number;
   cursor?: string;
 }): Promise<{ status: number; data: PortalDeliveryList | null }> {
   const params = new URLSearchParams();
   if (opts?.q?.trim()) params.set("q", opts.q.trim());
   if (opts?.status) params.set("status", opts.status);
+  if (opts?.orderId) params.set("orderId", opts.orderId);
   if (opts?.limit != null) params.set("limit", String(opts.limit));
   if (opts?.cursor) params.set("cursor", opts.cursor);
   const qs = params.toString();
