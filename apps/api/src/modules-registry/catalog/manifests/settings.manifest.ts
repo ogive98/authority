@@ -20,4 +20,12 @@ export const settingsManifest: ModuleManifest = {
   permissions: [],
   dependencies: ['platform', 'identity', 'organization'],
   publishedEvents: ['settings.value.updated.v1'],
+  navigationEntries: [
+    { id: 'prefs', label: 'Préférences', href: '/settings' },
+    {
+      id: 'expertise',
+      label: 'Expertise légale',
+      href: '/settings#expertise',
+    },
+  ],
 };

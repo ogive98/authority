@@ -108,6 +108,11 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       name: "Paramètres",
       features: [
         { id: "prefs", label: "Préférences", href: "/settings" },
+        {
+          id: "expertise",
+          label: "Expertise légale",
+          href: "/settings#expertise",
+        },
         { id: "company", label: "Société / sites", href: "/settings#company" },
       ],
     },

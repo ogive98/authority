@@ -57,6 +57,21 @@ export class SettingsController {
     });
   }
 
+  /** Legal expertise slots (FODEC / timbre / CNSS…) — rates only when expert-validated. */
+  @Get('expertise')
+  @UseGuards(TenancyGuard)
+  async expertise(
+    @CurrentUser() user: { id: string },
+    @CurrentTenancy() tenancy: TenancyContext,
+  ) {
+    await this.assertPermission(
+      user.id,
+      PERMISSION_KEYS.settingsSelf,
+      tenancy.companyId,
+    );
+    return this.settingsService.listExpertise(tenancy.companyId);
+  }
+
   @Put()
   @HttpCode(200)
   @UseGuards(TenancyGuard)

@@ -59,3 +59,97 @@ export const SETTING_ENUM_VALUES: Record<KernelSettingKey, readonly string[]> =
     'ui.theme': ['light', 'dark', 'system'],
     'ui.density': ['compact', 'comfortable'],
   };
+
+/**
+ * Legal / fiscal expertise slots hosted under Préférences (D090).
+ * Rates are NEVER invented here — PENDING until expert validation.
+ * VAT is owned by Tax Engine (`/tax`); other kinds wait for expert input.
+ */
+export const EXPERTISE_SLOT_KEYS = [
+  'tax.vat',
+  'tax.fodec',
+  'tax.timbre',
+  'hr.cnss',
+  'hr.irpp',
+  'hr.tfp',
+] as const;
+
+export type ExpertiseSlotKey = (typeof EXPERTISE_SLOT_KEYS)[number];
+
+export type ExpertiseDomain = 'tax' | 'hr' | 'payroll';
+
+export type ExpertiseSlotStatus =
+  | 'VALIDATED'
+  | 'PENDING_EXPERT'
+  | 'NOT_APPLICABLE';
+
+export type ExpertiseSlotDef = {
+  key: ExpertiseSlotKey;
+  domain: ExpertiseDomain;
+  label: string;
+  description: string;
+  /** Default status before live enrichment (VAT may become VALIDATED). */
+  defaultStatus: ExpertiseSlotStatus;
+  lawRefHint: string | null;
+  manageHref: string | null;
+};
+
+export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
+  {
+    key: 'tax.vat',
+    domain: 'tax',
+    label: 'TVA Tunisie',
+    description:
+      'Catalogue Code TVA (7 / 13 / 19 / 0 %) — Tax Engine D088.',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: 'Code TVA · LF2018 art.43',
+    manageHref: '/tax',
+  },
+  {
+    key: 'tax.fodec',
+    domain: 'tax',
+    label: 'FODEC',
+    description:
+      'Fonds de développement de la compétitivité — taux après validation expert.',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: null,
+  },
+  {
+    key: 'tax.timbre',
+    domain: 'tax',
+    label: 'Timbre fiscal',
+    description: 'Droit de timbre — montants après validation expert.',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: null,
+  },
+  {
+    key: 'hr.cnss',
+    domain: 'hr',
+    label: 'CNSS',
+    description:
+      'Cotisations sociales — taux employeur/salarié après expert (Payroll).',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: '/hr',
+  },
+  {
+    key: 'hr.irpp',
+    domain: 'hr',
+    label: 'IRPP',
+    description: 'Barème IRPP — après validation expert (Payroll).',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: '/hr',
+  },
+  {
+    key: 'hr.tfp',
+    domain: 'hr',
+    label: 'TFP',
+    description: 'Taxe sur la formation professionnelle — après expert.',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: null,
+  },
+] as const;

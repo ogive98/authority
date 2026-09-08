@@ -11,10 +11,12 @@ import { isCataloguedPermission } from '../permissions/permission.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   buildScopeKey,
+  EXPERTISE_CATALOG,
   KERNEL_SETTING_KEYS,
   SETTINGS_ERROR_CODES,
   SETTING_ENUM_VALUES,
   SETTING_LEVEL_PRIORITY,
+  type ExpertiseSlotStatus,
   type KernelSettingKey,
 } from './settings.constants';
 import { SettingsException } from './settings.exception';
@@ -30,6 +32,25 @@ export interface EffectiveSetting {
 export interface EffectiveSettingsResponse {
   companyId: string;
   settings: EffectiveSetting[];
+}
+
+export type ExpertiseSlotDto = {
+  key: string;
+  domain: string;
+  label: string;
+  description: string;
+  status: ExpertiseSlotStatus;
+  lawRef: string | null;
+  valueSummary: string | null;
+  manageHref: string | null;
+  expertValidatedAt: string | null;
+};
+
+export interface ExpertiseCatalogResponse {
+  companyId: string;
+  /** True when any slot still waits for expert rates (never invent). */
+  pendingExpertCount: number;
+  items: ExpertiseSlotDto[];
 }
 
 interface ResolveContext {
@@ -68,6 +89,114 @@ export class SettingsService {
     return {
       companyId: context.companyId,
       settings,
+    };
+  }
+
+  /**
+   * Préférences → Expertise légale (D090).
+   * Lists slots for FODEC / timbre / CNSS / IRPP / TFP / TVA.
+   * Only TVA may show VALIDATED when Tax Engine rates exist — never invent others.
+   */
+  async listExpertise(companyId: string): Promise<ExpertiseCatalogResponse> {
+    const vat = await this.resolveVatExpertise(companyId);
+
+    const items: ExpertiseSlotDto[] = EXPERTISE_CATALOG.map((slot) => {
+      if (slot.key === 'tax.vat') {
+        return {
+          key: slot.key,
+          domain: slot.domain,
+          label: slot.label,
+          description: slot.description,
+          status: vat.status,
+          lawRef: vat.lawRef ?? slot.lawRefHint,
+          valueSummary: vat.valueSummary,
+          manageHref: slot.manageHref,
+          expertValidatedAt: vat.expertValidatedAt,
+        };
+      }
+      return {
+        key: slot.key,
+        domain: slot.domain,
+        label: slot.label,
+        description: slot.description,
+        status: slot.defaultStatus,
+        lawRef: slot.lawRefHint,
+        valueSummary: null,
+        manageHref: slot.manageHref,
+        expertValidatedAt: null,
+      };
+    });
+
+    return {
+      companyId,
+      pendingExpertCount: items.filter((i) => i.status === 'PENDING_EXPERT')
+        .length,
+      items,
+    };
+  }
+
+  private async resolveVatExpertise(companyId: string): Promise<{
+    status: ExpertiseSlotStatus;
+    lawRef: string | null;
+    valueSummary: string | null;
+    expertValidatedAt: string | null;
+  }> {
+    const codes = await this.prisma.taxCode.findMany({
+      where: { companyId, deletedAt: null, active: true, kind: 'VAT' },
+      orderBy: { code: 'asc' },
+      select: { id: true, code: true },
+    });
+    if (codes.length === 0) {
+      return {
+        status: 'PENDING_EXPERT',
+        lawRef: null,
+        valueSummary: null,
+        expertValidatedAt: null,
+      };
+    }
+
+    const asOf = new Date();
+    asOf.setUTCHours(0, 0, 0, 0);
+    const summaries: string[] = [];
+    let anyValidated: Date | null = null;
+    let lawRef: string | null = null;
+
+    for (const code of codes) {
+      const rate = await this.prisma.taxRate.findFirst({
+        where: {
+          companyId,
+          taxCodeId: code.id,
+          deletedAt: null,
+          validFrom: { lte: asOf },
+          OR: [{ validTo: null }, { validTo: { gte: asOf } }],
+        },
+        orderBy: { validFrom: 'desc' },
+      });
+      if (!rate) continue;
+      summaries.push(`${code.code} ${(rate.rateBps / 100).toFixed(0)}%`);
+      if (rate.lawRef && !lawRef) lawRef = rate.lawRef;
+      if (
+        rate.expertValidatedAt &&
+        (!anyValidated || rate.expertValidatedAt > anyValidated)
+      ) {
+        anyValidated = rate.expertValidatedAt;
+      }
+    }
+
+    if (summaries.length === 0) {
+      return {
+        status: 'PENDING_EXPERT',
+        lawRef: null,
+        valueSummary: null,
+        expertValidatedAt: null,
+      };
+    }
+
+    return {
+      status: 'VALIDATED',
+      lawRef,
+      valueSummary: summaries.join(' · '),
+      expertValidatedAt: anyValidated?.toISOString() ?? null,
     };
   }
 
