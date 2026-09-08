@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ABadge,
   AButton,
-  ADrawer,
   AEmptyState,
   AErrorState,
   AForbiddenState,
@@ -29,6 +28,42 @@ type ExpertiseLoad =
   | { kind: "ok"; items: ExpertiseSlot[]; pending: number }
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
+
+type ExpertDraft = {
+  valueLabel: string;
+  lawRef: string;
+  expertValidatedAt: string;
+  rateBps: string;
+  amountMilli: string;
+  notes: string;
+};
+
+function emptyDraft(): ExpertDraft {
+  return {
+    valueLabel: "",
+    lawRef: "",
+    expertValidatedAt: "",
+    rateBps: "",
+    amountMilli: "",
+    notes: "",
+  };
+}
+
+function draftFromSlot(row: ExpertiseSlot): ExpertDraft {
+  if (row.status !== "VALIDATED") {
+    return emptyDraft();
+  }
+  return {
+    valueLabel: row.valueSummary ?? "",
+    lawRef: row.lawRef ?? "",
+    expertValidatedAt: row.expertValidatedAt
+      ? row.expertValidatedAt.slice(0, 10)
+      : "",
+    rateBps: row.rateBps != null ? String(row.rateBps) : "",
+    amountMilli: row.amountMilli != null ? String(row.amountMilli) : "",
+    notes: row.notes ?? "",
+  };
+}
 
 function statusTone(
   status: ExpertiseSlot["status"],
@@ -60,18 +95,9 @@ export default function SettingsPage() {
   const [expertise, setExpertise] = useState<ExpertiseLoad>({
     kind: "loading",
   });
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selected, setSelected] = useState<ExpertiseSlot | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [valueLabel, setValueLabel] = useState("");
-  const [lawRef, setLawRef] = useState("");
-  const [expertValidatedAt, setExpertValidatedAt] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
-  const [rateBps, setRateBps] = useState("");
-  const [amountMilli, setAmountMilli] = useState("");
-  const [notes, setNotes] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, ExpertDraft>>({});
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const density = usePrefsStore((s) => s.density);
   const setDensity = usePrefsStore((s) => s.setDensity);
@@ -102,6 +128,14 @@ export default function SettingsPage() {
       setExpertise({ kind: "error", message: res.message });
       return;
     }
+    const nextDrafts: Record<string, ExpertDraft> = {};
+    for (const item of res.data.items) {
+      if (item.writable) {
+        nextDrafts[item.key] = draftFromSlot(item);
+      }
+    }
+    setDrafts(nextDrafts);
+    setFormErrors({});
     setExpertise({
       kind: "ok",
       items: res.data.items,
@@ -137,54 +171,74 @@ export default function SettingsPage() {
     }
   }
 
-  function openExpertForm(row: ExpertiseSlot) {
-    if (!row.writable) return;
-    setSelected(row);
-    setFormError(null);
-    setValueLabel(row.valueSummary ?? "");
-    setLawRef(row.lawRef ?? "");
-    setExpertValidatedAt(
-      row.expertValidatedAt
-        ? row.expertValidatedAt.slice(0, 10)
-        : new Date().toISOString().slice(0, 10),
-    );
-    setRateBps(row.rateBps != null ? String(row.rateBps) : "");
-    setAmountMilli(row.amountMilli != null ? String(row.amountMilli) : "");
-    setNotes(row.notes ?? "");
-    setDrawerOpen(true);
+  function patchDraft(key: string, patch: Partial<ExpertDraft>) {
+    setDrafts((prev) => ({
+      ...prev,
+      [key]: { ...(prev[key] ?? emptyDraft()), ...patch },
+    }));
   }
 
-  async function onSubmitExpert() {
-    if (!selected) return;
-    setBusy(true);
-    setFormError(null);
-    const rate = rateBps.trim() ? Number(rateBps) : undefined;
-    const amount = amountMilli.trim() ? Number(amountMilli) : undefined;
-    if (rateBps.trim() && !Number.isFinite(rate)) {
-      setBusy(false);
-      setFormError("rateBps invalide (entier, ex. 100 = 1 %).");
+  async function onSubmitSlot(row: ExpertiseSlot) {
+    const draft = drafts[row.key] ?? emptyDraft();
+    setBusyKey(row.key);
+    setFormErrors((e) => {
+      const next = { ...e };
+      delete next[row.key];
+      return next;
+    });
+
+    if (!draft.valueLabel.trim() || !draft.lawRef.trim()) {
+      setBusyKey(null);
+      setFormErrors((e) => ({
+        ...e,
+        [row.key]:
+          "Libellé et référence légale obligatoires — laisser vide tant que l’expert n’a pas validé.",
+      }));
       return;
     }
-    if (amountMilli.trim() && !Number.isFinite(amount)) {
-      setBusy(false);
-      setFormError("amountMilli invalide.");
+    if (!draft.expertValidatedAt) {
+      setBusyKey(null);
+      setFormErrors((e) => ({
+        ...e,
+        [row.key]: "Date de validation expert obligatoire.",
+      }));
       return;
     }
-    const res = await upsertExpertise(selected.key, {
-      valueLabel: valueLabel.trim(),
-      lawRef: lawRef.trim(),
-      expertValidatedAt: new Date(expertValidatedAt).toISOString(),
+
+    const rate = draft.rateBps.trim() ? Number(draft.rateBps) : undefined;
+    const amount = draft.amountMilli.trim()
+      ? Number(draft.amountMilli)
+      : undefined;
+    if (draft.rateBps.trim() && !Number.isFinite(rate)) {
+      setBusyKey(null);
+      setFormErrors((e) => ({
+        ...e,
+        [row.key]: "rateBps invalide (entier, ex. 100 = 1 %).",
+      }));
+      return;
+    }
+    if (draft.amountMilli.trim() && !Number.isFinite(amount)) {
+      setBusyKey(null);
+      setFormErrors((e) => ({
+        ...e,
+        [row.key]: "amountMilli invalide.",
+      }));
+      return;
+    }
+
+    const res = await upsertExpertise(row.key, {
+      valueLabel: draft.valueLabel.trim(),
+      lawRef: draft.lawRef.trim(),
+      expertValidatedAt: new Date(draft.expertValidatedAt).toISOString(),
       rateBps: rate,
       amountMilli: amount,
-      notes: notes.trim() || undefined,
+      notes: draft.notes.trim() || undefined,
     });
-    setBusy(false);
+    setBusyKey(null);
     if (!res.ok) {
-      setFormError(res.message);
+      setFormErrors((e) => ({ ...e, [row.key]: res.message }));
       return;
     }
-    setDrawerOpen(false);
-    setSelected(null);
     await loadExpertise();
   }
 
@@ -228,10 +282,12 @@ export default function SettingsPage() {
         </div>
 
         {tab === "expertise" ? (
-          <section className="space-y-4">
+          <section className="space-y-5">
             <p className="max-w-2xl text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Saisie expert : libellé + référence légale + date de validation.
-              Aucun taux n’est prérempli — vous fournissez les valeurs.
+              Formulaire expert — champs{" "}
+              <span className="font-medium text-a-fg">vides par défaut</span>.
+              Aucun taux n’est inventé. Remplir uniquement avec un expert, puis
+              « Valider ».
             </p>
             {expertise.kind === "loading" ? (
               <ASkeleton className="h-48 w-full max-w-3xl" />
@@ -252,176 +308,189 @@ export default function SettingsPage() {
                 description="Le catalogue n’est pas initialisé."
               />
             ) : null}
-            {expertise.kind === "ok" && expertise.items.length > 0 ? (
-              <>
-                {expertise.pending > 0 ? (
-                  <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    {expertise.pending > 1
-                      ? `${expertise.pending} paramètres en attente d’expertise.`
-                      : "1 paramètre en attente d’expertise."}
-                  </p>
-                ) : null}
-                <div className="overflow-x-auto rounded-[var(--a-radius-lg)] border border-a-border-subtle">
-                  <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
-                    <thead className="bg-a-surface-2 text-a-fg-muted">
-                      <tr>
-                        <th className="px-4 py-3 font-medium">Paramètre</th>
-                        <th className="px-4 py-3 font-medium">Domaine</th>
-                        <th className="px-4 py-3 font-medium">Valeur</th>
-                        <th className="px-4 py-3 font-medium">Réf. légale</th>
-                        <th className="px-4 py-3 font-medium">Statut</th>
-                        <th className="px-4 py-3 font-medium">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {expertise.items.map((row) => (
-                        <tr
-                          key={row.key}
-                          className="border-t border-a-border-subtle hover:bg-a-surface-2/60"
-                        >
-                          <td className="px-4 py-3">
-                            <div className="font-medium">{row.label}</div>
-                            <div className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                              {row.description}
+
+            {expertise.kind === "ok"
+              ? expertise.items.map((row) => {
+                  if (!row.writable) {
+                    return (
+                      <div
+                        key={row.key}
+                        className="rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2 p-4"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-[length:var(--a-text-md)] font-medium">
+                                {row.label}
+                              </h3>
+                              <ABadge tone={statusTone(row.status)}>
+                                {statusLabel(row.status)}
+                              </ABadge>
                             </div>
-                          </td>
-                          <td className="a-mono px-4 py-3 text-a-fg-muted">
-                            {row.domain}
-                          </td>
-                          <td className="a-mono px-4 py-3 tabular-nums">
-                            {row.valueSummary ?? "—"}
-                          </td>
-                          <td className="px-4 py-3 text-a-fg-muted">
-                            {row.lawRef ?? "—"}
-                          </td>
-                          <td className="px-4 py-3">
+                            <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                              {row.description}
+                            </p>
+                            {row.valueSummary ? (
+                              <p className="a-mono mt-2 text-[length:var(--a-text-sm)]">
+                                {row.valueSummary}
+                                {row.lawRef ? ` · ${row.lawRef}` : ""}
+                              </p>
+                            ) : null}
+                          </div>
+                          {row.manageHref ? (
+                            <Link
+                              href={row.manageHref}
+                              className="text-[length:var(--a-text-sm)] text-a-accent hover:underline"
+                            >
+                              Ouvrir catalogue TVA
+                            </Link>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const draft = drafts[row.key] ?? emptyDraft();
+                  const err = formErrors[row.key];
+                  const canSubmit =
+                    Boolean(draft.valueLabel.trim()) &&
+                    Boolean(draft.lawRef.trim()) &&
+                    Boolean(draft.expertValidatedAt);
+
+                  return (
+                    <div
+                      key={row.key}
+                      className="space-y-4 rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2 p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-[length:var(--a-text-md)] font-medium">
+                              {row.label}
+                            </h3>
                             <ABadge tone={statusTone(row.status)}>
                               {statusLabel(row.status)}
                             </ABadge>
-                          </td>
-                          <td className="px-4 py-3">
-                            {row.writable ? (
-                              <AButton
-                                type="button"
-                                variant="ghost"
-                                onClick={() => openExpertForm(row)}
-                              >
-                                {row.status === "VALIDATED"
-                                  ? "Modifier"
-                                  : "Saisir"}
-                              </AButton>
-                            ) : row.manageHref ? (
-                              <Link
-                                href={row.manageHref}
-                                className="text-[length:var(--a-text-sm)] text-a-accent hover:underline"
-                              >
-                                Ouvrir
-                              </Link>
-                            ) : (
-                              <span className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                                —
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            ) : null}
+                            <span className="a-mono text-[length:var(--a-text-xs)] text-a-fg-muted">
+                              {row.key}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                            {row.description}
+                          </p>
+                        </div>
+                      </div>
 
-            <ADrawer
-              open={drawerOpen}
-              onOpenChange={setDrawerOpen}
-              title={
-                selected
-                  ? `Expertise — ${selected.label}`
-                  : "Saisie expert"
-              }
-            >
-              <div className="space-y-4 p-1">
-                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Saisissez uniquement des valeurs validées par un expert. Rien
-                  n’est inventé par le système.
-                </p>
-                {formError ? (
-                  <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
-                    {formError}
-                  </p>
-                ) : null}
-                <label className="block space-y-1">
-                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Libellé valeur (obligatoire)
-                  </span>
-                  <AInput
-                    value={valueLabel}
-                    onChange={(e) => setValueLabel(e.target.value)}
-                    placeholder="ex. 1 % · 1,000 TND · barème 2026"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Référence légale (obligatoire)
-                  </span>
-                  <AInput
-                    value={lawRef}
-                    onChange={(e) => setLawRef(e.target.value)}
-                    placeholder="ex. LF art. … / note expert"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Date validation expert
-                  </span>
-                  <AInput
-                    type="date"
-                    value={expertValidatedAt}
-                    onChange={(e) => setExpertValidatedAt(e.target.value)}
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Taux (bps, optionnel — 100 = 1 %)
-                  </span>
-                  <AInput
-                    value={rateBps}
-                    onChange={(e) => setRateBps(e.target.value)}
-                    placeholder="laisser vide si non applicable"
-                    className="a-mono"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Montant millimes (optionnel — timbre)
-                  </span>
-                  <AInput
-                    value={amountMilli}
-                    onChange={(e) => setAmountMilli(e.target.value)}
-                    placeholder="laisser vide si non applicable"
-                    className="a-mono"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Notes
-                  </span>
-                  <AInput
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
-                </label>
-                <AButton
-                  type="button"
-                  disabled={
-                    busy || !valueLabel.trim() || !lawRef.trim() || !expertValidatedAt
-                  }
-                  onClick={() => void onSubmitExpert()}
-                >
-                  Valider expertise
-                </AButton>
-              </div>
-            </ADrawer>
+                      {err ? (
+                        <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
+                          {err}
+                        </p>
+                      ) : null}
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block space-y-1 sm:col-span-2">
+                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                            Libellé valeur
+                          </span>
+                          <AInput
+                            value={draft.valueLabel}
+                            onChange={(e) =>
+                              patchDraft(row.key, {
+                                valueLabel: e.target.value,
+                              })
+                            }
+                            placeholder="Vide — à saisir avec l’expert"
+                          />
+                        </label>
+                        <label className="block space-y-1 sm:col-span-2">
+                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                            Référence légale
+                          </span>
+                          <AInput
+                            value={draft.lawRef}
+                            onChange={(e) =>
+                              patchDraft(row.key, { lawRef: e.target.value })
+                            }
+                            placeholder="Vide — réf. expert / LF / note"
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                            Date validation expert
+                          </span>
+                          <AInput
+                            type="date"
+                            value={draft.expertValidatedAt}
+                            onChange={(e) =>
+                              patchDraft(row.key, {
+                                expertValidatedAt: e.target.value,
+                              })
+                            }
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                            Taux bps (optionnel, 100 = 1 %)
+                          </span>
+                          <AInput
+                            value={draft.rateBps}
+                            onChange={(e) =>
+                              patchDraft(row.key, { rateBps: e.target.value })
+                            }
+                            placeholder="Vide"
+                            className="a-mono"
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                            Millimes (optionnel — timbre)
+                          </span>
+                          <AInput
+                            value={draft.amountMilli}
+                            onChange={(e) =>
+                              patchDraft(row.key, {
+                                amountMilli: e.target.value,
+                              })
+                            }
+                            placeholder="Vide"
+                            className="a-mono"
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                            Notes
+                          </span>
+                          <AInput
+                            value={draft.notes}
+                            onChange={(e) =>
+                              patchDraft(row.key, { notes: e.target.value })
+                            }
+                            placeholder="Vide"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <AButton
+                          type="button"
+                          disabled={busyKey === row.key || !canSubmit}
+                          onClick={() => void onSubmitSlot(row)}
+                        >
+                          {row.status === "VALIDATED"
+                            ? "Mettre à jour"
+                            : "Valider expertise"}
+                        </AButton>
+                        {!canSubmit ? (
+                          <span className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                            Bouton actif seulement quand libellé + réf. + date
+                            sont renseignés.
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })
+              : null}
           </section>
         ) : null}
 
