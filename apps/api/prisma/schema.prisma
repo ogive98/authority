@@ -469,6 +469,34 @@ model SetValue {
   @@map("set_value")
 }
 
+/**
+ * Expert-validated legal parameters (D091) — FODEC / timbre / CNSS / IRPP / TFP.
+ * Never seeded with invented rates; lawRef + expertValidatedAt required on write.
+ * VAT stays in Tax Engine (`tax_rate`), not here.
+ */
+model SetExpertise {
+  id                 String    @id @default(uuid()) @db.Uuid
+  companyId          String    @map("company_id") @db.Uuid
+  slotKey            String    @map("slot_key")
+  /** Human summary provided by expert — never auto-invented. */
+  valueLabel         String    @map("value_label")
+  /** Optional structured rate in basis points (100 = 1%). */
+  rateBps            Int?      @map("rate_bps")
+  /** Optional fixed amount in millimes (timbre). */
+  amountMilli        Int?      @map("amount_milli")
+  lawRef             String    @map("law_ref")
+  expertValidatedAt  DateTime  @map("expert_validated_at") @db.Timestamptz(6)
+  notes              String?
+  version            Int       @default(0)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, slotKey])
+  @@index([companyId, slotKey])
+  @@map("set_expertise")
+}
+
 // --- aud_* immutable audit ---
 
 model AudEvent {

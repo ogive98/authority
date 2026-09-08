@@ -5,6 +5,12 @@ describe('SettingsService hierarchy', () => {
   let prisma: {
     setDef: { findMany: jest.Mock; findUnique: jest.Mock };
     setValue: { findMany: jest.Mock; findUnique: jest.Mock };
+    setExpertise: {
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+    };
     orgUserAssignment: { findFirst: jest.Mock };
     taxCode: { findMany: jest.Mock };
     taxRate: { findFirst: jest.Mock };
@@ -16,6 +22,12 @@ describe('SettingsService hierarchy', () => {
     prisma = {
       setDef: { findMany: jest.fn(), findUnique: jest.fn() },
       setValue: { findMany: jest.fn(), findUnique: jest.fn() },
+      setExpertise: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
       orgUserAssignment: { findFirst: jest.fn() },
       taxCode: { findMany: jest.fn().mockResolvedValue([]) },
       taxRate: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -149,5 +161,57 @@ describe('SettingsService hierarchy', () => {
     expect(vat?.manageHref).toBe('/tax');
     const fodec = catalog.items.find((i) => i.key === 'tax.fodec');
     expect(fodec?.status).toBe('PENDING_EXPERT');
+  });
+
+  it('upserts FODEC expertise when expert provides lawRef + value', async () => {
+    const saved = {
+      id: 'e1',
+      companyId: 'company-demo',
+      slotKey: 'tax.fodec',
+      valueLabel: '1 %',
+      rateBps: 100,
+      amountMilli: null,
+      lawRef: 'Expert note 2026',
+      expertValidatedAt: new Date('2026-09-08T00:00:00.000Z'),
+      notes: null,
+      version: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+    prisma.setExpertise.create.mockResolvedValue(saved);
+    prisma.setExpertise.findMany.mockResolvedValue([saved]);
+
+    const item = await service.upsertExpertise(
+      'company-demo',
+      'tax.fodec',
+      {
+        valueLabel: '1 %',
+        lawRef: 'Expert note 2026',
+        expertValidatedAt: '2026-09-08T00:00:00.000Z',
+        rateBps: 100,
+      },
+      'user-demo',
+    );
+
+    expect(item.status).toBe('VALIDATED');
+    expect(item.valueSummary).toBe('1 %');
+    expect(item.lawRef).toBe('Expert note 2026');
+    expect(item.rateBps).toBe(100);
+  });
+
+  it('rejects writing TVA via preferences (Tax Engine only)', async () => {
+    await expect(
+      service.upsertExpertise(
+        'company-demo',
+        'tax.vat',
+        {
+          valueLabel: '19%',
+          lawRef: 'x',
+          expertValidatedAt: '2026-09-08T00:00:00.000Z',
+        },
+        'user-demo',
+      ),
+    ).rejects.toMatchObject({ code: 'SET.EXPERTISE_READONLY' });
   });
 });

@@ -10,12 +10,25 @@ export type ExpertiseSlot = {
   valueSummary: string | null;
   manageHref: string | null;
   expertValidatedAt: string | null;
+  writable: boolean;
+  rateBps: number | null;
+  amountMilli: number | null;
+  notes: string | null;
 };
 
 export type ExpertiseCatalog = {
   companyId: string;
   pendingExpertCount: number;
   items: ExpertiseSlot[];
+};
+
+export type UpsertExpertiseInput = {
+  valueLabel: string;
+  lawRef: string;
+  expertValidatedAt: string;
+  rateBps?: number;
+  amountMilli?: number;
+  notes?: string;
 };
 
 type ApiFail = { ok: false; status: number; message: string };
@@ -48,6 +61,32 @@ export async function fetchExpertiseCatalog(): Promise<
       return { ok: false, status: res.status, message: await parseError(res) };
     }
     return { ok: true, data: (await res.json()) as ExpertiseCatalog };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function upsertExpertise(
+  slotKey: string,
+  input: UpsertExpertiseInput,
+): Promise<{ ok: true; data: ExpertiseSlot } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/settings/expertise/${encodeURIComponent(slotKey)}`,
+      {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(input),
+      },
+    );
+    if (!res.ok) {
+      return { ok: false, status: res.status, message: await parseError(res) };
+    }
+    return { ok: true, data: (await res.json()) as ExpertiseSlot };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }

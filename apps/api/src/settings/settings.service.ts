@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   buildScopeKey,
   EXPERTISE_CATALOG,
+  isExpertiseWritableKey,
   KERNEL_SETTING_KEYS,
   SETTINGS_ERROR_CODES,
   SETTING_ENUM_VALUES,
@@ -20,6 +21,7 @@ import {
   type KernelSettingKey,
 } from './settings.constants';
 import { SettingsException } from './settings.exception';
+import type { UpsertExpertiseDto } from './upsert-expertise.dto';
 
 export interface EffectiveSetting {
   key: string;
@@ -44,6 +46,10 @@ export type ExpertiseSlotDto = {
   valueSummary: string | null;
   manageHref: string | null;
   expertValidatedAt: string | null;
+  writable: boolean;
+  rateBps: number | null;
+  amountMilli: number | null;
+  notes: string | null;
 };
 
 export interface ExpertiseCatalogResponse {
@@ -93,14 +99,19 @@ export class SettingsService {
   }
 
   /**
-   * Préférences → Expertise légale (D090).
+   * Préférences → Expertise légale (D090/D091).
    * Lists slots for FODEC / timbre / CNSS / IRPP / TFP / TVA.
-   * Only TVA may show VALIDATED when Tax Engine rates exist — never invent others.
+   * Stored expert rows override PENDING; VAT comes from Tax Engine only.
    */
   async listExpertise(companyId: string): Promise<ExpertiseCatalogResponse> {
     const vat = await this.resolveVatExpertise(companyId);
+    const stored = await this.prisma.setExpertise.findMany({
+      where: { companyId, deletedAt: null },
+    });
+    const byKey = new Map(stored.map((row) => [row.slotKey, row]));
 
     const items: ExpertiseSlotDto[] = EXPERTISE_CATALOG.map((slot) => {
+      const writable = isExpertiseWritableKey(slot.key);
       if (slot.key === 'tax.vat') {
         return {
           key: slot.key,
@@ -112,8 +123,32 @@ export class SettingsService {
           valueSummary: vat.valueSummary,
           manageHref: slot.manageHref,
           expertValidatedAt: vat.expertValidatedAt,
+          writable: false,
+          rateBps: null,
+          amountMilli: null,
+          notes: null,
         };
       }
+
+      const row = byKey.get(slot.key);
+      if (row) {
+        return {
+          key: slot.key,
+          domain: slot.domain,
+          label: slot.label,
+          description: slot.description,
+          status: 'VALIDATED',
+          lawRef: row.lawRef,
+          valueSummary: row.valueLabel,
+          manageHref: slot.manageHref,
+          expertValidatedAt: row.expertValidatedAt.toISOString(),
+          writable,
+          rateBps: row.rateBps,
+          amountMilli: row.amountMilli,
+          notes: row.notes,
+        };
+      }
+
       return {
         key: slot.key,
         domain: slot.domain,
@@ -124,6 +159,10 @@ export class SettingsService {
         valueSummary: null,
         manageHref: slot.manageHref,
         expertValidatedAt: null,
+        writable,
+        rateBps: null,
+        amountMilli: null,
+        notes: null,
       };
     });
 
@@ -133,6 +172,139 @@ export class SettingsService {
         .length,
       items,
     };
+  }
+
+  /**
+   * Expert capture (D091). Requires lawRef + expertValidatedAt + valueLabel.
+   * Does not invent rates — caller supplies all values.
+   */
+  async upsertExpertise(
+    companyId: string,
+    slotKey: string,
+    dto: UpsertExpertiseDto,
+    actorUserId: string,
+    meta?: { ip?: string; userAgent?: string; correlationId?: string },
+  ): Promise<ExpertiseSlotDto> {
+    if (!isExpertiseWritableKey(slotKey)) {
+      throw new SettingsException(
+        SETTINGS_ERROR_CODES.EXPERTISE_READONLY,
+        'This expertise slot is read-only (use Tax Engine for TVA).',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const valueLabel = dto.valueLabel.trim();
+    const lawRef = dto.lawRef.trim();
+    if (!valueLabel || !lawRef) {
+      throw new SettingsException(
+        SETTINGS_ERROR_CODES.EXPERTISE_REQUIRED,
+        'valueLabel and lawRef are required — never invent rates.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const expertValidatedAt = new Date(dto.expertValidatedAt);
+    if (Number.isNaN(expertValidatedAt.getTime())) {
+      throw new SettingsException(
+        SETTINGS_ERROR_CODES.INVALID,
+        'Invalid expertValidatedAt.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const existing = await this.prisma.setExpertise.findUnique({
+      where: {
+        companyId_slotKey: { companyId, slotKey },
+      },
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      const saved = existing
+        ? await tx.setExpertise.update({
+            where: { id: existing.id },
+            data: {
+              valueLabel,
+              lawRef,
+              expertValidatedAt,
+              rateBps: dto.rateBps ?? null,
+              amountMilli: dto.amountMilli ?? null,
+              notes: dto.notes?.trim() || null,
+              deletedAt: null,
+              version: { increment: 1 },
+            },
+          })
+        : await tx.setExpertise.create({
+            data: {
+              companyId,
+              slotKey,
+              valueLabel,
+              lawRef,
+              expertValidatedAt,
+              rateBps: dto.rateBps ?? null,
+              amountMilli: dto.amountMilli ?? null,
+              notes: dto.notes?.trim() || null,
+            },
+          });
+
+      await this.auditService.append(tx, {
+        companyId,
+        actorUserId,
+        action: AUDIT_ACTIONS.settingsExpertiseValidate,
+        entityType: AUDIT_ENTITY_TYPES.setExpertise,
+        entityId: saved.id,
+        beforeJson: existing
+          ? {
+              valueLabel: existing.valueLabel,
+              lawRef: existing.lawRef,
+              rateBps: existing.rateBps,
+            }
+          : undefined,
+        afterJson: {
+          slotKey,
+          valueLabel,
+          lawRef,
+          rateBps: saved.rateBps,
+          amountMilli: saved.amountMilli,
+          expertValidatedAt: saved.expertValidatedAt.toISOString(),
+        } as Prisma.InputJsonValue,
+        ip: meta?.ip,
+        device: meta?.userAgent,
+        correlationId: meta?.correlationId,
+      });
+
+      await this.outboxService.enqueue(tx, {
+        companyId,
+        aggregateType: AUDIT_ENTITY_TYPES.setExpertise,
+        aggregateId: saved.id,
+        eventType: OUTBOX_EVENT_TYPES.settingsExpertiseValidated,
+        payloadJson: {
+          eventType: OUTBOX_EVENT_TYPES.settingsExpertiseValidated,
+          eventVersion: 1,
+          source: 'settings',
+          actorId: actorUserId,
+          companyId,
+          correlationId: meta?.correlationId ?? null,
+          payload: {
+            slotKey,
+            valueLabel,
+            lawRef,
+            rateBps: saved.rateBps,
+            amountMilli: saved.amountMilli,
+            expertValidatedAt: saved.expertValidatedAt.toISOString(),
+          },
+        } as Prisma.InputJsonValue,
+      });
+    });
+
+    const catalog = await this.listExpertise(companyId);
+    const item = catalog.items.find((i) => i.key === slotKey);
+    if (!item) {
+      throw new SettingsException(
+        SETTINGS_ERROR_CODES.INVALID,
+        `Expertise slot ${slotKey} could not be resolved.`,
+      );
+    }
+    return item;
   }
 
   private async resolveVatExpertise(companyId: string): Promise<{

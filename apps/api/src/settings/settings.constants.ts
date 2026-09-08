@@ -3,6 +3,8 @@ import { SetLevel } from '@prisma/client';
 export const SETTINGS_ERROR_CODES = {
   INVALID: 'SET.INVALID',
   FORBIDDEN_LEVEL: 'SET.FORBIDDEN_LEVEL',
+  EXPERTISE_READONLY: 'SET.EXPERTISE_READONLY',
+  EXPERTISE_REQUIRED: 'SET.EXPERTISE_REQUIRED',
 } as const;
 
 export type SettingsErrorCode =
@@ -153,3 +155,20 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     manageHref: null,
   },
 ] as const;
+
+/** Slots writable via Préférences (VAT remains Tax Engine only). */
+export const EXPERTISE_WRITABLE_KEYS = [
+  'tax.fodec',
+  'tax.timbre',
+  'hr.cnss',
+  'hr.irpp',
+  'hr.tfp',
+] as const;
+
+export type ExpertiseWritableKey = (typeof EXPERTISE_WRITABLE_KEYS)[number];
+
+export function isExpertiseWritableKey(
+  key: string,
+): key is ExpertiseWritableKey {
+  return (EXPERTISE_WRITABLE_KEYS as readonly string[]).includes(key);
+}

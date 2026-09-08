@@ -5,15 +5,18 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ABadge,
   AButton,
+  ADrawer,
   AEmptyState,
   AErrorState,
   AForbiddenState,
+  AInput,
   AScreenHeader,
   ASkeleton,
   ASwitch,
 } from "@/components/a";
 import {
   fetchExpertiseCatalog,
+  upsertExpertise,
   type ExpertiseSlot,
 } from "@/lib/settings";
 import { cn } from "@/lib/utils";
@@ -57,6 +60,18 @@ export default function SettingsPage() {
   const [expertise, setExpertise] = useState<ExpertiseLoad>({
     kind: "loading",
   });
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selected, setSelected] = useState<ExpertiseSlot | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [valueLabel, setValueLabel] = useState("");
+  const [lawRef, setLawRef] = useState("");
+  const [expertValidatedAt, setExpertValidatedAt] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [rateBps, setRateBps] = useState("");
+  const [amountMilli, setAmountMilli] = useState("");
+  const [notes, setNotes] = useState("");
 
   const density = usePrefsStore((s) => s.density);
   const setDensity = usePrefsStore((s) => s.setDensity);
@@ -122,6 +137,57 @@ export default function SettingsPage() {
     }
   }
 
+  function openExpertForm(row: ExpertiseSlot) {
+    if (!row.writable) return;
+    setSelected(row);
+    setFormError(null);
+    setValueLabel(row.valueSummary ?? "");
+    setLawRef(row.lawRef ?? "");
+    setExpertValidatedAt(
+      row.expertValidatedAt
+        ? row.expertValidatedAt.slice(0, 10)
+        : new Date().toISOString().slice(0, 10),
+    );
+    setRateBps(row.rateBps != null ? String(row.rateBps) : "");
+    setAmountMilli(row.amountMilli != null ? String(row.amountMilli) : "");
+    setNotes(row.notes ?? "");
+    setDrawerOpen(true);
+  }
+
+  async function onSubmitExpert() {
+    if (!selected) return;
+    setBusy(true);
+    setFormError(null);
+    const rate = rateBps.trim() ? Number(rateBps) : undefined;
+    const amount = amountMilli.trim() ? Number(amountMilli) : undefined;
+    if (rateBps.trim() && !Number.isFinite(rate)) {
+      setBusy(false);
+      setFormError("rateBps invalide (entier, ex. 100 = 1 %).");
+      return;
+    }
+    if (amountMilli.trim() && !Number.isFinite(amount)) {
+      setBusy(false);
+      setFormError("amountMilli invalide.");
+      return;
+    }
+    const res = await upsertExpertise(selected.key, {
+      valueLabel: valueLabel.trim(),
+      lawRef: lawRef.trim(),
+      expertValidatedAt: new Date(expertValidatedAt).toISOString(),
+      rateBps: rate,
+      amountMilli: amount,
+      notes: notes.trim() || undefined,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setDrawerOpen(false);
+    setSelected(null);
+    await loadExpertise();
+  }
+
   return (
     <>
       <AScreenHeader
@@ -164,10 +230,8 @@ export default function SettingsPage() {
         {tab === "expertise" ? (
           <section className="space-y-4">
             <p className="max-w-2xl text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Siège des paramètres fiscaux / sociaux validés par expert. Les
-              taux FODEC, timbre, CNSS, IRPP et TFP ne sont{" "}
-              <strong className="font-medium text-a-fg">jamais inventés</strong>{" "}
-              — ils restent en attente jusqu’à saisie expert.
+              Saisie expert : libellé + référence légale + date de validation.
+              Aucun taux n’est prérempli — vous fournissez les valeurs.
             </p>
             {expertise.kind === "loading" ? (
               <ASkeleton className="h-48 w-full max-w-3xl" />
@@ -235,7 +299,17 @@ export default function SettingsPage() {
                             </ABadge>
                           </td>
                           <td className="px-4 py-3">
-                            {row.manageHref ? (
+                            {row.writable ? (
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                onClick={() => openExpertForm(row)}
+                              >
+                                {row.status === "VALIDATED"
+                                  ? "Modifier"
+                                  : "Saisir"}
+                              </AButton>
+                            ) : row.manageHref ? (
                               <Link
                                 href={row.manageHref}
                                 className="text-[length:var(--a-text-sm)] text-a-accent hover:underline"
@@ -244,7 +318,7 @@ export default function SettingsPage() {
                               </Link>
                             ) : (
                               <span className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                                Saisie expert bientôt
+                                —
                               </span>
                             )}
                           </td>
@@ -255,6 +329,98 @@ export default function SettingsPage() {
                 </div>
               </>
             ) : null}
+
+            <ADrawer
+              open={drawerOpen}
+              onOpenChange={setDrawerOpen}
+              title={
+                selected
+                  ? `Expertise — ${selected.label}`
+                  : "Saisie expert"
+              }
+            >
+              <div className="space-y-4 p-1">
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Saisissez uniquement des valeurs validées par un expert. Rien
+                  n’est inventé par le système.
+                </p>
+                {formError ? (
+                  <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
+                    {formError}
+                  </p>
+                ) : null}
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Libellé valeur (obligatoire)
+                  </span>
+                  <AInput
+                    value={valueLabel}
+                    onChange={(e) => setValueLabel(e.target.value)}
+                    placeholder="ex. 1 % · 1,000 TND · barème 2026"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Référence légale (obligatoire)
+                  </span>
+                  <AInput
+                    value={lawRef}
+                    onChange={(e) => setLawRef(e.target.value)}
+                    placeholder="ex. LF art. … / note expert"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Date validation expert
+                  </span>
+                  <AInput
+                    type="date"
+                    value={expertValidatedAt}
+                    onChange={(e) => setExpertValidatedAt(e.target.value)}
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Taux (bps, optionnel — 100 = 1 %)
+                  </span>
+                  <AInput
+                    value={rateBps}
+                    onChange={(e) => setRateBps(e.target.value)}
+                    placeholder="laisser vide si non applicable"
+                    className="a-mono"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Montant millimes (optionnel — timbre)
+                  </span>
+                  <AInput
+                    value={amountMilli}
+                    onChange={(e) => setAmountMilli(e.target.value)}
+                    placeholder="laisser vide si non applicable"
+                    className="a-mono"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Notes
+                  </span>
+                  <AInput
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                </label>
+                <AButton
+                  type="button"
+                  disabled={
+                    busy || !valueLabel.trim() || !lawRef.trim() || !expertValidatedAt
+                  }
+                  onClick={() => void onSubmitExpert()}
+                >
+                  Valider expertise
+                </AButton>
+              </div>
+            </ADrawer>
           </section>
         ) : null}
 

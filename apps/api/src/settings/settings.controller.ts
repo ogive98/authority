@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Get,
   HttpCode,
+  Param,
   Put,
   Req,
   UseGuards,
@@ -23,6 +24,7 @@ import {
 import { PermissionService } from '../permissions/permission.service';
 import { SettingsService } from './settings.service';
 import { UpdateSettingDto } from './update-setting.dto';
+import { UpsertExpertiseDto } from './upsert-expertise.dto';
 
 @Controller('api/v1/settings')
 @UseGuards(SessionGuard, ModuleGuard)
@@ -70,6 +72,41 @@ export class SettingsController {
       tenancy.companyId,
     );
     return this.settingsService.listExpertise(tenancy.companyId);
+  }
+
+  /** Expert capture — requires lawRef + expertValidatedAt; never invents rates. */
+  @Put('expertise/:slotKey')
+  @HttpCode(200)
+  @UseGuards(TenancyGuard)
+  async upsertExpertise(
+    @CurrentUser() user: { id: string },
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('slotKey') slotKey: string,
+    @Body() dto: UpsertExpertiseDto,
+    @Req() req: Request,
+  ) {
+    await this.assertPermission(
+      user.id,
+      PERMISSION_KEYS.settingsCompanyWrite,
+      tenancy.companyId,
+    );
+
+    const correlation =
+      req.headers['x-authority-correlation-id'] ??
+      req.headers['x-correlation-id'];
+
+    return this.settingsService.upsertExpertise(
+      tenancy.companyId,
+      slotKey,
+      dto,
+      user.id,
+      {
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        correlationId:
+          typeof correlation === 'string' ? correlation : undefined,
+      },
+    );
   }
 
   @Put()

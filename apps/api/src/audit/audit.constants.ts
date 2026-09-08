@@ -2,6 +2,7 @@ export const AUDIT_ACTIONS = {
   identityUserUpdate: 'identity.user.update',
   organizationSiteCreate: 'organization.site.create',
   settingsValueUpdate: 'settings.value.update',
+  settingsExpertiseValidate: 'settings.expertise.validate',
   moduleEnable: 'module.enable',
   moduleDisable: 'module.disable',
   thunderBreakerForceOpen: 'thunder.breaker.force_open',
@@ -15,6 +16,7 @@ export const OUTBOX_EVENT_TYPES = {
   platformFileUploaded: 'platform.file.uploaded.v1',
   organizationSiteCreated: 'organization.site.created.v1',
   settingsValueUpdated: 'settings.value.updated.v1',
+  settingsExpertiseValidated: 'settings.expertise.validated.v1',
   moduleEnabled: 'module.enabled.v1',
   moduleDisabled: 'module.disabled.v1',
 } as const;
@@ -23,6 +25,7 @@ export const AUDIT_ENTITY_TYPES = {
   iamUser: 'iam_user',
   orgSite: 'org_site',
   setValue: 'set_value',
+  setExpertise: 'set_expertise',
   modModuleState: 'mod_module_state',
   thunderCircuitBreaker: 'thunder_circuit_breaker',
   thuRecommendation: 'thu_recommendation',

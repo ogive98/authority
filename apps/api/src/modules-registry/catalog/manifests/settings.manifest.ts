@@ -19,7 +19,10 @@ export const settingsManifest: ModuleManifest = {
   queries: ['settings.effective'],
   permissions: [],
   dependencies: ['platform', 'identity', 'organization'],
-  publishedEvents: ['settings.value.updated.v1'],
+  publishedEvents: [
+    'settings.value.updated.v1',
+    'settings.expertise.validated.v1',
+  ],
   navigationEntries: [
     { id: 'prefs', label: 'Préférences', href: '/settings' },
     {
