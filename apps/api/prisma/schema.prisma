@@ -1007,6 +1007,7 @@ model InvWarehouse {
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   balances InvBalance[]
+  lots     InvLot[]
 
   @@unique([companyId, code])
   @@index([companyId, active])
@@ -1037,6 +1038,7 @@ model InvMovement {
   id            String          @id @default(uuid()) @db.Uuid
   companyId     String          @map("company_id") @db.Uuid
   balanceId     String          @map("balance_id") @db.Uuid
+  lotId         String?         @map("lot_id") @db.Uuid
   type          InvMovementType
   qty           Decimal         @db.Decimal(18, 3)
   onHandAfter   Decimal         @map("on_hand_after") @db.Decimal(18, 3)
@@ -1047,10 +1049,43 @@ model InvMovement {
   createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
 
   balance InvBalance @relation(fields: [balanceId], references: [id])
+  lot     InvLot?    @relation(fields: [lotId], references: [id])
 
   @@index([companyId, balanceId, createdAt(sort: Desc)])
   @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, lotId, createdAt(sort: Desc)])
   @@map("inv_movement")
+}
+
+enum InvLotStatus {
+  OPEN
+  QUARANTINE
+  CLOSED
+}
+
+/** Lot / batch V0 — DLC optional; FEFO later (D096). */
+model InvLot {
+  id          String       @id @default(uuid()) @db.Uuid
+  companyId   String       @map("company_id") @db.Uuid
+  warehouseId String       @map("warehouse_id") @db.Uuid
+  productId   String       @map("product_id") @db.Uuid
+  lotCode     String       @map("lot_code")
+  qtyOnHand   Decimal      @default(0) @map("qty_on_hand") @db.Decimal(18, 3)
+  qtyReserved Decimal      @default(0) @map("qty_reserved") @db.Decimal(18, 3)
+  dlc         DateTime?    @db.Date
+  status      InvLotStatus @default(OPEN)
+  version     Int          @default(0)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  warehouse InvWarehouse  @relation(fields: [warehouseId], references: [id])
+  movements InvMovement[]
+
+  @@unique([companyId, warehouseId, productId, lotCode])
+  @@index([companyId, productId])
+  @@index([companyId, warehouseId])
+  @@index([companyId, status, dlc])
+  @@map("inv_lot")
 }
 
 // --- sa_* Super Admin industry packs (POLY-01) ---

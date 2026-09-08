@@ -45,7 +45,7 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       key: "inventory",
       name: "Stock",
       features: [
-        { id: "lots", label: "Lots", href: "/preview/lots" },
+        { id: "lots", label: "Lots", href: "/inventory/lots" },
         { id: "inventory", label: "Inventaire", href: "/inventory" },
       ],
     },

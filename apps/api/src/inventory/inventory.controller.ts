@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Param,
   Post,
   Query,
   UseGuards,
@@ -17,8 +18,11 @@ import { PermissionGuard } from '../permissions/permission.guard';
 import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
+  AdjustLotDto,
   AdjustStockDto,
+  CreateLotDto,
   CreateWarehouseDto,
+  PatchLotStatusDto,
   ReleaseStockDto,
   ReserveStockDto,
 } from './inventory.dto';
@@ -62,6 +66,63 @@ export class InventoryController {
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor,
     });
+  }
+
+  @Get('lots')
+  @RequirePermission(PERMISSION_KEYS.inventoryRead)
+  listLots(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('q') q?: string,
+    @Query('warehouseId') warehouseId?: string,
+    @Query('productId') productId?: string,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.inventoryService.listLots(tenancy.companyId, {
+      q,
+      warehouseId,
+      productId,
+      status,
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor,
+    });
+  }
+
+  @Post('lots')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.inventoryWrite)
+  createLot(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateLotDto,
+  ) {
+    return this.inventoryService.createLot(tenancy.companyId, dto);
+  }
+
+  @Post('lots/adjust')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.inventoryWrite)
+  adjustLot(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: AdjustLotDto,
+  ) {
+    return this.inventoryService.adjustLot(tenancy.companyId, dto);
+  }
+
+  @Post('lots/:lotId/status')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.inventoryWrite)
+  patchLotStatus(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('lotId') lotId: string,
+    @Body() dto: PatchLotStatusDto,
+  ) {
+    return this.inventoryService.patchLotStatus(
+      tenancy.companyId,
+      lotId,
+      dto,
+    );
   }
 
   @Get('movements')

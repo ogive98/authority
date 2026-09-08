@@ -5,7 +5,7 @@ export const inventoryManifest: ModuleManifest = {
   name: 'Inventory',
   version: '1.0.0',
   apiVersion: '1',
-  description: 'Inventory light — balances, adjust, reserve',
+  description: 'Inventory light — balances, lots/DLC, adjust, reserve',
   capabilities: [
     {
       key: 'inventory.read',
@@ -44,16 +44,11 @@ export const inventoryManifest: ModuleManifest = {
       requiresIdempotency: true,
     },
   ],
-  commands: [
-    'inventory.adjust',
-    'inventory.reserve',
-    'inventory.release',
-    'inventory.warehouse.create',
-  ],
   queries: [
     'inventory.balances.list',
     'inventory.warehouses.list',
     'inventory.movements.list',
+    'inventory.lots.list',
   ],
   permissions: ['inventory.read', 'inventory.write', 'inventory.reserve'],
   dependencies: ['platform', 'organization', 'master_data', 'products'],
@@ -62,9 +57,19 @@ export const inventoryManifest: ModuleManifest = {
     'inventory.stock.reserved.v1',
     'inventory.stock.released.v1',
     'inventory.stock.issued.v1',
+    'inventory.lot.adjusted.v1',
+  ],
+  commands: [
+    'inventory.adjust',
+    'inventory.reserve',
+    'inventory.release',
+    'inventory.warehouse.create',
+    'inventory.lot.create',
+    'inventory.lot.adjust',
   ],
   consumedEvents: ['sales.order.confirmed.v1'],
   navigationEntries: [
     { id: 'stock', label: 'Stock', href: '/inventory' },
+    { id: 'lots', label: 'Lots', href: '/inventory/lots' },
   ],
 };

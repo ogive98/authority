@@ -311,12 +311,12 @@ function SalesPageInner() {
           </AButton>
         }
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className="mx-auto max-w-5xl space-y-6 px-6 pb-16 pt-2 md:px-10">
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
             <label
               htmlFor="so-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+              className="text-[12px] text-a-fg-subtle"
             >
               Recherche
             </label>
@@ -369,81 +369,57 @@ function SalesPageInner() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle">
-            <table className="w-full min-w-[48rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="border-b border-a-border-subtle bg-a-surface-2 text-a-fg-muted">
-                <tr>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    N°
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Client
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Lignes
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Montant
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Statut
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
-                  >
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+          <ul className="space-y-1">
+            {state.items.map((row) => (
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center gap-3 rounded-[12px] px-3 py-3 hover:bg-a-surface-3/70"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="a-mono text-[13px] font-semibold text-a-fg">
                       {row.number}
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      {row.customerName ?? row.customerCode ?? "—"}
-                    </td>
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
-                      {row.lines.length}
-                    </td>
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      {row.amountTotal} {row.currency}
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      <ABadge tone={orderBadgeTone(row.status)}>
-                        {STATUS_LABELS[row.status]}
-                      </ABadge>
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      <div className="flex flex-wrap gap-2">
-                        {row.status === "DRAFT" ? (
-                          <AButton
-                            type="button"
-                            size="sm"
-                            onClick={() => void onConfirm(row)}
-                          >
-                            Confirmer
-                          </AButton>
-                        ) : null}
-                        {row.status !== "CANCELLED" ? (
-                          <AButton
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => void onCancel(row)}
-                          >
-                            Annuler
-                          </AButton>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </span>
+                    <ABadge tone={orderBadgeTone(row.status)}>
+                      {STATUS_LABELS[row.status]}
+                    </ABadge>
+                  </div>
+                  <p className="mt-0.5 truncate text-[12px] text-a-fg-muted">
+                    {row.customerName ?? row.customerCode ?? "—"}
+                    {" · "}
+                    {row.lines.length} ligne(s)
+                  </p>
+                </div>
+                <div className="a-mono text-right text-[13px] tabular-nums text-a-fg">
+                  {row.amountTotal}
+                  <span className="ml-1 text-[11px] text-a-fg-subtle">
+                    {row.currency}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {row.status === "DRAFT" ? (
+                    <AButton
+                      type="button"
+                      size="sm"
+                      onClick={() => void onConfirm(row)}
+                    >
+                      Confirmer
+                    </AButton>
+                  ) : null}
+                  {row.status !== "CANCELLED" ? (
+                    <AButton
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => void onCancel(row)}
+                    >
+                      Annuler
+                    </AButton>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
         ) : null}
       </div>
 
@@ -485,7 +461,7 @@ function SalesPageInner() {
       >
         {form ? (
           <div className="space-y-4">
-            <p className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-1 px-3 py-2 text-[length:var(--a-text-xs)] text-a-fg-muted">
+            <p className="rounded-[12px] bg-a-surface-3/80 px-3 py-2 text-[12px] text-a-fg-muted">
               Workflow auto à la confirmation : {workflowHint}
               {settings?.autoConfirmOnCreate
                 ? " · auto_confirm_on_create=ON"
@@ -593,9 +569,9 @@ function SalesPageInner() {
               </p>
             </div>
 
-            <div className="space-y-3 border-t border-a-border-subtle pt-4">
+            <div className="space-y-3 pt-4">
               <div className="flex items-center justify-between">
-                <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                <p className="text-[13px] font-medium text-a-fg">
                   Articles
                 </p>
                 <AButton
@@ -613,7 +589,7 @@ function SalesPageInner() {
               {form.lines.map((line, idx) => (
                 <div
                   key={line.key}
-                  className="space-y-2 rounded-[var(--a-radius-md)] border border-a-border-subtle p-3"
+                  className="space-y-2 rounded-[12px] bg-a-surface-3/60 p-3"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">

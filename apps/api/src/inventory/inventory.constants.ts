@@ -5,6 +5,9 @@ export const INVENTORY_ERROR_CODES = {
   INSUFFICIENT: 'INV.INSUFFICIENT',
   INVALID_QTY: 'INV.INVALID_QTY',
   VERSION_CONFLICT: 'INV.VERSION_CONFLICT',
+  LOT_REQUIRED: 'INV.LOT_REQUIRED',
+  LOT_DUP: 'INV.LOT_DUP',
+  LOT_CLOSED: 'INV.LOT_CLOSED',
 } as const;
 
 export type InventoryErrorCode =
@@ -15,4 +18,5 @@ export const INVENTORY_EVENT_TYPES = {
   RESERVED: 'inventory.stock.reserved.v1',
   RELEASED: 'inventory.stock.released.v1',
   ISSUED: 'inventory.stock.issued.v1',
+  LOT_ADJUSTED: 'inventory.lot.adjusted.v1',
 } as const;

@@ -28,6 +28,7 @@ describe('InventoryService', () => {
       name: 'Brie 250',
       uom: 'kg',
       status: 'ACTIVE',
+      trackLot: false,
       deletedAt: null,
     };
 

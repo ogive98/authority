@@ -35,6 +35,65 @@ export class AdjustStockDto {
   @IsString()
   @MaxLength(240)
   reason?: string;
+
+  /** Required when product.trackLot = true (D096). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  lotCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  dlc?: string;
+}
+
+export class CreateLotDto {
+  @IsUUID()
+  productId!: string;
+
+  @IsUUID()
+  warehouseId!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(64)
+  lotCode!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  dlc?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(16)
+  status?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  initialQty?: number;
+}
+
+export class AdjustLotDto {
+  @IsUUID()
+  lotId!: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  qtyDelta!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  reason?: string;
+}
+
+export class PatchLotStatusDto {
+  @IsString()
+  @MaxLength(16)
+  status!: string;
 }
 
 export class ReserveStockDto {

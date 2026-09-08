@@ -314,9 +314,9 @@ export default function DeliveryPage() {
           </div>
         }
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className="mx-auto max-w-5xl space-y-6 px-6 pb-16 pt-2 md:px-10">
         <div
-          className="flex flex-wrap gap-1 border-b border-a-border-subtle"
+          className="flex flex-wrap gap-1.5"
           role="tablist"
           aria-label="Filtrer par statut"
         >
@@ -330,10 +330,10 @@ export default function DeliveryPage() {
                 aria-selected={active}
                 onClick={() => setStatusFilter(chip.id)}
                 className={cn(
-                  "border-b-2 px-3 py-2 text-[length:var(--a-text-sm)]",
+                  "rounded-[10px] px-3 py-1.5 text-[12px] transition-colors",
                   active
-                    ? "border-a-accent text-a-fg"
-                    : "border-transparent text-a-fg-muted hover:text-a-fg",
+                    ? "bg-a-accent text-white"
+                    : "bg-a-surface-3 text-a-fg-muted hover:text-a-fg",
                 )}
               >
                 {chip.label}
@@ -344,10 +344,7 @@ export default function DeliveryPage() {
 
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="dlv-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
+            <label htmlFor="dlv-q" className="text-[12px] text-a-fg-subtle">
               Recherche
             </label>
             <AInput
@@ -401,132 +398,116 @@ export default function DeliveryPage() {
         {state.kind === "ok" && state.items.length > 0
           ? tourneeGroups.map(([groupLabel, rows]) => (
               <div key={groupLabel} className="space-y-2">
-                <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
+                <p className="text-[11px] font-medium uppercase tracking-wider text-a-fg-subtle">
                   Tournée · {groupLabel}
                   <span className="a-mono ml-2 font-normal normal-case tracking-normal text-a-fg-muted">
                     {rows.length}
                   </span>
                 </p>
-                <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2">
-                  <table className="w-full min-w-[52rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-                    <thead className="border-b border-a-border-subtle bg-a-surface-3/80 text-a-fg-muted">
-                      <tr>
-                        <th className="a-table-cell font-medium">N°</th>
-                        <th className="a-table-cell font-medium">Commande</th>
-                        <th className="a-table-cell font-medium">Client</th>
-                        <th className="a-table-cell font-medium">Livreur</th>
-                        <th className="a-table-cell font-medium">Statut</th>
-                        <th className="a-table-cell font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((row) => (
-                        <tr
-                          key={row.id}
-                          className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
-                        >
-                          <td className="a-mono a-table-cell">{row.number}</td>
-                          <td className="a-mono a-table-cell">
+                <ul className="space-y-1">
+                  {rows.map((row) => (
+                    <li
+                      key={row.id}
+                      className="space-y-2 rounded-[12px] px-3 py-3 hover:bg-a-surface-3/70"
+                    >
+                      <div className="flex flex-wrap items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="a-mono text-[13px] font-semibold text-a-fg">
+                              {row.number}
+                            </span>
+                            <ABadge tone={shipmentBadgeTone(row.status)}>
+                              {SHIPMENT_STATUS_LABELS[row.status]}
+                            </ABadge>
+                          </div>
+                          <p className="mt-0.5 truncate text-[12px] text-a-fg-muted">
                             {row.orderNumber ?? "—"}
-                          </td>
-                          <td className="a-table-cell">
+                            {" · "}
                             {row.customerName ?? row.customerCode ?? "—"}
-                          </td>
-                          <td className="a-table-cell">
-                            {row.status === "READY" ||
-                            row.status === "ASSIGNED" ? (
-                              <div className="flex flex-wrap items-center gap-2">
-                                <AInput
-                                  value={
-                                    assignDraft[row.id] ??
-                                    row.driverLabel ??
-                                    ""
-                                  }
-                                  onChange={(e) =>
-                                    setAssignDraft({
-                                      ...assignDraft,
-                                      [row.id]: e.target.value,
-                                    })
-                                  }
-                                  placeholder={
-                                    row.preferredDriver
-                                      ? `hint: ${row.preferredDriver}`
-                                      : "Livreur"
-                                  }
-                                />
-                                <AButton
-                                  type="button"
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => void onAssign(row)}
-                                >
-                                  Assigner
-                                </AButton>
-                              </div>
-                            ) : (
-                              row.driverLabel ?? "—"
-                            )}
-                          </td>
-                          <td className="a-table-cell">
-                            <div className="space-y-1">
-                              <ABadge tone={shipmentBadgeTone(row.status)}>
-                                {SHIPMENT_STATUS_LABELS[row.status]}
-                              </ABadge>
-                              {row.status === "FAILED" && row.failReason ? (
-                                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                                  {row.failReason}
-                                </p>
-                              ) : null}
-                            </div>
-                          </td>
-                          <td className="a-table-cell">
-                            <div className="flex flex-wrap gap-2">
-                              {(row.status === "READY" ||
-                                row.status === "ASSIGNED") &&
-                              row.driverLabel ? (
-                                <AButton
-                                  type="button"
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => void onDispatch(row)}
-                                >
-                                  En route
-                                </AButton>
-                              ) : null}
-                              {row.status === "READY" ||
-                              row.status === "ASSIGNED" ||
-                              row.status === "OUT" ? (
-                                <>
-                                  <AButton
-                                    type="button"
-                                    size="sm"
-                                    onClick={() => void onComplete(row)}
-                                  >
-                                    Livré
-                                  </AButton>
-                                  <AButton
-                                    type="button"
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() =>
-                                      setFailDraft({
-                                        id: row.id,
-                                        number: row.number,
-                                        reason: "",
-                                      })
-                                    }
-                                  >
-                                    Échec
-                                  </AButton>
-                                </>
-                              ) : null}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          </p>
+                          {row.status === "FAILED" && row.failReason ? (
+                            <p className="mt-1 text-[12px] text-a-fg-muted">
+                              {row.failReason}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(row.status === "READY" ||
+                            row.status === "ASSIGNED") &&
+                          row.driverLabel ? (
+                            <AButton
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => void onDispatch(row)}
+                            >
+                              En route
+                            </AButton>
+                          ) : null}
+                          {row.status === "READY" ||
+                          row.status === "ASSIGNED" ||
+                          row.status === "OUT" ? (
+                            <>
+                              <AButton
+                                type="button"
+                                size="sm"
+                                onClick={() => void onComplete(row)}
+                              >
+                                Livré
+                              </AButton>
+                              <AButton
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() =>
+                                  setFailDraft({
+                                    id: row.id,
+                                    number: row.number,
+                                    reason: "",
+                                  })
+                                }
+                              >
+                                Échec
+                              </AButton>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                      {row.status === "READY" || row.status === "ASSIGNED" ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <AInput
+                            value={
+                              assignDraft[row.id] ?? row.driverLabel ?? ""
+                            }
+                            onChange={(e) =>
+                              setAssignDraft({
+                                ...assignDraft,
+                                [row.id]: e.target.value,
+                              })
+                            }
+                            placeholder={
+                              row.preferredDriver
+                                ? `hint: ${row.preferredDriver}`
+                                : "Livreur"
+                            }
+                          />
+                          <AButton
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void onAssign(row)}
+                          >
+                            Assigner
+                          </AButton>
+                        </div>
+                      ) : (
+                        <p className="text-[12px] text-a-fg-muted">
+                          Livreur · {row.driverLabel ?? "—"}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))
           : null}

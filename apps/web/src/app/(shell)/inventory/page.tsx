@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   AButton,
@@ -32,10 +33,12 @@ type FormState = {
   productId: string;
   qtyDelta: string;
   reason: string;
+  lotCode: string;
+  dlc: string;
 };
 
 const selectClass =
-  "flex h-9 w-full rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-3 text-[length:var(--a-text-sm)] text-a-fg";
+  "flex h-9 w-full rounded-[var(--a-radius-md)] bg-a-surface-3 px-3 text-[13px] text-a-fg outline-none focus:ring-2 focus:ring-a-accent/30";
 
 export default function InventoryPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
@@ -82,6 +85,8 @@ export default function InventoryPage() {
       productId: row?.productId ?? products[0]?.id ?? "",
       qtyDelta: "",
       reason: "",
+      lotCode: "",
+      dlc: "",
     });
     setDrawerOpen(true);
   }
@@ -97,6 +102,11 @@ export default function InventoryPage() {
       setFormError("Entrepôt et produit requis.");
       return;
     }
+    const product = products.find((p) => p.id === form.productId);
+    if (product?.trackLot && !form.lotCode.trim()) {
+      setFormError("Code lot requis (produit trackLot).");
+      return;
+    }
     setBusy(true);
     setFormError(null);
     const res = await adjustStock({
@@ -104,6 +114,8 @@ export default function InventoryPage() {
       productId: form.productId,
       qtyDelta,
       reason: form.reason.trim() || undefined,
+      lotCode: form.lotCode.trim() || undefined,
+      dlc: form.dlc.trim() || undefined,
     });
     setBusy(false);
     if (!res.ok) {
@@ -121,18 +133,23 @@ export default function InventoryPage() {
         title="Inventaire"
         description="Soldes on-hand / reserved par entrepôt (light)."
         actions={
-          <AButton type="button" size="sm" onClick={() => openAdjust()}>
-            Ajuster
-          </AButton>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/inventory/lots"
+              className="text-[13px] font-medium text-a-accent hover:underline"
+            >
+              Lots →
+            </Link>
+            <AButton type="button" size="sm" onClick={() => openAdjust()}>
+              Ajuster
+            </AButton>
+          </div>
         }
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className="mx-auto max-w-5xl space-y-6 px-6 pb-16 pt-2 md:px-10">
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="inv-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
+            <label htmlFor="inv-q" className="text-[12px] text-a-fg-subtle">
               Recherche
             </label>
             <AInput
@@ -184,73 +201,53 @@ export default function InventoryPage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle">
-            <table className="w-full min-w-[44rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="border-b border-a-border-subtle bg-a-surface-2 text-a-fg-muted">
-                <tr>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    SKU
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Produit
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Entrepôt
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    On hand
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Réservé
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Dispo
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
-                  >
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+          <ul className="space-y-1">
+            {state.items.map((row) => (
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center gap-3 rounded-[12px] px-3 py-3 hover:bg-a-surface-3/70"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="a-mono text-[13px] font-semibold text-a-fg">
                       {row.productSku ?? "—"}
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      {row.productName ?? "—"}
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
+                    </span>
+                    <span className="text-[12px] text-a-fg-subtle">
                       {row.warehouseCode}
-                    </td>
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                    </span>
+                  </div>
+                  <p className="mt-0.5 truncate text-[12px] text-a-fg-muted">
+                    {row.productName ?? "—"}
+                  </p>
+                </div>
+                <div className="flex gap-4 text-right text-[13px] tabular-nums">
+                  <div>
+                    <p className="text-[11px] text-a-fg-subtle">On hand</p>
+                    <p className="a-mono text-a-fg">
                       {row.onHand}
                       {row.productUom ? ` ${row.productUom}` : ""}
-                    </td>
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
-                      {row.reserved}
-                    </td>
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      {row.available}
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      <AButton
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => openAdjust(row)}
-                      >
-                        Ajuster
-                      </AButton>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-a-fg-subtle">Réservé</p>
+                    <p className="a-mono text-a-fg-muted">{row.reserved}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-a-fg-subtle">Dispo</p>
+                    <p className="a-mono font-medium text-a-fg">{row.available}</p>
+                  </div>
+                </div>
+                <AButton
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => openAdjust(row)}
+                >
+                  Ajuster
+                </AButton>
+              </li>
+            ))}
+          </ul>
         ) : null}
       </div>
 
@@ -318,6 +315,28 @@ export default function InventoryPage() {
                 ))}
               </select>
             </Field>
+            {products.find((p) => p.id === form.productId)?.trackLot ? (
+              <>
+                <Field label="Code lot (requis)">
+                  <AInput
+                    value={form.lotCode}
+                    onChange={(e) =>
+                      setForm({ ...form, lotCode: e.target.value })
+                    }
+                    placeholder="LOT-2026-0001"
+                  />
+                </Field>
+                <Field label="DLC">
+                  <AInput
+                    type="date"
+                    value={form.dlc}
+                    onChange={(e) =>
+                      setForm({ ...form, dlc: e.target.value })
+                    }
+                  />
+                </Field>
+              </>
+            ) : null}
             <Field label="Écart quantité">
               <AInput
                 value={form.qtyDelta}
@@ -354,9 +373,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-        {label}
-      </label>
+      <label className="text-[12px] text-a-fg-subtle">{label}</label>
       {children}
     </div>
   );
