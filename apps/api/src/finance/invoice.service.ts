@@ -9,12 +9,26 @@ import {
 } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { TaxService, round3, taxFromHt } from '../tax/tax.service';
 import {
   FINANCE_ERROR_CODES,
   FINANCE_EVENT_TYPES,
 } from './finance.constants';
-import type { CreateInvoiceDto } from './finance.dto';
+import type { CreateInvoiceDto, CreateInvoiceLineDto } from './finance.dto';
 import { FinanceException } from './finance.exception';
+
+export type InvoiceLineDto = {
+  id: string;
+  lineNo: number;
+  description: string;
+  qty: string;
+  unitPriceHt: string;
+  taxCodeId: string;
+  taxCode: string | null;
+  amountHt: string;
+  amountTax: string;
+  amountTtc: string;
+};
 
 export type InvoiceDto = {
   id: string;
@@ -27,15 +41,34 @@ export type InvoiceDto = {
   salesOrderId: string | null;
   shipmentId: string | null;
   currency: string;
+  amountHt: string;
+  amountTax: string;
   amountTotal: string;
   dueDate: string | null;
   issuedAt: string | null;
   label: string | null;
   notes: string | null;
   openItemId: string | null;
+  lines: InvoiceLineDto[];
   version: number;
   createdAt: string;
   updatedAt: string;
+};
+
+type InvoiceWithExtras = FinInvoice & {
+  openItems: { id: string }[];
+  lines: Array<{
+    id: string;
+    lineNo: number;
+    description: string;
+    qty: Prisma.Decimal;
+    unitPriceHt: Prisma.Decimal;
+    taxCodeId: string;
+    amountHt: Prisma.Decimal;
+    amountTax: Prisma.Decimal;
+    amountTtc: Prisma.Decimal;
+    taxCode?: { code: string } | null;
+  }>;
 };
 
 @Injectable()
@@ -43,6 +76,7 @@ export class InvoiceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly tax: TaxService,
   ) {}
 
   async list(
@@ -94,6 +128,10 @@ export class InvoiceService {
           select: { id: true },
           take: 1,
         },
+        lines: {
+          orderBy: { lineNo: 'asc' },
+          include: { taxCode: { select: { code: true } } },
+        },
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
@@ -112,18 +150,11 @@ export class InvoiceService {
 
   async create(companyId: string, dto: CreateInvoiceDto): Promise<InvoiceDto> {
     await this.assertCustomer(companyId, dto.customerId);
-    const amount = round3(dto.amountTotal);
-    if (amount <= 0) {
-      throw new FinanceException(
-        FINANCE_ERROR_CODES.INVALID_AMOUNT,
-        'amountTotal must be positive.',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
     if (dto.salesOrderId) {
       await this.assertSalesOrder(companyId, dto.customerId, dto.salesOrderId);
     }
 
+    const computed = await this.computeLines(companyId, dto);
     const number = await this.nextNumber(companyId);
     const currency = (dto.currency?.trim() || 'TND').toUpperCase();
     const issue = dto.issue === true;
@@ -138,11 +169,26 @@ export class InvoiceService {
           salesOrderId: dto.salesOrderId ?? null,
           shipmentId: dto.shipmentId ?? null,
           currency,
-          amountTotal: amount,
+          amountHt: computed.amountHt,
+          amountTax: computed.amountTax,
+          amountTotal: computed.amountTtc,
           dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
           issuedAt: issue ? new Date() : null,
           label: dto.label?.trim() || null,
           notes: dto.notes?.trim() || null,
+          lines: {
+            create: computed.lines.map((l) => ({
+              companyId,
+              lineNo: l.lineNo,
+              description: l.description,
+              qty: l.qty,
+              unitPriceHt: l.unitPriceHt,
+              taxCodeId: l.taxCodeId,
+              amountHt: l.amountHt,
+              amountTax: l.amountTax,
+              amountTtc: l.amountTtc,
+            })),
+          },
         },
       });
 
@@ -157,6 +203,8 @@ export class InvoiceService {
             invoiceId: invoice.id,
             number: invoice.number,
             customerId: invoice.customerId,
+            amountHt: invoice.amountHt.toString(),
+            amountTax: invoice.amountTax.toString(),
             amountTotal: invoice.amountTotal.toString(),
           },
         });
@@ -164,13 +212,7 @@ export class InvoiceService {
 
       return tx.finInvoice.findFirstOrThrow({
         where: { id: invoice.id },
-        include: {
-          openItems: {
-            where: { deletedAt: null },
-            select: { id: true },
-            take: 1,
-          },
-        },
+        include: invoiceInclude,
       });
     });
 
@@ -199,13 +241,7 @@ export class InvoiceService {
       if (existing.status === FinInvoiceStatus.ISSUED) {
         return tx.finInvoice.findFirstOrThrow({
           where: { id },
-          include: {
-            openItems: {
-              where: { deletedAt: null },
-              select: { id: true },
-              take: 1,
-            },
-          },
+          include: invoiceInclude,
         });
       }
 
@@ -229,19 +265,15 @@ export class InvoiceService {
           invoiceId: id,
           number: issued.number,
           customerId: issued.customerId,
+          amountHt: issued.amountHt.toString(),
+          amountTax: issued.amountTax.toString(),
           amountTotal: issued.amountTotal.toString(),
         },
       });
 
       return tx.finInvoice.findFirstOrThrow({
         where: { id },
-        include: {
-          openItems: {
-            where: { deletedAt: null },
-            select: { id: true },
-            take: 1,
-          },
-        },
+        include: invoiceInclude,
       });
     });
 
@@ -399,21 +431,114 @@ export class InvoiceService {
     });
   }
 
+  private async computeLines(
+    companyId: string,
+    dto: CreateInvoiceDto,
+  ): Promise<{
+    amountHt: number;
+    amountTax: number;
+    amountTtc: number;
+    lines: Array<{
+      lineNo: number;
+      description: string;
+      qty: number;
+      unitPriceHt: number;
+      taxCodeId: string;
+      amountHt: number;
+      amountTax: number;
+      amountTtc: number;
+    }>;
+  }> {
+    if (dto.lines && dto.lines.length > 0) {
+      const lines = [];
+      let amountHt = 0;
+      let amountTax = 0;
+      let lineNo = 1;
+      for (const line of dto.lines) {
+        const computed = await this.computeOneLine(companyId, line, lineNo);
+        lines.push(computed);
+        amountHt = round3(amountHt + computed.amountHt);
+        amountTax = round3(amountTax + computed.amountTax);
+        lineNo += 1;
+      }
+      return {
+        amountHt,
+        amountTax,
+        amountTtc: round3(amountHt + amountTax),
+        lines,
+      };
+    }
+
+    const ttc = round3(dto.amountTotal ?? 0);
+    if (ttc <= 0) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.INVALID_AMOUNT,
+        'Provide lines or a positive amountTotal.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Legacy / AR-on-delivery: single EXO line so TTC stays as-recorded.
+    const exo = await this.tax.findCodeByCode(companyId, 'EXO');
+    if (!exo) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.INVALID_AMOUNT,
+        'Tax catalog missing EXO code — seed Tunisia VAT catalog.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    return {
+      amountHt: ttc,
+      amountTax: 0,
+      amountTtc: ttc,
+      lines: [
+        {
+          lineNo: 1,
+          description: dto.label?.trim() || 'Montant enregistré (hors ventilation TVA)',
+          qty: 1,
+          unitPriceHt: ttc,
+          taxCodeId: exo.id,
+          amountHt: ttc,
+          amountTax: 0,
+          amountTtc: ttc,
+        },
+      ],
+    };
+  }
+
+  private async computeOneLine(
+    companyId: string,
+    line: CreateInvoiceLineDto,
+    lineNo: number,
+  ) {
+    const qty = round3(line.qty);
+    const unitPriceHt = round3(line.unitPriceHt);
+    const amountHt = round3(qty * unitPriceHt);
+    const { rateBps } = await this.tax.resolveRateBps(
+      companyId,
+      line.taxCodeId,
+    );
+    const amountTax = taxFromHt(amountHt, rateBps);
+    const amountTtc = round3(amountHt + amountTax);
+    return {
+      lineNo,
+      description: line.description.trim(),
+      qty,
+      unitPriceHt,
+      taxCodeId: line.taxCodeId,
+      amountHt,
+      amountTax,
+      amountTtc,
+    };
+  }
+
   private async findActive(
     companyId: string,
     id: string,
-  ): Promise<
-    FinInvoice & { openItems: { id: string }[] }
-  > {
+  ): Promise<InvoiceWithExtras> {
     const row = await this.prisma.finInvoice.findFirst({
       where: { id, companyId, deletedAt: null },
-      include: {
-        openItems: {
-          where: { deletedAt: null },
-          select: { id: true },
-          take: 1,
-        },
-      },
+      include: invoiceInclude,
     });
     if (!row) {
       throw new FinanceException(
@@ -450,10 +575,7 @@ export class InvoiceService {
         customerId,
         deletedAt: null,
         status: {
-          in: [
-            SalOrderStatus.CONFIRMED,
-            SalOrderStatus.DRAFT,
-          ],
+          in: [SalOrderStatus.CONFIRMED, SalOrderStatus.DRAFT],
         },
       },
     });
@@ -477,7 +599,7 @@ export class InvoiceService {
 
   private async enrichMany(
     companyId: string,
-    rows: Array<FinInvoice & { openItems: { id: string }[] }>,
+    rows: InvoiceWithExtras[],
   ): Promise<InvoiceDto[]> {
     if (rows.length === 0) return [];
     const customerIds = [...new Set(rows.map((r) => r.customerId))];
@@ -498,19 +620,27 @@ export class InvoiceService {
 
   private async enrichOne(
     companyId: string,
-    row: FinInvoice & { openItems: { id: string }[] },
+    row: InvoiceWithExtras,
   ): Promise<InvoiceDto> {
     const [dto] = await this.enrichMany(companyId, [row]);
     return dto!;
   }
 }
 
-function round3(n: number): number {
-  return Math.round(n * 1000) / 1000;
-}
+const invoiceInclude = {
+  openItems: {
+    where: { deletedAt: null },
+    select: { id: true },
+    take: 1,
+  },
+  lines: {
+    orderBy: { lineNo: 'asc' as const },
+    include: { taxCode: { select: { code: true } } },
+  },
+};
 
 function serializeInvoice(
-  row: FinInvoice & { openItems: { id: string }[] },
+  row: InvoiceWithExtras,
   customerCode: string | null,
   customerName: string | null,
 ): InvoiceDto {
@@ -525,12 +655,26 @@ function serializeInvoice(
     salesOrderId: row.salesOrderId,
     shipmentId: row.shipmentId,
     currency: row.currency,
-    amountTotal: row.amountTotal.toFixed(3),
+    amountHt: Number(row.amountHt).toFixed(3),
+    amountTax: Number(row.amountTax).toFixed(3),
+    amountTotal: Number(row.amountTotal).toFixed(3),
     dueDate: row.dueDate ? row.dueDate.toISOString().slice(0, 10) : null,
     issuedAt: row.issuedAt?.toISOString() ?? null,
     label: row.label,
     notes: row.notes,
     openItemId: row.openItems[0]?.id ?? null,
+    lines: (row.lines ?? []).map((l) => ({
+      id: l.id,
+      lineNo: l.lineNo,
+      description: l.description,
+      qty: Number(l.qty).toFixed(3),
+      unitPriceHt: Number(l.unitPriceHt).toFixed(3),
+      taxCodeId: l.taxCodeId,
+      taxCode: l.taxCode?.code ?? null,
+      amountHt: Number(l.amountHt).toFixed(3),
+      amountTax: Number(l.amountTax).toFixed(3),
+      amountTtc: Number(l.amountTtc).toFixed(3),
+    })),
     version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

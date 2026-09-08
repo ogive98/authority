@@ -156,7 +156,8 @@ async function main() {
       moduleKey === 'documents' ||
       moduleKey === 'accounting' ||
       moduleKey === 'repair' ||
-      moduleKey === 'production'
+      moduleKey === 'production' ||
+      moduleKey === 'tax'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -174,6 +175,8 @@ async function main() {
       },
     });
   }
+
+  await seedTunisiaVatCatalog(prisma, company.id);
 
   await prisma.modFlag.upsert({
     where: {
@@ -471,6 +474,18 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'finance.allocate',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'tax.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'tax.rate.manage',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,
@@ -1017,6 +1032,13 @@ async function main() {
       if (!existingInv) {
         const issuedAt = new Date();
         const dueDate = new Date(Date.now() + 14 * 86400000);
+        const tva19 = await prisma.taxCode.findFirst({
+          where: { companyId: company.id, code: 'TVA19', deletedAt: null },
+        });
+        // 50.000 TTC @ 19% → HT = 50/1.19 ≈ 42.017, tax ≈ 7.983
+        const amountHt = 42.017;
+        const amountTax = 7.983;
+        const amountTotal = 50;
         const invoice = await prisma.finInvoice.create({
           data: {
             companyId: company.id,
@@ -1025,11 +1047,32 @@ async function main() {
             status: 'ISSUED',
             salesOrderId: portalOrder.id,
             currency: 'TND',
-            amountTotal: 50,
+            amountTotal,
+            amountHt,
+            amountTax,
             dueDate,
             issuedAt,
-            label: 'Facture démo portal (montant enregistré — pas de TVA calculée)',
+            label: 'Facture démo portal (TVA 19% Code TVA)',
             notes: 'INTERNAL — never returned to portal',
+            ...(tva19
+              ? {
+                  lines: {
+                    create: [
+                      {
+                        companyId: company.id,
+                        lineNo: 1,
+                        description: 'Livraison démo portal',
+                        qty: 1,
+                        unitPriceHt: amountHt,
+                        taxCodeId: tva19.id,
+                        amountHt,
+                        amountTax,
+                        amountTtc: amountTotal,
+                      },
+                    ],
+                  },
+                }
+              : {}),
           },
         });
         if (portalOpenItem && !portalOpenItem.invoiceId) {
@@ -1037,6 +1080,41 @@ async function main() {
             where: { id: portalOpenItem.id },
             data: { invoiceId: invoice.id },
           });
+        }
+      } else {
+        const lineCount = await prisma.finInvoiceLine.count({
+          where: { invoiceId: existingInv.id },
+        });
+        if (lineCount === 0) {
+          const tva19 = await prisma.taxCode.findFirst({
+            where: { companyId: company.id, code: 'TVA19', deletedAt: null },
+          });
+          if (tva19) {
+            const amountHt = 42.017;
+            const amountTax = 7.983;
+            await prisma.finInvoice.update({
+              where: { id: existingInv.id },
+              data: {
+                amountHt,
+                amountTax,
+                label: 'Facture démo portal (TVA 19% Code TVA)',
+              },
+            });
+            await prisma.finInvoiceLine.create({
+              data: {
+                companyId: company.id,
+                invoiceId: existingInv.id,
+                lineNo: 1,
+                description: 'Livraison démo portal',
+                qty: 1,
+                unitPriceHt: amountHt,
+                taxCodeId: tva19.id,
+                amountHt,
+                amountTax,
+                amountTtc: 50,
+              },
+            });
+          }
         }
       }
 
@@ -1531,6 +1609,65 @@ async function seedAccountingGl(companyId: string): Promise<void> {
         status: 'OPEN',
       },
     });
+  }
+}
+
+/** Tunisia VAT catalog (Code TVA) — VAT only; CNSS/IRPP reserved for HR. */
+async function seedTunisiaVatCatalog(
+  prismaClient: typeof prisma,
+  companyId: string,
+): Promise<void> {
+  const validatedAt = new Date('2026-09-08T00:00:00.000Z');
+  const validFrom = new Date('2018-01-01T00:00:00.000Z');
+  const lawRef = 'Code TVA art.7 / LF2018 art.43 (taux 7/13/19)';
+  const defs: Array<{ code: string; label: string; rateBps: number }> = [
+    { code: 'TVA19', label: 'TVA normale 19%', rateBps: 1900 },
+    { code: 'TVA13', label: 'TVA intermédiaire 13%', rateBps: 1300 },
+    { code: 'TVA7', label: 'TVA réduite 7%', rateBps: 700 },
+    { code: 'EXO', label: 'Exonération / hors champ 0%', rateBps: 0 },
+  ];
+
+  for (const d of defs) {
+    let codeRow = await prismaClient.taxCode.findFirst({
+      where: { companyId, code: d.code, deletedAt: null },
+    });
+    if (!codeRow) {
+      codeRow = await prismaClient.taxCode.create({
+        data: {
+          companyId,
+          code: d.code,
+          label: d.label,
+          kind: 'VAT',
+          active: true,
+        },
+      });
+    } else {
+      await prismaClient.taxCode.update({
+        where: { id: codeRow.id },
+        data: { label: d.label, active: true },
+      });
+    }
+
+    const existingRate = await prismaClient.taxRate.findFirst({
+      where: {
+        companyId,
+        taxCodeId: codeRow.id,
+        deletedAt: null,
+      },
+      orderBy: { validFrom: 'desc' },
+    });
+    if (!existingRate) {
+      await prismaClient.taxRate.create({
+        data: {
+          companyId,
+          taxCodeId: codeRow.id,
+          rateBps: d.rateBps,
+          validFrom,
+          lawRef,
+          expertValidatedAt: validatedAt,
+        },
+      });
+    }
   }
 }
 

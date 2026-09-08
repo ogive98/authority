@@ -68,6 +68,11 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       ],
     },
     {
+      key: "tax",
+      name: "Fiscalité",
+      features: [{ id: "tax-catalog", label: "TVA Tunisie", href: "/tax" }],
+    },
+    {
       key: "accounting",
       name: "Comptabilité",
       features: [

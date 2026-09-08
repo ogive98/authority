@@ -24,6 +24,7 @@ import {
   issueInvoice,
   type FinInvoice,
 } from "@/lib/finance";
+import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
 
 type LoadState =
   | { kind: "loading" }
@@ -31,22 +32,42 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
+type LineDraft = {
+  description: string;
+  qty: string;
+  unitPriceHt: string;
+  taxCodeId: string;
+};
+
+type FormState = {
+  customerId: string | null;
+  customerLabel: string;
+  dueDate: string;
+  label: string;
+  issue: boolean;
+  lines: LineDraft[];
+};
+
+function emptyLine(taxCodeId = ""): LineDraft {
+  return {
+    description: "",
+    qty: "1",
+    unitPriceHt: "",
+    taxCodeId,
+  };
+}
+
 export default function FinanceInvoicesPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [detail, setDetail] = useState<FinInvoice | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [form, setForm] = useState<FormState | null>(null);
   const [customerOpts, setCustomerOpts] = useState<AComboboxOption[]>([]);
   const [customerLoading, setCustomerLoading] = useState(false);
-  const [form, setForm] = useState<{
-    customerId: string | null;
-    customerLabel: string;
-    amountTotal: string;
-    dueDate: string;
-    label: string;
-    issue: boolean;
-  } | null>(null);
+  const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async (query?: string) => {
@@ -66,6 +87,13 @@ export default function FinanceInvoicesPage() {
   useEffect(() => {
     void load(q);
   }, [load]);
+
+  useEffect(() => {
+    void (async () => {
+      const res = await fetchTaxCodes();
+      if (res.ok) setTaxCodes(res.data.items);
+    })();
+  }, []);
 
   const refreshCustomers = useCallback(async (query: string) => {
     setCustomerLoading(true);
@@ -90,21 +118,52 @@ export default function FinanceInvoicesPage() {
     }, 200);
   }
 
+  function openCreate() {
+    const defaultTax =
+      taxCodes.find((c) => c.code === "TVA19")?.id ?? taxCodes[0]?.id ?? "";
+    setFormError(null);
+    setForm({
+      customerId: null,
+      customerLabel: "",
+      dueDate: "",
+      label: "",
+      issue: true,
+      lines: [emptyLine(defaultTax)],
+    });
+    setDrawerOpen(true);
+  }
+
   async function submit() {
     if (!form?.customerId) {
       setFormError("Sélectionnez un client.");
       return;
     }
-    const amount = Number(form.amountTotal.replace(",", "."));
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setFormError("Montant invalide.");
+    const lines = form.lines.map((l) => ({
+      description: l.description.trim(),
+      qty: Number(l.qty.replace(",", ".")),
+      unitPriceHt: Number(l.unitPriceHt.replace(",", ".")),
+      taxCodeId: l.taxCodeId,
+    }));
+    if (
+      lines.length === 0 ||
+      lines.some(
+        (l) =>
+          !l.description ||
+          !l.taxCodeId ||
+          !Number.isFinite(l.qty) ||
+          l.qty <= 0 ||
+          !Number.isFinite(l.unitPriceHt) ||
+          l.unitPriceHt < 0,
+      )
+    ) {
+      setFormError("Chaque ligne doit avoir description, qté, PU HT et code TVA.");
       return;
     }
     setBusy(true);
     setFormError(null);
     const res = await createInvoice({
       customerId: form.customerId,
-      amountTotal: amount,
+      lines,
       dueDate: form.dueDate || undefined,
       label: form.label.trim() || undefined,
       currency: "TND",
@@ -135,31 +194,22 @@ export default function FinanceInvoicesPage() {
       <AScreenHeader
         kicker="Finance"
         title="Factures"
-        description="Factures commerciales — montants enregistrés tels quels (pas de calcul TVA)."
+        description="Factures HT / TVA / TTC — taux depuis le catalogue Fiscalité (Code TVA Tunisie)."
         actions={
           <div className="flex items-center gap-2">
+            <Link
+              href="/tax"
+              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
+            >
+              TVA Tunisie
+            </Link>
             <Link
               href="/finance"
               className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
             >
               Créances
             </Link>
-            <AButton
-              type="button"
-              size="sm"
-              onClick={() => {
-                setFormError(null);
-                setForm({
-                  customerId: null,
-                  customerLabel: "",
-                  amountTotal: "",
-                  dueDate: "",
-                  label: "",
-                  issue: true,
-                });
-                setDrawerOpen(true);
-              }}
-            >
+            <AButton type="button" size="sm" onClick={openCreate}>
               Nouvelle facture
             </AButton>
           </div>
@@ -213,19 +263,20 @@ export default function FinanceInvoicesPage() {
         {state.kind === "ok" && state.items.length === 0 ? (
           <AEmptyState
             title="Aucune facture"
-            description="Émettez une facture pour générer la créance AR."
+            description="Créez une facture avec lignes et codes TVA."
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
           <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2">
-            <table className="w-full min-w-[48rem] border-collapse text-left text-[length:var(--a-text-sm)]">
+            <table className="w-full min-w-[56rem] border-collapse text-left text-[length:var(--a-text-sm)]">
               <thead className="border-b border-a-border-subtle bg-a-surface-3/80 text-a-fg-muted">
                 <tr>
                   <th className="a-table-cell font-medium">N°</th>
                   <th className="a-table-cell font-medium">Client</th>
                   <th className="a-table-cell font-medium">Statut</th>
-                  <th className="a-table-cell font-medium">Montant</th>
-                  <th className="a-table-cell font-medium">Échéance</th>
+                  <th className="a-table-cell font-medium text-right">HT</th>
+                  <th className="a-table-cell font-medium text-right">TVA</th>
+                  <th className="a-table-cell font-medium text-right">TTC</th>
                   <th className="a-table-cell font-medium">Actions</th>
                 </tr>
               </thead>
@@ -244,26 +295,37 @@ export default function FinanceInvoicesPage() {
                         {INVOICE_STATUS_LABELS[inv.status]}
                       </ABadge>
                     </td>
-                    <td className="a-mono a-table-cell tabular-nums">
+                    <td className="a-mono a-table-cell tabular-nums text-right">
+                      {inv.amountHt ?? "—"}
+                    </td>
+                    <td className="a-mono a-table-cell tabular-nums text-right">
+                      {inv.amountTax ?? "—"}
+                    </td>
+                    <td className="a-mono a-table-cell tabular-nums text-right font-medium">
                       {inv.amountTotal} {inv.currency}
                     </td>
-                    <td className="a-mono a-table-cell text-a-fg-muted">
-                      {inv.dueDate ?? "—"}
-                    </td>
                     <td className="a-table-cell">
-                      {inv.status === "DRAFT" ? (
+                      <div className="flex flex-wrap gap-2">
                         <AButton
                           type="button"
                           variant="secondary"
                           size="sm"
-                          disabled={busy}
-                          onClick={() => void onIssue(inv.id)}
+                          onClick={() => setDetail(inv)}
                         >
-                          Émettre
+                          Détail
                         </AButton>
-                      ) : (
-                        <span className="text-a-fg-subtle">—</span>
-                      )}
+                        {inv.status === "DRAFT" ? (
+                          <AButton
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            disabled={busy}
+                            onClick={() => void onIssue(inv.id)}
+                          >
+                            Émettre
+                          </AButton>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -277,7 +339,7 @@ export default function FinanceInvoicesPage() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title="Nouvelle facture"
-        description="Montant enregistré tel quel — pas de TVA calculée."
+        description="Lignes HT + code TVA Tunisie — totaux calculés côté serveur."
       >
         {form ? (
           <div className="space-y-4">
@@ -307,18 +369,15 @@ export default function FinanceInvoicesPage() {
             />
             <div className="space-y-1">
               <label
-                htmlFor="inv-amount"
+                htmlFor="inv-label"
                 className="text-[length:var(--a-text-sm)] text-a-fg-muted"
               >
-                Montant total (TND)
+                Libellé
               </label>
               <AInput
-                id="inv-amount"
-                className="a-mono"
-                value={form.amountTotal}
-                onChange={(e) =>
-                  setForm({ ...form, amountTotal: e.target.value })
-                }
+                id="inv-label"
+                value={form.label}
+                onChange={(e) => setForm({ ...form, label: e.target.value })}
               />
             </div>
             <div className="space-y-1">
@@ -331,23 +390,94 @@ export default function FinanceInvoicesPage() {
               <AInput
                 id="inv-due"
                 type="date"
+                className="a-mono"
                 value={form.dueDate}
                 onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
               />
             </div>
-            <div className="space-y-1">
-              <label
-                htmlFor="inv-label"
-                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-              >
-                Libellé
-              </label>
-              <AInput
-                id="inv-label"
-                value={form.label}
-                onChange={(e) => setForm({ ...form, label: e.target.value })}
-              />
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[length:var(--a-text-sm)] font-medium">
+                  Lignes
+                </p>
+                <AButton
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      lines: [
+                        ...form.lines,
+                        emptyLine(
+                          taxCodes.find((c) => c.code === "TVA19")?.id ??
+                            taxCodes[0]?.id ??
+                            "",
+                        ),
+                      ],
+                    })
+                  }
+                >
+                  + Ligne
+                </AButton>
+              </div>
+              {form.lines.map((line, idx) => (
+                <div
+                  key={idx}
+                  className="space-y-2 border-b border-a-border-subtle pb-3"
+                >
+                  <AInput
+                    placeholder="Description"
+                    value={line.description}
+                    onChange={(e) => {
+                      const lines = [...form.lines];
+                      lines[idx] = { ...line, description: e.target.value };
+                      setForm({ ...form, lines });
+                    }}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <AInput
+                      className="a-mono"
+                      placeholder="Qté"
+                      value={line.qty}
+                      onChange={(e) => {
+                        const lines = [...form.lines];
+                        lines[idx] = { ...line, qty: e.target.value };
+                        setForm({ ...form, lines });
+                      }}
+                    />
+                    <AInput
+                      className="a-mono"
+                      placeholder="PU HT"
+                      value={line.unitPriceHt}
+                      onChange={(e) => {
+                        const lines = [...form.lines];
+                        lines[idx] = { ...line, unitPriceHt: e.target.value };
+                        setForm({ ...form, lines });
+                      }}
+                    />
+                  </div>
+                  <select
+                    className="w-full rounded-[var(--a-radius-md)] border border-a-border bg-a-surface-1 px-3 py-2 text-[length:var(--a-text-sm)]"
+                    value={line.taxCodeId}
+                    onChange={(e) => {
+                      const lines = [...form.lines];
+                      lines[idx] = { ...line, taxCodeId: e.target.value };
+                      setForm({ ...form, lines });
+                    }}
+                  >
+                    <option value="">Code TVA…</option>
+                    {taxCodes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code} — {formatRateBps(c.currentRateBps)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
             </div>
+
             <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
               <input
                 type="checkbox"
@@ -356,21 +486,80 @@ export default function FinanceInvoicesPage() {
                   setForm({ ...form, issue: e.target.checked })
                 }
               />
-              Émettre et créer la créance AR
+              Émettre immédiatement (crée la créance AR sur TTC)
             </label>
+
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {formError}
               </p>
             ) : null}
-            <AButton
-              type="button"
-              size="sm"
-              disabled={busy}
-              onClick={() => void submit()}
-            >
-              Enregistrer
-            </AButton>
+            <div className="flex justify-end gap-2 pt-2">
+              <AButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setDrawerOpen(false)}
+              >
+                Annuler
+              </AButton>
+              <AButton
+                type="button"
+                size="sm"
+                disabled={busy}
+                onClick={() => void submit()}
+              >
+                Créer
+              </AButton>
+            </div>
+          </div>
+        ) : null}
+      </ADrawer>
+
+      <ADrawer
+        open={!!detail}
+        onOpenChange={(open) => {
+          if (!open) setDetail(null);
+        }}
+        title={detail?.number ?? "Facture"}
+        description="Ventilation HT / TVA / TTC"
+      >
+        {detail ? (
+          <div className="space-y-4 text-[length:var(--a-text-sm)]">
+            <dl className="space-y-2">
+              <div className="flex justify-between gap-4">
+                <dt className="text-a-fg-muted">HT</dt>
+                <dd className="a-mono">{detail.amountHt}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-a-fg-muted">TVA</dt>
+                <dd className="a-mono">{detail.amountTax}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-a-fg-muted">TTC</dt>
+                <dd className="a-mono font-medium">
+                  {detail.amountTotal} {detail.currency}
+                </dd>
+              </div>
+            </dl>
+            {(detail.lines?.length ?? 0) > 0 ? (
+              <ul className="space-y-2">
+                {detail.lines.map((l) => (
+                  <li
+                    key={l.id}
+                    className="border-b border-a-border-subtle pb-2"
+                  >
+                    <p>{l.description}</p>
+                    <p className="a-mono text-a-fg-muted">
+                      {l.qty} × {l.unitPriceHt} · {l.taxCode ?? "—"} · TTC{" "}
+                      {l.amountTtc}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-a-fg-muted">Aucune ligne (facture legacy).</p>
+            )}
           </div>
         ) : null}
       </ADrawer>

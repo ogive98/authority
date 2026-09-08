@@ -68,14 +68,41 @@ export class AllocateOpenItemDto {
   note?: string;
 }
 
-export class CreateInvoiceDto {
-  @IsUUID()
-  customerId!: string;
+export class CreateInvoiceLineDto {
+  @IsString()
+  @MaxLength(240)
+  description!: string;
 
   @Type(() => Number)
   @IsNumber()
   @Min(0.001)
-  amountTotal!: number;
+  qty!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  unitPriceHt!: number;
+
+  @IsUUID()
+  taxCodeId!: string;
+}
+
+export class CreateInvoiceDto {
+  @IsUUID()
+  customerId!: string;
+
+  /** Legacy TTC total when lines omitted (auto AR-on-delivery). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  amountTotal?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateInvoiceLineDto)
+  lines?: CreateInvoiceLineDto[];
 
   @IsOptional()
   @IsUUID()

@@ -6,7 +6,7 @@ export const financeManifest: ModuleManifest = {
   version: '1.1.0',
   apiVersion: '1',
   description:
-    'Finance AR — invoices, open items, payments, allocation engine, cheque/traite (amounts as recorded; no invented tax rates)',
+    'Finance AR — invoices with HT/TVA/TTC lines, open items, payments, instruments, promises',
   capabilities: [
     {
       key: 'finance.ar.read',
@@ -61,6 +61,7 @@ export const financeManifest: ModuleManifest = {
     'platform',
     'organization',
     'customers',
+    'tax',
   ],
   publishedEvents: [
     'finance.open_item.created.v1',
@@ -70,6 +71,8 @@ export const financeManifest: ModuleManifest = {
     'finance.payment.allocated.v1',
     'finance.instrument.status.v1',
     'finance.instrument.rejected.v1',
+    'finance.promise.created.v1',
+    'finance.promise.status.v1',
   ],
   consumedEvents: ['delivery.shipment.delivered.v1'],
   navigationEntries: [
@@ -77,5 +80,6 @@ export const financeManifest: ModuleManifest = {
     { id: 'invoices', label: 'Factures', href: '/finance/invoices' },
     { id: 'payments', label: 'Encaissements', href: '/finance/payments' },
     { id: 'instruments', label: 'Instruments', href: '/finance/instruments' },
+    { id: 'promises', label: 'Promesses', href: '/finance/promises' },
   ],
 };

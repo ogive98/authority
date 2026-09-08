@@ -1,27 +1,41 @@
 import type { ModuleManifest } from '../manifest.types';
 
 /**
- * Tax Engine catalog stub (D076).
- * No rates, no posting, no UI — discover-only until expert-validated rate tables.
+ * Tax Engine V0 (D088) — Tunisia VAT catalog.
+ * CNSS / IRPP / payroll rates are NOT here (future HR module).
  */
 export const taxManifest: ModuleManifest = {
   id: 'tax',
-  name: 'Tax',
+  name: 'Fiscalité',
   version: '1.0.0',
   apiVersion: '1',
   description:
-    'Tax Engine (catalog stub — no rates; expert validation required)',
+    'Tax Engine — Tunisia VAT codes/rates (7/13/19/0%); no payroll/CNSS',
   capabilities: [
     {
-      key: 'tax.discover',
+      key: 'tax.read',
       moduleId: 'tax',
       version: '1',
-      description: 'Tax module discovery placeholder (no rate data)',
+      description: 'Read VAT tax codes and active rates',
+      permissionKey: 'tax.read',
       riskLevel: 'low',
     },
+    {
+      key: 'tax.rate.manage',
+      moduleId: 'tax',
+      version: '1',
+      description: 'Create / patch VAT rate rows (law_ref required ideally)',
+      permissionKey: 'tax.rate.manage',
+      riskLevel: 'high',
+      requiresAudit: true,
+    },
   ],
-  commands: [],
-  queries: [],
-  permissions: [],
+  commands: ['tax.rate.create', 'tax.rate.patch'],
+  queries: ['tax.codes.list', 'tax.rates.list'],
+  permissions: ['tax.read', 'tax.rate.manage'],
   dependencies: ['platform', 'organization', 'master_data'],
+  publishedEvents: ['tax.rate.published.v1'],
+  navigationEntries: [
+    { id: 'tax-catalog', label: 'TVA Tunisie', href: '/tax' },
+  ],
 };

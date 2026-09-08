@@ -23,6 +23,7 @@ import { AccountingModule } from './accounting/accounting.module';
 import { CustomerPortalModule } from './customer-portal/customer-portal.module';
 import { RepairModule } from './repair/repair.module';
 import { ProductionModule } from './production/production.module';
+import { TaxModule } from './tax/tax.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { ProductionModule } from './production/production.module';
     InventoryModule,
     SalesModule,
     DeliveryModule,
+    TaxModule,
     FinanceModule,
     DocumentsModule,
     AccountingModule,

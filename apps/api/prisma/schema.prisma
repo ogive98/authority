@@ -1256,8 +1256,10 @@ model FinInvoice {
   salesOrderId String?         @map("sales_order_id") @db.Uuid
   shipmentId   String?         @map("shipment_id") @db.Uuid
   currency     String          @default("TND")
-  /** Gross as-recorded — never derived from invented tax rates. */
+  /** Gross TTC — from lines (HT+tax) or legacy as-recorded. */
   amountTotal  Decimal         @map("amount_total") @db.Decimal(18, 3)
+  amountHt     Decimal         @default(0) @map("amount_ht") @db.Decimal(18, 3)
+  amountTax    Decimal         @default(0) @map("amount_tax") @db.Decimal(18, 3)
   dueDate      DateTime?       @map("due_date") @db.Date
   issuedAt     DateTime?       @map("issued_at") @db.Timestamptz(6)
   label        String?
@@ -1268,12 +1270,36 @@ model FinInvoice {
   deletedAt    DateTime?       @map("deleted_at") @db.Timestamptz(6)
 
   openItems FinOpenItem[]
+  lines     FinInvoiceLine[]
 
   @@unique([companyId, number])
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, customerId, status])
   @@index([companyId, salesOrderId])
   @@map("fin_invoice")
+}
+
+model FinInvoiceLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  invoiceId   String   @map("invoice_id") @db.Uuid
+  lineNo      Int      @map("line_no")
+  description String
+  qty         Decimal  @db.Decimal(18, 3)
+  unitPriceHt Decimal  @map("unit_price_ht") @db.Decimal(18, 3)
+  taxCodeId   String   @map("tax_code_id") @db.Uuid
+  amountHt    Decimal  @map("amount_ht") @db.Decimal(18, 3)
+  amountTax   Decimal  @map("amount_tax") @db.Decimal(18, 3)
+  amountTtc   Decimal  @map("amount_ttc") @db.Decimal(18, 3)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  invoice FinInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  taxCode TaxCode   @relation(fields: [taxCodeId], references: [id])
+
+  @@unique([invoiceId, lineNo])
+  @@index([companyId, invoiceId])
+  @@map("fin_invoice_line")
 }
 
 model FinOpenItem {
@@ -1411,6 +1437,54 @@ model FinPromiseToPay {
   @@index([companyId, openItemId])
   @@index([companyId, createdAt(sort: Desc)])
   @@map("fin_promise_to_pay")
+}
+
+// --- tax_* Tax Engine V0 (D088) — Tunisia VAT catalog; CNSS/IRPP reserved for HR ---
+
+enum TaxKind {
+  VAT
+}
+
+model TaxCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  code      String
+  label     String
+  kind      TaxKind  @default(VAT)
+  active    Boolean  @default(true)
+  version   Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  rates         TaxRate[]
+  invoiceLines  FinInvoiceLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId, kind, active])
+  @@map("tax_code")
+}
+
+model TaxRate {
+  id                 String    @id @default(uuid()) @db.Uuid
+  companyId          String    @map("company_id") @db.Uuid
+  taxCodeId          String    @map("tax_code_id") @db.Uuid
+  /** Basis points: 1900 = 19%. */
+  rateBps            Int       @map("rate_bps")
+  validFrom          DateTime  @map("valid_from") @db.Date
+  validTo            DateTime? @map("valid_to") @db.Date
+  lawRef             String?   @map("law_ref")
+  expertValidatedAt  DateTime? @map("expert_validated_at") @db.Timestamptz(6)
+  version            Int       @default(0)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  taxCode TaxCode @relation(fields: [taxCodeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, taxCodeId, validFrom])
+  @@index([companyId, validFrom])
+  @@map("tax_rate")
 }
 
 // --- acc_* Accounting GL V0 (D072) — no invented tax rates ---

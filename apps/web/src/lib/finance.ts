@@ -64,12 +64,26 @@ export type FinInvoice = {
   salesOrderId: string | null;
   shipmentId: string | null;
   currency: string;
+  amountHt: string;
+  amountTax: string;
   amountTotal: string;
   dueDate: string | null;
   issuedAt: string | null;
   label: string | null;
   notes: string | null;
   openItemId: string | null;
+  lines: {
+    id: string;
+    lineNo: number;
+    description: string;
+    qty: string;
+    unitPriceHt: string;
+    taxCodeId: string;
+    taxCode: string | null;
+    amountHt: string;
+    amountTax: string;
+    amountTtc: string;
+  }[];
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -300,7 +314,13 @@ export async function fetchInvoices(opts?: {
 
 export async function createInvoice(body: {
   customerId: string;
-  amountTotal: number;
+  amountTotal?: number;
+  lines?: {
+    description: string;
+    qty: number;
+    unitPriceHt: number;
+    taxCodeId: string;
+  }[];
   dueDate?: string;
   label?: string;
   notes?: string;
