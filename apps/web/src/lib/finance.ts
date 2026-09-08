@@ -66,12 +66,15 @@ export type FinInvoice = {
   currency: string;
   amountHt: string;
   amountTax: string;
+  amountFodec?: string;
+  amountTimbre?: string;
   amountTotal: string;
   dueDate: string | null;
   issuedAt: string | null;
   label: string | null;
   notes: string | null;
   openItemId: string | null;
+  expertiseApplied?: { fodec: boolean; timbre: boolean };
   lines: {
     id: string;
     lineNo: number;

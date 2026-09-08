@@ -195,7 +195,7 @@ export default function FinanceInvoicesPage() {
       <AScreenHeader
         kicker="Finance"
         title="Factures"
-        description="Factures HT / TVA / TTC — taux depuis le catalogue Fiscalité (Code TVA Tunisie)."
+        description="Factures HT / TVA / FODEC / timbre / TTC — FODEC·timbre seulement si validés en Préférences."
         actions={
           <div className="flex items-center gap-2">
             <Link
@@ -524,7 +524,7 @@ export default function FinanceInvoicesPage() {
           if (!open) setDetail(null);
         }}
         title={detail?.number ?? "Facture"}
-        description="Ventilation HT / TVA / TTC"
+        description="Ventilation HT / TVA / FODEC / timbre / TTC"
       >
         {detail ? (
           <div className="space-y-4 text-[length:var(--a-text-sm)]">
@@ -536,6 +536,28 @@ export default function FinanceInvoicesPage() {
               <div className="flex justify-between gap-4">
                 <dt className="text-a-fg-muted">TVA</dt>
                 <dd className="a-mono">{detail.amountTax}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-a-fg-muted">FODEC</dt>
+                <dd className="a-mono">
+                  {detail.amountFodec ?? "0.000"}
+                  {!detail.expertiseApplied?.fodec ? (
+                    <span className="ml-2 text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                      (non appliqué)
+                    </span>
+                  ) : null}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-a-fg-muted">Timbre</dt>
+                <dd className="a-mono">
+                  {detail.amountTimbre ?? "0.000"}
+                  {!detail.expertiseApplied?.timbre ? (
+                    <span className="ml-2 text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                      (non appliqué)
+                    </span>
+                  ) : null}
+                </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-a-fg-muted">TTC</dt>

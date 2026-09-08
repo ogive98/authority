@@ -1284,10 +1284,14 @@ model FinInvoice {
   salesOrderId String?         @map("sales_order_id") @db.Uuid
   shipmentId   String?         @map("shipment_id") @db.Uuid
   currency     String          @default("TND")
-  /** Gross TTC — from lines (HT+tax) or legacy as-recorded. */
+  /** Gross TTC — HT + TVA + FODEC + timbre (expertise when VALIDATED). */
   amountTotal  Decimal         @map("amount_total") @db.Decimal(18, 3)
   amountHt     Decimal         @default(0) @map("amount_ht") @db.Decimal(18, 3)
   amountTax    Decimal         @default(0) @map("amount_tax") @db.Decimal(18, 3)
+  /** FODEC amount — 0 unless Préférences tax.fodec VALIDATED with rateBps. */
+  amountFodec  Decimal         @default(0) @map("amount_fodec") @db.Decimal(18, 3)
+  /** Timbre amount — 0 unless Préférences tax.timbre VALIDATED with amountMilli. */
+  amountTimbre Decimal         @default(0) @map("amount_timbre") @db.Decimal(18, 3)
   dueDate      DateTime?       @map("due_date") @db.Date
   issuedAt     DateTime?       @map("issued_at") @db.Timestamptz(6)
   label        String?

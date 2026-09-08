@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
 import { TaxService, round3, taxFromHt } from '../tax/tax.service';
 import {
   FINANCE_ERROR_CODES,
@@ -43,6 +44,8 @@ export type InvoiceDto = {
   currency: string;
   amountHt: string;
   amountTax: string;
+  amountFodec: string;
+  amountTimbre: string;
   amountTotal: string;
   dueDate: string | null;
   issuedAt: string | null;
@@ -50,6 +53,11 @@ export type InvoiceDto = {
   notes: string | null;
   openItemId: string | null;
   lines: InvoiceLineDto[];
+  /** True when FODEC/timbre came from VALIDATED expertise (not invented). */
+  expertiseApplied: {
+    fodec: boolean;
+    timbre: boolean;
+  };
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -77,6 +85,7 @@ export class InvoiceService {
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly tax: TaxService,
+    private readonly expertise: ExpertiseResolverService,
   ) {}
 
   async list(
@@ -155,6 +164,10 @@ export class InvoiceService {
     }
 
     const computed = await this.computeLines(companyId, dto);
+    const withExpertise = await this.applyExpertiseSurcharges(
+      companyId,
+      computed,
+    );
     const number = await this.nextNumber(companyId);
     const currency = (dto.currency?.trim() || 'TND').toUpperCase();
     const issue = dto.issue === true;
@@ -169,15 +182,17 @@ export class InvoiceService {
           salesOrderId: dto.salesOrderId ?? null,
           shipmentId: dto.shipmentId ?? null,
           currency,
-          amountHt: computed.amountHt,
-          amountTax: computed.amountTax,
-          amountTotal: computed.amountTtc,
+          amountHt: withExpertise.amountHt,
+          amountTax: withExpertise.amountTax,
+          amountFodec: withExpertise.amountFodec,
+          amountTimbre: withExpertise.amountTimbre,
+          amountTotal: withExpertise.amountTtc,
           dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
           issuedAt: issue ? new Date() : null,
           label: dto.label?.trim() || null,
           notes: dto.notes?.trim() || null,
           lines: {
-            create: computed.lines.map((l) => ({
+            create: withExpertise.lines.map((l) => ({
               companyId,
               lineNo: l.lineNo,
               description: l.description,
@@ -506,6 +521,69 @@ export class InvoiceService {
     };
   }
 
+  /**
+   * Apply FODEC / timbre only when Préférences expertise is VALIDATED
+   * with structured rateBps / amountMilli — never invent rates.
+   * Base FODEC = HT (hors TVA). Timbre = millimes / 1000 → TND.
+   */
+  private async applyExpertiseSurcharges(
+    companyId: string,
+    base: {
+      amountHt: number;
+      amountTax: number;
+      amountTtc: number;
+      lines: Array<{
+        lineNo: number;
+        description: string;
+        qty: number;
+        unitPriceHt: number;
+        taxCodeId: string;
+        amountHt: number;
+        amountTax: number;
+        amountTtc: number;
+      }>;
+    },
+  ): Promise<{
+    amountHt: number;
+    amountTax: number;
+    amountFodec: number;
+    amountTimbre: number;
+    amountTtc: number;
+    lines: typeof base.lines;
+  }> {
+    const [fodec, timbre] = await Promise.all([
+      this.expertise.getFodec(companyId),
+      this.expertise.getTimbre(companyId),
+    ]);
+
+    let amountFodec = 0;
+    if (fodec?.rateBps != null && fodec.rateBps > 0 && base.amountHt > 0) {
+      amountFodec = taxFromHt(base.amountHt, fodec.rateBps);
+    }
+
+    let amountTimbre = 0;
+    if (timbre?.amountMilli != null && timbre.amountMilli > 0) {
+      amountTimbre = round3(timbre.amountMilli / 1000);
+    } else if (
+      timbre?.rateBps != null &&
+      timbre.rateBps > 0 &&
+      base.amountHt > 0
+    ) {
+      amountTimbre = taxFromHt(base.amountHt, timbre.rateBps);
+    }
+
+    return {
+      amountHt: base.amountHt,
+      amountTax: base.amountTax,
+      amountFodec,
+      amountTimbre,
+      amountTtc: round3(
+        base.amountHt + base.amountTax + amountFodec + amountTimbre,
+      ),
+      lines: base.lines,
+    };
+  }
+
   private async computeOneLine(
     companyId: string,
     line: CreateInvoiceLineDto,
@@ -644,6 +722,8 @@ function serializeInvoice(
   customerCode: string | null,
   customerName: string | null,
 ): InvoiceDto {
+  const amountFodec = Number(row.amountFodec ?? 0);
+  const amountTimbre = Number(row.amountTimbre ?? 0);
   return {
     id: row.id,
     companyId: row.companyId,
@@ -657,6 +737,8 @@ function serializeInvoice(
     currency: row.currency,
     amountHt: Number(row.amountHt).toFixed(3),
     amountTax: Number(row.amountTax).toFixed(3),
+    amountFodec: amountFodec.toFixed(3),
+    amountTimbre: amountTimbre.toFixed(3),
     amountTotal: Number(row.amountTotal).toFixed(3),
     dueDate: row.dueDate ? row.dueDate.toISOString().slice(0, 10) : null,
     issuedAt: row.issuedAt?.toISOString() ?? null,
@@ -675,6 +757,10 @@ function serializeInvoice(
       amountTax: Number(l.amountTax).toFixed(3),
       amountTtc: Number(l.amountTtc).toFixed(3),
     })),
+    expertiseApplied: {
+      fodec: amountFodec > 0,
+      timbre: amountTimbre > 0,
+    },
     version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
