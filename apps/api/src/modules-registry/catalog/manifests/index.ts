@@ -4,6 +4,7 @@ import { customersManifest } from './customers.manifest';
 import { deliveryManifest } from './delivery.manifest';
 import { documentsManifest } from './documents.manifest';
 import { financeManifest } from './finance.manifest';
+import { hrManifest } from './hr.manifest';
 import { identityManifest } from './identity.manifest';
 import { inventoryManifest } from './inventory.manifest';
 import { masterDataManifest } from './master-data.manifest';
@@ -34,6 +35,7 @@ export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   accountingManifest,
   productionManifest,
   payrollManifest,
+  hrManifest,
   taxManifest,
   repairManifest,
   customersManifest,

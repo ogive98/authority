@@ -49,6 +49,16 @@ export function SyncModuleFromRoute() {
       setFeatureMenuOpen(false);
       return;
     }
+    if (pathname.startsWith("/tax")) {
+      if (has("tax")) setSelectedModuleId("tax");
+      setFeatureMenuOpen(false);
+      return;
+    }
+    if (pathname.startsWith("/hr")) {
+      if (has("hr")) setSelectedModuleId("hr");
+      setFeatureMenuOpen(false);
+      return;
+    }
     if (pathname.startsWith("/delivery")) {
       if (has("delivery")) setSelectedModuleId("delivery");
       else if (has("sales")) setSelectedModuleId("sales");

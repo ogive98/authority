@@ -25,7 +25,7 @@ describe('ModuleLifecycleService', () => {
   it('boots all 17 seeded modules to READY (deps present in catalog)', () => {
     const { lifecycle } = build();
     const states = lifecycle.listProcessStates();
-    expect(states).toHaveLength(19);
+    expect(states).toHaveLength(20);
     expect(states.every((s) => s.state === 'READY')).toBe(true);
   });
 
@@ -196,7 +196,7 @@ describe('ModuleLifecycleService', () => {
   });
 
   it('static catalog has no process ERROR modules', () => {
-    expect(STATIC_MODULE_MANIFESTS).toHaveLength(19);
+    expect(STATIC_MODULE_MANIFESTS).toHaveLength(20);
     const { lifecycle } = build();
     expect(
       lifecycle.listProcessStates().filter((s) => s.state === 'ERROR'),

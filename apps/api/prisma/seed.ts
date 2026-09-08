@@ -132,6 +132,7 @@ async function main() {
     'delivery',
     'production',
     'payroll',
+    'hr',
     'tax',
     'customers',
     'master_data',
@@ -157,7 +158,8 @@ async function main() {
       moduleKey === 'accounting' ||
       moduleKey === 'repair' ||
       moduleKey === 'production' ||
-      moduleKey === 'tax'
+      moduleKey === 'tax' ||
+      moduleKey === 'hr'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -564,6 +566,24 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'production.scrap',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'hr.employee.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'hr.employee.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'hr.wage.read',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,

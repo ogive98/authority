@@ -1915,3 +1915,77 @@ model ProdScrap {
   @@index([companyId, workOrderId])
   @@map("prd_scrap")
 }
+
+// --- hr_* HR light V0 (D089) — employees/contracts; no CNSS/IRPP rates (Payroll later) ---
+
+enum HrEmployeeStatus {
+  ACTIVE
+  LEFT
+}
+
+enum HrContractStatus {
+  ACTIVE
+  ENDED
+}
+
+enum HrContractType {
+  CDI
+  CDD
+  INTERIM
+  STAGE
+  OTHER
+}
+
+model HrEmployee {
+  id          String           @id @default(uuid()) @db.Uuid
+  companyId   String           @map("company_id") @db.Uuid
+  matricule   String
+  displayName String           @map("display_name")
+  siteId      String?          @map("site_id") @db.Uuid
+  department  String?
+  jobTitle    String?          @map("job_title")
+  /** CNSS affiliation number — identifier only, never a contribution rate. */
+  cnssNo      String?          @map("cnss_no")
+  email       String?
+  userId      String?          @map("user_id") @db.Uuid
+  status      HrEmployeeStatus @default(ACTIVE)
+  hiredAt     DateTime?        @map("hired_at") @db.Date
+  leftAt      DateTime?        @map("left_at") @db.Date
+  notes       String?
+  version     Int              @default(0)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz(6)
+
+  contracts HrContract[]
+
+  @@unique([companyId, matricule])
+  @@index([companyId, status])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("hr_employee")
+}
+
+model HrContract {
+  id         String           @id @default(uuid()) @db.Uuid
+  companyId  String           @map("company_id") @db.Uuid
+  employeeId String           @map("employee_id") @db.Uuid
+  number     String
+  type       HrContractType   @default(CDI)
+  status     HrContractStatus @default(ACTIVE)
+  startDate  DateTime         @map("start_date") @db.Date
+  endDate    DateTime?        @map("end_date") @db.Date
+  /** Wage reference label only — no invented payroll rates. */
+  wageRef    String?          @map("wage_ref")
+  notes      String?
+  version    Int              @default(0)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime?        @map("deleted_at") @db.Timestamptz(6)
+
+  employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, number])
+  @@index([companyId, employeeId])
+  @@index([companyId, status])
+  @@map("hr_contract")
+}
