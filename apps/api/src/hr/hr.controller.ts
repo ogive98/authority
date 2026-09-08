@@ -29,6 +29,7 @@ import {
   PatchEmployeeDto,
 } from './hr.dto';
 import { HrService } from './hr.service';
+import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
 
 @Controller('api/v1/hr')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
@@ -37,7 +38,25 @@ export class HrController {
   constructor(
     private readonly hr: HrService,
     private readonly permissions: PermissionService,
+    private readonly expertise: ExpertiseResolverService,
   ) {}
+
+  /**
+   * CNSS / IRPP / TFP readiness (D092) — null until expert validates in Préférences.
+   */
+  @Get('expertise-hints')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
+  async expertiseHints(@CurrentTenancy() tenancy: TenancyContext) {
+    const snap = await this.expertise.getHrContributionSnapshot(
+      tenancy.companyId,
+    );
+    return {
+      companyId: tenancy.companyId,
+      ...snap,
+      prefsHref: '/settings#expertise',
+      note: 'Payroll calc must use VALIDATED slots only — never invent CNSS/IRPP/TFP.',
+    };
+  }
 
   @Get('employees')
   @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)

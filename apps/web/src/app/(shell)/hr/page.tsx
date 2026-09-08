@@ -19,6 +19,7 @@ import {
   fetchEmployees,
   type HrEmployee,
 } from "@/lib/hr";
+import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 
 type LoadState =
   | { kind: "loading" }
@@ -172,6 +173,8 @@ export default function HrEmployeesPage() {
           </AButton>
         }
       />
+
+      <ExpertiseHintsStrip keys={["hr.cnss", "hr.irpp", "hr.tfp"]} />
 
       <div className="flex flex-wrap items-center gap-2">
         <AInput

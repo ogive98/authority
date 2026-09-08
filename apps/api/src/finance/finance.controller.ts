@@ -33,6 +33,7 @@ import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentService } from './payment.service';
 import { PromiseService } from './promise.service';
+import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
 
 @Controller('api/v1/finance')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
@@ -43,7 +44,28 @@ export class FinanceController {
     private readonly invoiceService: InvoiceService,
     private readonly paymentService: PaymentService,
     private readonly promiseService: PromiseService,
+    private readonly expertise: ExpertiseResolverService,
   ) {}
+
+  /**
+   * FODEC / timbre readiness for invoicing (D092).
+   * Null values = expert not yet entered in Préférences — never invent rates.
+   */
+  @Get('expertise-hints')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  async expertiseHints(@CurrentTenancy() tenancy: TenancyContext) {
+    const [fodec, timbre] = await Promise.all([
+      this.expertise.getFodec(tenancy.companyId),
+      this.expertise.getTimbre(tenancy.companyId),
+    ]);
+    return {
+      companyId: tenancy.companyId,
+      fodec,
+      timbre,
+      prefsHref: '/settings#expertise',
+      note: 'Apply FODEC/timbre only when VALIDATED; otherwise skip — no invented rates.',
+    };
+  }
 
   @Get('open-items')
   @RequirePermission(PERMISSION_KEYS.financeArRead)

@@ -256,8 +256,9 @@ export default function SettingsPage() {
               <>
                 {expertise.pending > 0 ? (
                   <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    {expertise.pending} paramètre
-                    {expertise.pending > 1 ? "s" : ""} en attente d’expertise.
+                    {expertise.pending > 1
+                      ? `${expertise.pending} paramètres en attente d’expertise.`
+                      : "1 paramètre en attente d’expertise."}
                   </p>
                 ) : null}
                 <div className="overflow-x-auto rounded-[var(--a-radius-lg)] border border-a-border-subtle">

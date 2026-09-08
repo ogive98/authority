@@ -25,6 +25,7 @@ import {
   type FinInvoice,
 } from "@/lib/finance";
 import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
+import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 
 type LoadState =
   | { kind: "loading" }
@@ -216,6 +217,7 @@ export default function FinanceInvoicesPage() {
         }
       />
       <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+        <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre"]} />
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
             <label
