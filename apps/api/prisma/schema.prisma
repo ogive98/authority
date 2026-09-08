@@ -1724,3 +1724,85 @@ model RepDiagnosticOutbox {
   @@index([state, nextAttemptAt])
   @@map("rep_diagnostic_outbox")
 }
+
+// --- prd_* Production light (MOD-PRODUCTION) ---
+// Note: product catalog already uses PrdProduct / prd_product; WO tables share prd_ prefix per module docs.
+
+enum ProdWoStatus {
+  PLANNED
+  RELEASED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+model ProdWorkOrder {
+  id          String       @id @default(uuid()) @db.Uuid
+  companyId   String       @map("company_id") @db.Uuid
+  number      String
+  productId   String       @map("product_id") @db.Uuid
+  warehouseId String       @map("warehouse_id") @db.Uuid
+  plannedQty  Decimal      @map("planned_qty") @db.Decimal(18, 3)
+  actualQty   Decimal?     @map("actual_qty") @db.Decimal(18, 3)
+  lotOut      String?      @map("lot_out")
+  status      ProdWoStatus @default(PLANNED)
+  notes       String?
+  version     Int          @default(0)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  consumptions ProdWoConsumption[]
+  outputs      ProdWoOutput[]
+  scraps       ProdScrap[]
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@map("prd_wo")
+}
+
+model ProdWoConsumption {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  workOrderId String   @map("work_order_id") @db.Uuid
+  productId   String   @map("product_id") @db.Uuid
+  qty         Decimal  @db.Decimal(18, 3)
+  lotIn       String?  @map("lot_in")
+  postedAt    DateTime @default(now()) @map("posted_at") @db.Timestamptz(6)
+
+  workOrder ProdWorkOrder @relation(fields: [workOrderId], references: [id])
+
+  @@index([companyId, workOrderId])
+  @@map("prd_wo_cons")
+}
+
+model ProdWoOutput {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  workOrderId String   @map("work_order_id") @db.Uuid
+  productId   String   @map("product_id") @db.Uuid
+  qty         Decimal  @db.Decimal(18, 3)
+  lotOut      String?  @map("lot_out")
+  postedAt    DateTime @default(now()) @map("posted_at") @db.Timestamptz(6)
+
+  workOrder ProdWorkOrder @relation(fields: [workOrderId], references: [id])
+
+  @@index([companyId, workOrderId])
+  @@map("prd_wo_out")
+}
+
+model ProdScrap {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  workOrderId String   @map("work_order_id") @db.Uuid
+  productId   String   @map("product_id") @db.Uuid
+  qty         Decimal  @db.Decimal(18, 3)
+  reason      String?
+  postedAt    DateTime @default(now()) @map("posted_at") @db.Timestamptz(6)
+
+  workOrder ProdWorkOrder @relation(fields: [workOrderId], references: [id])
+
+  @@index([companyId, workOrderId])
+  @@map("prd_scrap")
+}

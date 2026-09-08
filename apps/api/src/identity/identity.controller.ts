@@ -17,6 +17,7 @@ import { AuthService } from './auth.service';
 import { CurrentSession, CurrentUser } from './identity.decorators';
 import { IDENTITY_COOKIE_NAME } from './identity.constants';
 import { LoginDto } from './login.dto';
+import { ReauthDto } from './reauth.dto';
 import { SessionGuard } from './session.guard';
 import { SessionService } from './session.service';
 import type { SessionWithUser } from './session.service';
@@ -61,6 +62,23 @@ export class IdentityController {
       user: result.user,
       session: { id: result.session.id, expiresAt: result.session.expiresAt },
     };
+  }
+
+  @Post('auth/reauth')
+  @HttpCode(200)
+  @UseGuards(SessionGuard, PermissionGuard)
+  @RequirePermission(PERMISSION_KEYS.identitySelfRead)
+  async reauth(
+    @CurrentUser() user: IamUser,
+    @Body() dto: ReauthDto,
+    @Req() req: Request,
+  ) {
+    await this.authService.verifyCurrentPassword({
+      userId: user.id,
+      password: dto.password,
+      ip: req.ip,
+    });
+    return { ok: true };
   }
 
   @Get('me')

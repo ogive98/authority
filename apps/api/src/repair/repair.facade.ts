@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { AuthService } from '../identity/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HealthCheckersService } from './checkers/health-checkers.service';
 import { MaintenanceEngine } from './engines/maintenance.engine';
+import { RecoveryEngine } from './engines/recovery.engine';
 import { RepairEngine } from './engines/repair.engine';
 import { RepairRegistryService } from './engines/registry.service';
 import { ReportingEngine } from './engines/reporting.engine';
@@ -9,12 +11,16 @@ import { ResetEngine } from './engines/reset.engine';
 import { ScanEngine, type RunScanInput } from './engines/scan.engine';
 import { SnapshotEngine } from './engines/snapshot.engine';
 import { VerificationEngine } from './engines/verification.engine';
-import { REPAIR_PIPELINE_STAGES } from './repair.constants';
+import { REPAIR_ERROR_CODES, REPAIR_PIPELINE_STAGES, EXECUTABLE_RISKS } from './repair.constants';
+import { RepairException } from './repair.exception';
+import { RepairExecutorsService } from './executors/repair-executors.service';
+import { REPAIR_SCENARIOS } from './catalogs/scenarios.catalog';
 
 @Injectable()
 export class RepairFacade {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly auth: AuthService,
     private readonly registry: RepairRegistryService,
     private readonly checkers: HealthCheckersService,
     private readonly scanEngine: ScanEngine,
@@ -24,6 +30,8 @@ export class RepairFacade {
     private readonly verificationEngine: VerificationEngine,
     private readonly reportingEngine: ReportingEngine,
     private readonly maintenanceEngine: MaintenanceEngine,
+    private readonly recoveryEngine: RecoveryEngine,
+    private readonly executors: RepairExecutorsService,
   ) {}
 
   async dashboard(companyId?: string) {
@@ -73,6 +81,37 @@ export class RepairFacade {
       scenarios: this.registry.listScenarios().length,
       signatures: this.registry.listSignatures().length,
       scanLevels: this.registry.listScanLevels(),
+      coverage: this.coverage(),
+    };
+  }
+
+  coverage() {
+    const executableIds = new Set(this.executors.listExecutableScenarioIds());
+    const scenarios = REPAIR_SCENARIOS;
+    const byRisk = {
+      SAFE: scenarios.filter((s) => s.risk === 'SAFE'),
+      LOW: scenarios.filter((s) => s.risk === 'LOW'),
+      MEDIUM: scenarios.filter((s) => s.risk === 'MEDIUM'),
+      HIGH: scenarios.filter((s) => s.risk === 'HIGH'),
+      BLOCKED: scenarios.filter((s) => s.risk === 'BLOCKED'),
+    };
+    const safeLow = [...byRisk.SAFE, ...byRisk.LOW];
+    const executableSafeLow = safeLow.filter((s) => executableIds.has(s.id));
+    const planOnlySafeLow = safeLow.filter((s) => !executableIds.has(s.id));
+    return {
+      totalScenarios: scenarios.length,
+      executableCount: executableIds.size,
+      executableIds: [...executableIds],
+      safeLowTotal: safeLow.length,
+      safeLowExecutable: executableSafeLow.length,
+      safeLowPlanOnly: planOnlySafeLow.map((s) => s.id),
+      blockedCount: byRisk.BLOCKED.length,
+      mediumHighPlanOnly: byRisk.MEDIUM.length + byRisk.HIGH.length,
+      completeAllowedSurface:
+        planOnlySafeLow.length === 0 &&
+        executableSafeLow.every((s) =>
+          EXECUTABLE_RISKS.has(s.risk as 'SAFE' | 'LOW'),
+        ),
     };
   }
 
@@ -143,12 +182,27 @@ export class RepairFacade {
     return this.repairEngine.plan(input);
   }
 
-  execute(input: {
+  async execute(input: {
     executionId: string;
     confirm: boolean;
     actorId?: string;
     dryRun?: boolean;
+    password?: string;
   }) {
+    // Live execute requires session password step-up (pack SECURITY).
+    if (input.confirm && input.dryRun !== true) {
+      if (!input.actorId || !input.password?.trim()) {
+        throw new RepairException(
+          REPAIR_ERROR_CODES.REAUTH_REQUIRED,
+          'Session password is required for live repair execute.',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      await this.auth.verifyCurrentPassword({
+        userId: input.actorId,
+        password: input.password,
+      });
+    }
     return this.repairEngine.execute(input);
   }
 
@@ -172,12 +226,34 @@ export class RepairFacade {
     return this.resetEngine.preview(input);
   }
 
-  resetExecute(input: {
+  async resetExecute(input: {
     scope: string;
     companyId?: string;
     createdBy?: string;
     confirm?: boolean;
+    password?: string;
+    confirmPhrase?: string;
   }) {
+    if (input.confirm) {
+      if (!input.createdBy || !input.password?.trim()) {
+        throw new RepairException(
+          REPAIR_ERROR_CODES.REAUTH_REQUIRED,
+          'Session password is required for reset execute.',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      if (input.confirmPhrase !== 'CONFIRM') {
+        throw new RepairException(
+          REPAIR_ERROR_CODES.CONFIRM_REQUIRED,
+          'Typed confirmation CONFIRM is required for reset execute.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      await this.auth.verifyCurrentPassword({
+        userId: input.createdBy,
+        password: input.password,
+      });
+    }
     return this.resetEngine.execute(input);
   }
 
@@ -187,6 +263,19 @@ export class RepairFacade {
 
   listBackups() {
     return this.snapshotEngine.list();
+  }
+
+  recoveryPolicies() {
+    return this.recoveryEngine.policies();
+  }
+
+  createRecoveryManifest(input?: { companyId?: string; label?: string }) {
+    return this.recoveryEngine.createManifestBookmark(input);
+  }
+
+  /** Explicit refuse — never restore from metadata bookmarks. */
+  restoreSnapshot(ref: string): never {
+    return this.snapshotEngine.restore(ref);
   }
 
   verify(executionId: string) {

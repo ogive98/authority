@@ -94,6 +94,7 @@ export class RepairController {
       confirm: body.confirm,
       dryRun: body.dryRun,
       actorId: req.user?.id,
+      password: body.password,
     });
     return { execution };
   }
@@ -137,6 +138,8 @@ export class RepairController {
       companyId: body.companyId,
       createdBy: req.user?.id,
       confirm: body.confirm,
+      password: body.password,
+      confirmPhrase: body.confirmPhrase,
     });
   }
 

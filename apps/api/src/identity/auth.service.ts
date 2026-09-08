@@ -110,6 +110,28 @@ export class AuthService {
     return user;
   }
 
+  /** Session step-up: verify password for the already-authenticated user. */
+  async verifyCurrentPassword(params: {
+    userId: string;
+    password: string;
+    ip?: string;
+  }): Promise<void> {
+    const user = await this.prisma.iamUser.findUnique({
+      where: { id: params.userId },
+    });
+    if (!user || user.deletedAt || user.status !== IamUserStatus.ACTIVE) {
+      throw this.invalidCredentials();
+    }
+    if (
+      !user.passwordHash ||
+      !(await this.passwordService.verify(user.passwordHash, params.password))
+    ) {
+      await this.recordFailedAttempt(user.id, user.email, params.ip);
+      await this.applyLockoutIfNeeded(user.id);
+      throw this.invalidCredentials();
+    }
+  }
+
   toMeResponse(user: {
     id: string;
     email: string;

@@ -77,9 +77,9 @@ export function RepairWorkflowCanvas({
       >
         <defs>
           <linearGradient id="repair-edge" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#059669" stopOpacity="0.35" />
-            <stop offset="50%" stopColor="#6868f0" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.4" />
+            <stop offset="0%" stopColor="var(--a-accent)" stopOpacity="0.35" />
+            <stop offset="50%" stopColor="var(--a-violet)" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="var(--a-sky)" stopOpacity="0.4" />
           </linearGradient>
         </defs>
 
@@ -89,7 +89,7 @@ export function RepairWorkflowCanvas({
           cy={y}
           r={86}
           fill="none"
-          stroke="rgb(104 104 240 / 0.12)"
+          stroke="color-mix(in srgb, var(--a-violet) 12%, transparent)"
           strokeWidth="1"
           className="repair-orbit"
         />
@@ -98,7 +98,7 @@ export function RepairWorkflowCanvas({
           cy={y}
           r={128}
           fill="none"
-          stroke="rgb(5 150 105 / 0.1)"
+          stroke="color-mix(in srgb, var(--a-accent) 10%, transparent)"
           strokeWidth="1"
           className="repair-orbit repair-orbit-slow"
         />
@@ -115,7 +115,11 @@ export function RepairWorkflowCanvas({
               y1={p.y}
               x2={next.x - 22}
               y2={next.y}
-              stroke={lit ? "url(#repair-edge)" : "rgb(209 213 219 / 0.9)"}
+              stroke={
+                lit
+                  ? "url(#repair-edge)"
+                  : "color-mix(in srgb, var(--a-border-strong) 90%, transparent)"
+              }
               strokeWidth={lit ? 2.5 : 1.5}
               strokeDasharray="6 8"
               className={cn(lit && running && "repair-edge-flow")}
@@ -140,7 +144,9 @@ export function RepairWorkflowCanvas({
                 <circle
                   r={28}
                   fill="none"
-                  stroke={isActive ? "#059669" : "#34d399"}
+                  stroke={
+                    isActive ? "var(--a-accent)" : "var(--a-accent-2)"
+                  }
                   strokeOpacity={isActive ? 0.35 : 0.25}
                   strokeWidth={2}
                   className={cn(isActive && "repair-node-pulse")}
@@ -150,13 +156,17 @@ export function RepairWorkflowCanvas({
                 r={20}
                 fill={
                   isActive
-                    ? "#059669"
+                    ? "var(--a-accent)"
                     : isDone
-                      ? "#ecfdf5"
-                      : "rgb(255 255 255 / 0.92)"
+                      ? "var(--a-accent-muted)"
+                      : "color-mix(in srgb, var(--a-surface-2) 92%, transparent)"
                 }
                 stroke={
-                  isActive ? "#047857" : isDone ? "#34d399" : "#e5e7eb"
+                  isActive
+                    ? "var(--a-accent-hover)"
+                    : isDone
+                      ? "var(--a-accent-2)"
+                      : "var(--a-border-strong)"
                 }
                 strokeWidth={1.5}
                 className="cursor-pointer"

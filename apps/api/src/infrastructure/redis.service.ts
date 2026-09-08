@@ -91,6 +91,90 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /** Delete exact keys only — never patterns. Returns how many were deleted. */
+  async delExactKeys(keys: readonly string[]): Promise<number> {
+    if (!this.client || keys.length === 0) {
+      return 0;
+    }
+    try {
+      if (this.client.status === 'wait') {
+        await this.client.connect();
+      }
+      return await this.client.del(...keys);
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Bounded SCAN+DEL for a single allowlisted prefix.
+   * Caller must validate the prefix against a hard allowlist before calling.
+   */
+  async delByPrefix(
+    prefix: string,
+    maxKeys = 100,
+  ): Promise<{ deleted: number; keys: string[] }> {
+    if (!this.client || !prefix) {
+      return { deleted: 0, keys: [] };
+    }
+    try {
+      if (this.client.status === 'wait') {
+        await this.client.connect();
+      }
+      const found: string[] = [];
+      let cursor = '0';
+      do {
+        const [next, batch] = await this.client.scan(
+          cursor,
+          'MATCH',
+          `${prefix}*`,
+          'COUNT',
+          50,
+        );
+        cursor = next;
+        for (const key of batch) {
+          if (found.length >= maxKeys) break;
+          if (key.startsWith(prefix)) found.push(key);
+        }
+      } while (cursor !== '0' && found.length < maxKeys);
+
+      if (found.length === 0) {
+        return { deleted: 0, keys: [] };
+      }
+      const deleted = await this.client.del(...found);
+      return { deleted, keys: found };
+    } catch {
+      return { deleted: 0, keys: [] };
+    }
+  }
+
+  /** Soft reconnect: disconnect + connect + ping (never FLUSH). */
+  async reconnect(): Promise<boolean> {
+    if (!this.client) {
+      return false;
+    }
+    try {
+      if (
+        this.client.status === 'ready' ||
+        this.client.status === 'connect' ||
+        this.client.status === 'connecting'
+      ) {
+        this.client.disconnect();
+      }
+      await this.client.connect();
+      return (await this.client.ping()) === 'PONG';
+    } catch {
+      try {
+        if (this.client.status === 'wait') {
+          await this.client.connect();
+        }
+        return (await this.client.ping()) === 'PONG';
+      } catch {
+        return false;
+      }
+    }
+  }
+
   /** SET key value EX ttl NX — returns true when the lock was acquired. */
   async setNx(
     key: string,

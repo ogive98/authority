@@ -1,4 +1,4 @@
-/** Repair Control UI V0 — mock pipeline (no apply engine yet). */
+/** Repair Thunder Shield UI — Utility Cube (ERP `/repair`). */
 
 export type RepairRisk =
   | "SAFE"
@@ -49,14 +49,23 @@ export type RepairStage = {
 export type ScanDepth = "L0" | "L1" | "L2" | "L3" | "L4";
 export type RepairDomain = "L0" | "L1" | "L2" | "L3" | "L4" | "L5";
 
-export const SCAN_DEPTHS: Array<{ id: ScanDepth; label: string; hint: string }> =
-  [
-    { id: "L0", label: "Instant", hint: "Liveness" },
-    { id: "L1", label: "Quick", hint: "Operational" },
-    { id: "L2", label: "Deep", hint: "Structural" },
-    { id: "L3", label: "Integrity", hint: "Forensic" },
-    { id: "L4", label: "Full audit", hint: "Authority-wide" },
-  ];
+export const SCAN_DEPTHS: Array<{
+  id: ScanDepth;
+  label: string;
+  hint: string;
+  duration: string;
+}> = [
+  { id: "L0", label: "Instant", hint: "Liveness", duration: "< 30 s" },
+  { id: "L1", label: "Quick", hint: "Operational", duration: "5–15 s" },
+  { id: "L2", label: "Deep", hint: "Structural", duration: "15–45 s" },
+  { id: "L3", label: "Integrity", hint: "Forensic", duration: "30–90 s" },
+  {
+    id: "L4",
+    label: "Full audit",
+    hint: "Authority slice",
+    duration: "1–3 min",
+  },
+];
 
 export const REPAIR_DOMAINS: Array<{
   id: RepairDomain;
@@ -200,32 +209,20 @@ export const REPAIR_PIPELINE: RepairStage[] = [
   },
 ];
 
-export const MOCK_FINDINGS = [
-  {
-    id: "f-worker-1",
-    title: "Worker heartbeat missing",
-    signature: "WORKER_STALLED",
-    scenario: "REP-WORKER-001",
-    risk: "LOW" as RepairRisk,
-    domain: "L0" as RepairDomain,
-  },
-  {
-    id: "f-cache-1",
-    title: "Cache namespace corrupt",
-    signature: "CACHE_NAMESPACE_CORRUPT",
-    scenario: "REP-REDIS-001",
-    risk: "SAFE" as RepairRisk,
-    domain: "L0" as RepairDomain,
-  },
-  {
-    id: "f-queue-1",
-    title: "Stalled job detected",
-    signature: "JOB_STALLED",
-    scenario: "REP-QUEUE-002",
-    risk: "MEDIUM" as RepairRisk,
-    domain: "L1" as RepairDomain,
-  },
-];
+export function repairHealthScore(opts: {
+  health?: string | null;
+  openFindings: number;
+  openIncidents: number;
+}): number {
+  let score = 100;
+  score -= Math.min(40, opts.openFindings * 4);
+  score -= Math.min(25, opts.openIncidents * 5);
+  if (opts.health === "degraded") score = Math.min(score, 78);
+  if (opts.health === "ok" && opts.openFindings === 0) {
+    score = Math.max(score, 94);
+  }
+  return Math.max(12, Math.min(100, Math.round(score)));
+}
 
 export function repairRiskTone(
   risk: RepairRisk,
@@ -240,4 +237,14 @@ export function repairRiskTone(
 export function repairRiskLabel(risk: RepairRisk): string {
   if (risk === "NONE") return "Info";
   return risk;
+}
+
+export function severityTone(
+  severity: string,
+): "success" | "info" | "warning" | "danger" | "neutral" {
+  const s = severity.toUpperCase();
+  if (s === "INFO") return "info";
+  if (s === "WARN") return "warning";
+  if (s === "ERROR" || s === "CRITICAL") return "danger";
+  return "neutral";
 }

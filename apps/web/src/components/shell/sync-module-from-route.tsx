@@ -39,8 +39,13 @@ export function SyncModuleFromRoute() {
       setFeatureMenuOpen(false);
       return;
     }
-    if (pathname.startsWith("/preview/lots") || pathname.startsWith("/inventory")) {
+    if (pathname.startsWith("/inventory") || pathname.startsWith("/preview/lots")) {
       if (has("inventory")) setSelectedModuleId("inventory");
+      setFeatureMenuOpen(false);
+      return;
+    }
+    if (pathname.startsWith("/production")) {
+      if (has("production")) setSelectedModuleId("production");
       setFeatureMenuOpen(false);
       return;
     }

@@ -99,6 +99,15 @@ export const COMMAND_CATALOG: CommandItem[] = [
     permissionKey: "inventory.read",
   },
   {
+    id: "nav-production",
+    label: "Production",
+    group: "navigation",
+    href: "/production",
+    keywords: ["production", "of", "fabrication", "atelier"],
+    requiresModule: "production",
+    permissionKey: "production.read",
+  },
+  {
     id: "nav-sales",
     label: "Commandes",
     group: "navigation",
@@ -246,6 +255,11 @@ export const DEMO_ENABLED_MODULES = new Set([
   "delivery",
   "customers",
   "products",
+  "production",
+  "repair",
+  "finance",
+  "documents",
+  "accounting",
 ]);
 
 export function filterCommands(

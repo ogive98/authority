@@ -44,6 +44,16 @@ export type RepairDashboard = {
   pendingRepairs: number;
   reportingQueued: number;
   pipeline: string[];
+  scenarios?: number;
+  signatures?: number;
+  coverage?: {
+    totalScenarios: number;
+    executableCount: number;
+    safeLowTotal: number;
+    safeLowExecutable: number;
+    blockedCount: number;
+    completeAllowedSurface: boolean;
+  };
 };
 
 export async function fetchRepairDashboard() {
@@ -126,6 +136,7 @@ export async function executeRepair(body: {
   executionId: string;
   confirm: boolean;
   dryRun?: boolean;
+  password?: string;
 }) {
   return repairFetch<{
     execution: {
@@ -182,16 +193,54 @@ export async function fetchRepairMaintenance() {
 }
 
 export async function createRepairSnapshot() {
-  return repairFetch<{ id: string; ref: string }>("/snapshots", {
+  return repairFetch<{
+    id: string;
+    ref: string;
+    kind: string;
+    restorable: boolean;
+    note?: string;
+  }>("/snapshots", {
     method: "POST",
     body: "{}",
   });
 }
 
 export async function fetchRepairBackups() {
-  return repairFetch<{ items: Array<{ id: string; ref: string }> }>(
-    "/backups",
-  );
+  return repairFetch<{
+    items: Array<{
+      id: string;
+      ref: string;
+      kind?: string;
+      restorable?: boolean;
+      note?: string;
+    }>;
+  }>("/backups");
+}
+
+export async function fetchRecoveryPolicies() {
+  return repairFetch<{
+    policies: Array<{
+      id: string;
+      title: string;
+      status: "ALLOWED" | "DEFERRED" | "REJECTED";
+      reason: string;
+    }>;
+  }>("/recovery/policies");
+}
+
+export async function createRecoveryManifest(label?: string) {
+  return repairFetch<{
+    manifest: {
+      id: string;
+      restorable: boolean;
+      modules: Array<{ moduleKey: string; status: string }>;
+      note: string;
+      rejectedPaths: string[];
+    };
+  }>("/recovery/manifest", {
+    method: "POST",
+    body: JSON.stringify({ label }),
+  });
 }
 
 export async function verifyRepair(body: { executionId: string }) {

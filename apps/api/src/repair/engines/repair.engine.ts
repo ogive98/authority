@@ -7,6 +7,7 @@ import {
 import { OutboxService } from '../../audit/outbox.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { RepairScenario } from '../catalogs/scenarios.catalog';
+import { RepairExecutorsService } from '../executors/repair-executors.service';
 import {
   EXECUTABLE_RISKS,
   REPAIR_AGGREGATE_TYPES,
@@ -47,18 +48,21 @@ export class RepairEngine {
     private readonly registry: RepairRegistryService,
     private readonly snapshots: SnapshotEngine,
     private readonly verification: VerificationEngine,
+    private readonly executors: RepairExecutorsService,
   ) {}
 
   async plan(input: PlanInput) {
     const scenario = await this.resolveScenario(input);
     // HIGH/BLOCKED allowed for plan / dry-run only
 
+    const hasExecutor = this.executors.hasExecutor(scenario.id);
     const planJson = {
       scenarioId: scenario.id,
       name: scenario.name,
       risk: scenario.risk,
       autoEligible: scenario.autoEligible,
       verification: scenario.verification,
+      hasExecutor,
       steps: [
         'APPROVAL',
         'SNAPSHOT',
@@ -95,6 +99,7 @@ export class RepairEngine {
           executionId: row.id,
           scenarioId: scenario.id,
           risk: scenario.risk,
+          hasExecutor,
         },
       });
     });
@@ -105,18 +110,49 @@ export class RepairEngine {
   async dryRun(input: DryRunInput) {
     const row = await this.requireExecution(input.executionId);
     const scenario = this.registry.requireScenario(row.scenarioId);
+    const executable = EXECUTABLE_RISKS.has(
+      scenario.risk as 'SAFE' | 'LOW',
+    );
 
-    const resultJson = {
-      mode: 'dry-run',
-      scenarioId: scenario.id,
-      risk: scenario.risk,
-      wouldExecute: EXECUTABLE_RISKS.has(scenario.risk as 'SAFE' | 'LOW'),
-      stepsSimulated: ['SNAPSHOT', 'EXECUTE', 'VERIFY'],
-      note:
-        scenario.risk === 'BLOCKED'
-          ? scenario.blockedReason ?? 'BLOCKED — dry-run only'
-          : 'No side effects applied',
-    };
+    let resultJson: Record<string, unknown>;
+    if (scenario.risk === 'BLOCKED') {
+      resultJson = {
+        mode: 'dry-run',
+        scenarioId: scenario.id,
+        risk: scenario.risk,
+        wouldExecute: false,
+        stepsSimulated: ['SNAPSHOT', 'EXECUTE', 'VERIFY'],
+        note: scenario.blockedReason ?? 'BLOCKED — dry-run only',
+      };
+    } else if (executable && this.executors.hasExecutor(scenario.id)) {
+      const planned = await this.executors.require(scenario.id).dryRun(
+        scenario.id,
+      );
+      resultJson = {
+        ...planned,
+        risk: scenario.risk,
+        wouldExecute: true,
+        stepsSimulated: ['SNAPSHOT', 'EXECUTE', 'VERIFY'],
+      };
+    } else if (executable) {
+      resultJson = {
+        mode: 'dry-run',
+        scenarioId: scenario.id,
+        risk: scenario.risk,
+        wouldExecute: false,
+        stepsSimulated: ['SNAPSHOT', 'EXECUTE', 'VERIFY'],
+        note: 'No allowlisted executor — diagnose/plan only (no stub apply)',
+      };
+    } else {
+      resultJson = {
+        mode: 'dry-run',
+        scenarioId: scenario.id,
+        risk: scenario.risk,
+        wouldExecute: false,
+        stepsSimulated: ['SNAPSHOT', 'EXECUTE', 'VERIFY'],
+        note: 'Risk above SAFE|LOW — plan/dry-run only',
+      };
+    }
 
     const updated = await this.prisma.repRepairExecution.update({
       where: { id: row.id },
@@ -171,6 +207,9 @@ export class RepairEngine {
       );
     }
 
+    // No magic stub — require allowlisted executor
+    const executor = this.executors.require(scenario.id);
+
     const snapshot = await this.snapshots.create({
       companyId: row.companyId ?? undefined,
       label: `repair:${scenario.id}`,
@@ -201,25 +240,28 @@ export class RepairEngine {
     });
 
     try {
-      // Deterministic stub apply — no Redis FLUSHALL, no SQL, no business mutation.
-      const applyResult = {
-        applied: true,
-        scenarioId: scenario.id,
-        actions: [`stub:${scenario.name}`],
-        sideEffects: 'none',
-      };
+      const applyResult = await executor.apply(scenario.id);
 
-      const verification = await this.verification.verifyExecution(row.id, {
-        stubOk: true,
+      const verification = await executor.verify({
+        scenarioId: scenario.id,
         expected: scenario.verification,
+        applyResult: applyResult as unknown as Record<string, unknown>,
       });
+
+      // Persist via VerificationEngine for consistent shape
+      const verificationJson = await this.verification.recordLive(
+        row.id,
+        verification,
+      );
 
       const updated = await this.prisma.repRepairExecution.update({
         where: { id: row.id },
         data: {
-          status: RepExecutionStatus.SUCCEEDED,
-          resultJson: applyResult as Prisma.InputJsonValue,
-          verificationJson: verification as Prisma.InputJsonValue,
+          status: verification.ok
+            ? RepExecutionStatus.SUCCEEDED
+            : RepExecutionStatus.FAILED,
+          resultJson: applyResult as unknown as Prisma.InputJsonValue,
+          verificationJson: verificationJson as Prisma.InputJsonValue,
         },
       });
 
@@ -228,70 +270,83 @@ export class RepairEngine {
           companyId: row.companyId ?? undefined,
           aggregateType: REPAIR_AGGREGATE_TYPES.EXECUTION,
           aggregateId: row.id,
-          eventType: REPAIR_EVENT_TYPES.COMPLETED,
+          eventType: verification.ok
+            ? REPAIR_EVENT_TYPES.COMPLETED
+            : REPAIR_EVENT_TYPES.FAILED,
           payloadJson: {
             executionId: row.id,
             scenarioId: scenario.id,
-            status: 'SUCCEEDED',
+            status: updated.status,
+            verifyOk: verification.ok,
           },
         });
       });
+
+      if (!verification.ok) {
+        throw new RepairException(
+          REPAIR_ERROR_CODES.EXECUTOR_FAILED,
+          `Repair applied but verification failed for ${scenario.id}`,
+          HttpStatus.BAD_GATEWAY,
+          { scenarioId: scenario.id, verification },
+        );
+      }
 
       return updated;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`Repair execute failed: ${msg}`);
-      await this.prisma.repRepairExecution.update({
-        where: { id: row.id },
-        data: {
-          status: RepExecutionStatus.FAILED,
-          resultJson: { error: msg } as Prisma.InputJsonValue,
-        },
-      });
-      await this.prisma.$transaction(async (tx) => {
-        await this.outbox.enqueue(tx, {
-          companyId: row.companyId ?? undefined,
-          aggregateType: REPAIR_AGGREGATE_TYPES.EXECUTION,
-          aggregateId: row.id,
-          eventType: REPAIR_EVENT_TYPES.FAILED,
-          payloadJson: { executionId: row.id, error: msg },
+      if (!(err instanceof RepairException)) {
+        await this.prisma.repRepairExecution.update({
+          where: { id: row.id },
+          data: {
+            status: RepExecutionStatus.FAILED,
+            resultJson: { error: msg } as Prisma.InputJsonValue,
+          },
         });
-      });
+        await this.prisma.$transaction(async (tx) => {
+          await this.outbox.enqueue(tx, {
+            companyId: row.companyId ?? undefined,
+            aggregateType: REPAIR_AGGREGATE_TYPES.EXECUTION,
+            aggregateId: row.id,
+            eventType: REPAIR_EVENT_TYPES.FAILED,
+            payloadJson: { executionId: row.id, error: msg },
+          });
+        });
+      } else if (err.code !== REPAIR_ERROR_CODES.EXECUTOR_FAILED) {
+        await this.prisma.repRepairExecution.update({
+          where: { id: row.id },
+          data: {
+            status: RepExecutionStatus.FAILED,
+            resultJson: { error: msg } as Prisma.InputJsonValue,
+          },
+        });
+        await this.prisma.$transaction(async (tx) => {
+          await this.outbox.enqueue(tx, {
+            companyId: row.companyId ?? undefined,
+            aggregateType: REPAIR_AGGREGATE_TYPES.EXECUTION,
+            aggregateId: row.id,
+            eventType: REPAIR_EVENT_TYPES.FAILED,
+            payloadJson: { executionId: row.id, error: msg },
+          });
+        });
+      }
       throw err;
     }
   }
 
-  async rollback(executionId: string, actorId?: string) {
+  async rollback(executionId: string, _actorId?: string) {
     const row = await this.requireExecution(executionId);
-    const rollbackJson = {
-      rolledBack: true,
-      snapshotRef: row.snapshotRef,
-      note: 'Stub rollback — no destructive reverse applied',
-      actorId: actorId ?? null,
-    };
-
-    const updated = await this.prisma.repRepairExecution.update({
-      where: { id: row.id },
-      data: {
-        status: RepExecutionStatus.ROLLED_BACK,
-        rollbackJson: rollbackJson as Prisma.InputJsonValue,
+    // D085: never claim a reverse apply — metadata snapshots are not restorable.
+    throw new RepairException(
+      REPAIR_ERROR_CODES.EXECUTION_BLOCKED,
+      `Rollback BLOCKED for execution ${row.id}: snapshot refs are metadata-only. Use future SOC Recovery (signed artifact + DB backup), never GitHub reinstall.`,
+      HttpStatus.FORBIDDEN,
+      {
+        executionId: row.id,
+        snapshotRef: row.snapshotRef,
+        restorable: false,
       },
-    });
-
-    await this.prisma.$transaction(async (tx) => {
-      await this.outbox.enqueue(tx, {
-        companyId: row.companyId ?? undefined,
-        aggregateType: REPAIR_AGGREGATE_TYPES.EXECUTION,
-        aggregateId: row.id,
-        eventType: REPAIR_EVENT_TYPES.ROLLBACK_COMPLETED,
-        payloadJson: {
-          executionId: row.id,
-          snapshotRef: row.snapshotRef,
-        },
-      });
-    });
-
-    return updated;
+    );
   }
 
   private async resolveScenario(input: PlanInput): Promise<RepairScenario> {

@@ -27,28 +27,6 @@ export interface RunScanInput {
   createdBy?: string;
 }
 
-const DOMAIN_CHECKER_MAP: Record<string, string[]> = {
-  l0: ['postgres', 'redis'],
-  runtime: ['postgres', 'redis'],
-  l1: ['outbox'],
-  kernel: ['outbox'],
-  thunder: ['outbox'],
-  outbox: ['outbox'],
-  l2: ['module-catalog'],
-  module: ['module-catalog'],
-  catalog: ['module-catalog'],
-  l3: ['postgres', 'module-catalog'],
-  data: ['postgres'],
-  l4: ['redis'],
-  connectors: ['redis'],
-  l5: ['module-catalog'],
-  licence: ['module-catalog'],
-  license: ['module-catalog'],
-  postgres: ['postgres'],
-  database: ['postgres'],
-  redis: ['redis'],
-};
-
 @Injectable()
 export class ScanEngine {
   private readonly logger = new Logger(ScanEngine.name);
@@ -63,7 +41,7 @@ export class ScanEngine {
   async run(input: RunScanInput) {
     const level = this.registry.requireScanLevel(input.depth);
     const domains = input.domains ?? [];
-    const checkers = this.resolveCheckers(level.includesCheckers, domains);
+    const checkerIds = [...level.includesCheckers];
 
     const scan = await this.prisma.repScanExecution.create({
       data: {
@@ -91,7 +69,10 @@ export class ScanEngine {
         });
       });
 
-      const raw = await this.checkers.runL0L1({ checkers });
+      const raw = await this.checkers.runForDepth(level.id, {
+        domains,
+        checkers: checkerIds,
+      });
       const findings = [];
       let errorCount = 0;
 
@@ -165,7 +146,7 @@ export class ScanEngine {
           summaryJson: {
             depth: level.id,
             domains,
-            checkers,
+            checkers: checkerIds,
             findingCount: findings.length,
             errorCount,
           } as Prisma.InputJsonValue,
@@ -209,26 +190,6 @@ export class ScanEngine {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
-
-  private resolveCheckers(
-    levelCheckers: readonly string[],
-    domains: string[],
-  ): string[] {
-    if (domains.length === 0) {
-      return [...levelCheckers];
-    }
-    const fromDomains = new Set<string>();
-    for (const d of domains) {
-      const key = d.toLowerCase();
-      for (const c of DOMAIN_CHECKER_MAP[key] ?? []) {
-        fromDomains.add(c);
-      }
-    }
-    if (fromDomains.size === 0) {
-      return [...levelCheckers];
-    }
-    return levelCheckers.filter((c) => fromDomains.has(c));
   }
 
   private matchSignature(raw: RawFinding): {

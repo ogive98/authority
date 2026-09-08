@@ -22,6 +22,7 @@ import { DocumentsModule } from './documents/documents.module';
 import { AccountingModule } from './accounting/accounting.module';
 import { CustomerPortalModule } from './customer-portal/customer-portal.module';
 import { RepairModule } from './repair/repair.module';
+import { ProductionModule } from './production/production.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { RepairModule } from './repair/repair.module';
     AccountingModule,
     CustomerPortalModule,
     RepairModule,
+    ProductionModule,
   ],
 })
 export class AppModule {}

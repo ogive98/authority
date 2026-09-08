@@ -7,9 +7,9 @@ export default function RepairPage() {
   return (
     <>
       <AScreenHeader
-        kicker="Ops"
+        kicker="Thunder Shield"
         title="Scan & Repair"
-        description="Scan, diagnostic et réparation allowlistée du logiciel — aucune mutation métier (facture, paiement, stock)."
+        description="Diagnostiquer et réparer AUTHORITY — schémas, scan L0–L4, réparation allowlistée. Aucune mutation métier (facture, paiement, stock)."
       />
       <RepairWorkspace />
     </>

@@ -6,10 +6,13 @@ export const REPAIR_ERROR_CODES = {
   RISK_BLOCKED: 'REP.RISK_BLOCKED',
   RISK_TOO_HIGH: 'REP.RISK_TOO_HIGH',
   CONFIRM_REQUIRED: 'REP.CONFIRM_REQUIRED',
+  REAUTH_REQUIRED: 'REP.REAUTH_REQUIRED',
   INVALID_STATUS: 'REP.INVALID_STATUS',
   EXECUTION_BLOCKED: 'REP.EXECUTION_BLOCKED',
   RESET_BLOCKED: 'REP.RESET_BLOCKED',
   INVALID_INPUT: 'REP.INVALID_INPUT',
+  NO_EXECUTOR: 'REP.NO_EXECUTOR',
+  EXECUTOR_FAILED: 'REP.EXECUTOR_FAILED',
 } as const;
 
 export type RepairErrorCode =
@@ -56,4 +59,28 @@ export const REPAIR_AGGREGATE_TYPES = {
 
 export const REPAIR_OUTBOX_LAG_MS = 5 * 60 * 1000;
 
+/** Repair executions stuck in RUNNING longer than this → L3 finding. */
+export const REPAIR_STUCK_EXECUTION_MS = 15 * 60 * 1000;
+
 export const EXECUTABLE_RISKS = new Set(['SAFE', 'LOW'] as const);
+
+/**
+ * Exact Redis keys SAFE to invalidate via Repair (never FLUSHALL / KEYS *).
+ * Extend only with technical non-business keys.
+ */
+export const REPAIR_REDIS_ALLOWLIST_EXACT = [
+  'authority:license:verified',
+] as const;
+
+/**
+ * Prefixes SAFE to SCAN+DEL (bounded). Never BullMQ / stream keys.
+ */
+export const REPAIR_REDIS_ALLOWLIST_PREFIXES = [
+  'authority:repair:tech:',
+  'authority:repair:capability:',
+  'authority:repair:perm:',
+  'authority:repair:config:',
+  'authority:repair:search:',
+  'authority:repair:tenant:',
+  'authority:session:meta:',
+] as const;

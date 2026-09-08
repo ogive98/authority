@@ -45,6 +45,11 @@ export class ExecuteDto {
   @IsOptional()
   @IsBoolean()
   dryRun?: boolean;
+
+  /** Required for live execute (dryRun !== true). Session password step-up. */
+  @IsOptional()
+  @IsString()
+  password?: string;
 }
 
 export class RollbackDto {
@@ -63,6 +68,15 @@ export class ResetScopeDto {
   @IsOptional()
   @IsBoolean()
   confirm?: boolean;
+
+  @IsOptional()
+  @IsString()
+  password?: string;
+
+  /** Typed confirmation for destructive reset — must equal CONFIRM when set. */
+  @IsOptional()
+  @IsString()
+  confirmPhrase?: string;
 }
 
 export class SnapshotDto {

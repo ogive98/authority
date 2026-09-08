@@ -230,6 +230,57 @@ export const REPAIR_SCENARIOS: readonly RepairScenario[] = [
       blockedReason: 'Arbitrary SQL is permanently BLOCKED',
     },
   ),
+
+  // Recovery / code plane — permanently BLOCKED (D085)
+  s(
+    'REP-CODE-GITHUB-REINSTALL-BLOCKED',
+    'github-live-code-reinstall',
+    'BLOCKED',
+    false,
+    'n/a-blocked',
+    'recovery',
+    {
+      blockedReason:
+        'Live GitHub fetch + source reinstall is permanently BLOCKED (supply-chain / drift)',
+      description:
+        'Recovery must use signed release artifacts + SOC backup — never git pull into runtime',
+    },
+  ),
+  s(
+    'REP-SOURCE-REWRITE-BLOCKED',
+    'runtime-source-rewrite',
+    'BLOCKED',
+    false,
+    'n/a-blocked',
+    'recovery',
+    {
+      blockedReason: 'Rewriting application source from Repair is permanently BLOCKED',
+    },
+  ),
+  s(
+    'REP-MODULE-BINARY-REPLACE-BLOCKED',
+    'hot-swap-module-binaries',
+    'BLOCKED',
+    false,
+    'n/a-blocked',
+    'recovery',
+    {
+      blockedReason:
+        'Hot-swapping module binaries without signed artifact + human Recovery wizard is BLOCKED',
+    },
+  ),
+  s(
+    'REP-OS-PROCESS-KILL-BLOCKED',
+    'os-process-kill-restart',
+    'BLOCKED',
+    false,
+    'n/a-blocked',
+    'runtime',
+    {
+      blockedReason:
+        'OS-level process kill/restart from Repair is BLOCKED (watchdog heartbeat only)',
+    },
+  ),
 ] as const;
 
 export const REPAIR_SCENARIOS_BY_ID: ReadonlyMap<string, RepairScenario> =

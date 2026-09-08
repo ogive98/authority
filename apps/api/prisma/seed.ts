@@ -155,7 +155,8 @@ async function main() {
       moduleKey === 'finance' ||
       moduleKey === 'documents' ||
       moduleKey === 'accounting' ||
-      moduleKey === 'repair'
+      moduleKey === 'repair' ||
+      moduleKey === 'production'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -524,6 +525,30 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'repair.reset',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'production.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'production.wo.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'production.declare',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'production.scrap',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,

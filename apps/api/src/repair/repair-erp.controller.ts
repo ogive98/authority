@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Req,
   UseGuards,
@@ -43,6 +44,12 @@ export class RepairErpController {
   @RequirePermission(PERMISSION_KEYS.repairRead)
   dashboard(@CurrentTenancy() tenancy: TenancyContext) {
     return this.facade.dashboard(tenancy.companyId);
+  }
+
+  @Get('coverage')
+  @RequirePermission(PERMISSION_KEYS.repairRead)
+  coverage() {
+    return this.facade.coverage();
   }
 
   @Get('health')
@@ -123,6 +130,7 @@ export class RepairErpController {
       confirm: body.confirm,
       dryRun: body.dryRun,
       actorId: req.user?.id,
+      password: body.password,
     });
     return { execution };
   }
@@ -172,6 +180,8 @@ export class RepairErpController {
       companyId: tenancy.companyId,
       createdBy: req.user?.id,
       confirm: body.confirm,
+      password: body.password,
+      confirmPhrase: body.confirmPhrase,
     });
   }
 
@@ -189,8 +199,11 @@ export class RepairErpController {
     return {
       id: snap.ref,
       ref: snap.ref,
+      kind: snap.kind,
+      restorable: snap.restorable,
       label: snap.label,
       createdAt: snap.createdAt,
+      note: snap.note,
     };
   }
 
@@ -200,10 +213,40 @@ export class RepairErpController {
     const items = this.facade.listBackups().map((b) => ({
       id: b.ref,
       ref: b.ref,
+      kind: b.kind,
+      restorable: b.restorable,
       label: b.label,
       createdAt: b.createdAt,
+      note: b.note,
     }));
     return { items };
+  }
+
+  @Get('recovery/policies')
+  @RequirePermission(PERMISSION_KEYS.repairRead)
+  recoveryPolicies() {
+    return { policies: this.facade.recoveryPolicies() };
+  }
+
+  @Post('recovery/manifest')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(PERMISSION_KEYS.repairScan)
+  async recoveryManifest(
+    @Body() body: SnapshotDto,
+    @CurrentTenancy() tenancy: TenancyContext,
+  ) {
+    const manifest = await this.facade.createRecoveryManifest({
+      companyId: tenancy.companyId,
+      label: body.label,
+    });
+    return { manifest };
+  }
+
+  @Post('snapshots/:ref/restore')
+  @HttpCode(HttpStatus.FORBIDDEN)
+  @RequirePermission(PERMISSION_KEYS.repairExecute)
+  restoreSnapshot(@Param('ref') ref: string) {
+    return this.facade.restoreSnapshot(ref);
   }
 
   @Post('verify')

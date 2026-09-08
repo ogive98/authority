@@ -4,6 +4,7 @@ import {
   RepExecutionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RepairExecutorsService } from '../executors/repair-executors.service';
 import { REPAIR_ERROR_CODES } from '../repair.constants';
 import { RepairException } from '../repair.exception';
 
@@ -76,7 +77,10 @@ const RESET_SCOPES: readonly ResetScope[] = [
 
 @Injectable()
 export class ResetEngine {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly executors: RepairExecutorsService,
+  ) {}
 
   listScopes(): readonly ResetScope[] {
     return RESET_SCOPES;
@@ -145,7 +149,60 @@ export class ResetEngine {
       );
     }
 
-    // Non-destructive scopes still preview-only in this stub.
+    // D085/D086: SAFE/LOW only — cache scope applies allowlisted Redis invalidate.
+    if (scope.risk !== 'SAFE' && scope.risk !== 'LOW') {
+      throw new RepairException(
+        REPAIR_ERROR_CODES.RESET_BLOCKED,
+        `Reset scope '${scope.id}' risk=${scope.risk} cannot execute (SAFE|LOW only). Preview only.`,
+        HttpStatus.FORBIDDEN,
+        { scope: scope.id, risk: scope.risk },
+      );
+    }
+
+    if (scope.id === 'cache') {
+      const result = await this.executors.invalidateAllowlistedCache();
+      return this.prisma.repResetExecution.create({
+        data: {
+          companyId: input.companyId,
+          scope: scope.id,
+          previewJson: {
+            scope: scope.id,
+            risk: scope.risk,
+            dryRun: false,
+          } as Prisma.InputJsonValue,
+          status: RepExecutionStatus.SUCCEEDED,
+          dryRun: false,
+          resultJson: {
+            status: 'SUCCEEDED',
+            actions: result,
+            note: 'Allowlisted technical cache invalidated — never FLUSHALL',
+          } as Prisma.InputJsonValue,
+          createdBy: input.createdBy,
+        },
+      });
+    }
+
+    // technical-temp: purge allowlisted temp via FS executor path (soft).
+    if (scope.id === 'technical-temp') {
+      const exec = this.executors.require('REP-FS-001');
+      const applied = await exec.apply('REP-FS-001');
+      return this.prisma.repResetExecution.create({
+        data: {
+          companyId: input.companyId,
+          scope: scope.id,
+          previewJson: {
+            scope: scope.id,
+            risk: scope.risk,
+            dryRun: false,
+          } as Prisma.InputJsonValue,
+          status: RepExecutionStatus.SUCCEEDED,
+          dryRun: false,
+          resultJson: applied as unknown as Prisma.InputJsonValue,
+          createdBy: input.createdBy,
+        },
+      });
+    }
+
     return this.preview({
       scope: input.scope,
       companyId: input.companyId,

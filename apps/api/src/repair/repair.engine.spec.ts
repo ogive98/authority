@@ -8,6 +8,12 @@ import { RepairException } from './repair.exception';
 describe('RepairEngine risk gates', () => {
   const registry = new RepairRegistryService();
 
+  const executors = {
+    hasExecutor: jest.fn().mockReturnValue(true),
+    require: jest.fn(),
+    listExecutableScenarioIds: jest.fn().mockReturnValue(['REP-REDIS-001']),
+  };
+
   it('lists pack scenarios including BLOCKED markers', () => {
     const all = registry.listScenarios();
     expect(all.length).toBeGreaterThan(20);
@@ -31,7 +37,8 @@ describe('RepairEngine risk gates', () => {
       { enqueue: jest.fn() } as never,
       registry,
       { create: jest.fn() } as never,
-      { verify: jest.fn() } as never,
+      { verify: jest.fn(), recordLive: jest.fn() } as never,
+      executors as never,
     );
 
     await expect(
@@ -66,11 +73,51 @@ describe('RepairEngine risk gates', () => {
       { enqueue: jest.fn() } as never,
       registry,
       { create: jest.fn() } as never,
-      { verify: jest.fn() } as never,
+      { verify: jest.fn(), recordLive: jest.fn() } as never,
+      executors as never,
     );
 
     await expect(
       engine.execute({ executionId: 'ex-b', confirm: true }),
     ).rejects.toBeInstanceOf(RepairException);
+  });
+
+  it('refuses SAFE scenario without allowlisted executor', async () => {
+    const prisma = {
+      repRepairExecution: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'ex-no',
+          scenarioId: 'REP-FS-001',
+          risk: RepRiskLevel.SAFE,
+          status: 'PLANNED',
+          companyId: null,
+        }),
+        update: jest.fn(),
+      },
+    };
+    const noExec = {
+      hasExecutor: jest.fn().mockReturnValue(false),
+      require: jest.fn().mockImplementation(() => {
+        throw new RepairException(
+          REPAIR_ERROR_CODES.NO_EXECUTOR,
+          'no executor',
+          HttpStatus.BAD_REQUEST,
+        );
+      }),
+    };
+    const engine = new RepairEngine(
+      prisma as never,
+      { enqueue: jest.fn() } as never,
+      registry,
+      { create: jest.fn() } as never,
+      { verify: jest.fn(), recordLive: jest.fn() } as never,
+      noExec as never,
+    );
+
+    await expect(
+      engine.execute({ executionId: 'ex-no', confirm: true }),
+    ).rejects.toMatchObject({
+      code: REPAIR_ERROR_CODES.NO_EXECUTOR,
+    });
   });
 });
