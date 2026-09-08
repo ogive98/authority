@@ -503,6 +503,112 @@ export async function transitionInstrument(
   }
 }
 
+export type PromiseStatus = "OPEN" | "KEPT" | "BROKEN" | "CANCELLED";
+
+export type FinPromise = {
+  id: string;
+  companyId: string;
+  number: string;
+  customerId: string;
+  customerCode: string | null;
+  customerName: string | null;
+  openItemId: string;
+  openItemNumber: string | null;
+  amount: string;
+  currency: string;
+  promisedDate: string;
+  status: PromiseStatus;
+  notes: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const PROMISE_STATUS_LABELS: Record<PromiseStatus, string> = {
+  OPEN: "Ouverte",
+  KEPT: "Tenue",
+  BROKEN: "Rompue",
+  CANCELLED: "Annulée",
+};
+
+export async function fetchPromises(opts?: {
+  q?: string;
+  status?: PromiseStatus | "";
+  customerId?: string;
+  openItemId?: string;
+  broken?: boolean;
+}): Promise<{ ok: true; data: { items: FinPromise[] } } | ApiFail> {
+  try {
+    const params = new URLSearchParams();
+    if (opts?.q) params.set("q", opts.q);
+    if (opts?.status) params.set("status", opts.status);
+    if (opts?.customerId) params.set("customerId", opts.customerId);
+    if (opts?.openItemId) params.set("openItemId", opts.openItemId);
+    if (opts?.broken) params.set("broken", "1");
+    const qs = params.toString();
+    const res = await fetch(`/api/v1/finance/promises${qs ? `?${qs}` : ""}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as { items: FinPromise[] },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function createPromise(body: {
+  openItemId: string;
+  amount: number;
+  promisedDate: string;
+  notes?: string;
+}): Promise<{ ok: true; data: FinPromise } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/finance/promises", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinPromise };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function cancelPromise(
+  id: string,
+): Promise<{ ok: true; data: FinPromise } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/promises/${id}/cancel`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinPromise };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export function promiseBadgeTone(
+  status: PromiseStatus,
+): "success" | "warning" | "accent" | "neutral" | "danger" {
+  if (status === "KEPT") return "success";
+  if (status === "OPEN") return "accent";
+  if (status === "BROKEN") return "danger";
+  return "neutral";
+}
+
 export function openItemBadgeTone(
   status: OpenItemStatus,
 ): "success" | "warning" | "accent" | "neutral" {

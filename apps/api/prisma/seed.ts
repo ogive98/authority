@@ -1040,6 +1040,36 @@ async function main() {
         }
       }
 
+      const ptpOpenItem = await prisma.finOpenItem.findFirst({
+        where: {
+          companyId: company.id,
+          number: 'FIN-PORTAL-SEED',
+        },
+      });
+      if (ptpOpenItem) {
+        const existingPtp = await prisma.finPromiseToPay.findFirst({
+          where: {
+            companyId: company.id,
+            number: 'PTP-SEED-0001',
+          },
+        });
+        if (!existingPtp) {
+          await prisma.finPromiseToPay.create({
+            data: {
+              companyId: company.id,
+              number: 'PTP-SEED-0001',
+              customerId: ptpOpenItem.customerId,
+              openItemId: ptpOpenItem.id,
+              amount: 25,
+              currency: 'TND',
+              promisedDate: new Date(Date.now() + 7 * 86400000),
+              status: 'OPEN',
+              notes: 'Promesse démo collections (D087)',
+            },
+          });
+        }
+      }
+
       const existingClaim = await prisma.ptlClaim.findFirst({
         where: {
           companyId: company.id,

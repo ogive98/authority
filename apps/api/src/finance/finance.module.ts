@@ -9,6 +9,7 @@ import { FinanceController } from './finance.controller';
 import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentService } from './payment.service';
+import { PromiseService } from './promise.service';
 
 @Module({
   imports: [
@@ -24,7 +25,8 @@ import { PaymentService } from './payment.service';
     InvoiceService,
     PaymentService,
     AllocationEngineService,
+    PromiseService,
   ],
-  exports: [FinanceService, InvoiceService, PaymentService],
+  exports: [FinanceService, InvoiceService, PaymentService, PromiseService],
 })
 export class FinanceModule {}

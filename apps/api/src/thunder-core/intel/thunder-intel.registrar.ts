@@ -1,5 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { FinOpenItemSide, FinOpenItemStatus } from '@prisma/client';
+import {
+  FinOpenItemSide,
+  FinOpenItemStatus,
+  FinPromiseStatus,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AuthorityEventEnvelope } from '../events/event-envelope';
 import { ConsumerRegistryService } from '../events/consumer-registry.service';
@@ -32,6 +36,8 @@ export class ThunderIntelRegistrar implements OnModuleInit {
           THUNDER_INTEL_EVENT_TYPES.salesConfirmed,
           THUNDER_INTEL_EVENT_TYPES.financeAllocation,
           THUNDER_INTEL_EVENT_TYPES.financeOpenItemCreated,
+          THUNDER_INTEL_EVENT_TYPES.financePromiseCreated,
+          THUNDER_INTEL_EVENT_TYPES.financePromiseStatus,
         ],
       },
     );
@@ -55,6 +61,10 @@ export class ThunderIntelRegistrar implements OnModuleInit {
         return;
       case THUNDER_INTEL_EVENT_TYPES.financeOpenItemCreated:
         await this.maybeEmitOverdue(envelope);
+        return;
+      case THUNDER_INTEL_EVENT_TYPES.financePromiseCreated:
+      case THUNDER_INTEL_EVENT_TYPES.financePromiseStatus:
+        await this.maybeEmitBrokenPromises(envelope);
         return;
       default:
         return;
@@ -219,6 +229,83 @@ export class ThunderIntelRegistrar implements OnModuleInit {
 
     this.logger.log(
       `signal FinanceOverdueOpenItems customer=${customerId} count=${overdueCount}`,
+    );
+  }
+
+  /** Collections PTP: broken promises → WARN + reco (no sales block). */
+  private async maybeEmitBrokenPromises(
+    envelope: AuthorityEventEnvelope,
+  ): Promise<void> {
+    const companyId = envelope.companyId!;
+    const customerId =
+      typeof envelope.payload.customerId === 'string'
+        ? envelope.payload.customerId
+        : null;
+    if (!customerId) return;
+
+    const status =
+      typeof envelope.payload.status === 'string'
+        ? envelope.payload.status
+        : null;
+    if (
+      envelope.eventType === THUNDER_INTEL_EVENT_TYPES.financePromiseStatus &&
+      status !== FinPromiseStatus.BROKEN
+    ) {
+      return;
+    }
+
+    const brokenCount = await this.prisma.finPromiseToPay.count({
+      where: {
+        companyId,
+        customerId,
+        deletedAt: null,
+        status: FinPromiseStatus.BROKEN,
+      },
+    });
+    if (brokenCount <= 0) return;
+
+    const signal = await this.signals.create({
+      companyId,
+      siteId: envelope.siteId,
+      type: THUNDER_SIGNAL_TYPES.FinanceBrokenPromises,
+      severity: 'WARN',
+      source: THUNDER_INTEL_CONSUMER_ID,
+      sourceEventId: envelope.eventId,
+      sourceEventType: envelope.eventType,
+      correlationId: envelope.correlationId,
+      evidence: {
+        customerId,
+        brokenCount,
+        aggregateType: envelope.aggregateType,
+        aggregateId: envelope.aggregateId,
+      },
+      occurredAt: new Date(envelope.occurredAt),
+    });
+
+    await this.recommendations.create({
+      companyId,
+      signalId: signal.id,
+      problem: `Customer has ${brokenCount} broken promise-to-pay(s) — review collections`,
+      evidence: {
+        signalId: signal.id,
+        customerId,
+        brokenCount,
+      },
+      options: [
+        { id: 'review_promises', label: 'Open Promesses (Rompues)' },
+        { id: 'ack', label: 'Acknowledge without action' },
+      ],
+      autonomyLevel: 2,
+      proposedAction: {
+        type: 'record_only',
+        capabilityHint: 'finance.ar.read',
+        aggregateId: customerId,
+      },
+      correlationId: envelope.correlationId,
+    });
+
+    this.logger.log(
+      `signal FinanceBrokenPromises customer=${customerId} count=${brokenCount}`,
     );
   }
 }

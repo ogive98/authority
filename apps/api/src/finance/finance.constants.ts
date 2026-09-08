@@ -11,6 +11,8 @@ export const FINANCE_ERROR_CODES = {
   INVALID_POLICY: 'FIN.INVALID_POLICY',
   INSTRUMENT_REQUIRED: 'FIN.INSTRUMENT_REQUIRED',
   ALREADY_ALLOCATED: 'FIN.ALREADY_ALLOCATED',
+  PROMISE_EXISTS: 'FIN.PROMISE_EXISTS',
+  PROMISE_NOT_FOUND: 'FIN.PROMISE_NOT_FOUND',
 } as const;
 
 export type FinanceErrorCode =
@@ -24,6 +26,8 @@ export const FINANCE_EVENT_TYPES = {
   PAYMENT_ALLOCATED: 'finance.payment.allocated.v1',
   INSTRUMENT_STATUS: 'finance.instrument.status.v1',
   INSTRUMENT_REJECTED: 'finance.instrument.rejected.v1',
+  PROMISE_CREATED: 'finance.promise.created.v1',
+  PROMISE_STATUS: 'finance.promise.status.v1',
 } as const;
 
 /** Company settings — credit exposure check on sales confirm (default off). */

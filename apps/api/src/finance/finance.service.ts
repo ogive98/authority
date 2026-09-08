@@ -15,6 +15,7 @@ import {
 import type { AllocateOpenItemDto, CreateOpenItemDto } from './finance.dto';
 import { FinanceException } from './finance.exception';
 import { InvoiceService } from './invoice.service';
+import { PromiseService } from './promise.service';
 
 export type OpenItemDto = {
   id: string;
@@ -57,6 +58,7 @@ export class FinanceService {
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly invoices: InvoiceService,
+    private readonly promises: PromiseService,
   ) {}
 
   async list(
@@ -333,6 +335,15 @@ export class FinanceService {
           status: updated.status,
         },
       });
+
+      if (updated.status === FinOpenItemStatus.CLOSED) {
+        await this.promises.markKeptForClosedOpenItem(
+          tx,
+          companyId,
+          id,
+          existing.customerId,
+        );
+      }
 
       return updated;
     });

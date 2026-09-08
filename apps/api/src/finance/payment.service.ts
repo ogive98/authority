@@ -26,6 +26,7 @@ import type {
   TransitionInstrumentDto,
 } from './finance.dto';
 import { FinanceException } from './finance.exception';
+import { PromiseService } from './promise.service';
 
 export type PaymentDto = {
   id: string;
@@ -80,6 +81,7 @@ export class PaymentService {
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly engine: AllocationEngineService,
+    private readonly promises: PromiseService,
   ) {}
 
   async list(
@@ -412,6 +414,15 @@ export class PaymentService {
             policy: dto.policy,
           },
         });
+
+        if (nextOpenStatus(nextOpen) === FinOpenItemStatus.CLOSED) {
+          await this.promises.markKeptForClosedOpenItem(
+            tx,
+            companyId,
+            openItem.id,
+            payment.customerId,
+          );
+        }
       }
 
       await tx.finPayment.update({

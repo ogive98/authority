@@ -21,6 +21,7 @@ import {
   OPEN_ITEM_STATUS_LABELS,
   allocateOpenItem,
   createOpenItem,
+  createPromise,
   fetchOpenItems,
   isOpenItemOverdue,
   openItemBadgeTone,
@@ -50,6 +51,15 @@ type AllocateDraft = {
   note: string;
 };
 
+type PromiseDraft = {
+  id: string;
+  number: string;
+  amountOpen: string;
+  amount: string;
+  promisedDate: string;
+  notes: string;
+};
+
 type FilterMode = "" | OpenItemStatus | "OVERDUE";
 
 const STATUS_FILTERS: Array<{ id: FilterMode; label: string }> = [
@@ -73,6 +83,7 @@ export default function FinancePage() {
   const [allocateDraft, setAllocateDraft] = useState<AllocateDraft | null>(
     null,
   );
+  const [promiseDraft, setPromiseDraft] = useState<PromiseDraft | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(
@@ -187,6 +198,34 @@ export default function FinancePage() {
     await load(q, statusFilter);
   }
 
+  async function submitPromise() {
+    if (!promiseDraft) return;
+    const amount = Number(promiseDraft.amount.replace(",", "."));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setFormError("Montant de promesse invalide.");
+      return;
+    }
+    if (!promiseDraft.promisedDate) {
+      setFormError("Date promise requise.");
+      return;
+    }
+    setBusy(true);
+    setFormError(null);
+    const res = await createPromise({
+      openItemId: promiseDraft.id,
+      amount,
+      promisedDate: promiseDraft.promisedDate,
+      notes: promiseDraft.notes.trim() || undefined,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setPromiseDraft(null);
+    await load(q, statusFilter);
+  }
+
   return (
     <>
       <AScreenHeader
@@ -206,6 +245,12 @@ export default function FinancePage() {
               className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
             >
               Encaissements
+            </Link>
+            <Link
+              href="/finance/promises"
+              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
+            >
+              Promesses
             </Link>
             <AButton type="button" size="sm" onClick={openCreate}>
               Nouvelle créance
@@ -346,22 +391,44 @@ export default function FinancePage() {
                     </td>
                     <td className="a-table-cell">
                       {row.status !== "CLOSED" ? (
-                        <AButton
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() =>
-                            setAllocateDraft({
-                              id: row.id,
-                              number: row.number,
-                              amountOpen: row.amountOpen,
-                              amount: row.amountOpen,
-                              note: "",
-                            })
-                          }
-                        >
-                          Encaisser
-                        </AButton>
+                        <div className="flex flex-wrap gap-2">
+                          <AButton
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() =>
+                              setAllocateDraft({
+                                id: row.id,
+                                number: row.number,
+                                amountOpen: row.amountOpen,
+                                amount: row.amountOpen,
+                                note: "",
+                              })
+                            }
+                          >
+                            Encaisser
+                          </AButton>
+                          <AButton
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              const in7 = new Date();
+                              in7.setUTCDate(in7.getUTCDate() + 7);
+                              setPromiseDraft({
+                                id: row.id,
+                                number: row.number,
+                                amountOpen: row.amountOpen,
+                                amount: row.amountOpen,
+                                promisedDate: in7.toISOString().slice(0, 10),
+                                notes: "",
+                              });
+                              setFormError(null);
+                            }}
+                          >
+                            Promesse
+                          </AButton>
+                        </div>
                       ) : (
                         <span className="text-a-fg-subtle">—</span>
                       )}
@@ -546,6 +613,105 @@ export default function FinancePage() {
                 size="sm"
                 disabled={busy}
                 onClick={() => void submitAllocate()}
+              >
+                Enregistrer
+              </AButton>
+            </div>
+          </div>
+        ) : null}
+      </ADrawer>
+
+      <ADrawer
+        open={!!promiseDraft}
+        onOpenChange={(open) => {
+          if (!open) setPromiseDraft(null);
+        }}
+        title="Promesse de paiement"
+        description={
+          promiseDraft
+            ? `${promiseDraft.number} · ouvert ${promiseDraft.amountOpen} TND`
+            : undefined
+        }
+      >
+        {promiseDraft ? (
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label
+                htmlFor="fin-ptp-amount"
+                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+              >
+                Montant promis (TND)
+              </label>
+              <AInput
+                id="fin-ptp-amount"
+                className="a-mono"
+                value={promiseDraft.amount}
+                onChange={(e) =>
+                  setPromiseDraft({
+                    ...promiseDraft,
+                    amount: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <label
+                htmlFor="fin-ptp-date"
+                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+              >
+                Date promise
+              </label>
+              <AInput
+                id="fin-ptp-date"
+                type="date"
+                className="a-mono"
+                value={promiseDraft.promisedDate}
+                onChange={(e) =>
+                  setPromiseDraft({
+                    ...promiseDraft,
+                    promisedDate: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <label
+                htmlFor="fin-ptp-notes"
+                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+              >
+                Note
+              </label>
+              <AInput
+                id="fin-ptp-notes"
+                value={promiseDraft.notes}
+                onChange={(e) =>
+                  setPromiseDraft({
+                    ...promiseDraft,
+                    notes: e.target.value,
+                  })
+                }
+                placeholder="Engagement client…"
+              />
+            </div>
+            {formError ? (
+              <p className="text-[length:var(--a-text-sm)] text-a-danger">
+                {formError}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-2 pt-2">
+              <AButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setPromiseDraft(null)}
+              >
+                Annuler
+              </AButton>
+              <AButton
+                type="button"
+                size="sm"
+                disabled={busy}
+                onClick={() => void submitPromise()}
               >
                 Enregistrer
               </AButton>

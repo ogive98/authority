@@ -25,12 +25,14 @@ import {
   CreateInvoiceDto,
   CreateOpenItemDto,
   CreatePaymentDto,
+  CreatePromiseDto,
   SimulateAllocationDto,
   TransitionInstrumentDto,
 } from './finance.dto';
 import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentService } from './payment.service';
+import { PromiseService } from './promise.service';
 
 @Controller('api/v1/finance')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
@@ -40,6 +42,7 @@ export class FinanceController {
     private readonly financeService: FinanceService,
     private readonly invoiceService: InvoiceService,
     private readonly paymentService: PaymentService,
+    private readonly promiseService: PromiseService,
   ) {}
 
   @Get('open-items')
@@ -244,5 +247,62 @@ export class FinanceController {
       id,
       dto,
     );
+  }
+
+  @Get('promises')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  listPromises(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('customerId') customerId?: string,
+    @Query('openItemId') openItemId?: string,
+    @Query('broken') brokenRaw?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    const broken =
+      brokenRaw === '1' ||
+      brokenRaw?.toLowerCase() === 'true' ||
+      brokenRaw?.toLowerCase() === 'yes';
+    return this.promiseService.list(tenancy.companyId, {
+      q,
+      status,
+      customerId,
+      openItemId,
+      broken: broken || undefined,
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor,
+    });
+  }
+
+  @Get('promises/:id')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  getPromise(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.promiseService.get(tenancy.companyId, id);
+  }
+
+  @Post('promises')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  createPromise(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreatePromiseDto,
+  ) {
+    return this.promiseService.create(tenancy.companyId, dto);
+  }
+
+  @Post('promises/:id/cancel')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  cancelPromise(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.promiseService.cancel(tenancy.companyId, id);
   }
 }

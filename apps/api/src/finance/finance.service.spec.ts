@@ -154,12 +154,17 @@ describe('FinanceService', () => {
       ),
     };
 
+    const promises = {
+      markKeptForClosedOpenItem: jest.fn().mockResolvedValue(undefined),
+    };
+
     const service = new FinanceService(
       prisma as never,
       outbox as never,
       invoices as never,
+      promises as never,
     );
-    return { service, prisma, outbox, invoices, getItem: () => item };
+    return { service, prisma, outbox, invoices, promises, getItem: () => item };
   }
 
   it('creates an AR open item with amount as recorded', async () => {
@@ -194,18 +199,20 @@ describe('FinanceService', () => {
   });
 
   it('allocates partially then closes on full pay', async () => {
-    const { service, outbox } = build({ amountOpen: 50 });
+    const { service, outbox, promises } = build({ amountOpen: 50 });
     const partial = await service.allocate(companyId, openItemId, {
       amount: 20,
     });
     expect(partial.status).toBe(FinOpenItemStatus.PARTIAL);
     expect(partial.amountOpen).toBe('30.000');
+    expect(promises.markKeptForClosedOpenItem).not.toHaveBeenCalled();
 
     const closed = await service.allocate(companyId, openItemId, {
       amount: 30,
     });
     expect(closed.status).toBe(FinOpenItemStatus.CLOSED);
     expect(closed.amountOpen).toBe('0.000');
+    expect(promises.markKeptForClosedOpenItem).toHaveBeenCalled();
     expect(outbox.enqueue).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({

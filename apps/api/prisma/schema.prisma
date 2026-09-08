@@ -1240,6 +1240,13 @@ enum FinInstrumentStatus {
   CANCELLED
 }
 
+enum FinPromiseStatus {
+  OPEN
+  KEPT
+  BROKEN
+  CANCELLED
+}
+
 model FinInvoice {
   id           String          @id @default(uuid()) @db.Uuid
   companyId    String          @map("company_id") @db.Uuid
@@ -1289,8 +1296,9 @@ model FinOpenItem {
   updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt    DateTime?         @map("deleted_at") @db.Timestamptz(6)
 
-  invoice     FinInvoice?     @relation(fields: [invoiceId], references: [id])
+  invoice     FinInvoice?        @relation(fields: [invoiceId], references: [id])
   allocations FinAllocation[]
+  promises    FinPromiseToPay[]
 
   @@unique([companyId, number])
   @@index([companyId, createdAt(sort: Desc)])
@@ -1376,6 +1384,33 @@ model FinPaymentInstrument {
   @@index([companyId, paymentId])
   @@index([companyId, status, dueDate])
   @@map("fin_payment_instrument")
+}
+
+/** Collections promise-to-pay V0 (D087) — no auto-block on sales. */
+model FinPromiseToPay {
+  id           String          @id @default(uuid()) @db.Uuid
+  companyId    String          @map("company_id") @db.Uuid
+  number       String
+  customerId   String          @map("customer_id") @db.Uuid
+  openItemId   String          @map("open_item_id") @db.Uuid
+  amount       Decimal         @db.Decimal(18, 3)
+  currency     String          @default("TND")
+  promisedDate DateTime        @map("promised_date") @db.Date
+  status       FinPromiseStatus @default(OPEN)
+  notes        String?
+  version      Int             @default(0)
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?       @map("deleted_at") @db.Timestamptz(6)
+
+  openItem FinOpenItem @relation(fields: [openItemId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, number])
+  @@index([companyId, status, promisedDate])
+  @@index([companyId, customerId])
+  @@index([companyId, openItemId])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("fin_promise_to_pay")
 }
 
 // --- acc_* Accounting GL V0 (D072) — no invented tax rates ---

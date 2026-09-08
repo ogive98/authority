@@ -231,3 +231,21 @@ export class TransitionInstrumentDto {
   @MaxLength(240)
   rejectReason?: string;
 }
+
+export class CreatePromiseDto {
+  @IsUUID()
+  openItemId!: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  amount!: number;
+
+  @IsDateString()
+  promisedDate!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  notes?: string;
+}
