@@ -30,8 +30,7 @@ export type ACommandPaletteProps = {
 };
 
 /**
- * Command palette: search + run. Results restagger on each keystroke.
- * Panel is centered with inset + mx-auto (not translateX) so open animation never flashes left.
+ * Spotlight-style command palette — Contiental Apple materials.
  */
 export function ACommandPalette({
   open,
@@ -43,7 +42,6 @@ export function ACommandPalette({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(
@@ -58,9 +56,7 @@ export function ACommandPalette({
 
   const groups = useMemo(() => groupCommands(filtered), [filtered]);
   const flat = filtered;
-  /** Grow only when there is text — shrinks again when cleared. */
-  const expanded = query.length > 0;
-  const listOpen = flat.length > 0 || query.length > 0;
+  const listOpen = query.length > 0;
 
   useEffect(() => {
     if (open) {
@@ -95,9 +91,7 @@ export function ACommandPalette({
         );
         return;
       }
-      if (item.href) {
-        router.push(item.href);
-      }
+      if (item.href) router.push(item.href);
     },
     [onOpenChange, router],
   );
@@ -130,68 +124,32 @@ export function ACommandPalette({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="a-palette-overlay fixed inset-0 z-[var(--a-z-modal)]" />
+        <Dialog.Overlay className="a-spotlight-overlay fixed inset-0 z-[var(--a-z-modal)]" />
         <Dialog.Content
           className={cn(
-            /* Center with inset + mx-auto — never translateX (avoids left flash vs pop animation). */
-            "a-palette-panel fixed top-[10%] right-0 left-0 z-[var(--a-z-modal)] mx-auto",
-            "overflow-hidden focus:outline-none",
-            "rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2",
-            expanded
-              ? "w-[min(100%-1.5rem,36rem)]"
-              : "w-[min(100%-1.5rem,26rem)]",
+            "a-spotlight-panel fixed top-[18%] right-0 left-0 z-[var(--a-z-modal)] mx-auto",
+            "w-[min(100%-1.25rem,28rem)] focus:outline-none",
           )}
           onKeyDown={onKeyDown}
           aria-describedby={undefined}
         >
           <Dialog.Title className="sr-only">Palette de commandes</Dialog.Title>
           <Dialog.Description className="sr-only">
-            Recherchez une page, une action ou un enregistrement. Flèches et
-            Entrée pour naviguer.
+            Tapez pour rechercher une page ou une action.
           </Dialog.Description>
 
-          <div
-            ref={searchRef}
-            className={cn(
-              "a-palette-search mx-auto mt-3 flex items-center gap-2 rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-3 px-3",
-              "transition-[width,min-height,padding,box-shadow] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-              "motion-reduce:transition-none",
-              expanded
-                ? "w-[calc(100%-1.25rem)] min-h-12 px-4 py-2.5 shadow-[0_0_0_3px_color-mix(in_srgb,var(--a-accent)_22%,transparent)]"
-                : "w-[min(100%-2rem,18rem)] min-h-10 px-3 py-1.5",
-            )}
-          >
+          <div className="a-spotlight-field flex items-center gap-3 px-4 py-3.5">
             <Search
-              className={cn(
-                "shrink-0 text-a-fg-subtle transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-                "motion-reduce:transition-none",
-                expanded ? "h-5 w-5 text-a-accent" : "h-4 w-4",
-              )}
-              strokeWidth={1.75}
+              className="h-[18px] w-[18px] shrink-0 text-a-accent"
+              strokeWidth={1.6}
               aria-hidden
             />
             <input
               ref={inputRef}
               value={query}
-              onChange={(e) => {
-                const next = e.target.value;
-                setQuery(next);
-                const el = searchRef.current;
-                if (el && next.length > 0) {
-                  el.classList.remove("a-palette-typing");
-                  void el.offsetWidth;
-                  el.classList.add("a-palette-typing");
-                }
-              }}
-              placeholder="Rechercher…"
-              className={cn(
-                "a-palette-input min-w-0 flex-1 bg-transparent text-a-fg outline-none placeholder:text-a-fg-subtle",
-                "transition-[font-size,letter-spacing] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-                "motion-reduce:transition-none",
-                expanded
-                  ? "text-[length:var(--a-text-lg)] tracking-tight"
-                  : "text-[length:var(--a-text-md)]",
-              )}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Que cherchez-vous ?"
+              className="a-palette-input min-w-0 flex-1 bg-transparent text-[16px] font-medium tracking-[-0.02em] text-a-fg outline-none placeholder:font-normal placeholder:text-a-fg-subtle"
               aria-autocomplete="list"
               aria-controls="command-list"
               aria-activedescendant={
@@ -201,7 +159,7 @@ export function ACommandPalette({
             {query ? (
               <button
                 type="button"
-                className="a-palette-clear inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--a-radius-md)] text-a-fg-muted hover:bg-a-surface-4 hover:text-a-fg"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
                 aria-label="Effacer"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
@@ -212,37 +170,29 @@ export function ACommandPalette({
                 <X className="h-3.5 w-3.5" strokeWidth={1.75} />
               </button>
             ) : (
-              <span className="a-mono hidden shrink-0 text-[length:var(--a-text-xs)] text-a-fg-subtle sm:inline">
-                {formatShortcutKeys(["Ctrl", "K"]).join("")}
-              </span>
+              <kbd className="a-mono hidden rounded-md bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-subtle sm:inline">
+                esc
+              </kbd>
             )}
           </div>
 
-          <div
-            className={cn(
-              "a-palette-list grid transition-[grid-template-rows,opacity,margin] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-              "motion-reduce:transition-none",
-              listOpen
-                ? "mt-2 grid-rows-[1fr] opacity-100"
-                : "mt-0 grid-rows-[0fr] opacity-0",
-            )}
-          >
-            <div className="overflow-hidden">
+          {listOpen ? (
+            <div className="a-spotlight-results">
               <div
                 id="command-list"
                 ref={listRef}
                 role="listbox"
-                className="max-h-72 overflow-y-auto px-2 pt-1 pb-1"
+                className="max-h-[min(50vh,20rem)] overflow-y-auto px-2 py-2"
                 key={query}
               >
                 {groups.length === 0 ? (
-                  <p className="a-palette-item px-3 py-8 text-center text-[length:var(--a-text-sm)] text-a-fg-muted">
-                    Aucun résultat
+                  <p className="px-3 py-10 text-center text-[13px] text-a-fg-muted">
+                    Aucun résultat pour « {query} »
                   </p>
                 ) : (
                   groups.map((g) => (
-                    <div key={g.group} className="mb-1.5">
-                      <p className="a-mono px-2.5 py-1 text-[length:var(--a-text-xs)] uppercase tracking-wider text-a-fg-subtle">
+                    <div key={g.group} className="mb-2">
+                      <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-a-fg-subtle">
                         {g.label}
                       </p>
                       <ul>
@@ -251,42 +201,35 @@ export function ACommandPalette({
                           const i = index;
                           const isActive = i === active;
                           return (
-                            <li
-                              key={item.id}
-                              role="option"
-                              aria-selected={isActive}
-                              className="a-palette-item"
-                              style={{
-                                animationDelay: `${Math.min(i, 12) * 28}ms`,
-                              }}
-                            >
+                            <li key={item.id} role="option" aria-selected={isActive}>
                               <button
                                 type="button"
                                 id={`cmd-${item.id}`}
                                 data-cmd-index={i}
                                 className={cn(
-                                  "flex w-full items-center justify-between gap-3 rounded-[var(--a-radius-md)] px-2.5 py-2.5 text-left text-[length:var(--a-text-sm)]",
-                                  "transition-colors duration-150",
+                                  "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] transition-colors",
                                   isActive
-                                    ? "bg-a-accent-muted text-a-fg"
-                                    : "text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
+                                    ? "bg-a-accent text-white"
+                                    : "text-a-fg hover:bg-a-surface-3",
                                 )}
                                 onMouseEnter={() => setActive(i)}
                                 onClick={() => run(item)}
                               >
-                                <span className="min-w-0 truncate">
+                                <span className="min-w-0 truncate font-medium">
                                   {item.label}
                                 </span>
                                 {item.shortcut ? (
-                                  <span
-                                    className="flex shrink-0 items-center gap-0.5"
-                                    aria-label={`Raccourci ${formatShortcutKeys(item.shortcut.keys).join("+")}`}
-                                  >
+                                  <span className="flex shrink-0 gap-0.5 opacity-80">
                                     {formatShortcutKeys(item.shortcut.keys).map(
                                       (k) => (
                                         <kbd
                                           key={`${item.id}-${k}`}
-                                          className="a-mono inline-flex min-w-[1.25rem] items-center justify-center rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-1/80 px-1 py-0.5 text-[length:var(--a-text-xs)] text-a-fg-subtle"
+                                          className={cn(
+                                            "a-mono rounded px-1 py-0.5 text-[10px]",
+                                            isActive
+                                              ? "bg-white/20 text-white"
+                                              : "bg-a-surface-3 text-a-fg-subtle",
+                                          )}
                                         >
                                           {k}
                                         </kbd>
@@ -303,22 +246,27 @@ export function ACommandPalette({
                   ))
                 )}
               </div>
+              <div className="flex items-center justify-between px-4 py-2.5 text-[11px] text-a-fg-subtle">
+                <span>↑↓ naviguer · ↵ ouvrir</span>
+                <LinkHint />
+              </div>
             </div>
-          </div>
-
-          <div
-            className={cn(
-              "flex flex-wrap items-center gap-3 px-4 a-mono text-[length:var(--a-text-xs)] text-a-fg-subtle",
-              "transition-[padding,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
-              expanded ? "py-2.5 opacity-100" : "py-2 opacity-70",
-            )}
-          >
-            <span>↑↓</span>
-            <span>↵</span>
-            <span>esc</span>
-          </div>
+          ) : (
+            <div className="px-4 pb-4 pt-1">
+              <p className="text-[12px] leading-relaxed text-a-fg-muted">
+                Pages, modules, actions — commencez à taper. Ouvrez aussi depuis
+                la loupe ou ⌘K.
+              </p>
+            </div>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+function LinkHint() {
+  return (
+    <span className="a-mono text-[10px] tracking-wide">⌘K</span>
   );
 }

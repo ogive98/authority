@@ -81,7 +81,7 @@ export function AConfirmDialog({
         <Dialog.Content
           className={cn(
             "fixed top-1/2 left-1/2 z-[var(--a-z-modal)] w-[min(100%-2rem,24rem)] -translate-x-1/2 -translate-y-1/2",
-            "rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2 p-5 focus:outline-none",
+            "a-glass-strong rounded-[var(--a-radius-lg)] p-5 focus:outline-none shadow-[var(--a-shadow-panel)]",
           )}
         >
           <Dialog.Title className="text-[length:var(--a-text-lg)] font-semibold">

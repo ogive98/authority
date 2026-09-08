@@ -82,14 +82,14 @@ export function FeatureMenu() {
       aria-modal="true"
       aria-label={`Fonctionnalités — ${mod.name}`}
       className={cn(
-        "fixed top-12 left-14 z-[var(--a-z-dropdown)] flex w-52 flex-col",
+        "a-glass-strong fixed top-12 left-14 z-[var(--a-z-dropdown)] flex w-52 flex-col",
         "max-h-[min(20rem,calc(100vh-5rem))] overflow-hidden",
-        "rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2",
-        "shadow-[0_12px_32px_rgb(0_0_0_/_0.35)]",
+        "rounded-[var(--a-radius-md)]",
+        "shadow-[var(--a-shadow-panel)]",
       )}
     >
-      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-a-border-subtle px-3">
-        <p className="truncate text-[length:var(--a-text-sm)] font-medium">
+      <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-3">
+        <p className="truncate text-[length:var(--a-text-sm)] font-semibold tracking-[var(--a-tracking-nav)]">
           {mod.name}
         </p>
         <button

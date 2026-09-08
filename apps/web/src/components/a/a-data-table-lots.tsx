@@ -159,7 +159,7 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
           className="max-w-xs"
         />
         <select
-          className="h-9 rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-2 px-2 text-[length:var(--a-text-sm)] text-a-fg"
+          className="h-9 rounded-[var(--a-radius-sm)] bg-a-surface-3 px-2 text-[length:var(--a-text-sm)] font-medium text-a-fg shadow-[var(--a-shadow-card)]"
           value={filter.status ?? "all"}
           onChange={(e) =>
             applyFilter({
@@ -282,7 +282,7 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
                 <tr
                   key={row.id}
                   className={cn(
-                    "border-t border-a-border-subtle transition-colors hover:bg-a-surface-3/50",
+                    "transition-colors hover:bg-a-surface-3/50",
                     onRowClick && "cursor-pointer",
                   )}
                   onClick={() => onRowClick?.(row)}

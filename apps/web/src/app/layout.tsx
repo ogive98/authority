@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
-  display: "swap",
-});
-
+/** Tabular only — UI body uses Apple system stack in CSS. */
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
@@ -30,7 +25,7 @@ export default function RootLayout({
     <html
       lang="fr"
       data-theme="light"
-      className={`${inter.variable} ${jetbrainsMono.variable}`}
+      className={jetbrainsMono.variable}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">

@@ -98,7 +98,7 @@ export function AActivityCenter({
         </div>
       }
     >
-      <div className="mb-3 flex gap-1 rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-3 p-0.5">
+      <div className="mb-3 flex gap-1 rounded-[var(--a-radius-md)] bg-a-surface-3 p-0.5">
         {(
           [
             ["unread", "Non lus"],
@@ -166,11 +166,9 @@ function NotificationRow({
   return (
     <article
       className={cn(
-        "rounded-[var(--a-radius-md)] border px-3 py-2.5",
-        item.read
-          ? "border-a-border-subtle bg-a-surface-1/40"
-          : "border-a-border-subtle bg-a-surface-3",
-        critical && !item.read && "border-a-danger/40",
+        "a-card rounded-[var(--a-radius-md)] px-3 py-2.5",
+        item.read ? "opacity-70" : "",
+        critical && !item.read && "bg-a-danger-soft",
       )}
     >
       <div className="flex items-start justify-between gap-2">

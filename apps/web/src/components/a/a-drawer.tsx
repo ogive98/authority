@@ -32,14 +32,14 @@ export function ADrawer({
         <Dialog.Overlay className="fixed inset-0 z-[var(--a-z-modal)] bg-[#0b1220]/35 backdrop-blur-sm data-[state=open]:animate-in" />
         <Dialog.Content
           className={cn(
-            "a-glass-strong fixed inset-y-0 right-0 z-[var(--a-z-modal)] flex w-full max-w-lg flex-col border-l border-a-border-subtle",
+            "a-glass-strong fixed inset-y-0 right-0 z-[var(--a-z-modal)] flex w-full max-w-lg flex-col",
             "shadow-[var(--a-shadow-panel)] focus:outline-none",
             className,
           )}
         >
-          <div className="flex h-14 shrink-0 items-center justify-between border-b border-a-border-subtle px-5">
+          <div className="flex h-14 shrink-0 items-center justify-between px-5">
             <div className="min-w-0">
-              <Dialog.Title className="truncate text-[length:var(--a-text-md)] font-semibold tracking-tight">
+              <Dialog.Title className="truncate text-[length:var(--a-text-md)] font-semibold tracking-[var(--a-tracking-title)]">
                 {title}
               </Dialog.Title>
               {description ? (
@@ -61,7 +61,7 @@ export function ADrawer({
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
           {footer ? (
-            <div className="a-glass shrink-0 border-t border-a-border-subtle px-5 py-4">
+            <div className="a-glass shrink-0 px-5 py-4">
               {footer}
             </div>
           ) : null}

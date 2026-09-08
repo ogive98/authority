@@ -41,7 +41,7 @@ export function ASkeletonCard({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2 p-4",
+        "a-card p-4",
         className,
       )}
       aria-busy="true"

@@ -45,7 +45,7 @@ export function ExpertiseHintsStrip({ keys, className }: Props) {
     <div
       className={
         className ??
-        "flex flex-wrap items-center gap-2 rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-xs)]"
+        "flex flex-wrap items-center gap-2 rounded-[var(--a-radius-md)] bg-a-surface-3 px-3 py-2 text-[length:var(--a-text-xs)]"
       }
     >
       <span className="text-a-fg-muted">Expertise</span>

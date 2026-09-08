@@ -25,7 +25,7 @@ export function AEmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-start gap-3 rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2 p-[var(--a-space-6)]",
+        "a-card flex flex-col items-start gap-3 p-[var(--a-space-6)]",
         className,
       )}
       role="status"

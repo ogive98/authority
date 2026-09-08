@@ -12,10 +12,12 @@ const LABELS: Record<string, string> = {
   commandes: "Commandes",
 };
 
+/** Soft macOS path bar — no frames. */
 export function ShellBreadcrumbs() {
   const pathname = usePathname();
-  const parts = pathname.split("/").filter(Boolean);
+  if (pathname === "/") return null;
 
+  const parts = pathname.split("/").filter(Boolean);
   const crumbs = [
     { href: "/", label: "Accueil" },
     ...parts.map((part, i) => ({
@@ -24,24 +26,18 @@ export function ShellBreadcrumbs() {
     })),
   ];
 
-  // Avoid Accueil / Accueil on home
-  const unique =
-    parts.length === 0
-      ? [{ href: "/", label: "Accueil" }]
-      : crumbs;
-
   return (
     <nav
       aria-label="Fil d’Ariane"
-      className="a-glass flex h-9 shrink-0 items-center gap-1.5 border-b border-a-border-subtle px-3 text-[length:var(--a-text-sm)] md:px-4"
+      className="flex h-8 shrink-0 items-center gap-1.5 px-4 text-[12px] text-a-fg-muted"
     >
-      {unique.map((c, i) => {
-        const last = i === unique.length - 1;
+      {crumbs.map((c, i) => {
+        const last = i === crumbs.length - 1;
         return (
           <span key={c.href} className="flex items-center gap-1.5">
             {i > 0 ? (
               <span className="text-a-fg-subtle" aria-hidden>
-                /
+                ›
               </span>
             ) : null}
             {last ? (
@@ -49,7 +45,7 @@ export function ShellBreadcrumbs() {
                 {c.label}
               </span>
             ) : (
-              <Link href={c.href} className="text-a-fg-muted hover:text-a-accent">
+              <Link href={c.href} className="hover:text-a-accent">
                 {c.label}
               </Link>
             )}

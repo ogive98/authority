@@ -17,7 +17,7 @@ export function AForbiddenState({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2 p-[var(--a-space-6)]",
+        "a-card flex flex-col gap-2 p-[var(--a-space-6)]",
         className,
       )}
       role="status"

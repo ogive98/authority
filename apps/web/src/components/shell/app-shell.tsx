@@ -10,14 +10,15 @@ import { ShellSidebar } from "./sidebar";
 import { PrefsHydrator } from "./prefs-hydrator";
 import { SpectreOverlay } from "./spectre-overlay";
 import { SyncModuleFromRoute } from "./sync-module-from-route";
+import { ShellMain } from "./shell-main";
+import { FloatingToolbox } from "./floating-toolbox";
 
 /**
- * Utility Cube shell: wide sidebar + topbar search + main column.
- * Feature subnav lives inside the sidebar (no second column).
+ * Contiental Apple shell — Finder sidebar + Launchpad (viewport = sidebar height).
  */
 export function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="a-canvas flex min-h-screen text-a-fg">
+    <div className="a-canvas flex h-dvh overflow-hidden text-a-fg">
       <SyncModuleFromRoute />
       <PrefsHydrator />
       <CommandPaletteHost />
@@ -25,16 +26,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       <SpectreOverlay />
       <ASkipLink />
       <ShellSidebar />
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col pb-14 md:pb-0">
+      <div className="flex h-full min-w-0 flex-1 flex-col pb-12 md:pb-0">
         <ShellHeader />
         <ShellBreadcrumbs />
-        <main id="main" className="min-h-0 flex-1 overflow-auto">
-          {children}
-        </main>
+        <ShellMain>{children}</ShellMain>
         <div className="hidden md:block">
           <ResourceMonitor />
         </div>
       </div>
+      <FloatingToolbox />
       <MobileBottomNav />
     </div>
   );

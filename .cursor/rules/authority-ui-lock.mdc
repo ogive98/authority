@@ -1,49 +1,52 @@
 ---
-description: AUTHORITY visual identity — Utility Cube (LOCKED — all UI forever)
+description: AUTHORITY visual identity — Contiental Apple (D095)
 alwaysApply: true
 ---
 
-# Visual identity lock (Utility Cube) — NON-NÉGOCIABLE
+# Visual identity lock (Contiental Apple) — NON-NÉGOCIABLE
 
 This lock applies to **every** future screen, module, gate, widget, and PR.  
-No parallel design system. No “temporary” alternate chrome.
+No parallel design system.
+
+**Supersedes** Utility Cube · Contiental Wick D094.
 
 ## Before any UI work
 
 1. Read `apps/web/src/app/globals.css` (`--a-*` tokens only).
-2. Reuse `AppShell` + `AScreenHeader` + `A*` / `ADrawer` / `ABadge` / `AButton`.
-3. Match reference pixels: `/` · `/preview/lots` · `/preview/commandes` · `/sales` · `/delivery` · `/settings`.
+2. Reuse `AppShell` + `ModuleAppsGrid` + `AScreenHeader` + `A*`.
+3. Match reference: `/` (Launchpad) · module pages · `/settings`.
 4. If a screen diverges → **fix that screen**, never invent a second look.
 
-## Locked identity (2026-09-05)
+## Locked identity (D095 — 2026-09-08)
 
 | Token | Value |
 |-------|--------|
-| Fonts | **Inter** + JetBrains Mono (tabular) |
-| Accent | Soft emerald `#059669` · hover `#047857` · muted `#ecfdf5` |
-| Violet/sky | `#6868f0` → `#60a5fa` (optional glass accents only) |
-| Theme | **Light first** · dark secondary |
-| Radius | 8 / 12 / 16 px + pill badges |
-| Ops mode | **SPECTRE** (not Ghost) + PATCH |
+| Fonts | **-apple-system / SF Pro** stack + JetBrains Mono (tabular) |
+| Accent | Apple Blue `#0071e3` |
+| Accents | Violet / Sky / Orange for **app icons only** |
+| Theme | Light `#f5f5f7` · dark `#1c1c1e` |
+| Materials | Vibrancy `saturate(180%) blur(20px)` · **zero frames** |
+| Radius | 8 / 10 / 20 (app icons) |
+| Ops | SPECTRE + PATCH |
 
 ## Chrome (mandatory)
 
-- Sidebar sobré ~232px: icons + labels, **13px `font-normal`**, thin stroke icons, mint active on parent only, green **dot** on active leaf
-- Topbar: centered search ⌘K, notif, profil
-- Page: breadcrumbs → `AScreenHeader` (title medium, one primary CTA right) → filters → table/form → optional right `ADrawer`
-- Status = pastel pill `ABadge` only
+- Sidebar Finder: **icon + module name** + **small toggle on the RIGHT**
+- Features **never** listed in sidebar → **Launchpad grid** on `/` (`ModuleAppsGrid`: icon + label below)
+- Topbar: translucent search pill · no borders
+- Pages: no `border-a-*` boxes · soft surfaces only
+- Status = pastel `ABadge` only
 - Gates `/dev/*` = `ADevPage` only
-- Montants TND / stock = solid tabular (never blur the digits)
+- Montants TND / stock = solid tabular
 
 ## Forbidden
 
-- Second sidebar / topbar / “module skin”
-- Near-black greens (`#005040`, `#0f6b3f`, `#125b4a`) for CTAs — use `#059669`
-- IBM Plex / Geist as product UI fonts (superseded)
-- Promo “Discover Pro Plan” / decorative SPECTRE card in sidebar
-- Raw hex in `components/` (tokens only)
-- New typography scale fighting the 13px nav / soft headers
+- Framed cards / tables / panels (`border` chrome)
+- Feature lists or badge tiles inside the sidebar
+- Space Grotesk / Inter / emerald as product look
+- Raw hex in `components/` (except icon gradient utilities already tokenized via tone helpers)
+- Second design system
 
 ## New modules
 
-Every business module ships **inside** this shell with the same density, badges, buttons, and drawer patterns. Ask before changing tokens.
+Ship inside this shell. Ask before changing `--a-*` tokens.

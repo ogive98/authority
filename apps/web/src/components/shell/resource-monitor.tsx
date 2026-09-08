@@ -27,7 +27,7 @@ export function ResourceMonitor() {
 
   return (
     <footer
-      className="flex h-8 shrink-0 items-center gap-3 overflow-x-auto border-t border-a-border-subtle bg-a-surface-2 px-3"
+      className="a-glass flex h-8 shrink-0 items-center gap-3 overflow-x-auto px-3"
       aria-label="Resource monitor"
     >
       <span className="a-mono shrink-0 text-[length:var(--a-text-xs)] text-a-fg-subtle">

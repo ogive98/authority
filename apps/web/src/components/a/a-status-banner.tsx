@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 type BannerTone = "info" | "warning" | "danger" | "spectre";
 
 const toneClass: Record<BannerTone, string> = {
-  info: "border-a-info/40 bg-a-info/10 text-a-fg",
-  warning: "border-a-warning/50 bg-a-warning/15 text-a-fg",
-  danger: "border-a-danger/40 bg-a-danger/10 text-a-fg",
-  spectre: "border-a-spectre/50 bg-a-spectre-muted text-a-spectre-fg",
+  info: "bg-a-info-soft text-a-info-fg",
+  warning: "bg-a-warning-soft text-a-warning-fg",
+  danger: "bg-a-danger-soft text-a-danger-fg",
+  spectre: "bg-a-spectre-muted text-a-spectre-fg",
 };
 
 export type AStatusBannerProps = {
@@ -30,7 +30,7 @@ export function AStatusBanner({
   return (
     <div
       className={cn(
-        "flex items-start gap-3 rounded-[var(--a-radius-md)] border px-3 py-2.5",
+        "a-card flex items-start gap-3 px-3 py-2.5",
         toneClass[tone],
         className,
       )}

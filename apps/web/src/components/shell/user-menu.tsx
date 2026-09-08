@@ -110,9 +110,9 @@ export function UserMenu({ user = DEMO_USER }: UserMenuProps) {
           id={menuId}
           role="menu"
           aria-label="Menu profil"
-          className="absolute right-0 top-[calc(100%+0.35rem)] z-[var(--a-z-dropdown)] w-56 overflow-hidden rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 shadow-[var(--a-shadow-panel)]"
+          className="a-glass-strong absolute right-0 top-[calc(100%+0.35rem)] z-[var(--a-z-dropdown)] w-56 overflow-hidden rounded-[var(--a-radius-md)] shadow-[var(--a-shadow-panel)]"
         >
-          <div className="flex items-center gap-3 border-b border-a-border-subtle px-3 py-3">
+          <div className="flex items-center gap-3 px-3 py-3">
             <Avatar user={user} size="lg" />
             <div className="min-w-0">
               <p className="truncate text-[length:var(--a-text-sm)] font-medium text-a-fg">

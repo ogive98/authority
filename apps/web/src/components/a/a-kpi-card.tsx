@@ -28,12 +28,10 @@ export function AKpiCard({
 
   return (
     <article className="a-card relative overflow-hidden p-[var(--a-space-5)]">
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-a-accent/40"
-        aria-hidden
-      />
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">{label}</p>
+        <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg-muted">
+          {label}
+        </p>
         {delta ? (
           <span
             className={cn(

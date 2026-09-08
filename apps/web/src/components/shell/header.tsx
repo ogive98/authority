@@ -5,6 +5,7 @@ import { Bell, Menu, Search } from "lucide-react";
 import { useNotificationsStore } from "@/stores/notifications-store";
 import { unreadCount } from "@/lib/notifications";
 import { useShellStore } from "@/stores/shell-store";
+import { CompanyBrandPlate } from "./company-brand-plate";
 import {
   ModeSwitch,
   PatchIcon,
@@ -32,7 +33,7 @@ function IconBtn({
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted transition-colors duration-150 hover:bg-a-surface-3 hover:text-a-fg",
+        "inline-flex h-8 w-8 items-center justify-center rounded-full text-a-fg-muted transition-colors duration-150 hover:bg-a-surface-3 hover:text-a-fg",
         className,
       )}
     >
@@ -41,7 +42,7 @@ function IconBtn({
   );
 }
 
-/** Utility Cube topbar — centered ⌘K search, utilities right, profile. */
+/** Horizontal topbar — logo left, search loupe, utilities. Independent of sidebar collapse. */
 export function ShellHeader() {
   const [theme, setTheme] = useState<"dark" | "light">("light");
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
@@ -83,36 +84,29 @@ export function ShellHeader() {
   }
 
   return (
-    <header className="a-glass sticky top-0 z-[var(--a-z-sticky)] flex h-14 shrink-0 items-center gap-3 border-b border-a-border-subtle px-4">
+    <header className="a-glass sticky top-0 z-[var(--a-z-sticky)] flex h-14 shrink-0 items-center gap-3 px-3 md:px-4">
       <button
         type="button"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted hover:bg-white/50 md:hidden"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-a-fg-muted hover:bg-a-surface-3 md:hidden"
         aria-label="Ouvrir les modules"
         aria-controls="shell-sidebar-mobile"
         onClick={() => setMobileNavOpen(true)}
       >
-        <Menu className="h-4 w-4" strokeWidth={1.75} />
+        <Menu className="h-4 w-4" strokeWidth={1.5} />
       </button>
 
-      <div className="flex min-w-0 flex-1 justify-center">
-        <button
-          type="button"
+      <CompanyBrandPlate className="min-w-0" />
+
+      <div className="flex min-w-0 flex-1 justify-end sm:justify-center">
+        <IconBtn
+          label="Rechercher (⌘K)"
           onClick={() => setPaletteOpen(true)}
-          className={cn(
-            "a-glass flex h-10 w-full max-w-xl items-center gap-2 rounded-[var(--a-radius-pill)] border border-a-border-subtle px-4",
-            "text-left text-[length:var(--a-text-sm)] text-a-fg-subtle transition-colors duration-150",
-            "hover:border-a-border-strong",
-          )}
         >
-          <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
-          <span className="min-w-0 flex-1 truncate">Rechercher…</span>
-          <kbd className="a-mono hidden shrink-0 rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-white/60 px-1.5 py-0.5 text-[10px] text-a-fg-subtle sm:inline">
-            ⌘K
-          </kbd>
-        </button>
+          <Search className="h-4 w-4" strokeWidth={1.5} />
+        </IconBtn>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
         <IconBtn
           label={
             unread > 0
@@ -122,10 +116,10 @@ export function ShellHeader() {
           onClick={() => setInboxOpen(true)}
           className="relative"
         >
-          <Bell className="h-4 w-4" strokeWidth={1.75} />
+          <Bell className="h-4 w-4" strokeWidth={1.5} />
           {unread > 0 ? (
             <span
-              className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-a-danger"
+              className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-a-danger"
               aria-hidden
             />
           ) : null}
@@ -146,7 +140,7 @@ export function ShellHeader() {
           onCheckedChange={setPatchEnabled}
         />
         {patchEnabled ? (
-          <span className="a-mono hidden rounded-[var(--a-radius-pill)] bg-a-warning-soft px-2 py-0.5 text-[10px] font-medium text-a-warning xl:inline">
+          <span className="a-mono hidden rounded-full bg-a-warning-soft px-2 py-0.5 text-[10px] font-medium text-a-warning xl:inline">
             PATCH
           </span>
         ) : null}

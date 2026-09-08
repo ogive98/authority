@@ -105,6 +105,12 @@ export default function SettingsPage() {
   const setShowSseBanner = usePrefsStore((s) => s.setShowSseBanner);
   const jobAlerts = usePrefsStore((s) => s.jobAlerts);
   const setJobAlerts = usePrefsStore((s) => s.setJobAlerts);
+  const sidebarAutoCollapseSec = usePrefsStore(
+    (s) => s.sidebarAutoCollapseSec,
+  );
+  const setSidebarAutoCollapseSec = usePrefsStore(
+    (s) => s.setSidebarAutoCollapseSec,
+  );
 
   useEffect(() => {
     usePrefsStore.getState().applyDensityToDom(usePrefsStore.getState().density);
@@ -551,6 +557,42 @@ export default function SettingsPage() {
                 >
                   Compact
                 </AButton>
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                Sidebar — auto-réduction
+              </p>
+              <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                Réduit le menu latéral après N secondes sans survol. 0 =
+                désactivé (bouton panneau uniquement). Défaut : 10 s.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <ASwitch
+                  label="Auto-réduction"
+                  checked={sidebarAutoCollapseSec > 0}
+                  onCheckedChange={(on) =>
+                    setSidebarAutoCollapseSec(on ? 10 : 0)
+                  }
+                />
+                {sidebarAutoCollapseSec > 0 ? (
+                  <label className="flex items-center gap-2 text-[length:var(--a-text-sm)] text-a-fg-muted">
+                    <span>Délai</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={120}
+                      value={sidebarAutoCollapseSec}
+                      onChange={(e) =>
+                        setSidebarAutoCollapseSec(
+                          Number.parseInt(e.target.value || "10", 10),
+                        )
+                      }
+                      className="a-mono w-16 rounded-lg bg-a-surface-3 px-2 py-1.5 text-[13px] text-a-fg outline-none focus:ring-2 focus:ring-a-accent/30"
+                    />
+                    <span>s</span>
+                  </label>
+                ) : null}
               </div>
             </div>
           </section>

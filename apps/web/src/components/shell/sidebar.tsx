@@ -2,199 +2,189 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ChevronDown,
   HelpCircle,
   LogOut,
-  PanelLeftClose,
   PanelLeft,
+  PanelLeftClose,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMeRegistry } from "@/hooks/use-me-registry";
+import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 import { iconForModule } from "./module-icons";
+import { personalityForModule } from "./icon-personality";
 
-const ICON = "h-4 w-4 shrink-0";
-const STROKE = 1.5;
-/** Single nav type scale — sober, no weight fights. */
-const NAV =
-  "text-[13px] font-normal leading-5 tracking-normal";
+const STROKE = 1.35;
 
 /**
- * Minimal sidebar — flat labels, thin icons, soft active only.
+ * Finder sidebar — modules only. Collapse lives here (does not affect topbar).
+ * Auto-collapse after idle (prefs: sidebarAutoCollapseSec).
  */
 export function ShellSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  const autoCollapseSec = usePrefsStore((s) => s.sidebarAutoCollapseSec);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoveringRef = useRef(false);
+
   const mobileOpen = useShellStore((s) => s.mobileNavOpen);
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
+  const selectedModuleId = useShellStore((s) => s.selectedModuleId);
   const setSelectedModuleId = useShellStore((s) => s.setSelectedModuleId);
   const { data: registry } = useMeRegistry();
   const modules = registry.modules;
 
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(modules.map((m) => [m.key, true])),
-  );
+  const widthClass = railCollapsed
+    ? "w-[5.25rem]"
+    : "w-[var(--a-sidebar-width)]";
 
-  const widthClass = collapsed ? "w-[4.25rem]" : "w-[14.5rem]";
-  const activeHref = useMemo(() => pathname, [pathname]);
+  const clearTimer = useCallback(() => {
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
 
-  function pathActive(href: string) {
-    const pathOnly = href.split("#")[0] || "/";
-    if (pathOnly === "/") return activeHref === "/";
-    return activeHref === pathOnly || activeHref.startsWith(pathOnly + "/");
+  const scheduleCollapse = useCallback(() => {
+    clearTimer();
+    if (autoCollapseSec <= 0) return;
+    timerRef.current = setTimeout(() => {
+      if (!hoveringRef.current) setRailCollapsed(true);
+    }, autoCollapseSec * 1000);
+  }, [autoCollapseSec, clearTimer]);
+
+  useEffect(() => () => clearTimer(), [clearTimer]);
+
+  // Idle collapse while expanded and not hovering (incl. first paint)
+  useEffect(() => {
+    if (railCollapsed || hoveringRef.current) return;
+    scheduleCollapse();
+  }, [autoCollapseSec, railCollapsed, scheduleCollapse]);
+
+  function onSidebarEnter() {
+    hoveringRef.current = true;
+    clearTimer();
+    if (railCollapsed && autoCollapseSec > 0) {
+      setRailCollapsed(false);
+    }
   }
 
-  function toggleSection(key: string) {
-    setOpenSections((s) => ({ ...s, [key]: !s[key] }));
+  function onSidebarLeave() {
+    hoveringRef.current = false;
+    scheduleCollapse();
+  }
+
+  function toggleRail() {
+    clearTimer();
+    setRailCollapsed((c) => {
+      const next = !c;
+      if (!next && autoCollapseSec > 0 && !hoveringRef.current) {
+        // Expanded via button — still auto-collapse if mouse is outside
+        timerRef.current = setTimeout(() => {
+          if (!hoveringRef.current) setRailCollapsed(true);
+        }, autoCollapseSec * 1000);
+      }
+      return next;
+    });
+  }
+
+  function activateModule(key: string) {
+    setSelectedModuleId(key);
+    setMobileNavOpen(false);
+    if (pathname !== "/") router.push("/");
   }
 
   function NavBody({ mobile = false }: { mobile?: boolean }) {
-    const expanded = mobile || !collapsed;
+    const expanded = mobile || !railCollapsed;
     return (
-      <>
-        <div
-          className={cn(
-            "flex h-12 shrink-0 items-center",
-            expanded ? "justify-between gap-2 px-3" : "justify-center px-2",
-          )}
-        >
-          <Link
-            href="/"
-            className="flex min-w-0 items-center gap-2"
-            onClick={() => setMobileNavOpen(false)}
+      <div className="flex h-full min-h-0 flex-col">
+        {!mobile ? (
+          <div
+            className={cn(
+              "flex h-10 shrink-0 items-center px-2",
+              expanded ? "justify-end" : "justify-center",
+            )}
           >
-            <span
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-a-accent text-[11px] font-medium text-a-accent-fg"
-              aria-hidden
-            >
-              A
-            </span>
-            {expanded ? (
-              <span className="truncate text-[13px] font-medium tracking-tight text-a-fg">
-                AUTHORITY
-              </span>
-            ) : null}
-          </Link>
-          {!mobile ? (
             <button
               type="button"
-              title={collapsed ? "Étendre" : "Réduire"}
+              title={railCollapsed ? "Étendre" : "Réduire"}
               aria-label={
-                collapsed ? "Étendre la navigation" : "Réduire la navigation"
+                railCollapsed
+                  ? "Étendre la navigation"
+                  : "Réduire la navigation"
               }
               className="inline-flex h-7 w-7 items-center justify-center rounded-md text-a-fg-subtle hover:bg-a-surface-3 hover:text-a-fg"
-              onClick={() => setCollapsed((c) => !c)}
+              onClick={toggleRail}
             >
-              {collapsed ? (
+              {railCollapsed ? (
                 <PanelLeft className="h-3.5 w-3.5" strokeWidth={STROKE} />
               ) : (
                 <PanelLeftClose className="h-3.5 w-3.5" strokeWidth={STROKE} />
               )}
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : (
+          <div className="h-3 shrink-0" />
+        )}
 
         <nav
-          className="flex-1 overflow-y-auto px-2 pb-2 pt-1"
+          className="a-ios-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 pb-2 pt-0.5"
           aria-label="Modules"
         >
-          <ul className="space-y-px">
+          <ul className="space-y-0.5">
             {modules.map((mod) => {
               const Icon = iconForModule(mod.key);
-              const sectionOpen = openSections[mod.key] !== false;
-              const hasFeatures = mod.features.length > 0;
-              const childActive = mod.features.some((f) => pathActive(f.href));
+              const personality = personalityForModule(mod.key);
+              const on = selectedModuleId === mod.key;
 
               return (
                 <li key={mod.key}>
                   <button
                     type="button"
                     title={mod.name}
-                    onClick={() => {
-                      setSelectedModuleId(mod.key);
-                      if (!expanded && mod.features[0]) {
-                        router.push(mod.features[0].href);
-                        setMobileNavOpen(false);
-                        return;
-                      }
-                      if (hasFeatures) toggleSection(mod.key);
-                      else if (mod.features[0]) {
-                        router.push(mod.features[0].href);
-                        setMobileNavOpen(false);
-                      }
-                    }}
                     className={cn(
-                      NAV,
-                      "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors duration-100",
-                      childActive
-                        ? "bg-a-accent-muted text-a-accent"
-                        : "text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
-                      !expanded && "justify-center px-0",
+                      "a-nav-row group flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left transition-colors",
+                      `a-motion-${personality.motion}`,
+                      on ? "bg-a-accent/12" : "hover:bg-white/40",
+                      !expanded && "justify-center px-1",
                     )}
+                    onClick={() => activateModule(mod.key)}
                   >
-                    <Icon
+                    <span
                       className={cn(
-                        ICON,
-                        childActive ? "text-a-accent" : "text-a-fg-subtle",
+                        "a-app-icon a-nav-icon relative inline-flex shrink-0 items-center justify-center",
+                        personality.colorClass,
                       )}
-                      strokeWidth={STROKE}
-                      aria-hidden
-                    />
-                    {expanded ? (
-                      <>
-                        <span className="min-w-0 flex-1 truncate">
-                          {mod.name}
+                    >
+                      {personality.motion === "smoke" ? (
+                        <span className="a-fx-smoke" aria-hidden>
+                          <i />
+                          <i />
+                          <i />
                         </span>
-                        {hasFeatures ? (
-                          <ChevronDown
-                            className={cn(
-                              "h-3.5 w-3.5 shrink-0 text-a-fg-subtle transition-transform duration-150",
-                              !sectionOpen && "-rotate-90",
-                            )}
-                            strokeWidth={STROKE}
-                          />
-                        ) : null}
-                      </>
+                      ) : null}
+                      <Icon
+                        className="a-app-glyph h-6 w-6"
+                        strokeWidth={STROKE}
+                        aria-hidden
+                      />
+                    </span>
+                    {expanded ? (
+                      <span
+                        className={cn(
+                          "min-w-0 flex-1 truncate text-[14px] tracking-[-0.015em]",
+                          on
+                            ? "font-semibold text-a-fg"
+                            : "font-medium text-a-fg-muted",
+                        )}
+                      >
+                        {mod.name}
+                      </span>
                     ) : null}
                   </button>
-
-                  {expanded && hasFeatures && sectionOpen ? (
-                    <ul className="mb-1 mt-px space-y-px pl-9">
-                      {mod.features.map((f) => {
-                        const active = pathActive(f.href);
-                        return (
-                          <li key={f.id}>
-                            <Link
-                              href={f.href}
-                              onClick={() => {
-                                setSelectedModuleId(mod.key);
-                                setMobileNavOpen(false);
-                              }}
-                              className={cn(
-                                NAV,
-                                "flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors duration-100",
-                                active
-                                  ? "text-a-accent"
-                                  : "text-a-fg-muted hover:text-a-fg",
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  "h-1 w-1 shrink-0 rounded-full",
-                                  active ? "bg-a-accent" : "bg-a-border-strong",
-                                )}
-                                aria-hidden
-                              />
-                              <span className="truncate">{f.label}</span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : null}
                 </li>
               );
             })}
@@ -203,43 +193,45 @@ export function ShellSidebar() {
 
         <div
           className={cn(
-            "shrink-0 space-y-px border-t border-a-border-subtle py-2",
-            expanded ? "px-2" : "px-1",
+            "shrink-0 space-y-0.5 pb-2",
+            expanded ? "px-2" : "px-1.5",
           )}
         >
           <Link
-            href="/settings"
+            href="/help"
             className={cn(
-              NAV,
-              "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
-              !expanded && "justify-center px-0",
+              "group flex items-center gap-2.5 rounded-[10px] px-2 py-2 text-a-fg-muted hover:bg-white/40 hover:text-a-fg",
+              !expanded && "justify-center",
             )}
             title="Centre d’aide"
             onClick={() => setMobileNavOpen(false)}
           >
             <HelpCircle
-              className={cn(ICON, "text-a-fg-subtle")}
+              className="a-app-glyph h-5 w-5 text-a-fg-subtle"
               strokeWidth={STROKE}
             />
-            {expanded ? <span>Aide</span> : null}
+            {expanded ? (
+              <span className="text-[13px] font-medium">Aide</span>
+            ) : null}
           </Link>
           <button
             type="button"
             title="Déconnexion (stub)"
             className={cn(
-              NAV,
-              "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
-              !expanded && "justify-center px-0",
+              "group flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-a-fg-muted hover:bg-white/40 hover:text-a-fg",
+              !expanded && "justify-center",
             )}
           >
             <LogOut
-              className={cn(ICON, "text-a-fg-subtle")}
+              className="a-app-glyph h-5 w-5 text-a-orange"
               strokeWidth={STROKE}
             />
-            {expanded ? <span>Déconnexion</span> : null}
+            {expanded ? (
+              <span className="text-[13px] font-medium">Déconnexion</span>
+            ) : null}
           </button>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -248,7 +240,7 @@ export function ShellSidebar() {
       {mobileOpen ? (
         <button
           type="button"
-          className="fixed inset-0 z-[var(--a-z-dropdown)] bg-a-fg/15 md:hidden"
+          className="fixed inset-0 z-[var(--a-z-dropdown)] bg-black/20 backdrop-blur-[2px] md:hidden"
           aria-label="Fermer le menu"
           onClick={() => setMobileNavOpen(false)}
         />
@@ -257,10 +249,12 @@ export function ShellSidebar() {
       <aside
         id="shell-sidebar"
         className={cn(
-          "hidden shrink-0 flex-col border-r border-a-border-subtle bg-a-surface-2/90 backdrop-blur-md md:flex",
+          "a-glass hidden h-full min-h-0 shrink-0 flex-col md:flex",
           "transition-[width] duration-200 ease-out motion-reduce:transition-none",
           widthClass,
         )}
+        onMouseEnter={onSidebarEnter}
+        onMouseLeave={onSidebarLeave}
       >
         <NavBody />
       </aside>
@@ -269,7 +263,7 @@ export function ShellSidebar() {
         id="shell-sidebar-mobile"
         aria-hidden={!mobileOpen}
         className={cn(
-          "fixed inset-y-0 left-0 z-[var(--a-z-dropdown)] flex w-[14.5rem] flex-col border-r border-a-border-subtle bg-a-surface-2 md:hidden",
+          "a-glass-strong fixed inset-y-0 left-0 z-[var(--a-z-dropdown)] flex w-[var(--a-sidebar-width)] flex-col md:hidden",
           "transition-transform duration-200 ease-out",
           mobileOpen
             ? "translate-x-0"

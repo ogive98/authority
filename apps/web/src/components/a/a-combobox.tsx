@@ -140,7 +140,7 @@ export function ACombobox({
             <ul
               id={listId}
               role="listbox"
-              className="fixed max-h-56 overflow-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 py-1 text-[length:var(--a-text-sm)] shadow-lg"
+              className="a-glass-strong fixed max-h-56 overflow-auto rounded-[var(--a-radius-md)] py-1 text-[length:var(--a-text-sm)] shadow-[var(--a-shadow-panel)]"
               style={{
                 top: coords.top,
                 left: coords.left,

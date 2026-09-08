@@ -6,14 +6,10 @@ export type AScreenHeaderProps = {
   title: string;
   description?: ReactNode;
   actions?: ReactNode;
-  /** Gates /dev — sticky bar. Module pages: false. */
   sticky?: boolean;
 };
 
-/**
- * Page chrome: title left, primary CTA right.
- * Use inside AppShell (modules) and /dev gates.
- */
+/** macOS page title — no chrome frame. */
 export function AScreenHeader({
   kicker,
   title,
@@ -24,26 +20,26 @@ export function AScreenHeader({
   return (
     <header
       className={cn(
-        "flex flex-wrap items-center justify-between gap-4 border-b border-a-border-subtle a-glass px-[var(--a-space-6)] py-[var(--a-space-5)]",
-        sticky && "sticky top-14 z-[var(--a-z-sticky)]",
+        "flex flex-wrap items-end justify-between gap-4 px-6 pb-3 pt-5 md:px-8",
+        sticky && "sticky top-12 z-[var(--a-z-sticky)] bg-[var(--a-gradient-canvas)]/80 backdrop-blur-xl",
       )}
     >
       <div className="min-w-0">
         {kicker ? (
-          <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
+          <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-a-fg-subtle">
             {kicker}
           </p>
         ) : null}
         <h1
           className={cn(
-            "text-[length:var(--a-text-lg)] font-medium tracking-tight text-a-fg",
+            "text-[22px] font-semibold tracking-[-0.022em] text-a-fg",
             kicker && "mt-1",
           )}
         >
           {title}
         </h1>
         {description ? (
-          <p className="mt-1 max-w-2xl text-[13px] font-normal text-a-fg-muted">
+          <p className="mt-1 max-w-2xl text-[13px] text-a-fg-muted">
             {description}
           </p>
         ) : null}

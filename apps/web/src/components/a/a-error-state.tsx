@@ -31,7 +31,7 @@ export function AErrorState({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-[var(--a-radius-lg)] border border-a-danger/40 bg-a-surface-2 p-[var(--a-space-6)]",
+        "a-card flex flex-col gap-3 p-[var(--a-space-6)]",
         className,
       )}
       role="alert"
