@@ -87,6 +87,18 @@ export class CreateCustomerDto {
   zoneId?: string | null;
 
   @IsOptional()
+  @IsBoolean()
+  salubritaEmail?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  salubritaWhatsapp?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  salubritaPortal?: boolean;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateContactDto)
@@ -123,6 +135,18 @@ export class UpdateCustomerDto {
   @IsOptional()
   @IsUUID()
   zoneId?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  salubritaEmail?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  salubritaWhatsapp?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  salubritaPortal?: boolean;
 
   @IsInt()
   @Min(0)

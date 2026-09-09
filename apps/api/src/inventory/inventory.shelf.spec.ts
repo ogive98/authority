@@ -1,5 +1,6 @@
 import {
   computeDlcIso,
+  computeProductionDateIso,
   dailyLotCode,
   shouldRunDailyGen,
   tunisClock,
@@ -10,6 +11,12 @@ describe('inventory.shelf', () => {
     expect(computeDlcIso('2026-09-09', 7)).toBe('2026-09-16');
     expect(computeDlcIso('2026-09-09', 30)).toBe('2026-10-09');
     expect(computeDlcIso('2026-09-09', 60)).toBe('2026-11-08');
+  });
+
+  it('computes production date as packDate − offset', () => {
+    expect(computeProductionDateIso('2026-09-09', null)).toBe('2026-09-09');
+    expect(computeProductionDateIso('2026-09-09', 0)).toBe('2026-09-09');
+    expect(computeProductionDateIso('2026-09-09', 30)).toBe('2026-08-10');
   });
 
   it('rejects invalid shelf life', () => {

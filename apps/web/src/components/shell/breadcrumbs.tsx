@@ -33,6 +33,9 @@ const LABELS: Record<string, string> = {
   commandes: "Commandes",
   search: "Recherche",
   portal: "Portail",
+  account: "Mon compte",
+  users: "Utilisateurs",
+  identity: "Identité",
 };
 
 function looksLikeRecordId(part: string): boolean {

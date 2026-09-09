@@ -221,11 +221,11 @@ async function main() {
         userId: demoUser.id,
       },
     },
-    update: {},
+    update: { roleCode: 'admin' },
     create: {
       companyId: company.id,
       userId: demoUser.id,
-      roleCode: 'operator',
+      roleCode: 'admin',
     },
   });
 
@@ -274,9 +274,27 @@ async function main() {
     subjectId: demoUser.id,
   });
   await upsertGrant({
+    permissionKey: 'identity.user.manage',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'identity.user.manage',
+    subjectType: IamGrantSubject.ROLE,
+    subjectId: 'admin',
+    companyId: company.id,
+  });
+  await upsertGrant({
     permissionKey: 'platform.search.use',
     subjectType: IamGrantSubject.ROLE,
     subjectId: 'operator',
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'platform.search.use',
+    subjectType: IamGrantSubject.ROLE,
+    subjectId: 'admin',
     companyId: company.id,
   });
   await upsertGrant({
@@ -1296,6 +1314,22 @@ async function seedSettingsDefinitions(
       isPrefOnly: false,
     },
     {
+      key: 'salubrita.outlook.from_email',
+      valueType: 'string',
+      defaultJson: '',
+      description:
+        'Adresse expéditeur Outlook/mailto pour certificats (vide jusqu’à saisie humaine)',
+      isPrefOnly: false,
+    },
+    {
+      key: 'salubrita.whatsapp.default_prefix',
+      valueType: 'string',
+      defaultJson: '',
+      description:
+        'Préfixe téléphone WhatsApp (ex. 216) — vide jusqu’à saisie humaine',
+      isPrefOnly: false,
+    },
+    {
       key: 'finance.credit.enforce',
       valueType: 'boolean',
       defaultJson: false,
@@ -1728,25 +1762,29 @@ async function seedCheeseArticles(companyId: string): Promise<void> {
     sku: string;
     name: string;
     shelfLifeDays: number;
+    productionOffsetDays: number;
     notes: string;
   }> = [
     {
       sku: 'BRIE-250',
       name: 'Brie 250g',
       shelfLifeDays: 30,
+      productionOffsetDays: 30,
       notes: 'Pâte molle — DLC = emballage + 30 j',
     },
     {
       sku: 'MOZ-FIOR',
       name: 'Mozzarella fior di latte',
       shelfLifeDays: 7,
-      notes: 'Frais — DLC = emballage + 7 j',
+      productionOffsetDays: 0,
+      notes: 'Frais — prod = emballage · DLC + 7 j',
     },
     {
       sku: 'GRUY-AFF',
       name: 'Gruyère affiné',
       shelfLifeDays: 60,
-      notes: 'Affiné — DLC = emballage + 60 j',
+      productionOffsetDays: 30,
+      notes: 'Affiné — prod = emballage − 30 j · DLC + 60 j',
     },
   ];
 
@@ -1759,6 +1797,7 @@ async function seedCheeseArticles(companyId: string): Promise<void> {
         trackLot: true,
         perishable: true,
         shelfLifeDays: d.shelfLifeDays,
+        productionOffsetDays: d.productionOffsetDays,
         deletedAt: null,
       },
       create: {
@@ -1772,6 +1811,7 @@ async function seedCheeseArticles(companyId: string): Promise<void> {
         trackLot: true,
         perishable: true,
         shelfLifeDays: d.shelfLifeDays,
+        productionOffsetDays: d.productionOffsetDays,
       },
     });
 

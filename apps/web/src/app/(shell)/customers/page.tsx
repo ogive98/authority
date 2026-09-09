@@ -11,6 +11,7 @@ import {
   AInput,
   AScreenHeader,
   ASkeleton,
+  ASwitch,
 } from "@/components/a";
 import {
   STATUS_LABELS,
@@ -46,8 +47,12 @@ type FormState = {
   paymentTerms: string;
   creditLimit: string;
   zoneId: string;
+  salubritaEmail: boolean;
+  salubritaWhatsapp: boolean;
+  salubritaPortal: boolean;
   contactName: string;
   contactPhone: string;
+  contactWhatsapp: string;
   contactEmail: string;
 };
 
@@ -71,8 +76,12 @@ export default function CustomersPage() {
       paymentTerms: "",
       creditLimit: "",
       zoneId: "",
+      salubritaEmail: false,
+      salubritaWhatsapp: false,
+      salubritaPortal: true,
       contactName: "",
       contactPhone: "",
+      contactWhatsapp: "",
       contactEmail: "",
     }),
     [],
@@ -126,8 +135,12 @@ export default function CustomersPage() {
       paymentTerms: detail.data.paymentTerms ?? "",
       creditLimit: detail.data.creditLimit ?? "",
       zoneId: detail.data.zoneId ?? "",
+      salubritaEmail: detail.data.salubritaEmail ?? false,
+      salubritaWhatsapp: detail.data.salubritaWhatsapp ?? false,
+      salubritaPortal: detail.data.salubritaPortal ?? true,
       contactName: "",
       contactPhone: "",
+      contactWhatsapp: "",
       contactEmail: "",
     });
     setDrawerOpen(true);
@@ -148,6 +161,7 @@ export default function CustomersPage() {
                 {
                   name: form.contactName.trim(),
                   phone: form.contactPhone.trim() || undefined,
+                  whatsapp: form.contactWhatsapp.trim() || undefined,
                   email: form.contactEmail.trim() || undefined,
                 },
               ]
@@ -161,6 +175,9 @@ export default function CustomersPage() {
           paymentTerms: form.paymentTerms.trim() || undefined,
           creditLimit,
           zoneId,
+          salubritaEmail: form.salubritaEmail,
+          salubritaWhatsapp: form.salubritaWhatsapp,
+          salubritaPortal: form.salubritaPortal,
           contacts,
         });
         if (!res.ok) {
@@ -176,6 +193,9 @@ export default function CustomersPage() {
           salesRep: form.salesRep.trim() || undefined,
           paymentTerms: form.paymentTerms.trim() || undefined,
           zoneId,
+          salubritaEmail: form.salubritaEmail,
+          salubritaWhatsapp: form.salubritaWhatsapp,
+          salubritaPortal: form.salubritaPortal,
           version,
         });
         if (!res.ok) {
@@ -205,6 +225,7 @@ export default function CustomersPage() {
           const contactRes = await addCustomerContact(editing.id, {
             name: form.contactName.trim(),
             phone: form.contactPhone.trim() || undefined,
+            whatsapp: form.contactWhatsapp.trim() || undefined,
             email: form.contactEmail.trim() || undefined,
           });
           if (!contactRes.ok) {
@@ -532,6 +553,55 @@ export default function CustomersPage() {
               </select>
             </Field>
 
+            <div className="space-y-3 rounded-[12px] bg-a-surface-3 p-3">
+              <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                Certificat de salubrité
+              </p>
+              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                Canaux d’envoi depuis Stock → Certificat. Contacts e-mail /
+                WhatsApp ci-dessous.
+              </p>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[length:var(--a-text-sm)] text-a-fg">
+                  Outlook
+                </span>
+                <ASwitch
+                  size="sm"
+                  label="Outlook salubrité"
+                  checked={form.salubritaEmail}
+                  onCheckedChange={(v) =>
+                    setForm({ ...form, salubritaEmail: v })
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[length:var(--a-text-sm)] text-a-fg">
+                  WhatsApp
+                </span>
+                <ASwitch
+                  size="sm"
+                  label="WhatsApp salubrité"
+                  checked={form.salubritaWhatsapp}
+                  onCheckedChange={(v) =>
+                    setForm({ ...form, salubritaWhatsapp: v })
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[length:var(--a-text-sm)] text-a-fg">
+                  Portail client
+                </span>
+                <ASwitch
+                  size="sm"
+                  label="Portail salubrité"
+                  checked={form.salubritaPortal}
+                  onCheckedChange={(v) =>
+                    setForm({ ...form, salubritaPortal: v })
+                  }
+                />
+              </div>
+            </div>
+
             {editing?.blocked ? (
               <p className="text-[length:var(--a-text-sm)] text-[color:var(--a-danger)]">
                 Client bloqué
@@ -562,6 +632,15 @@ export default function CustomersPage() {
                     }
                   />
                 </Field>
+                <Field label="WhatsApp">
+                  <AInput
+                    value={form.contactWhatsapp}
+                    onChange={(e) =>
+                      setForm({ ...form, contactWhatsapp: e.target.value })
+                    }
+                    placeholder="Ex. 216XXXXXXXX"
+                  />
+                </Field>
                 <Field label="Email">
                   <AInput
                     value={form.contactEmail}
@@ -580,6 +659,7 @@ export default function CustomersPage() {
                   <p key={c.id} className="text-a-fg">
                     {c.name}
                     {c.phone ? ` · ${c.phone}` : ""}
+                    {c.whatsapp ? ` · WA ${c.whatsapp}` : ""}
                     {c.email ? ` · ${c.email}` : ""}
                   </p>
                 ))}

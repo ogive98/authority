@@ -36,6 +36,7 @@ type FormState = {
   trackLot: boolean;
   perishable: boolean;
   shelfLifeDays: string;
+  productionOffsetDays: string;
   storageClassKey: string;
   allergenFlags: string;
 };
@@ -89,6 +90,10 @@ export default function ProductEditPage() {
         p.shelfLifeDays != null && p.shelfLifeDays > 0
           ? String(p.shelfLifeDays)
           : "",
+      productionOffsetDays:
+        p.productionOffsetDays != null && p.productionOffsetDays >= 0
+          ? String(p.productionOffsetDays)
+          : "0",
       storageClassKey: p.storageClassKey,
       allergenFlags: p.allergenFlags.join(", "),
     });
@@ -111,6 +116,18 @@ export default function ProductEditPage() {
       }
       shelfLifeDays = Math.trunc(n);
     }
+    const offsetRaw = form.productionOffsetDays.trim();
+    let productionOffsetDays: number | null = 0;
+    if (offsetRaw !== "") {
+      const o = Number(offsetRaw);
+      if (!Number.isFinite(o) || o < 0) {
+        setFormError(
+          "Jours avant emballage : entier ≥ 0 (0 = prod = emballage).",
+        );
+        return;
+      }
+      productionOffsetDays = Math.trunc(o);
+    }
     setBusy(true);
     setFormError(null);
     const allergenList = form.allergenFlags
@@ -124,6 +141,7 @@ export default function ProductEditPage() {
       trackLot: form.trackLot || shelfLifeDays != null,
       perishable: form.perishable || shelfLifeDays != null,
       shelfLifeDays,
+      productionOffsetDays,
       storageClassKey: form.storageClassKey,
       allergenFlags: allergenList,
       version: state.product.version,
@@ -293,6 +311,24 @@ export default function ProductEditPage() {
               <p className="text-[11px] text-a-fg-subtle">
                 Sert au certificat de salubrité et au calcul automatique de la
                 DLC (emballage + jours).
+              </p>
+            </Field>
+            <Field
+              label="Jours avant emballage (date production)"
+              htmlFor="prd-offset"
+            >
+              <AInput
+                id="prd-offset"
+                value={form.productionOffsetDays}
+                onChange={(e) =>
+                  setForm({ ...form, productionOffsetDays: e.target.value })
+                }
+                placeholder="0 = frais · 30 = affiné (modèle Word)"
+                inputMode="numeric"
+              />
+              <p className="text-[11px] text-a-fg-subtle">
+                Date production = emballage − ces jours. Ex. emballage 09/09 et
+                30 j → production 10/08.
               </p>
             </Field>
             <Field label="Allergènes (codes, virgules)" htmlFor="prd-allergens">

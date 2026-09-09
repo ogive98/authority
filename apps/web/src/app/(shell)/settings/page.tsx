@@ -14,14 +14,21 @@ import {
   ASwitch,
 } from "@/components/a";
 import {
+  fetchEffectiveSettings,
   fetchExpertiseCatalog,
+  putCompanySetting,
   upsertExpertise,
   type ExpertiseSlot,
 } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 import { usePrefsStore, type Density } from "@/stores/prefs-store";
 
-type Tab = "general" | "apparence" | "notifications" | "expertise";
+type Tab =
+  | "general"
+  | "apparence"
+  | "notifications"
+  | "expertise"
+  | "envois";
 
 type ExpertiseLoad =
   | { kind: "loading" }
@@ -98,6 +105,11 @@ export default function SettingsPage() {
   const [drafts, setDrafts] = useState<Record<string, ExpertDraft>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [outlookFrom, setOutlookFrom] = useState("");
+  const [waPrefix, setWaPrefix] = useState("");
+  const [envoisBusy, setEnvoisBusy] = useState(false);
+  const [envoisMsg, setEnvoisMsg] = useState<string | null>(null);
+  const [envoisError, setEnvoisError] = useState<string | null>(null);
 
   const density = usePrefsStore((s) => s.density);
   const setDensity = usePrefsStore((s) => s.setDensity);
@@ -155,17 +167,64 @@ export default function SettingsPage() {
     }
   }, [tab, loadExpertise]);
 
+  const loadEnvois = useCallback(async () => {
+    setEnvoisError(null);
+    const res = await fetchEffectiveSettings();
+    if (!res.ok) {
+      setEnvoisError(res.message);
+      return;
+    }
+    const from = res.data.settings.find(
+      (s) => s.key === "salubrita.outlook.from_email",
+    );
+    const pref = res.data.settings.find(
+      (s) => s.key === "salubrita.whatsapp.default_prefix",
+    );
+    setOutlookFrom(
+      from && typeof from.value === "string" ? from.value : "",
+    );
+    setWaPrefix(pref && typeof pref.value === "string" ? pref.value : "");
+  }, []);
+
+  useEffect(() => {
+    if (tab === "envois") {
+      void loadEnvois();
+    }
+  }, [tab, loadEnvois]);
+
+  async function onSaveEnvois() {
+    setEnvoisBusy(true);
+    setEnvoisMsg(null);
+    setEnvoisError(null);
+    const a = await putCompanySetting(
+      "salubrita.outlook.from_email",
+      outlookFrom.trim(),
+    );
+    if (!a.ok) {
+      setEnvoisBusy(false);
+      setEnvoisError(a.message);
+      return;
+    }
+    const b = await putCompanySetting(
+      "salubrita.whatsapp.default_prefix",
+      waPrefix.trim(),
+    );
+    setEnvoisBusy(false);
+    if (!b.ok) {
+      setEnvoisError(b.message);
+      return;
+    }
+    setEnvoisMsg("Envois enregistrés.");
+    setSavedFlash(true);
+    window.setTimeout(() => setSavedFlash(false), 1600);
+  }
+
   function applyDensity(next: Density) {
     setDensity(next);
   }
 
   function onSseBannerChange(on: boolean) {
     setShowSseBanner(on);
-  }
-
-  function onSave() {
-    setSavedFlash(true);
-    window.setTimeout(() => setSavedFlash(false), 1600);
   }
 
   function selectTab(id: Tab) {
@@ -254,11 +313,17 @@ export default function SettingsPage() {
         title="Préférences"
         description="Apparence du poste · expertise légale société. Une préférence n’outrepasse jamais une permission."
         actions={
-          tab === "expertise" ? null : (
-            <AButton type="button" size="sm" onClick={onSave}>
-              {savedFlash ? "Enregistré" : "Enregistrer"}
+          tab === "envois" ? (
+            <AButton
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={envoisBusy}
+              onClick={() => void onSaveEnvois()}
+            >
+              {envoisBusy ? "…" : savedFlash ? "Enregistré" : "Enregistrer"}
             </AButton>
-          )
+          ) : null
         }
       />
       <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
@@ -266,6 +331,7 @@ export default function SettingsPage() {
           {(
             [
               ["expertise", "Expertise légale"],
+              ["envois", "Envois"],
               ["general", "Général"],
               ["apparence", "Apparence"],
               ["notifications", "Notifications"],
@@ -497,6 +563,67 @@ export default function SettingsPage() {
                   );
                 })
               : null}
+          </section>
+        ) : null}
+
+        {tab === "envois" ? (
+          <section className="max-w-xl space-y-5">
+            <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+              Paramètres société pour le certificat de salubrité. Champs vides
+              jusqu’à saisie — aucun défaut inventé. Les destinataires se
+              choisissent sur la fiche client (canaux Outlook / WhatsApp /
+              Portail).
+            </p>
+            {envoisError ? (
+              <AErrorState
+                message={envoisError}
+                retryable
+                onRetry={() => void loadEnvois()}
+              />
+            ) : null}
+            <div className="space-y-4 rounded-[14px] bg-a-surface-2 p-4">
+              <div className="space-y-1">
+                <label
+                  htmlFor="salubrita-outlook-from"
+                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                >
+                  Outlook — expéditeur (from)
+                </label>
+                <AInput
+                  id="salubrita-outlook-from"
+                  type="email"
+                  value={outlookFrom}
+                  onChange={(e) => setOutlookFrom(e.target.value)}
+                  placeholder="ex. qualite@entreprise.tn"
+                />
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                  Utilisé comme référence pour les envois mailto du certificat.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <label
+                  htmlFor="salubrita-wa-prefix"
+                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                >
+                  WhatsApp — préfixe pays
+                </label>
+                <AInput
+                  id="salubrita-wa-prefix"
+                  value={waPrefix}
+                  onChange={(e) => setWaPrefix(e.target.value)}
+                  placeholder="ex. 216"
+                  className="a-mono"
+                />
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                  Préfixé aux numéros clients sans indicatif international.
+                </p>
+              </div>
+            </div>
+            {envoisMsg ? (
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                {envoisMsg}
+              </p>
+            ) : null}
           </section>
         ) : null}
 

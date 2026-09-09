@@ -156,18 +156,42 @@ export class AuthService {
     userId: string;
     displayName?: string;
     locale?: string;
+    currentPassword?: string;
+    password?: string;
     companyId?: string;
     siteId?: string;
     ip?: string;
     userAgent?: string;
     correlationId?: string;
   }): Promise<ReturnType<AuthService['toMeResponse']>> {
-    if (!params.displayName && !params.locale) {
+    const wantsPassword = Boolean(params.password?.trim());
+    if (
+      !params.displayName &&
+      !params.locale &&
+      !wantsPassword
+    ) {
       throw new IdentityException(
         IDENTITY_ERROR_CODES.VALIDATION,
-        'Provide displayName and/or locale.',
+        'Provide displayName, locale, and/or password.',
         HttpStatus.BAD_REQUEST,
       );
+    }
+
+    let passwordHash: string | undefined;
+    if (wantsPassword) {
+      if (!params.currentPassword?.trim()) {
+        throw new IdentityException(
+          IDENTITY_ERROR_CODES.VALIDATION,
+          'currentPassword is required to change password.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      await this.verifyCurrentPassword({
+        userId: params.userId,
+        password: params.currentPassword,
+        ip: params.ip,
+      });
+      passwordHash = await this.passwordService.hash(params.password!.trim());
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -182,6 +206,7 @@ export class AuthService {
             ? { displayName: params.displayName }
             : {}),
           ...(params.locale !== undefined ? { locale: params.locale } : {}),
+          ...(passwordHash !== undefined ? { passwordHash } : {}),
           version: { increment: 1 },
         },
       });
@@ -196,7 +221,10 @@ export class AuthService {
         entityType: AUDIT_ENTITY_TYPES.iamUser,
         entityId: params.userId,
         beforeJson: snapshot(before),
-        afterJson: snapshot(after),
+        afterJson: {
+          ...snapshot(after),
+          ...(passwordHash ? { passwordChanged: true } : {}),
+        },
         ip: params.ip,
         device: params.userAgent,
         correlationId: params.correlationId,

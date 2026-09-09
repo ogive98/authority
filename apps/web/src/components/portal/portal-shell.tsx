@@ -14,6 +14,7 @@ import {
   PORTAL_HOME_PATH,
   PORTAL_LOGIN_PATH,
   PORTAL_ORDERS_PATH,
+  PORTAL_SALUBRITA_PATH,
 } from "@/lib/customer-portal";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ const NAV = [
   { href: PORTAL_ORDERS_PATH, label: "Commandes" },
   { href: PORTAL_DELIVERIES_PATH, label: "Livraisons" },
   { href: PORTAL_FINANCE_PATH, label: "Finance" },
+  { href: PORTAL_SALUBRITA_PATH, label: "Salubrité" },
   { href: PORTAL_CLAIMS_PATH, label: "Réclamations" },
   { href: PORTAL_DOCUMENTS_PATH, label: "Documents" },
 ] as const;

@@ -16,6 +16,7 @@ export type ProductDto = {
   trackLot: boolean;
   perishable: boolean;
   shelfLifeDays: number | null;
+  productionOffsetDays: number | null;
   storageClassKey: string;
   allergenFlags: string[];
   status: PrdProductStatus;
@@ -96,6 +97,10 @@ export class ProductsService {
           perishable: dto.perishable ?? false,
           shelfLifeDays:
             dto.shelfLifeDays === undefined ? null : dto.shelfLifeDays,
+          productionOffsetDays:
+            dto.productionOffsetDays === undefined
+              ? null
+              : dto.productionOffsetDays,
           storageClassKey,
           allergenFlags,
           status: PrdProductStatus.DRAFT,
@@ -163,6 +168,9 @@ export class ProductsService {
         ...(dto.perishable !== undefined ? { perishable: dto.perishable } : {}),
         ...(dto.shelfLifeDays !== undefined
           ? { shelfLifeDays: dto.shelfLifeDays }
+          : {}),
+        ...(dto.productionOffsetDays !== undefined
+          ? { productionOffsetDays: dto.productionOffsetDays }
           : {}),
         ...(dto.storageClassKey !== undefined ? { storageClassKey } : {}),
         ...(dto.allergenFlags !== undefined ? { allergenFlags } : {}),
@@ -280,6 +288,7 @@ function serialize(row: PrdProduct): ProductDto {
     trackLot: row.trackLot,
     perishable: row.perishable,
     shelfLifeDays: row.shelfLifeDays,
+    productionOffsetDays: row.productionOffsetDays,
     storageClassKey: row.storageClassKey,
     allergenFlags: asStringArray(row.allergenFlags),
     status: row.status,

@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  BUSINESS_LOGIN_PATH,
+  fetchBusinessMeClient,
+  initialsFromName,
+  logoutBusiness,
+} from "@/lib/business-auth";
 import { cn } from "@/lib/utils";
 
 export type ShellUser = {
@@ -13,20 +20,15 @@ export type ShellUser = {
   avatarUrl?: string | null;
 };
 
-/** Demo identity until auth session lands (SOC). */
-const DEMO_USER: ShellUser = {
-  name: "Karim Ben Ali",
-  role: "Super Admin",
-  initials: "KB",
-  avatarUrl: null,
-};
-
 export type UserMenuProps = {
   user?: ShellUser;
 };
 
 function Avatar({ user, size }: { user: ShellUser; size: "md" | "lg" }) {
-  const dim = size === "lg" ? "h-10 w-10 text-[length:var(--a-text-sm)]" : "h-9 w-9 text-[length:var(--a-text-sm)]";
+  const dim =
+    size === "lg"
+      ? "h-10 w-10 text-[length:var(--a-text-sm)]"
+      : "h-9 w-9 text-[length:var(--a-text-sm)]";
   if (user.avatarUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- session avatar URL, not a static asset
@@ -50,10 +52,35 @@ function Avatar({ user, size }: { user: ShellUser; size: "md" | "lg" }) {
   );
 }
 
-export function UserMenu({ user = DEMO_USER }: UserMenuProps) {
+export function UserMenu({ user: userProp }: UserMenuProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<ShellUser | null>(userProp ?? null);
+  const [busyLogout, setBusyLogout] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+
+  const loadMe = useCallback(async () => {
+    if (userProp) {
+      setUser(userProp);
+      return;
+    }
+    const res = await fetchBusinessMeClient();
+    if (!res.ok) {
+      setUser(null);
+      return;
+    }
+    setUser({
+      name: res.data.displayName,
+      role: res.data.email,
+      initials: initialsFromName(res.data.displayName, res.data.email),
+      avatarUrl: null,
+    });
+  }, [userProp]);
+
+  useEffect(() => {
+    void loadMe();
+  }, [loadMe]);
 
   useEffect(() => {
     if (!open) return;
@@ -70,6 +97,23 @@ export function UserMenu({ user = DEMO_USER }: UserMenuProps) {
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  async function onLogout() {
+    setBusyLogout(true);
+    setOpen(false);
+    await logoutBusiness();
+    router.replace(BUSINESS_LOGIN_PATH);
+    router.refresh();
+  }
+
+  if (!user) {
+    return (
+      <span
+        className="inline-flex h-9 w-9 animate-pulse rounded-full bg-a-surface-3"
+        aria-hidden
+      />
+    );
+  }
 
   return (
     <div ref={rootRef} className="relative">
@@ -125,15 +169,15 @@ export function UserMenu({ user = DEMO_USER }: UserMenuProps) {
           </div>
           <ul className="p-1">
             <li role="none">
-              <button
-                type="button"
+              <Link
+                href="/account"
                 role="menuitem"
-                className="flex w-full items-center gap-2 rounded-[var(--a-radius-sm)] px-2.5 py-2 text-left text-[length:var(--a-text-sm)] text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
+                className="flex w-full items-center gap-2 rounded-[var(--a-radius-sm)] px-2.5 py-2 text-[length:var(--a-text-sm)] text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
                 onClick={() => setOpen(false)}
               >
                 <User className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-                Compte (stub)
-              </button>
+                Compte
+              </Link>
             </li>
             <li role="none">
               <Link
@@ -154,11 +198,12 @@ export function UserMenu({ user = DEMO_USER }: UserMenuProps) {
               <button
                 type="button"
                 role="menuitem"
-                className="flex w-full items-center gap-2 rounded-[var(--a-radius-sm)] px-2.5 py-2 text-left text-[length:var(--a-text-sm)] text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
-                onClick={() => setOpen(false)}
+                disabled={busyLogout}
+                className="flex w-full items-center gap-2 rounded-[var(--a-radius-sm)] px-2.5 py-2 text-left text-[length:var(--a-text-sm)] text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg disabled:opacity-50"
+                onClick={() => void onLogout()}
               >
                 <LogOut className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-                Déconnexion (stub)
+                {busyLogout ? "Déconnexion…" : "Déconnexion"}
               </button>
             </li>
           </ul>

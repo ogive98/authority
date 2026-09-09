@@ -241,4 +241,23 @@ export class InventoryController {
       warehouseId,
     });
   }
+
+  @Get('salubrita/history')
+  @RequirePermission(PERMISSION_KEYS.inventoryRead)
+  salubritaHistory(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.inventoryService.listSalubritaHistory(tenancy.companyId);
+  }
+
+  @Get('salubrita/recipients')
+  @RequirePermission(PERMISSION_KEYS.inventoryRead)
+  salubritaRecipients(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('channel') channel?: string,
+    @Query('q') q?: string,
+  ) {
+    return this.inventoryService.listSalubritaRecipients(tenancy.companyId, {
+      channel: channel as 'email' | 'whatsapp' | 'portal' | undefined,
+      q,
+    });
+  }
 }

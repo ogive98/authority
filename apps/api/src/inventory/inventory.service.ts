@@ -31,7 +31,7 @@ import type {
   ReserveStockDto,
   UpsertCheeseArticleDto,
 } from './inventory.dto';
-import { computeDlcIso, dailyLotCode, tunisClock } from './inventory.shelf';
+import { computeDlcIso, computeProductionDateIso, dailyLotCode, tunisClock } from './inventory.shelf';
 
 export type WarehouseDto = {
   id: string;
@@ -92,6 +92,7 @@ export type LotDto = {
   qtyReserved: string;
   available: string;
   packDate: string | null;
+  productionDate: string | null;
   dlc: string | null;
   status: InvLotStatus;
   version: number;
@@ -115,6 +116,20 @@ export type CheeseArticleDto = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type SalubritaCertLine = {
+  productId: string;
+  productSku: string;
+  productName: string;
+  productionDate: string;
+  packDate: string;
+  dlc: string;
+  daysAfterPack: number;
+  lotCode: string | null;
+  shelfLifeDays: number;
+};
+
+const SALUBRITA_HISTORY_DAYS = 30;
 
 @Injectable()
 export class InventoryService {
@@ -933,6 +948,7 @@ export class InventoryService {
         name: true,
         uom: true,
         shelfLifeDays: true,
+        productionOffsetDays: true,
       },
     });
 
@@ -950,6 +966,10 @@ export class InventoryService {
       if (shelfLifeDays == null || shelfLifeDays < 1) continue;
       const lotCode = dailyLotCode(product.sku, packDate);
       const dlcIso = computeDlcIso(packDate, shelfLifeDays);
+      const productionIso = computeProductionDateIso(
+        packDate,
+        product.productionOffsetDays,
+      );
       const existing = await this.prisma.invLot.findUnique({
         where: {
           companyId_warehouseId_productId_lotCode: {
@@ -978,6 +998,7 @@ export class InventoryService {
           productId: product.id,
           lotCode,
           packDate: parseDlc(packDate),
+          productionDate: parseDlc(productionIso),
           dlc: parseDlc(dlcIso),
           status: InvLotStatus.OPEN,
           qtyOnHand: new Prisma.Decimal(0),
@@ -997,29 +1018,223 @@ export class InventoryService {
       });
     }
 
+    const cert = await this.buildSalubritaCertificateLive(companyId, {
+      packDate,
+      warehouseId,
+    });
+    if (cert.items.length > 0) {
+      try {
+        await this.upsertSalubritaSnapshot(
+          companyId,
+          packDate,
+          warehouseId,
+          cert.items,
+        );
+      } catch {
+        // best-effort publish snapshot
+      }
+    }
+
     return { packDate, warehouseId, created, skipped, items };
   }
 
   /**
-   * D102 — certificate rows for packDate (auto DLC from product.shelfLifeDays).
+   * D105 — last 30 calendar days of certificat snapshots (+ backfill from live).
+   */
+  async listSalubritaHistory(
+    companyId: string,
+  ): Promise<{
+    days: number;
+    fromDate: string;
+    toDate: string;
+    items: Array<{
+      packDate: string;
+      lineCount: number;
+      updatedAt: string;
+      source: 'snapshot' | 'live';
+    }>;
+  }> {
+    const toDate = tunisClock().date;
+    const fromDate = addDaysIso(toDate, -(SALUBRITA_HISTORY_DAYS - 1));
+    const from = parseDlc(fromDate);
+    const to = parseDlc(toDate);
+    if (!from || !to) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.INVALID_SHELF_LIFE,
+        'Invalid history date window.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const snaps = await this.prisma.invSalubritaCertificate.findMany({
+      where: {
+        companyId,
+        packDate: { gte: from, lte: to },
+      },
+      orderBy: [{ packDate: 'desc' }],
+      select: {
+        packDate: true,
+        lineCount: true,
+        updatedAt: true,
+      },
+    });
+    const byDate = new Map<
+      string,
+      {
+        packDate: string;
+        lineCount: number;
+        updatedAt: string;
+        source: 'snapshot' | 'live';
+      }
+    >(
+      snaps.map((s) => [
+        s.packDate.toISOString().slice(0, 10),
+        {
+          packDate: s.packDate.toISOString().slice(0, 10),
+          lineCount: s.lineCount,
+          updatedAt: s.updatedAt.toISOString(),
+          source: 'snapshot',
+        },
+      ]),
+    );
+
+    // Include pack dates that have cheese lots but no snapshot yet
+    const lotDates = await this.prisma.invLot.findMany({
+      where: {
+        companyId,
+        AND: [
+          { packDate: { not: null } },
+          { packDate: { gte: from, lte: to } },
+        ],
+      },
+      select: { packDate: true },
+      distinct: ['packDate'],
+    });
+    for (const row of lotDates) {
+      if (!row.packDate) continue;
+      const iso = row.packDate.toISOString().slice(0, 10);
+      if (byDate.has(iso)) continue;
+      byDate.set(iso, {
+        packDate: iso,
+        lineCount: 0,
+        updatedAt: new Date().toISOString(),
+        source: 'live',
+      });
+    }
+
+    // Always surface today
+    if (!byDate.has(toDate)) {
+      byDate.set(toDate, {
+        packDate: toDate,
+        lineCount: 0,
+        updatedAt: new Date().toISOString(),
+        source: 'live',
+      });
+    }
+
+    const items = [...byDate.values()].sort((a, b) =>
+      a.packDate < b.packDate ? 1 : a.packDate > b.packDate ? -1 : 0,
+    );
+
+    return {
+      days: SALUBRITA_HISTORY_DAYS,
+      fromDate,
+      toDate,
+      items,
+    };
+  }
+
+  /**
+   * D107 — customers eligible for salubrité send (flags on fiche client).
+   */
+  async listSalubritaRecipients(
+    companyId: string,
+    opts: { channel?: 'email' | 'whatsapp' | 'portal'; q?: string } = {},
+  ): Promise<{
+    channel: string;
+    items: Array<{
+      id: string;
+      code: string;
+      legalName: string;
+      nickname: string | null;
+      email: string | null;
+      whatsapp: string | null;
+      salubritaEmail: boolean;
+      salubritaWhatsapp: boolean;
+      salubritaPortal: boolean;
+    }>;
+  }> {
+    const channel = opts.channel ?? 'email';
+    const where: Prisma.CusCustomerWhereInput = {
+      companyId,
+      deletedAt: null,
+      status: 'ACTIVE',
+      blocked: false,
+    };
+    if (channel === 'email') where.salubritaEmail = true;
+    if (channel === 'whatsapp') where.salubritaWhatsapp = true;
+    if (channel === 'portal') where.salubritaPortal = true;
+    if (opts.q?.trim()) {
+      const q = opts.q.trim();
+      where.OR = [
+        { code: { contains: q, mode: 'insensitive' } },
+        { nickname: { contains: q, mode: 'insensitive' } },
+        { party: { legalName: { contains: q, mode: 'insensitive' } } },
+      ];
+    }
+
+    const rows = await this.prisma.cusCustomer.findMany({
+      where,
+      include: {
+        party: true,
+        contacts: {
+          where: { deletedAt: null, active: true },
+          orderBy: [{ createdAt: 'asc' }],
+          take: 5,
+        },
+      },
+      orderBy: [{ code: 'asc' }],
+      take: 200,
+    });
+
+    const items = rows.map((row) => {
+      const contactEmail =
+        row.contacts.find((c) => c.email?.trim())?.email?.trim() ?? null;
+      const contactWa =
+        row.contacts.find((c) => c.whatsapp?.trim())?.whatsapp?.trim() ??
+        row.contacts.find((c) => c.phone?.trim())?.phone?.trim() ??
+        null;
+      return {
+        id: row.id,
+        code: row.code,
+        legalName: row.party.legalName,
+        nickname: row.nickname,
+        email: contactEmail,
+        whatsapp: contactWa,
+        salubritaEmail: row.salubritaEmail,
+        salubritaWhatsapp: row.salubritaWhatsapp,
+        salubritaPortal: row.salubritaPortal,
+      };
+    });
+
+    return { channel, items };
+  }
+
+  /**
+   * D102/D105 — certificate for packDate. Prefer snapshot for past days; refresh+save today.
    */
   async listSalubritaCertificate(
     companyId: string,
-    opts: { packDate?: string; warehouseId?: string } = {},
+    opts: {
+      packDate?: string;
+      warehouseId?: string;
+      persist?: boolean;
+    } = {},
   ): Promise<{
     packDate: string;
     warehouseId: string | null;
-    items: Array<{
-      productId: string;
-      productSku: string;
-      productName: string;
-      productionDate: string;
-      packDate: string;
-      dlc: string;
-      daysAfterPack: number;
-      lotCode: string | null;
-      shelfLifeDays: number;
-    }>;
+    source: 'snapshot' | 'live';
+    items: SalubritaCertLine[];
   }> {
     const packDate = (opts.packDate?.trim() || tunisClock().date).slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(packDate)) {
@@ -1029,6 +1244,86 @@ export class InventoryService {
         HttpStatus.BAD_REQUEST,
       );
     }
+
+    const today = tunisClock().date;
+    const oldest = addDaysIso(today, -(SALUBRITA_HISTORY_DAYS - 1));
+    if (packDate < oldest || packDate > today) {
+      // Still allow read of snapshot outside window if exists
+      const snapOnly = await this.prisma.invSalubritaCertificate.findUnique({
+        where: {
+          companyId_packDate: {
+            companyId,
+            packDate: parseDlc(packDate)!,
+          },
+        },
+      });
+      if (!snapOnly) {
+        throw new InventoryException(
+          INVENTORY_ERROR_CODES.NOT_FOUND,
+          `Certificat hors fenêtre ${SALUBRITA_HISTORY_DAYS} j.`,
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      return {
+        packDate,
+        warehouseId: snapOnly.warehouseId,
+        source: 'snapshot',
+        items: asCertLines(snapOnly.payloadJson),
+      };
+    }
+
+    if (packDate < today) {
+      const snap = await this.prisma.invSalubritaCertificate.findUnique({
+        where: {
+          companyId_packDate: {
+            companyId,
+            packDate: parseDlc(packDate)!,
+          },
+        },
+      });
+      if (snap && asCertLines(snap.payloadJson).length > 0) {
+        return {
+          packDate,
+          warehouseId: snap.warehouseId,
+          source: 'snapshot',
+          items: asCertLines(snap.payloadJson),
+        };
+      }
+    }
+
+    const live = await this.buildSalubritaCertificateLive(companyId, {
+      packDate,
+      warehouseId: opts.warehouseId,
+    });
+
+    const shouldPersist =
+      opts.persist !== false &&
+      (packDate === today || live.items.length > 0);
+    if (shouldPersist && live.items.length > 0) {
+      try {
+        await this.upsertSalubritaSnapshot(
+          companyId,
+          live.packDate,
+          live.warehouseId,
+          live.items,
+        );
+      } catch {
+        // Snapshot is best-effort — never block consultation / print / send
+      }
+    }
+
+    return { ...live, source: 'live' };
+  }
+
+  private async buildSalubritaCertificateLive(
+    companyId: string,
+    opts: { packDate: string; warehouseId?: string },
+  ): Promise<{
+    packDate: string;
+    warehouseId: string | null;
+    items: SalubritaCertLine[];
+  }> {
+    const packDate = opts.packDate;
 
     let warehouseId = opts.warehouseId?.trim() || null;
     if (warehouseId) {
@@ -1053,6 +1348,7 @@ export class InventoryService {
         sku: true,
         name: true,
         shelfLifeDays: true,
+        productionOffsetDays: true,
       },
     });
 
@@ -1064,12 +1360,13 @@ export class InventoryService {
               companyId,
               warehouseId,
               productId: { in: productIds },
-              packDate: parseDlc(packDate),
+              packDate: parseDlc(packDate)!,
             },
             select: {
               productId: true,
               lotCode: true,
               packDate: true,
+              productionDate: true,
               dlc: true,
             },
           })
@@ -1082,11 +1379,14 @@ export class InventoryService {
       const dlcIso = lot?.dlc
         ? lot.dlc.toISOString().slice(0, 10)
         : computeDlcIso(packDate, shelf);
+      const productionIso = lot?.productionDate
+        ? lot.productionDate.toISOString().slice(0, 10)
+        : computeProductionDateIso(packDate, p.productionOffsetDays);
       return {
         productId: p.id,
         productSku: p.sku,
         productName: p.name,
-        productionDate: packDate,
+        productionDate: productionIso,
         packDate,
         dlc: dlcIso,
         daysAfterPack: shelf,
@@ -1096,6 +1396,37 @@ export class InventoryService {
     });
 
     return { packDate, warehouseId, items };
+  }
+
+  private async upsertSalubritaSnapshot(
+    companyId: string,
+    packDate: string,
+    warehouseId: string | null,
+    items: SalubritaCertLine[],
+  ): Promise<void> {
+    const pack = parseDlc(packDate);
+    if (!pack) return;
+    await this.prisma.invSalubritaCertificate.upsert({
+      where: {
+        companyId_packDate: {
+          companyId,
+          packDate: pack,
+        },
+      },
+      create: {
+        companyId,
+        packDate: pack,
+        warehouseId,
+        lineCount: items.length,
+        payloadJson: items,
+      },
+      update: {
+        warehouseId,
+        lineCount: items.length,
+        payloadJson: items,
+        version: { increment: 1 },
+      },
+    });
   }
 
   async createLot(companyId: string, dto: CreateLotDto): Promise<LotDto> {
@@ -2004,6 +2335,9 @@ function serializeLot(
     qtyReserved: row.qtyReserved.toString(),
     available: row.qtyOnHand.sub(row.qtyReserved).toString(),
     packDate: row.packDate ? row.packDate.toISOString().slice(0, 10) : null,
+    productionDate: row.productionDate
+      ? row.productionDate.toISOString().slice(0, 10)
+      : null,
     dlc: row.dlc ? row.dlc.toISOString().slice(0, 10) : null,
     status: row.status,
     version: row.version,
@@ -2033,4 +2367,42 @@ function parseDlc(raw?: string): Date | null {
     );
   }
   return new Date(`${s}T00:00:00.000Z`);
+}
+
+function addDaysIso(iso: string, deltaDays: number): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+  if (!m) throw new Error('date must be YYYY-MM-DD');
+  const utc = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const next = new Date(utc + deltaDays * 86400000);
+  const yy = next.getUTCFullYear();
+  const mm = String(next.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(next.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+function asCertLines(payload: Prisma.JsonValue): SalubritaCertLine[] {
+  if (!Array.isArray(payload)) return [];
+  const out: SalubritaCertLine[] = [];
+  for (const row of payload) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
+    const r = row as Record<string, unknown>;
+    if (typeof r.productSku !== 'string' || typeof r.productName !== 'string') {
+      continue;
+    }
+    out.push({
+      productId: typeof r.productId === 'string' ? r.productId : '',
+      productSku: r.productSku,
+      productName: r.productName,
+      productionDate:
+        typeof r.productionDate === 'string' ? r.productionDate : '',
+      packDate: typeof r.packDate === 'string' ? r.packDate : '',
+      dlc: typeof r.dlc === 'string' ? r.dlc : '',
+      daysAfterPack:
+        typeof r.daysAfterPack === 'number' ? r.daysAfterPack : 0,
+      lotCode: typeof r.lotCode === 'string' ? r.lotCode : null,
+      shelfLifeDays:
+        typeof r.shelfLifeDays === 'number' ? r.shelfLifeDays : 0,
+    });
+  }
+  return out;
 }

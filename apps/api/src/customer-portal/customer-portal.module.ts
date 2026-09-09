@@ -4,6 +4,7 @@ import { DeliveryModule } from '../delivery/delivery.module';
 import { FinanceModule } from '../finance/finance.module';
 import { DocumentsModule } from '../documents/documents.module';
 import { IdentityModule } from '../identity/identity.module';
+import { InventoryModule } from '../inventory/inventory.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SalesModule } from '../sales/sales.module';
@@ -23,6 +24,7 @@ import { CustomerPortalSessionGuard } from './customer-portal-session.guard';
     DeliveryModule,
     FinanceModule,
     DocumentsModule,
+    InventoryModule,
     AuditModule,
     ModulesRegistryModule,
   ],

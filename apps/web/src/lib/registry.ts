@@ -18,8 +18,8 @@ export type MeRegistry = {
 };
 
 /**
- * Offline / API-down fallback — Utility Cube nav shape
- * (Dashboard / Sales / Inventory / Settings) mapped to AUTHORITY routes.
+ * Offline / API-down fallback — full Contiental nav so chrome stays usable
+ * when Nest hangs (authenticated session assumed by shell layout).
  */
 export const FALLBACK_REGISTRY: MeRegistry = {
   companyId: null,
@@ -116,6 +116,14 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       ],
     },
     {
+      key: "identity",
+      name: "Identité",
+      features: [
+        { id: "account", label: "Mon compte", href: "/account" },
+        { id: "users", label: "Utilisateurs", href: "/users" },
+      ],
+    },
+    {
       key: "settings",
       name: "Paramètres",
       features: [
@@ -126,6 +134,21 @@ export const FALLBACK_REGISTRY: MeRegistry = {
           href: "/settings#expertise",
         },
         { id: "company", label: "Société / sites", href: "/settings#company" },
+      ],
+    },
+  ],
+  flags: [],
+};
+
+/** Unauthenticated — Accueil only (do not fake full module rail). */
+export const UNAUTH_REGISTRY: MeRegistry = {
+  companyId: null,
+  modules: [
+    {
+      key: "home",
+      name: "Tableau de bord",
+      features: [
+        { id: "dashboard", label: "Vue d’ensemble", href: "/" },
       ],
     },
   ],
@@ -164,6 +187,7 @@ const REGISTRY_TIMEOUT_MS = 4_000;
 
 /**
  * Never throws — shell chrome must keep icons even when Nest is down / hangs.
+ * 401 → Accueil only (session gate should redirect; this avoids fake full nav).
  */
 export async function fetchMeRegistry(): Promise<MeRegistry> {
   try {
@@ -172,6 +196,9 @@ export async function fetchMeRegistry(): Promise<MeRegistry> {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
     });
+    if (res.status === 401 || res.status === 403) {
+      return UNAUTH_REGISTRY;
+    }
     if (!res.ok) {
       return FALLBACK_REGISTRY;
     }

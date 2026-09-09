@@ -10,6 +10,7 @@ export type Product = {
   trackLot: boolean;
   perishable: boolean;
   shelfLifeDays: number | null;
+  productionOffsetDays: number | null;
   storageClassKey: string;
   allergenFlags: string[];
   status: ProductStatus;
@@ -45,6 +46,7 @@ export type ProductWriteBody = {
   trackLot: boolean;
   perishable: boolean;
   shelfLifeDays?: number | null;
+  productionOffsetDays?: number | null;
   storageClassKey: string;
   allergenFlags: string[];
   version?: number;

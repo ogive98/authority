@@ -46,6 +46,13 @@ export class CreateProductDto {
   @Min(1)
   shelfLifeDays?: number | null;
 
+  /** Days before pack = Date Production (0/null = same day). */
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsInt()
+  @Min(0)
+  productionOffsetDays?: number | null;
+
   @IsString()
   @MinLength(1)
   @MaxLength(64)
@@ -89,6 +96,12 @@ export class UpdateProductDto {
   @IsInt()
   @Min(1)
   shelfLifeDays?: number | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsInt()
+  @Min(0)
+  productionOffsetDays?: number | null;
 
   @IsOptional()
   @IsString()

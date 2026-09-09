@@ -24,6 +24,11 @@ export function SyncModuleFromRoute() {
       setFeatureMenuOpen(false);
       return;
     }
+    if (pathname.startsWith("/account") || pathname.startsWith("/users")) {
+      if (has("identity")) setSelectedModuleId("identity");
+      setFeatureMenuOpen(false);
+      return;
+    }
     if (pathname.startsWith("/customers")) {
       if (has("customers")) setSelectedModuleId("customers");
       setFeatureMenuOpen(false);

@@ -2,6 +2,7 @@ import './load-env';
 import { Module } from '@nestjs/common';
 import { HealthModule } from './health/health.module';
 import { IdentityModule } from './identity/identity.module';
+import { UsersModule } from './identity/users.module';
 import { OrganizationModule } from './organization/organization.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SuperAdminModule } from './super-admin/super-admin.module';
@@ -32,6 +33,7 @@ import { HrModule } from './hr/hr.module';
     HealthModule,
     AuditModule,
     IdentityModule,
+    UsersModule,
     OrganizationModule,
     SuperAdminModule,
     ModulesRegistryModule,

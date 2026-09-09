@@ -65,6 +65,9 @@ export type CustomerDto = {
   blocked: boolean;
   blockedAt: string | null;
   blockedReason: string | null;
+  salubritaEmail: boolean;
+  salubritaWhatsapp: boolean;
+  salubritaPortal: boolean;
   status: CusCustomerStatus;
   version: number;
   createdAt: string;
@@ -230,6 +233,9 @@ export class CustomersService {
                 ? new Prisma.Decimal(dto.creditLimit)
                 : null,
             zoneId: dto.zoneId ?? null,
+            salubritaEmail: dto.salubritaEmail ?? false,
+            salubritaWhatsapp: dto.salubritaWhatsapp ?? false,
+            salubritaPortal: dto.salubritaPortal ?? true,
             status: CusCustomerStatus.ACTIVE,
           },
           include: { party: true, zone: true },
@@ -327,6 +333,15 @@ export class CustomersService {
             ? { paymentTerms: dto.paymentTerms?.trim() || null }
             : {}),
           ...(dto.zoneId !== undefined ? { zoneId: dto.zoneId } : {}),
+          ...(dto.salubritaEmail !== undefined
+            ? { salubritaEmail: dto.salubritaEmail }
+            : {}),
+          ...(dto.salubritaWhatsapp !== undefined
+            ? { salubritaWhatsapp: dto.salubritaWhatsapp }
+            : {}),
+          ...(dto.salubritaPortal !== undefined
+            ? { salubritaPortal: dto.salubritaPortal }
+            : {}),
           version: { increment: 1 },
         },
       });
@@ -632,6 +647,9 @@ function serializeCustomer(row: CustomerWithParty): CustomerDto {
     blocked: row.blocked,
     blockedAt: row.blockedAt ? row.blockedAt.toISOString() : null,
     blockedReason: row.blockedReason,
+    salubritaEmail: row.salubritaEmail,
+    salubritaWhatsapp: row.salubritaWhatsapp,
+    salubritaPortal: row.salubritaPortal,
     status: row.status,
     version: row.version,
     createdAt: row.createdAt.toISOString(),

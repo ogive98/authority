@@ -10,6 +10,10 @@ import {
   PanelLeftClose,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  BUSINESS_LOGIN_PATH,
+  logoutBusiness,
+} from "@/lib/business-auth";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
@@ -216,11 +220,19 @@ export function ShellSidebar() {
           </Link>
           <button
             type="button"
-            title="Déconnexion (stub)"
+            title="Déconnexion"
             className={cn(
               "group flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-a-fg-muted hover:bg-white/40 hover:text-a-fg",
               !expanded && "justify-center",
             )}
+            onClick={() => {
+              setMobileNavOpen(false);
+              void (async () => {
+                await logoutBusiness();
+                router.replace(BUSINESS_LOGIN_PATH);
+                router.refresh();
+              })();
+            }}
           >
             <LogOut
               className="a-app-glyph h-5 w-5 text-a-orange"

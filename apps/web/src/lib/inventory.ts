@@ -54,6 +54,7 @@ export type InventoryLot = {
   qtyReserved: string;
   available: string;
   packDate?: string | null;
+  productionDate?: string | null;
   dlc: string | null;
   status: "OPEN" | "QUARANTINE" | "CLOSED";
   version: number;
@@ -400,8 +401,47 @@ export type SalubritaCertificateItem = {
 export type SalubritaCertificate = {
   packDate: string;
   warehouseId: string | null;
+  source?: "snapshot" | "live";
   items: SalubritaCertificateItem[];
 };
+
+export type SalubritaHistoryItem = {
+  packDate: string;
+  lineCount: number;
+  updatedAt: string;
+  source: "snapshot" | "live";
+};
+
+export async function fetchSalubritaHistory(): Promise<
+  | {
+      ok: true;
+      data: {
+        days: number;
+        fromDate: string;
+        toDate: string;
+        items: SalubritaHistoryItem[];
+      };
+    }
+  | ApiFail
+> {
+  try {
+    const res = await fetch("/api/v1/inventory/salubrita/history", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    const data = (await res.json()) as {
+      days: number;
+      fromDate: string;
+      toDate: string;
+      items: SalubritaHistoryItem[];
+    };
+    return { ok: true, data };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
 
 export async function fetchSalubritaCertificate(opts?: {
   packDate?: string;
@@ -424,6 +464,48 @@ export async function fetchSalubritaCertificate(opts?: {
     );
     if (!res.ok) return parseFail(res);
     const data = (await res.json()) as SalubritaCertificate;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export type SalubritaRecipient = {
+  id: string;
+  code: string;
+  legalName: string;
+  nickname: string | null;
+  email: string | null;
+  whatsapp: string | null;
+  salubritaEmail: boolean;
+  salubritaWhatsapp: boolean;
+  salubritaPortal: boolean;
+};
+
+export async function fetchSalubritaRecipients(opts: {
+  channel: "email" | "whatsapp" | "portal";
+  q?: string;
+}): Promise<
+  | { ok: true; data: { channel: string; items: SalubritaRecipient[] } }
+  | ApiFail
+> {
+  try {
+    const params = new URLSearchParams();
+    params.set("channel", opts.channel);
+    if (opts.q?.trim()) params.set("q", opts.q.trim());
+    const res = await fetch(
+      `/api/v1/inventory/salubrita/recipients?${params.toString()}`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    const data = (await res.json()) as {
+      channel: string;
+      items: SalubritaRecipient[];
+    };
     return { ok: true, data };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };

@@ -1,4 +1,10 @@
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateMeDto {
   @IsOptional()
@@ -12,4 +18,17 @@ export class UpdateMeDto {
   @MinLength(2)
   @MaxLength(16)
   locale?: string;
+
+  /** Required when setting a new password. */
+  @ValidateIf((o: UpdateMeDto) => Boolean(o.password?.trim()))
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  currentPassword?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  password?: string;
 }

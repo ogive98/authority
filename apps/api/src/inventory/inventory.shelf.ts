@@ -1,6 +1,6 @@
 /**
- * Pack date + shelf life → DLC (calendar days, exclusive of inventing legal rates).
- * Pack date is the fabrication/packaging calendar day in company local TZ (Tunis).
+ * Pack date + shelf life → DLC (calendar days).
+ * Pack date = emballage (Tunis calendar day).
  */
 export function computeDlcIso(
   packDateIso: string,
@@ -9,22 +9,43 @@ export function computeDlcIso(
   if (!Number.isInteger(shelfLifeDays) || shelfLifeDays < 1) {
     throw new Error('shelfLifeDays must be a positive integer');
   }
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(packDateIso.trim());
+  return addCalendarDaysIso(packDateIso, shelfLifeDays);
+}
+
+/**
+ * Date Production = emballage − offset (jours).
+ * Offset 0/null → même jour (frais, ex. mozzarella).
+ * Offset 30 → modèle Word fromages affinés (prod 10/08, emballage 09/09).
+ */
+export function computeProductionDateIso(
+  packDateIso: string,
+  productionOffsetDays?: number | null,
+): string {
+  const offset = Math.trunc(Number(productionOffsetDays ?? 0));
+  if (!Number.isFinite(offset) || offset < 0) {
+    throw new Error('productionOffsetDays must be >= 0');
+  }
+  if (offset === 0) return packDateIso.trim().slice(0, 10);
+  return addCalendarDaysIso(packDateIso, -offset);
+}
+
+function addCalendarDaysIso(iso: string, deltaDays: number): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
   if (!m) {
-    throw new Error('packDate must be YYYY-MM-DD');
+    throw new Error('date must be YYYY-MM-DD');
   }
   const y = Number(m[1]);
   const mo = Number(m[2]);
   const d = Number(m[3]);
   const utc = Date.UTC(y, mo - 1, d);
-  const dlc = new Date(utc + shelfLifeDays * 24 * 60 * 60 * 1000);
-  const yy = dlc.getUTCFullYear();
-  const mm = String(dlc.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(dlc.getUTCDate()).padStart(2, '0');
+  const next = new Date(utc + deltaDays * 24 * 60 * 60 * 1000);
+  const yy = next.getUTCFullYear();
+  const mm = String(next.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(next.getUTCDate()).padStart(2, '0');
   return `${yy}-${mm}-${dd}`;
 }
 
-/** Lot code for 1 lot / cheese type / day. */
+/** Lot code for 1 lot / cheese type / pack day. */
 export function dailyLotCode(sku: string, packDateIso: string): string {
   const skuPart = sku.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-');
   return `${skuPart}-${packDateIso.replace(/-/g, '')}`;

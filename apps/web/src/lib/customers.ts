@@ -41,6 +41,9 @@ export type Customer = {
   blockedAt: string | null;
   blockedReason: string | null;
   status: CustomerStatus;
+  salubritaEmail: boolean;
+  salubritaWhatsapp: boolean;
+  salubritaPortal: boolean;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -61,6 +64,9 @@ export type CustomerWriteBody = {
   paymentTerms?: string;
   creditLimit?: string;
   zoneId?: string | null;
+  salubritaEmail?: boolean;
+  salubritaWhatsapp?: boolean;
+  salubritaPortal?: boolean;
   contacts?: Array<{
     name: string;
     phone?: string;
@@ -292,6 +298,7 @@ export async function addCustomerContact(
   body: {
     name: string;
     phone?: string;
+    whatsapp?: string;
     email?: string;
     role?: string;
   },

@@ -168,3 +168,73 @@ export async function upsertExpertise(
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
 }
+
+export type EffectiveSetting = {
+  key: string;
+  value: unknown;
+  source: string;
+  valueType: string;
+  description: string | null;
+};
+
+export type EffectiveSettings = {
+  companyId: string;
+  settings: EffectiveSetting[];
+};
+
+export async function fetchEffectiveSettings(): Promise<
+  { ok: true; data: EffectiveSettings } | ApiFail
+> {
+  try {
+    const res = await fetch("/api/v1/settings/effective", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      if (res.status === 403) {
+        const ok = await ensureCompanyContext();
+        if (ok) {
+          const retry = await fetch("/api/v1/settings/effective", {
+            credentials: "include",
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+          });
+          if (!retry.ok) return parseError(retry);
+          return {
+            ok: true,
+            data: (await retry.json()) as EffectiveSettings,
+          };
+        }
+      }
+      return parseError(res);
+    }
+    return { ok: true, data: (await res.json()) as EffectiveSettings };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function putCompanySetting(
+  key: string,
+  value: unknown,
+): Promise<{ ok: true; data: EffectiveSetting } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/settings", {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ key, value, level: "COMPANY" }),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as EffectiveSetting };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}

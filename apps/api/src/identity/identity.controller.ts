@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { IamUser } from '@prisma/client';
+import { IamSessionRealm } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { CurrentSession, CurrentUser } from './identity.decorators';
@@ -55,13 +56,39 @@ export class IdentityController {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
+      path: '/',
       expires: result.session.expiresAt,
     });
 
     return {
       user: result.user,
       session: { id: result.session.id, expiresAt: result.session.expiresAt },
+      realm: 'business' as const,
     };
+  }
+
+  @Post('auth/logout')
+  @HttpCode(200)
+  async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const token = req.cookies?.[IDENTITY_COOKIE_NAME] as string | undefined;
+
+    if (token) {
+      const session = await this.sessionService.findActiveSession(
+        token,
+        IamSessionRealm.BUSINESS,
+      );
+      if (session) {
+        await this.sessionService.revokeSession(session.id, session.userId);
+      }
+    }
+
+    res.clearCookie(IDENTITY_COOKIE_NAME, { path: '/' });
+    res.clearCookie(TENANCY_COOKIES.companyId, { path: '/' });
+    res.clearCookie(TENANCY_COOKIES.siteId, { path: '/' });
+    return { ok: true };
   }
 
   @Post('auth/reauth')
@@ -107,6 +134,8 @@ export class IdentityController {
       userId: user.id,
       displayName: dto.displayName,
       locale: dto.locale,
+      currentPassword: dto.currentPassword,
+      password: dto.password,
       companyId:
         (typeof companyHeader === 'string' ? companyHeader : undefined) ??
         cookies[TENANCY_COOKIES.companyId],
@@ -131,7 +160,9 @@ export class IdentityController {
     await this.sessionService.revokeSession(sessionId, session.userId);
 
     if (session.id === sessionId) {
-      res.clearCookie(IDENTITY_COOKIE_NAME);
+      res.clearCookie(IDENTITY_COOKIE_NAME, { path: '/' });
+      res.clearCookie(TENANCY_COOKIES.companyId, { path: '/' });
+      res.clearCookie(TENANCY_COOKIES.siteId, { path: '/' });
     }
   }
 }

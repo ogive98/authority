@@ -20,6 +20,7 @@ import { LoginDto } from '../identity/login.dto';
 import { SessionService } from '../identity/session.service';
 import { RequireModule } from '../modules-registry/modules.decorators';
 import { DocumentsService } from '../documents/documents.service';
+import { InventoryService } from '../inventory/inventory.service';
 import { DEFAULT_MAX_UPLOAD_MB } from '../platform/platform.constants';
 import { CustomerPortalAuthService } from './customer-portal-auth.service';
 import { CustomerPortalClaimsService } from './customer-portal-claims.service';
@@ -48,6 +49,7 @@ export class CustomerPortalController {
     private readonly portalClaimsService: CustomerPortalClaimsService,
     private readonly portalInsightsService: CustomerPortalInsightsService,
     private readonly documentsService: DocumentsService,
+    private readonly inventoryService: InventoryService,
     private readonly sessionService: SessionService,
   ) {}
 
@@ -328,6 +330,27 @@ export class CustomerPortalController {
       req.customerId!,
       id,
     );
+  }
+
+  @Get('salubrita/certificates')
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('inventory')
+  listSalubritaCertificates(@Req() req: CustomerPortalRequest) {
+    // Company-scoped quality certificates (no customer-specific lines)
+    return this.inventoryService.listSalubritaHistory(req.companyId!);
+  }
+
+  @Get('salubrita/certificates/:packDate')
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('inventory')
+  getSalubritaCertificate(
+    @Req() req: CustomerPortalRequest,
+    @Param('packDate') packDate: string,
+  ) {
+    return this.inventoryService.listSalubritaCertificate(req.companyId!, {
+      packDate,
+      persist: false,
+    });
   }
 
   @Get('claims')

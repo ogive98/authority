@@ -7,6 +7,7 @@ export const PORTAL_FINANCE_PATH = "/portal/finance";
 export const PORTAL_FINANCE_INVOICES_PATH = "/portal/finance/invoices";
 export const PORTAL_CLAIMS_PATH = "/portal/claims";
 export const PORTAL_DOCUMENTS_PATH = "/portal/documents";
+export const PORTAL_SALUBRITA_PATH = "/portal/salubrita";
 export const PORTAL_COOKIE_NAME = "authority_customer_portal_session";
 
 export const PORTAL_API = {
@@ -23,6 +24,7 @@ export const PORTAL_API = {
   financeCredit: "/api/v1/customer-portal/finance/credit",
   claims: "/api/v1/customer-portal/claims",
   documents: "/api/v1/customer-portal/documents",
+  salubritaCertificates: "/api/v1/customer-portal/salubrita/certificates",
 } as const;
 
 export type PortalMe = {
@@ -454,6 +456,52 @@ export async function fetchPortalDocuments(opts?: {
   const qs = params.toString();
   return portalFetch<PortalDocumentList>(
     `${PORTAL_API.documents}${qs ? `?${qs}` : ""}`,
+  );
+}
+
+export type PortalSalubritaHistoryItem = {
+  packDate: string;
+  lineCount: number;
+  updatedAt: string;
+  source: "snapshot" | "live";
+};
+
+export type PortalSalubritaHistory = {
+  days: number;
+  fromDate: string;
+  toDate: string;
+  items: PortalSalubritaHistoryItem[];
+};
+
+export type PortalSalubritaCertificate = {
+  packDate: string;
+  warehouseId: string | null;
+  source?: "snapshot" | "live";
+  items: Array<{
+    productId: string;
+    productSku: string;
+    productName: string;
+    productionDate: string;
+    packDate: string;
+    dlc: string;
+    daysAfterPack: number;
+    lotCode: string | null;
+    shelfLifeDays: number;
+  }>;
+};
+
+export async function fetchPortalSalubritaHistory(): Promise<{
+  status: number;
+  data: PortalSalubritaHistory | null;
+}> {
+  return portalFetch<PortalSalubritaHistory>(PORTAL_API.salubritaCertificates);
+}
+
+export async function fetchPortalSalubritaCertificate(
+  packDate: string,
+): Promise<{ status: number; data: PortalSalubritaCertificate | null }> {
+  return portalFetch<PortalSalubritaCertificate>(
+    `${PORTAL_API.salubritaCertificates}/${encodeURIComponent(packDate)}`,
   );
 }
 
