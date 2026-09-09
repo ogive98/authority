@@ -3,6 +3,7 @@ import { IdentityModule } from './identity.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
+import { AuditModule } from '../audit/audit.module';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
@@ -12,6 +13,7 @@ import { UsersService } from './users.service';
     OrganizationModule,
     PermissionsModule,
     ModulesRegistryModule,
+    AuditModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

@@ -29,9 +29,13 @@ export default function BusinessLoginPage() {
     () => safeBusinessNext(search.get("next")),
     [search],
   );
+  const invitedOk = search.get("invited") === "1";
+  const emailFromInvite = search.get("email")?.trim() ?? "";
 
   const [step, setStep] = useState<Step>("credentials");
-  const [email, setEmail] = useState(DEMO_HINT?.email ?? "");
+  const [email, setEmail] = useState(
+    emailFromInvite || DEMO_HINT?.email || "",
+  );
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [companies, setCompanies] = useState<BusinessCompany[]>([]);
@@ -111,6 +115,15 @@ export default function BusinessLoginPage() {
             ? "Connexion session métier · modules selon société"
             : "Choisissez la société active"}
         </p>
+
+        {invitedOk && step === "credentials" ? (
+          <p
+            className="rounded-[10px] bg-a-success-soft px-3 py-2 text-center text-[length:var(--a-text-sm)] text-a-success-fg"
+            role="status"
+          >
+            Compte activé. Connectez-vous avec le mot de passe choisi.
+          </p>
+        ) : null}
 
         {step === "credentials" ? (
           <form
@@ -222,7 +235,7 @@ export default function BusinessLoginPage() {
           </div>
         )}
 
-        {DEMO_HINT && step === "credentials" ? (
+        {DEMO_HINT && step === "credentials" && !invitedOk ? (
           <div className="rounded-[10px] bg-a-surface-2/60 px-3 py-2.5 text-center text-[length:var(--a-text-xs)] text-a-fg-muted">
             <p className="font-medium text-a-fg">Démo locale</p>
             <p className="mt-1 a-mono">

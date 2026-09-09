@@ -22,21 +22,39 @@ import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
   CreateCompanyUserDto,
+  InviteCompanyUserDto,
   SetUserGrantsDto,
   UpdateCompanyUserDto,
 } from './users.dto';
 import { UsersService } from './users.service';
+import { InviteService } from './invite.service';
+import { CurrentUser } from './identity.decorators';
+import type { IamUser } from '@prisma/client';
 
 @Controller('api/v1/identity/users')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
 @RequireModule('identity')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly inviteService: InviteService,
+  ) {}
 
   @Get('roles')
   @RequirePermission(PERMISSION_KEYS.identityUserManage)
   roles() {
     return this.usersService.listRoles();
+  }
+
+  @Post('invite')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.identityUserManage)
+  invite(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() actor: IamUser,
+    @Body() dto: InviteCompanyUserDto,
+  ) {
+    return this.inviteService.invite(tenancy.companyId, dto, actor.id);
   }
 
   @Get()
@@ -87,13 +105,25 @@ export class UsersController {
     return this.usersService.create(tenancy.companyId, dto);
   }
 
+  @Post(':id/reinvite')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.identityUserManage)
+  reinvite(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() actor: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.inviteService.reinvite(tenancy.companyId, id, actor.id);
+  }
+
   @Patch(':id')
   @RequirePermission(PERMISSION_KEYS.identityUserManage)
   update(
     @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() actor: IamUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCompanyUserDto,
   ) {
-    return this.usersService.update(tenancy.companyId, id, dto);
+    return this.usersService.update(tenancy.companyId, id, dto, actor.id);
   }
 }

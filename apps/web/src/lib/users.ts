@@ -16,6 +16,7 @@ export type CompanyUser = {
   mfaEnabled: boolean;
   roleCode: string | null;
   assignmentId: string;
+  inviteExpiresAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -102,6 +103,52 @@ export async function createCompanyUser(body: {
     });
     if (!res.ok) return parseError(res);
     return { ok: true, data: (await res.json()) as CompanyUser };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export type InviteIssue = {
+  user: CompanyUser;
+  inviteUrl: string | null;
+  mailtoHref: string | null;
+  expiresAt: string | null;
+  alreadyActive: boolean;
+};
+
+export async function inviteCompanyUser(body: {
+  email: string;
+  displayName: string;
+  roleCode: string;
+}): Promise<{ ok: true; data: InviteIssue } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/identity/users/invite", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as InviteIssue };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function reinviteCompanyUser(
+  id: string,
+): Promise<{ ok: true; data: InviteIssue } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/identity/users/${id}/reinvite`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as InviteIssue };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }

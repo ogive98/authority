@@ -155,8 +155,25 @@ model IamUser {
   assignments            OrgUserAssignment[]
   superAdminMembership   IamSuperAdminMembership?
   portalMemberships      PtlMembership[]
+  invite                 IamInvite?
 
   @@map("iam_user")
+}
+
+/** One-time business invite (D118). Plain token never stored — hash only. */
+model IamInvite {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @unique @map("user_id") @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  tokenHash  String    @map("token_hash")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user IamUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@map("iam_invite")
 }
 
 model IamSession {

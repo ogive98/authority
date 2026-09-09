@@ -7,6 +7,11 @@ import {
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import {
+  AUDIT_ACTIONS,
+  AUDIT_ENTITY_TYPES,
+} from '../audit/audit.constants';
 import { IDENTITY_ERROR_CODES } from './identity.constants';
 import { IdentityException } from './identity.exception';
 import { PasswordService } from './password.service';
@@ -39,6 +44,8 @@ export type CompanyUserDto = {
   mfaEnabled: boolean;
   roleCode: string | null;
   assignmentId: string;
+  /** Present when status=INVITED and invite not consumed (D121). */
+  inviteExpiresAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -48,6 +55,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
+    private readonly audit: AuditService,
   ) {}
 
   listRoles() {
@@ -77,7 +85,15 @@ export class UsersService {
             : {}),
         },
       },
-      include: { user: true },
+      include: {
+        user: {
+          include: {
+            invite: {
+              select: { expiresAt: true, consumedAt: true },
+            },
+          },
+        },
+      },
       orderBy: [{ user: { displayName: 'asc' } }],
       take: 200,
     });
@@ -88,7 +104,15 @@ export class UsersService {
   async get(companyId: string, userId: string): Promise<CompanyUserDto> {
     const row = await this.prisma.orgUserAssignment.findFirst({
       where: { companyId, userId, deletedAt: null, user: { deletedAt: null } },
-      include: { user: true },
+      include: {
+        user: {
+          include: {
+            invite: {
+              select: { expiresAt: true, consumedAt: true },
+            },
+          },
+        },
+      },
     });
     if (!row) {
       throw new IdentityException(
@@ -191,6 +215,7 @@ export class UsersService {
     companyId: string,
     userId: string,
     dto: UpdateCompanyUserDto,
+    actorUserId?: string,
   ): Promise<CompanyUserDto> {
     const assignment = await this.prisma.orgUserAssignment.findFirst({
       where: { companyId, userId, deletedAt: null, user: { deletedAt: null } },
@@ -220,10 +245,43 @@ export class UsersService {
         ? await this.passwords.hash(dto.password)
         : undefined;
 
+    const effectivePasswordHash =
+      passwordHash !== undefined
+        ? passwordHash
+        : assignment.user.passwordHash;
+
+    let effectiveStatus: IamUserStatus | undefined =
+      dto.status !== undefined
+        ? (dto.status as IamUserStatus)
+        : undefined;
+
+    // Admin sets a password on an Invité → activate (consume invite below).
+    if (
+      passwordHash !== undefined &&
+      assignment.user.status === IamUserStatus.INVITED &&
+      (effectiveStatus === undefined ||
+        effectiveStatus === IamUserStatus.INVITED ||
+        effectiveStatus === IamUserStatus.ACTIVE)
+    ) {
+      effectiveStatus = IamUserStatus.ACTIVE;
+    }
+
+    const nextStatus = effectiveStatus ?? assignment.user.status;
+    if (
+      nextStatus === IamUserStatus.ACTIVE &&
+      !effectivePasswordHash
+    ) {
+      throw new IdentityException(
+        IDENTITY_ERROR_CODES.VALIDATION,
+        'Impossible d’activer sans mot de passe (invitation ou saisie admin).',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     await this.prisma.$transaction(async (tx) => {
       if (
         dto.displayName !== undefined ||
-        dto.status !== undefined ||
+        effectiveStatus !== undefined ||
         passwordHash !== undefined
       ) {
         await tx.iamUser.update({
@@ -232,10 +290,35 @@ export class UsersService {
             ...(dto.displayName !== undefined
               ? { displayName: dto.displayName.trim() }
               : {}),
-            ...(dto.status !== undefined
-              ? { status: dto.status as IamUserStatus }
+            ...(effectiveStatus !== undefined
+              ? { status: effectiveStatus }
               : {}),
             ...(passwordHash !== undefined ? { passwordHash } : {}),
+          },
+        });
+      }
+      if (
+        assignment.user.status === IamUserStatus.INVITED &&
+        nextStatus === IamUserStatus.ACTIVE
+      ) {
+        await tx.iamInvite.updateMany({
+          where: { userId, consumedAt: null },
+          data: {
+            consumedAt: new Date(),
+            tokenHash: `consumed-admin:${userId}`,
+          },
+        });
+        await this.audit.append(tx, {
+          companyId,
+          actorUserId,
+          action: AUDIT_ACTIONS.identityUserInviteAdminActivate,
+          entityType: AUDIT_ENTITY_TYPES.iamUser,
+          entityId: userId,
+          afterJson: {
+            email: assignment.user.email,
+            status: IamUserStatus.ACTIVE,
+            via: 'admin_password',
+            passwordSet: passwordHash !== undefined,
           },
         });
       }
@@ -362,8 +445,19 @@ export class UsersService {
       mfaEnabled: boolean;
       createdAt: Date;
       updatedAt: Date;
+      invite?: {
+        expiresAt: Date;
+        consumedAt: Date | null;
+      } | null;
     };
   }): CompanyUserDto {
+    const invite = row.user.invite;
+    const inviteExpiresAt =
+      row.user.status === IamUserStatus.INVITED &&
+      invite &&
+      !invite.consumedAt
+        ? invite.expiresAt.toISOString()
+        : null;
     return {
       id: row.user.id,
       email: row.user.email,
@@ -374,6 +468,7 @@ export class UsersService {
       mfaEnabled: row.user.mfaEnabled,
       roleCode: row.roleCode,
       assignmentId: row.id,
+      inviteExpiresAt,
       createdAt: row.user.createdAt.toISOString(),
       updatedAt: row.user.updatedAt.toISOString(),
     };
