@@ -20,6 +20,9 @@ export type BusinessMe = {
   locale: string;
   timezone: string;
   mfaEnabled: boolean;
+  /** Company-scoped assignment (active tenancy). */
+  roleCode?: string | null;
+  roleLabel?: string | null;
 };
 
 export type BusinessCompany = {

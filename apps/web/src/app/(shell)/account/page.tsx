@@ -115,6 +115,14 @@ export default function AccountPage() {
             <section className="space-y-4 rounded-[14px] bg-a-surface-2 p-5">
               <h2 className="text-[15px] font-medium text-a-fg">Profil</h2>
               <p className="a-mono text-[12px] text-a-fg-subtle">{me.email}</p>
+              {me.roleLabel || me.roleCode ? (
+                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  Rôle société :{" "}
+                  <span className="font-medium text-a-fg">
+                    {me.roleLabel ?? me.roleCode}
+                  </span>
+                </p>
+              ) : null}
               <div className="space-y-1">
                 <label
                   htmlFor="acc-name"

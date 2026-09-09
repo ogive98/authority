@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 export type ShellUser = {
   name: string;
   role: string;
+  email?: string;
   initials: string;
   /** Profile photo URL when available from session / identity. */
   avatarUrl?: string | null;
@@ -72,7 +73,8 @@ export function UserMenu({ user: userProp }: UserMenuProps) {
     }
     setUser({
       name: res.data.displayName,
-      role: res.data.email,
+      role: res.data.roleLabel ?? res.data.roleCode ?? "Compte",
+      email: res.data.email,
       initials: initialsFromName(res.data.displayName, res.data.email),
       avatarUrl: null,
     });
@@ -165,6 +167,11 @@ export function UserMenu({ user: userProp }: UserMenuProps) {
               <p className="truncate text-[length:var(--a-text-xs)] text-a-fg-muted">
                 {user.role}
               </p>
+              {user.email ? (
+                <p className="a-mono truncate text-[10px] text-a-fg-subtle">
+                  {user.email}
+                </p>
+              ) : null}
             </div>
           </div>
           <ul className="p-1">

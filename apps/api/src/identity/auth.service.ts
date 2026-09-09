@@ -12,6 +12,8 @@ import { IDENTITY_DEFAULTS, IDENTITY_ERROR_CODES } from './identity.constants';
 import { IdentityException } from './identity.exception';
 import { PasswordService } from './password.service';
 import { SessionService } from './session.service';
+import { BUSINESS_ROLE_CATALOGUE } from './business-roles';
+import type { BusinessRoleCode } from './business-roles';
 
 export interface LoginResult {
   user: {
@@ -149,6 +151,49 @@ export class AuthService {
       locale: user.locale,
       timezone: user.timezone,
       mfaEnabled: user.mfaEnabled,
+      roleCode: null as string | null,
+      roleLabel: null as string | null,
+    };
+  }
+
+  /** Me payload with company-scoped business role (D114). */
+  async buildMeResponse(
+    user: {
+      id: string;
+      email: string;
+      displayName: string;
+      status: IamUserStatus;
+      locale: string;
+      timezone: string;
+      mfaEnabled: boolean;
+    },
+    companyId?: string | null,
+  ) {
+    const base = this.toMeResponse(user);
+    if (!companyId) {
+      return base;
+    }
+
+    const assignment = await this.prisma.orgUserAssignment.findFirst({
+      where: {
+        userId: user.id,
+        companyId,
+        deletedAt: null,
+      },
+      select: { roleCode: true },
+    });
+
+    const roleCode = assignment?.roleCode ?? null;
+    const roleLabel = roleCode
+      ? (BUSINESS_ROLE_CATALOGUE.find(
+          (r) => r.code === (roleCode as BusinessRoleCode),
+        )?.label ?? roleCode)
+      : null;
+
+    return {
+      ...base,
+      roleCode,
+      roleLabel,
     };
   }
 
@@ -163,7 +208,7 @@ export class AuthService {
     ip?: string;
     userAgent?: string;
     correlationId?: string;
-  }): Promise<ReturnType<AuthService['toMeResponse']>> {
+  }): Promise<Awaited<ReturnType<AuthService['buildMeResponse']>>> {
     const wantsPassword = Boolean(params.password?.trim());
     if (
       !params.displayName &&
@@ -250,7 +295,7 @@ export class AuthService {
       return after;
     });
 
-    return this.toMeResponse(updated);
+    return this.buildMeResponse(updated, params.companyId);
   }
 
   private invalidCredentials(): IdentityException {

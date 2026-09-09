@@ -111,8 +111,13 @@ export class IdentityController {
   @Get('me')
   @UseGuards(SessionGuard, PermissionGuard)
   @RequirePermission(PERMISSION_KEYS.identitySelfRead)
-  me(@CurrentUser() user: IamUser) {
-    return this.authService.toMeResponse(user);
+  async me(@CurrentUser() user: IamUser, @Req() req: Request) {
+    const cookies = (req.cookies ?? {}) as Record<string, string | undefined>;
+    const companyHeader = req.headers[TENANCY_HEADERS.companyId];
+    const companyId =
+      (typeof companyHeader === 'string' ? companyHeader : undefined) ??
+      cookies[TENANCY_COOKIES.companyId];
+    return this.authService.buildMeResponse(user, companyId);
   }
 
   @Patch('me')
