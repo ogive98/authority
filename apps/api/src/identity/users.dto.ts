@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsEmail,
   IsIn,
   IsOptional,
@@ -56,4 +57,11 @@ export class UpdateCompanyUserDto {
   @MinLength(8)
   @MaxLength(128)
   password?: string;
+}
+
+export class SetUserGrantsDto {
+  /** Company-scoped USER ALLOW keys (replaces previous company USER ALLOW). */
+  @IsArray()
+  @IsString({ each: true })
+  allowKeys!: string[];
 }

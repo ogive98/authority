@@ -1,6 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  IamGrantEffect,
   IamGrantSubject,
+  IamLifecycleStatus,
   IamUserStatus,
   Prisma,
 } from '@prisma/client';
@@ -11,8 +13,18 @@ import { PasswordService } from './password.service';
 import {
   BUSINESS_ROLE_CODES,
   type CreateCompanyUserDto,
+  type SetUserGrantsDto,
   type UpdateCompanyUserDto,
 } from './users.dto';
+import {
+  PERMISSION_CATALOGUE,
+  isCataloguedPermission,
+} from '../permissions/permission.constants';
+
+const PROTECTED_USER_KEYS = new Set([
+  'identity.self.read',
+  'identity.session.revoke',
+]);
 
 export type CompanyUserDto = {
   id: string;
@@ -241,6 +253,105 @@ export class UsersService {
     });
 
     return this.get(companyId, userId);
+  }
+
+  async getGrants(companyId: string, userId: string) {
+    const assignment = await this.prisma.orgUserAssignment.findFirst({
+      where: { companyId, userId, deletedAt: null, user: { deletedAt: null } },
+    });
+    if (!assignment) {
+      throw new IdentityException(
+        IDENTITY_ERROR_CODES.USER_NOT_FOUND,
+        'User not found in this company.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const userGrants = await this.prisma.iamGrant.findMany({
+      where: {
+        subjectType: IamGrantSubject.USER,
+        subjectId: userId,
+        status: IamLifecycleStatus.ACTIVE,
+        effect: IamGrantEffect.ALLOW,
+        OR: [{ companyId }, { companyId: null }],
+      },
+      orderBy: [{ permissionKey: 'asc' }],
+    });
+
+    const roleCode = assignment.roleCode;
+    const roleGrants = roleCode
+      ? await this.prisma.iamGrant.findMany({
+          where: {
+            subjectType: IamGrantSubject.ROLE,
+            subjectId: roleCode,
+            status: IamLifecycleStatus.ACTIVE,
+            effect: IamGrantEffect.ALLOW,
+            OR: [{ companyId }, { companyId: null }],
+          },
+          orderBy: [{ permissionKey: 'asc' }],
+        })
+      : [];
+
+    const userAllow = userGrants.map((g) => g.permissionKey);
+    const roleAllow = roleGrants.map((g) => g.permissionKey);
+    const companyUserAllow = userGrants
+      .filter((g) => g.companyId === companyId)
+      .map((g) => g.permissionKey);
+
+    return {
+      userId,
+      roleCode,
+      catalog: [...PERMISSION_CATALOGUE],
+      userAllow,
+      roleAllow,
+      companyUserAllow,
+      protectedKeys: [...PROTECTED_USER_KEYS],
+    };
+  }
+
+  async setGrants(
+    companyId: string,
+    userId: string,
+    dto: SetUserGrantsDto,
+  ) {
+    await this.get(companyId, userId);
+
+    const next = [
+      ...new Set(
+        (dto.allowKeys ?? []).filter(
+          (k) =>
+            isCataloguedPermission(k) &&
+            !PROTECTED_USER_KEYS.has(k),
+        ),
+      ),
+    ];
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.iamGrant.deleteMany({
+        where: {
+          subjectType: IamGrantSubject.USER,
+          subjectId: userId,
+          companyId,
+          effect: IamGrantEffect.ALLOW,
+          permissionKey: { notIn: [...PROTECTED_USER_KEYS] },
+        },
+      });
+
+      if (next.length > 0) {
+        await tx.iamGrant.createMany({
+          data: next.map((permissionKey) => ({
+            permissionKey,
+            effect: IamGrantEffect.ALLOW,
+            subjectType: IamGrantSubject.USER,
+            subjectId: userId,
+            companyId,
+            status: IamLifecycleStatus.ACTIVE,
+          })),
+        });
+      }
+    });
+
+    return this.getGrants(companyId, userId);
   }
 
   private toDto(row: {

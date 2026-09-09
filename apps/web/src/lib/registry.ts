@@ -155,14 +155,14 @@ export const UNAUTH_REGISTRY: MeRegistry = {
   flags: [],
 };
 
-/** Ensure Accueil (+ Paramètres if missing) so the icon rail never goes blank.
- * Also merge FALLBACK features into known modules (e.g. new Inventory apps).
+/** Ensure Accueil so the icon rail never goes blank.
+ * Merge FALLBACK features into known modules only — do not invent extra modules
+ * when the API already returned a tenancy registry (D111).
  */
 export function ensureShellModules(data: MeRegistry): MeRegistry {
   if (!data.modules?.length) {
     return FALLBACK_REGISTRY;
   }
-  const keys = new Set(data.modules.map((m) => m.key));
   const modules = data.modules.map((mod) => {
     const fb = FALLBACK_REGISTRY.modules.find((m) => m.key === mod.key);
     if (!fb?.features?.length) return mod;
@@ -175,9 +175,19 @@ export function ensureShellModules(data: MeRegistry): MeRegistry {
       ? mod
       : { ...mod, features: merged };
   });
+  const keys = new Set(modules.map((m) => m.key));
+  if (!keys.has("home")) {
+    const home = FALLBACK_REGISTRY.modules.find((m) => m.key === "home");
+    if (home) modules.unshift(home);
+  }
+  // When authenticated with company context, do not pad the full FALLBACK rail.
+  if (data.companyId) {
+    return { ...data, modules };
+  }
   for (const fb of FALLBACK_REGISTRY.modules) {
     if (!keys.has(fb.key)) {
       modules.push(fb);
+      keys.add(fb.key);
     }
   }
   return { ...data, modules };

@@ -132,3 +132,50 @@ export async function updateCompanyUser(
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
 }
+
+export type UserGrants = {
+  userId: string;
+  roleCode: string | null;
+  catalog: string[];
+  userAllow: string[];
+  roleAllow: string[];
+  companyUserAllow: string[];
+  protectedKeys: string[];
+};
+
+export async function fetchUserGrants(
+  id: string,
+): Promise<{ ok: true; data: UserGrants } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/identity/users/${id}/grants`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as UserGrants };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function putUserGrants(
+  id: string,
+  allowKeys: string[],
+): Promise<{ ok: true; data: UserGrants } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/identity/users/${id}/grants`, {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ allowKeys }),
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as UserGrants };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}

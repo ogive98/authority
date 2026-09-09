@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -19,7 +20,11 @@ import type { TenancyContext } from '../organization/organization.constants';
 import { PermissionGuard } from '../permissions/permission.guard';
 import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
-import { CreateCompanyUserDto, UpdateCompanyUserDto } from './users.dto';
+import {
+  CreateCompanyUserDto,
+  SetUserGrantsDto,
+  UpdateCompanyUserDto,
+} from './users.dto';
 import { UsersService } from './users.service';
 
 @Controller('api/v1/identity/users')
@@ -41,6 +46,26 @@ export class UsersController {
     @Query('q') q?: string,
   ) {
     return this.usersService.list(tenancy.companyId, { q });
+  }
+
+  @Get(':id/grants')
+  @RequirePermission(PERMISSION_KEYS.identityUserManage)
+  getGrants(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.usersService.getGrants(tenancy.companyId, id);
+  }
+
+  @Put(':id/grants')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.identityUserManage)
+  setGrants(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetUserGrantsDto,
+  ) {
+    return this.usersService.setGrants(tenancy.companyId, id, dto);
   }
 
   @Get(':id')

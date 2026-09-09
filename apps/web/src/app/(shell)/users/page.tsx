@@ -11,16 +11,20 @@ import {
   AInput,
   AScreenHeader,
   ASkeleton,
+  ASwitch,
 } from "@/components/a";
 import {
   STATUS_LABELS,
   createCompanyUser,
   fetchBusinessRoles,
   fetchCompanyUsers,
+  fetchUserGrants,
+  putUserGrants,
   updateCompanyUser,
   type BusinessRole,
   type CompanyUser,
   type CompanyUserStatus,
+  type UserGrants,
 } from "@/lib/users";
 
 const selectClass =
@@ -65,6 +69,9 @@ export default function UsersPage() {
   const [form, setForm] = useState<FormState | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [grantsMeta, setGrantsMeta] = useState<UserGrants | null>(null);
+  const [grantKeys, setGrantKeys] = useState<Set<string>>(new Set());
+  const [grantsLoading, setGrantsLoading] = useState(false);
 
   const emptyForm = useCallback(
     (): FormState => ({
@@ -103,10 +110,12 @@ export default function UsersPage() {
     setEditing(null);
     setForm(emptyForm());
     setFormError(null);
+    setGrantsMeta(null);
+    setGrantKeys(new Set());
     setDrawerOpen(true);
   }
 
-  function openEdit(row: CompanyUser) {
+  async function openEdit(row: CompanyUser) {
     setEditing(row);
     setForm({
       email: row.email,
@@ -117,6 +126,16 @@ export default function UsersPage() {
     });
     setFormError(null);
     setDrawerOpen(true);
+    setGrantsLoading(true);
+    const g = await fetchUserGrants(row.id);
+    setGrantsLoading(false);
+    if (g.ok) {
+      setGrantsMeta(g.data);
+      setGrantKeys(new Set(g.data.companyUserAllow));
+    } else {
+      setGrantsMeta(null);
+      setGrantKeys(new Set());
+    }
   }
 
   async function onSave() {
@@ -152,12 +171,28 @@ export default function UsersPage() {
           setFormError(res.message);
           return;
         }
+        if (grantsMeta) {
+          const gRes = await putUserGrants(editing.id, [...grantKeys]);
+          if (!gRes.ok) {
+            setFormError(gRes.message);
+            return;
+          }
+        }
       }
       setDrawerOpen(false);
       await load(q);
     } finally {
       setBusy(false);
     }
+  }
+
+  function toggleGrant(key: string, on: boolean) {
+    setGrantKeys((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(key);
+      else next.delete(key);
+      return next;
+    });
   }
 
   const roleLabel = (code: string | null) =>
@@ -402,6 +437,59 @@ export default function UsersPage() {
                 minLength={editing ? undefined : 8}
               />
             </Field>
+
+            {editing ? (
+              <div className="space-y-3 border-t border-a-border-subtle pt-4">
+                <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                  Droits société (USER)
+                </p>
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Les droits du rôle ({roleLabel(form.roleCode)}) s’ajoutent
+                  automatiquement. Cases = droits directs sur cette société.
+                </p>
+                {grantsLoading ? <ASkeleton className="h-24 w-full" /> : null}
+                {!grantsLoading && grantsMeta ? (
+                  <ul className="max-h-[40vh] space-y-1 overflow-y-auto">
+                    {grantsMeta.catalog.map((key) => {
+                      const protectedKey =
+                        grantsMeta.protectedKeys.includes(key);
+                      const viaRole = grantsMeta.roleAllow.includes(key);
+                      const checked = grantKeys.has(key) || protectedKey;
+                      return (
+                        <li
+                          key={key}
+                          className="flex items-center justify-between gap-2 rounded-[8px] px-2 py-1.5 hover:bg-a-surface-3"
+                        >
+                          <span className="min-w-0">
+                            <span className="a-mono block text-[12px] text-a-fg">
+                              {key}
+                            </span>
+                            {viaRole ? (
+                              <span className="text-[10px] text-a-fg-subtle">
+                                via rôle
+                              </span>
+                            ) : null}
+                            {protectedKey ? (
+                              <span className="text-[10px] text-a-fg-subtle">
+                                protégé
+                              </span>
+                            ) : null}
+                          </span>
+                          <ASwitch
+                            size="sm"
+                            label={key}
+                            checked={checked}
+                            disabled={protectedKey || busy}
+                            onCheckedChange={(on) => toggleGrant(key, on)}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
+
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {formError}

@@ -132,29 +132,8 @@ function buildFeatures(
     ];
   }
 
-  if (moduleKey === 'platform') {
-    return [
-      {
-        id: 'platform-overview',
-        label: moduleName,
-        href: '/m/platform',
-      },
-      {
-        id: 'platform-search',
-        label: 'Recherche',
-        href: '/search',
-        flagKey: 'platform.search',
-      },
-    ];
-  }
-
-  return [
-    {
-      id: `${moduleKey}-overview`,
-      label: moduleName,
-      href: `/m/${moduleKey}`,
-    },
-  ];
+  // No placeholder /m/:module apps — hide module from rail until real nav exists (D111).
+  return [];
 }
 
 function parseNavEntry(raw: Record<string, unknown>): RegistryFeature | null {
