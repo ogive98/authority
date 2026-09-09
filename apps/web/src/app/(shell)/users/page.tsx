@@ -107,6 +107,7 @@ export default function UsersPage() {
     "invite",
   );
   const [inviteResult, setInviteResult] = useState<InviteIssue | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const emptyForm = useCallback(
     (): FormState => ({
@@ -149,6 +150,7 @@ export default function UsersPage() {
     setGrantKeys(new Set());
     setCreateMode("invite");
     setInviteResult(null);
+    setCopied(false);
     setDrawerOpen(true);
   }
 
@@ -193,6 +195,7 @@ export default function UsersPage() {
             return;
           }
           setInviteResult(res.data);
+          setCopied(false);
           await load(q);
           return;
         }
@@ -256,6 +259,7 @@ export default function UsersPage() {
         status: row.status,
       });
       setInviteResult(res.data);
+      setCopied(false);
       setDrawerOpen(true);
     } finally {
       setBusy(false);
@@ -298,6 +302,24 @@ export default function UsersPage() {
     return state.items.filter((u) => u.status === statusFilter);
   }, [state, statusFilter]);
 
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { "": 0 };
+    for (const s of [
+      "INVITED",
+      "ACTIVE",
+      "LOCKED",
+      "DISABLED",
+    ] as CompanyUserStatus[]) {
+      counts[s] = 0;
+    }
+    if (state.kind !== "ok") return counts;
+    counts[""] = state.items.length;
+    for (const u of state.items) {
+      counts[u.status] = (counts[u.status] ?? 0) + 1;
+    }
+    return counts;
+  }, [state]);
+
   return (
     <>
       <AScreenHeader
@@ -334,6 +356,11 @@ export default function UsersPage() {
                 )}
               >
                 {chip.label}
+                {state.kind === "ok" ? (
+                  <span className="a-mono ml-1.5 opacity-80">
+                    {statusCounts[chip.id] ?? 0}
+                  </span>
+                ) : null}
               </button>
             );
           })}
@@ -477,12 +504,20 @@ export default function UsersPage() {
                         {row.status === "INVITED" ? (
                           <AButton
                             type="button"
-                            variant="secondary"
+                            variant={
+                              row.inviteExpiresAt &&
+                              Date.parse(row.inviteExpiresAt) < Date.now()
+                                ? "primary"
+                                : "secondary"
+                            }
                             size="sm"
                             disabled={busy}
                             onClick={() => void onReinvite(row)}
                           >
-                            Renvoyer
+                            {row.inviteExpiresAt &&
+                            Date.parse(row.inviteExpiresAt) < Date.now()
+                              ? "Renvoyer (expiré)"
+                              : "Renvoyer"}
                           </AButton>
                         ) : null}
                       </div>
@@ -573,13 +608,13 @@ export default function UsersPage() {
                       type="button"
                       size="sm"
                       variant="secondary"
-                      onClick={() =>
-                        void navigator.clipboard.writeText(
-                          inviteResult.inviteUrl!,
-                        )
-                      }
+                      onClick={() => {
+                        void navigator.clipboard
+                          .writeText(inviteResult.inviteUrl!)
+                          .then(() => setCopied(true));
+                      }}
                     >
-                      Copier le lien
+                      {copied ? "Copié" : "Copier le lien"}
                     </AButton>
                   ) : null}
                   {inviteResult.mailtoHref ? (
