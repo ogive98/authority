@@ -15,6 +15,7 @@
     "test:all": "npm run typecheck && npm run lint && npm run test && npm run build && npm run test:e2e",
     "dev:api": "npm run start:dev -w api",
     "dev:web": "npm run dev -w web",
+    "dev:light:hint": "node ./scripts/print-dev-light.mjs",
     "db:migrate": "npm run prisma:migrate -w api",
     "db:seed": "npm run prisma:seed -w api",
     "db:deploy": "npm run prisma:deploy -w api",

@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { monitorPollMs } from "@/lib/dev-light";
 
 /** Client shape of GET /api/v1/thunder/monitor/snapshot (schemaVersion 1). */
 
@@ -34,11 +36,26 @@ export async function fetchMonitorSnapshot(): Promise<MonitorSnapshot> {
   return res.json() as Promise<MonitorSnapshot>;
 }
 
+function useDocumentVisible(): boolean {
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    function sync() {
+      setVisible(document.visibilityState === "visible");
+    }
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, []);
+  return visible;
+}
+
 export function useMonitorSnapshot() {
+  const visible = useDocumentVisible();
   return useQuery({
     queryKey: ["thunder-monitor"],
     queryFn: fetchMonitorSnapshot,
-    refetchInterval: 5_000,
+    refetchInterval: visible ? monitorPollMs() : false,
+    refetchIntervalInBackground: false,
     retry: false,
   });
 }

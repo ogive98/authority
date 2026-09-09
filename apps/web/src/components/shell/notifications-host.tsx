@@ -3,13 +3,15 @@
 import { useMemo } from "react";
 import { AActivityCenter, AOfflineBanner } from "@/components/a";
 import { useNotificationSse } from "@/hooks/use-notification-sse";
+import { isShellLight } from "@/lib/dev-light";
 import { isJobAlert } from "@/lib/notifications";
 import { useNotificationsStore } from "@/stores/notifications-store";
 import { usePrefsStore } from "@/stores/prefs-store";
 
 /** Shell host: SSE subscription, disconnect banner, activity drawer. */
 export function NotificationsHost() {
-  useNotificationSse();
+  /** D115: mock SSE off in shell light (RAM) — inbox stays usable from store. */
+  useNotificationSse({ enabled: !isShellLight() });
 
   const items = useNotificationsStore((s) => s.items);
   const sseStatus = useNotificationsStore((s) => s.sseStatus);
@@ -25,7 +27,8 @@ export function NotificationsHost() {
     [items, jobAlerts],
   );
 
-  const sseLost = showSseBanner && sseStatus === "disconnected";
+  const sseLost =
+    showSseBanner && !isShellLight() && sseStatus === "disconnected";
 
   return (
     <>

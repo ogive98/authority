@@ -146,6 +146,38 @@ Health :
 
 ---
 
+## Dev light (RAM laptop) — D115
+
+Si Docker / Nest / Next saturent la RAM (95–100 %), **Thunder ne résout pas** le problème : les workers BullMQ sont déjà dans l’API dès que `REDIS_URL` est set.
+
+Dans `.env` (puis **redémarrer** `dev:api` et `dev:web`) :
+
+```env
+THUNDER_WORKERS_ENABLED=false
+THUNDER_EVENTS_ENABLED=false
+NEXT_PUBLIC_AUTHORITY_SHELL_LIGHT=true
+```
+
+Effets :
+
+| Flag | Effet |
+|------|--------|
+| `THUNDER_WORKERS_ENABLED=false` | Pas de 6 workers BullMQ in-process |
+| `THUNDER_EVENTS_ENABLED=false` | Pas de consumer Redis events / timers associés |
+| `NEXT_PUBLIC_AUTHORITY_SHELL_LIGHT=true` | Monitor shell toutes les **60 s** (sinon **15 s**) ; SSE notifs mock **off** ; pause poll si onglet caché |
+
+Aussi : plafonner la RAM Docker Desktop (WSL2), tuer les `node` orphelins, un seul Postgres, MinIO off si inutile.
+
+Mesure rapide :
+
+```powershell
+Get-Process node,com.docker.backend,vmmemWSL -ErrorAction SilentlyContinue |
+  Sort-Object WorkingSet64 -Descending |
+  Select-Object Name,Id,@{N='MB';E={[math]::Round($_.WorkingSet64/1MB)}}
+```
+
+---
+
 ## Dépannage
 
 | Problème | Cause probable | Action |
