@@ -22,6 +22,11 @@ export const identityManifest: ModuleManifest = {
   publishedEvents: ['identity.user.updated.v1'],
   navigationEntries: [
     { id: 'account', label: 'Mon compte', href: '/account' },
-    { id: 'users', label: 'Utilisateurs', href: '/users' },
+    {
+      id: 'users',
+      label: 'Utilisateurs',
+      href: '/users',
+      permissionKey: 'identity.user.manage',
+    },
   ],
 };

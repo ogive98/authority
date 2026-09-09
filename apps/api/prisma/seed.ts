@@ -18,6 +18,11 @@ import {
   applyPackToCompany,
   seedIndustryPacks,
 } from './industry-packs.seed';
+import {
+  BUSINESS_ROLE_CODES,
+  ROLE_PERMISSION_PACKS,
+} from '../src/identity/business-roles';
+import { isCataloguedPermission } from '../src/permissions/permission.constants';
 
 const DEMO_USER_EMAIL = 'demo@authority.local';
 const DEMO_USER_PASSWORD = 'DemoPass123!';
@@ -27,6 +32,8 @@ const SUPER_ADMIN_PASSWORD = 'SuperAdminPass123!';
 const SUPER_ADMIN_TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
 const LIMITED_USER_EMAIL = 'limited@authority.local';
 const LIMITED_USER_PASSWORD = 'LimitedPass123!';
+const ACCOUNTANT_USER_EMAIL = 'comptable@authority.local';
+const ACCOUNTANT_USER_PASSWORD = 'AccountantPass123!';
 
 async function main() {
   if (process.env.NODE_ENV === 'production') {
@@ -263,6 +270,40 @@ async function main() {
     },
   });
 
+  const accountantPasswordHash = await argon2.hash(ACCOUNTANT_USER_PASSWORD, {
+    type: argon2.argon2id,
+  });
+
+  const accountantUser = await prisma.iamUser.upsert({
+    where: { email: ACCOUNTANT_USER_EMAIL },
+    update: {
+      passwordHash: accountantPasswordHash,
+      status: 'ACTIVE',
+      displayName: 'Demo Comptable',
+    },
+    create: {
+      email: ACCOUNTANT_USER_EMAIL,
+      displayName: 'Demo Comptable',
+      status: 'ACTIVE',
+      passwordHash: accountantPasswordHash,
+    },
+  });
+
+  await prisma.orgUserAssignment.upsert({
+    where: {
+      companyId_userId: {
+        companyId: company.id,
+        userId: accountantUser.id,
+      },
+    },
+    update: { roleCode: 'accountant' },
+    create: {
+      companyId: company.id,
+      userId: accountantUser.id,
+      roleCode: 'accountant',
+    },
+  });
+
   await upsertGrant({
     permissionKey: 'identity.self.read',
     subjectType: IamGrantSubject.USER,
@@ -274,27 +315,42 @@ async function main() {
     subjectId: demoUser.id,
   });
   await upsertGrant({
+    permissionKey: 'identity.self.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: limitedUser.id,
+  });
+  await upsertGrant({
+    permissionKey: 'identity.session.revoke',
+    subjectType: IamGrantSubject.USER,
+    subjectId: limitedUser.id,
+  });
+  await upsertGrant({
+    permissionKey: 'identity.self.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: accountantUser.id,
+  });
+  await upsertGrant({
+    permissionKey: 'identity.session.revoke',
+    subjectType: IamGrantSubject.USER,
+    subjectId: accountantUser.id,
+  });
+
+  for (const roleCode of BUSINESS_ROLE_CODES) {
+    for (const permissionKey of ROLE_PERMISSION_PACKS[roleCode]) {
+      if (!isCataloguedPermission(permissionKey)) continue;
+      await upsertGrant({
+        permissionKey,
+        subjectType: IamGrantSubject.ROLE,
+        subjectId: roleCode,
+        companyId: company.id,
+      });
+    }
+  }
+
+  await upsertGrant({
     permissionKey: 'identity.user.manage',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
-    companyId: company.id,
-  });
-  await upsertGrant({
-    permissionKey: 'identity.user.manage',
-    subjectType: IamGrantSubject.ROLE,
-    subjectId: 'admin',
-    companyId: company.id,
-  });
-  await upsertGrant({
-    permissionKey: 'platform.search.use',
-    subjectType: IamGrantSubject.ROLE,
-    subjectId: 'operator',
-    companyId: company.id,
-  });
-  await upsertGrant({
-    permissionKey: 'platform.search.use',
-    subjectType: IamGrantSubject.ROLE,
-    subjectId: 'admin',
     companyId: company.id,
   });
   await upsertGrant({
@@ -1233,7 +1289,7 @@ async function main() {
   }
 
   console.log(
-    `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, limited ${LIMITED_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}, portal ${PORTAL_USER_EMAIL}`,
+    `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, limited ${LIMITED_USER_EMAIL}, accountant ${ACCOUNTANT_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}, portal ${PORTAL_USER_EMAIL}`,
   );
 }
 

@@ -11,10 +11,13 @@ import { IDENTITY_ERROR_CODES } from './identity.constants';
 import { IdentityException } from './identity.exception';
 import { PasswordService } from './password.service';
 import {
+  BUSINESS_ROLE_CATALOGUE,
   BUSINESS_ROLE_CODES,
-  type CreateCompanyUserDto,
-  type SetUserGrantsDto,
-  type UpdateCompanyUserDto,
+} from './business-roles';
+import type {
+  CreateCompanyUserDto,
+  SetUserGrantsDto,
+  UpdateCompanyUserDto,
 } from './users.dto';
 import {
   PERMISSION_CATALOGUE,
@@ -49,18 +52,7 @@ export class UsersService {
 
   listRoles() {
     return {
-      items: [
-        {
-          code: 'admin',
-          label: 'Administrateur',
-          description: 'Gestion utilisateurs + droits opérationnels',
-        },
-        {
-          code: 'operator',
-          label: 'Opérateur',
-          description: 'Usage métier sans administration des comptes',
-        },
-      ],
+      items: BUSINESS_ROLE_CATALOGUE.map((r) => ({ ...r })),
     };
   }
 
@@ -212,7 +204,10 @@ export class UsersService {
       );
     }
 
-    if (dto.roleCode && !BUSINESS_ROLE_CODES.includes(dto.roleCode)) {
+    if (
+      dto.roleCode &&
+      !(BUSINESS_ROLE_CODES as readonly string[]).includes(dto.roleCode)
+    ) {
       throw new IdentityException(
         IDENTITY_ERROR_CODES.VALIDATION,
         'Invalid roleCode.',

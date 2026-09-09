@@ -120,20 +120,14 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       name: "Identité",
       features: [
         { id: "account", label: "Mon compte", href: "/account" },
-        { id: "users", label: "Utilisateurs", href: "/users" },
+        // Utilisateurs: API-only when identity.user.manage (D112) — never pad FALLBACK
       ],
     },
     {
       key: "settings",
       name: "Paramètres",
       features: [
-        { id: "prefs", label: "Préférences", href: "/settings" },
-        {
-          id: "expertise",
-          label: "Expertise légale",
-          href: "/settings#expertise",
-        },
-        { id: "company", label: "Société / sites", href: "/settings#company" },
+        // Préférences / expertise: Admin only via settings.company.write (D112)
       ],
     },
   ],

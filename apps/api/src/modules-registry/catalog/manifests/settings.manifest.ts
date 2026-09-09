@@ -24,11 +24,17 @@ export const settingsManifest: ModuleManifest = {
     'settings.expertise.validated.v1',
   ],
   navigationEntries: [
-    { id: 'prefs', label: 'Préférences', href: '/settings' },
+    {
+      id: 'prefs',
+      label: 'Préférences',
+      href: '/settings',
+      permissionKey: 'settings.company.write',
+    },
     {
       id: 'expertise',
       label: 'Expertise légale',
       href: '/settings#expertise',
+      permissionKey: 'settings.company.write',
     },
   ],
 };

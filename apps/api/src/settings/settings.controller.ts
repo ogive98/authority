@@ -59,7 +59,7 @@ export class SettingsController {
     });
   }
 
-  /** Legal expertise slots (FODEC / timbre / CNSS…) — rates only when expert-validated. */
+  /** Legal expertise slots (FODEC / timbre / CNSS…) — Admin company write only (D112). */
   @Get('expertise')
   @UseGuards(TenancyGuard)
   async expertise(
@@ -68,7 +68,7 @@ export class SettingsController {
   ) {
     await this.assertPermission(
       user.id,
-      PERMISSION_KEYS.settingsSelf,
+      PERMISSION_KEYS.settingsCompanyWrite,
       tenancy.companyId,
     );
     return this.settingsService.listExpertise(tenancy.companyId);
