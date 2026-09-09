@@ -1,6 +1,6 @@
 "use client";
 
-import { Printer, Mail, MessageCircle, Globe } from "lucide-react";
+import { Printer, Mail, MessageCircle, Globe, FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AButton,
@@ -18,6 +18,7 @@ import {
   salubritaMailtoBody,
 } from "@/components/salubrita/certificate-document";
 import {
+  downloadSalubritaTemplate,
   fetchSalubritaCertificate,
   fetchSalubritaRecipients,
   generateDailyCheeseLots,
@@ -342,6 +343,22 @@ export default function CertificatSalubritePage() {
           >
             <Globe className="h-4 w-4 text-a-fg" strokeWidth={1.75} />
             Portail
+          </button>
+          <button
+            type="button"
+            className={iconBtn}
+            disabled={busy}
+            onClick={() => {
+              void (async () => {
+                setBusy(true);
+                const res = await downloadSalubritaTemplate();
+                setBusy(false);
+                if (!res.ok) setToast(res.message);
+              })();
+            }}
+          >
+            <FileText className="h-4 w-4 text-a-fg" strokeWidth={1.75} />
+            Modèle Word
           </button>
         </section>
 

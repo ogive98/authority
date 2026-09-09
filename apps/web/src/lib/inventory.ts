@@ -511,3 +511,26 @@ export async function fetchSalubritaRecipients(opts: {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
 }
+
+/** D128 — download Word model (OOXML as .docx). */
+export async function downloadSalubritaTemplate(): Promise<
+  { ok: true } | ApiFail
+> {
+  try {
+    const res = await fetch("/api/v1/inventory/salubrita/template", {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "certificat-salubrita-template.docx";
+    a.click();
+    URL.revokeObjectURL(url);
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}

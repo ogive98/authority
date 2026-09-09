@@ -7,8 +7,10 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
+import { createReadStream } from 'fs';
 import { CurrentTenancy } from '../organization/organization.decorators';
 import type { TenancyContext } from '../organization/organization.constants';
 import { TenancyGuard } from '../organization/tenancy.guard';
@@ -258,6 +260,18 @@ export class InventoryController {
     return this.inventoryService.listSalubritaRecipients(tenancy.companyId, {
       channel: channel as 'email' | 'whatsapp' | 'portal' | undefined,
       q,
+    });
+  }
+
+  /** D128 — Word model (OOXML zip stored as template.zip). */
+  @Get('salubrita/template')
+  @RequirePermission(PERMISSION_KEYS.inventoryRead)
+  salubritaTemplate(): StreamableFile {
+    const path = this.inventoryService.resolveSalubritaTemplatePath();
+    return new StreamableFile(createReadStream(path), {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      disposition:
+        'attachment; filename="certificat-salubrita-template.docx"',
     });
   }
 }

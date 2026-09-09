@@ -1,4 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import {
   InvBalance,
   InvCheeseArticle,
@@ -1218,6 +1220,29 @@ export class InventoryService {
     });
 
     return { channel, items };
+  }
+
+  /** Absolute path to committed OOXML template (D128). */
+  resolveSalubritaTemplatePath(): string {
+    const candidates = [
+      join(process.cwd(), 'assets', 'salubrita', 'template.zip'),
+      join(
+        process.cwd(),
+        'apps',
+        'api',
+        'assets',
+        'salubrita',
+        'template.zip',
+      ),
+    ];
+    for (const p of candidates) {
+      if (existsSync(p)) return p;
+    }
+    throw new InventoryException(
+      INVENTORY_ERROR_CODES.NOT_FOUND,
+      'Salubrita Word template missing on server.',
+      HttpStatus.NOT_FOUND,
+    );
   }
 
   /**
