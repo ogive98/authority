@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -22,9 +23,13 @@ import {
   AdjustStockDto,
   CreateLotDto,
   CreateWarehouseDto,
+  GenerateDailyLotsDto,
+  PatchCheeseArticleDto,
   PatchLotStatusDto,
+  PreviewDlcDto,
   ReleaseStockDto,
   ReserveStockDto,
+  UpsertCheeseArticleDto,
 } from './inventory.dto';
 import { InventoryService } from './inventory.service';
 
@@ -167,5 +172,73 @@ export class InventoryController {
     @Body() dto: ReleaseStockDto,
   ) {
     return this.inventoryService.release(tenancy.companyId, dto);
+  }
+
+  @Get('cheese-articles')
+  @RequirePermission(PERMISSION_KEYS.inventoryRead)
+  listCheeseArticles(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('active') active?: string,
+  ) {
+    const activeOnly =
+      active === '1' || active === 'true'
+        ? true
+        : active === '0' || active === 'false'
+          ? false
+          : undefined;
+    return this.inventoryService.listCheeseArticles(tenancy.companyId, {
+      activeOnly,
+    });
+  }
+
+  @Post('cheese-articles')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.inventoryWrite)
+  upsertCheeseArticle(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: UpsertCheeseArticleDto,
+  ) {
+    return this.inventoryService.upsertCheeseArticle(tenancy.companyId, dto);
+  }
+
+  @Patch('cheese-articles/:id')
+  @RequirePermission(PERMISSION_KEYS.inventoryWrite)
+  patchCheeseArticle(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id') id: string,
+    @Body() dto: PatchCheeseArticleDto,
+  ) {
+    return this.inventoryService.patchCheeseArticle(tenancy.companyId, id, dto);
+  }
+
+  @Post('cheese-articles/preview-dlc')
+  @RequirePermission(PERMISSION_KEYS.inventoryRead)
+  previewDlc(@Body() dto: PreviewDlcDto) {
+    return this.inventoryService.previewDlc(dto);
+  }
+
+  @Post('cheese-articles/generate-daily')
+  @RequirePermission(PERMISSION_KEYS.inventoryWrite)
+  generateDaily(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: GenerateDailyLotsDto,
+  ) {
+    return this.inventoryService.generateDailyCheeseLots(tenancy.companyId, {
+      packDate: dto.packDate,
+      warehouseId: dto.warehouseId,
+    });
+  }
+
+  @Get('salubrita/certificate')
+  @RequirePermission(PERMISSION_KEYS.inventoryRead)
+  salubritaCertificate(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('packDate') packDate?: string,
+    @Query('warehouseId') warehouseId?: string,
+  ) {
+    return this.inventoryService.listSalubritaCertificate(tenancy.companyId, {
+      packDate,
+      warehouseId,
+    });
   }
 }

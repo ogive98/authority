@@ -2,7 +2,7 @@ import type { ModuleManifest } from '../manifest.types';
 
 export const inventoryManifest: ModuleManifest = {
   id: 'inventory',
-  name: 'Inventory',
+  name: 'Stock',
   version: '1.0.0',
   apiVersion: '1',
   description: 'Inventory light — balances, lots/DLC, adjust, reserve',
@@ -69,7 +69,12 @@ export const inventoryManifest: ModuleManifest = {
   ],
   consumedEvents: ['sales.order.confirmed.v1'],
   navigationEntries: [
-    { id: 'stock', label: 'Stock', href: '/inventory' },
+    {
+      id: 'salubrita',
+      label: 'Certificat de salubrité',
+      href: '/inventory/certificat-salubrite',
+    },
     { id: 'lots', label: 'Lots', href: '/inventory/lots' },
+    { id: 'stock', label: 'Inventaire', href: '/inventory' },
   ],
 };

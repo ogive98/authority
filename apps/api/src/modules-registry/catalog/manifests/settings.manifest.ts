@@ -2,7 +2,7 @@ import type { ModuleManifest } from '../manifest.types';
 
 export const settingsManifest: ModuleManifest = {
   id: 'settings',
-  name: 'Settings',
+  name: 'Paramètres',
   version: '1.0.0',
   apiVersion: '1',
   description: 'Hierarchical settings resolution',

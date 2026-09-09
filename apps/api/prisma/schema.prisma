@@ -728,6 +728,8 @@ model PrdProduct {
   uom             String
   trackLot        Boolean          @default(false) @map("track_lot")
   perishable      Boolean          @default(false)
+  /** Days after packaging → DLC (cheese / salubrité). Null = not on certificate. */
+  shelfLifeDays   Int?             @map("shelf_life_days")
   storageClassKey String           @map("storage_class_key")
   allergenFlags   Json             @default("[]") @map("allergen_flags")
   status          PrdProductStatus @default(DRAFT)
@@ -1063,7 +1065,7 @@ enum InvLotStatus {
   CLOSED
 }
 
-/** Lot / batch V0 — DLC optional; FEFO later (D096). */
+/** Lot / batch V0 — DLC optional; FEFO consume via InvLotAllocation (D097). */
 model InvLot {
   id          String       @id @default(uuid()) @db.Uuid
   companyId   String       @map("company_id") @db.Uuid
@@ -1072,20 +1074,74 @@ model InvLot {
   lotCode     String       @map("lot_code")
   qtyOnHand   Decimal      @default(0) @map("qty_on_hand") @db.Decimal(18, 3)
   qtyReserved Decimal      @default(0) @map("qty_reserved") @db.Decimal(18, 3)
+  packDate    DateTime?    @map("pack_date") @db.Date
   dlc         DateTime?    @db.Date
   status      InvLotStatus @default(OPEN)
   version     Int          @default(0)
   createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  warehouse InvWarehouse  @relation(fields: [warehouseId], references: [id])
-  movements InvMovement[]
+  warehouse    InvWarehouse        @relation(fields: [warehouseId], references: [id])
+  movements    InvMovement[]
+  allocations  InvLotAllocation[]
 
   @@unique([companyId, warehouseId, productId, lotCode])
   @@index([companyId, productId])
   @@index([companyId, warehouseId])
   @@index([companyId, status, dlc])
   @@map("inv_lot")
+}
+
+enum InvLotAllocStatus {
+  ALLOCATED
+  CONSUMED
+  RELEASED
+}
+
+/** FEFO pick ledger — allocate once (sales confirm), consume once (delivery). */
+model InvLotAllocation {
+  id             String            @id @default(uuid()) @db.Uuid
+  companyId      String            @map("company_id") @db.Uuid
+  lotId          String            @map("lot_id") @db.Uuid
+  productId      String            @map("product_id") @db.Uuid
+  warehouseId    String            @map("warehouse_id") @db.Uuid
+  qty            Decimal           @db.Decimal(18, 3)
+  status         InvLotAllocStatus @default(ALLOCATED)
+  fromReserve    Boolean           @default(true) @map("from_reserve")
+  sourceType     String            @map("source_type")
+  sourceId       String            @map("source_id") @db.Uuid
+  consumeRefType String?           @map("consume_ref_type")
+  consumeRefId   String?           @map("consume_ref_id") @db.Uuid
+  version        Int               @default(0)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  lot InvLot @relation(fields: [lotId], references: [id])
+
+  @@index([companyId, sourceType, sourceId, status])
+  @@index([companyId, consumeRefId, status])
+  @@index([companyId, lotId])
+  @@map("inv_lot_allocation")
+}
+
+/**
+ * Cheese fabrication articles (Inventory) — shelf life drives auto DLC (D100).
+ * Daily lot gen (00:00 Africa/Tunis, 1 lot/type/day) lands in a later lot.
+ */
+model InvCheeseArticle {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  productId     String   @map("product_id") @db.Uuid
+  shelfLifeDays Int      @map("shelf_life_days")
+  active        Boolean  @default(true)
+  notes         String?
+  version       Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, productId])
+  @@index([companyId, active])
+  @@map("inv_cheese_article")
 }
 
 // --- sa_* Super Admin industry packs (POLY-01) ---

@@ -2,7 +2,7 @@ import type { ModuleManifest } from '../manifest.types';
 
 export const customersManifest: ModuleManifest = {
   id: 'customers',
-  name: 'Customers',
+  name: 'Clients',
   version: '1.1.0',
   apiVersion: '1',
   description:

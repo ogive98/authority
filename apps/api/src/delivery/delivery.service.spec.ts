@@ -95,6 +95,7 @@ describe('DeliveryService', () => {
     const outbox = { enqueue: jest.fn().mockResolvedValue({ id: 'o1' }) };
     const inventory = {
       issue: jest.fn().mockResolvedValue({}),
+      reverseIssue: jest.fn().mockResolvedValue({}),
       release: jest.fn().mockResolvedValue({}),
       adjust: jest.fn().mockResolvedValue({}),
       reserve: jest.fn().mockResolvedValue({}),
@@ -233,7 +234,13 @@ describe('DeliveryService', () => {
     expect(dto.status).toBe(DlvShipmentStatus.DELIVERED);
     expect(inventory.issue).toHaveBeenCalledWith(
       companyId,
-      expect.objectContaining({ productId, qty: 10 }),
+      expect.objectContaining({
+        productId,
+        qty: 10,
+        allocationRefType: 'sales.order',
+        allocationRefId: orderId,
+        consumeReserved: true,
+      }),
     );
     expect(outbox.enqueue).toHaveBeenCalledWith(
       expect.anything(),

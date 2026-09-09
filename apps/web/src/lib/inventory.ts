@@ -53,6 +53,7 @@ export type InventoryLot = {
   qtyOnHand: string;
   qtyReserved: string;
   available: string;
+  packDate?: string | null;
   dlc: string | null;
   status: "OPEN" | "QUARANTINE" | "CLOSED";
   version: number;
@@ -255,6 +256,174 @@ export async function patchLotStatus(
     });
     if (!res.ok) return parseFail(res);
     const data = (await res.json()) as InventoryLot;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export type CheeseArticle = {
+  id: string;
+  companyId: string;
+  productId: string;
+  productSku: string | null;
+  productName: string | null;
+  productUom: string | null;
+  shelfLifeDays: number;
+  active: boolean;
+  notes: string | null;
+  version: number;
+  sampleDlcToday: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function fetchCheeseArticles(opts?: {
+  activeOnly?: boolean;
+}): Promise<{ ok: true; items: CheeseArticle[] } | ApiFail> {
+  try {
+    const params = new URLSearchParams();
+    if (opts?.activeOnly === true) params.set("active", "1");
+    if (opts?.activeOnly === false) params.set("active", "0");
+    const qs = params.toString();
+    const res = await fetch(
+      qs
+        ? `/api/v1/inventory/cheese-articles?${qs}`
+        : "/api/v1/inventory/cheese-articles",
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    const data = (await res.json()) as { items: CheeseArticle[] };
+    return { ok: true, items: data.items };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function upsertCheeseArticle(body: {
+  productId: string;
+  shelfLifeDays: number;
+  active?: boolean;
+  notes?: string;
+}): Promise<{ ok: true; data: CheeseArticle } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/inventory/cheese-articles", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseFail(res);
+    const data = (await res.json()) as CheeseArticle;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function patchCheeseArticle(
+  id: string,
+  body: { shelfLifeDays?: number; active?: boolean; notes?: string },
+): Promise<{ ok: true; data: CheeseArticle } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/inventory/cheese-articles/${id}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseFail(res);
+    const data = (await res.json()) as CheeseArticle;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export type DailyLotGenResult = {
+  packDate: string;
+  warehouseId: string;
+  created: number;
+  skipped: number;
+  items: Array<{
+    lotCode: string;
+    productSku: string;
+    dlc: string;
+    status: "created" | "skipped";
+  }>;
+};
+
+export async function generateDailyCheeseLots(body?: {
+  packDate?: string;
+  warehouseId?: string;
+}): Promise<{ ok: true; data: DailyLotGenResult } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/inventory/cheese-articles/generate-daily", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body ?? {}),
+    });
+    if (!res.ok) return parseFail(res);
+    const data = (await res.json()) as DailyLotGenResult;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export type SalubritaCertificateItem = {
+  productId: string;
+  productSku: string;
+  productName: string;
+  productionDate: string;
+  packDate: string;
+  dlc: string;
+  daysAfterPack: number;
+  lotCode: string | null;
+  shelfLifeDays: number;
+};
+
+export type SalubritaCertificate = {
+  packDate: string;
+  warehouseId: string | null;
+  items: SalubritaCertificateItem[];
+};
+
+export async function fetchSalubritaCertificate(opts?: {
+  packDate?: string;
+  warehouseId?: string;
+}): Promise<{ ok: true; data: SalubritaCertificate } | ApiFail> {
+  try {
+    const params = new URLSearchParams();
+    if (opts?.packDate) params.set("packDate", opts.packDate);
+    if (opts?.warehouseId) params.set("warehouseId", opts.warehouseId);
+    const qs = params.toString();
+    const res = await fetch(
+      qs
+        ? `/api/v1/inventory/salubrita/certificate?${qs}`
+        : "/api/v1/inventory/salubrita/certificate",
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    const data = (await res.json()) as SalubritaCertificate;
     return { ok: true, data };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };

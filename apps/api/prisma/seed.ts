@@ -689,6 +689,7 @@ async function main() {
     update: {
       name: 'Brie 250g',
       status: 'ACTIVE',
+      trackLot: true,
       deletedAt: null,
     },
     create: {
@@ -699,8 +700,12 @@ async function main() {
       uom: 'kg',
       storageClassKey: 'COLD',
       status: 'ACTIVE',
+      trackLot: true,
     },
   });
+
+  await seedFefoDemoLots(company.id);
+  await seedCheeseArticles(company.id);
 
   await seedSettingsDefinitions(company.id, demoUser.id);
   await seedAccountingGl(company.id);
@@ -1276,6 +1281,21 @@ async function seedSettingsDefinitions(
       isPrefOnly: false,
     },
     {
+      key: 'inventory.daily_lot_gen.hour_tunis',
+      valueType: 'number',
+      defaultJson: 0,
+      description:
+        'Hour (0–23) in Africa/Tunis for daily cheese lot generation (D100 default midnight)',
+      isPrefOnly: false,
+    },
+    {
+      key: 'inventory.daily_lot_gen.tz',
+      valueType: 'string',
+      defaultJson: 'Africa/Tunis',
+      description: 'Timezone for daily cheese lot generation',
+      isPrefOnly: false,
+    },
+    {
       key: 'finance.credit.enforce',
       valueType: 'boolean',
       defaultJson: false,
@@ -1627,6 +1647,152 @@ async function seedAccountingGl(companyId: string): Promise<void> {
         startDate,
         endDate,
         status: 'OPEN',
+      },
+    });
+  }
+}
+
+/** D099 — demo OPEN lots with staggered DLC so FEFO pick is visible (no tax rates). */
+async function seedFefoDemoLots(companyId: string): Promise<void> {
+  const warehouse = await prisma.invWarehouse.findFirst({
+    where: { companyId, code: 'MAIN', deletedAt: null },
+  });
+  const product = await prisma.prdProduct.findFirst({
+    where: { companyId, sku: 'BRIE-250', deletedAt: null },
+  });
+  if (!warehouse || !product) return;
+
+  const lots: Array<{ lotCode: string; qty: string; dlc: string }> = [
+    { lotCode: 'LOT-FEFO-SOON', qty: '40', dlc: '2026-10-15' },
+    { lotCode: 'LOT-FEFO-MID', qty: '60', dlc: '2026-11-20' },
+    { lotCode: 'LOT-FEFO-LATE', qty: '50', dlc: '2027-01-10' },
+  ];
+
+  let totalOnHand = new Prisma.Decimal(0);
+  for (const lot of lots) {
+    const qty = new Prisma.Decimal(lot.qty);
+    totalOnHand = totalOnHand.add(qty);
+    await prisma.invLot.upsert({
+      where: {
+        companyId_warehouseId_productId_lotCode: {
+          companyId,
+          warehouseId: warehouse.id,
+          productId: product.id,
+          lotCode: lot.lotCode,
+        },
+      },
+      update: {
+        qtyOnHand: qty,
+        qtyReserved: new Prisma.Decimal(0),
+        dlc: new Date(`${lot.dlc}T00:00:00.000Z`),
+        status: 'OPEN',
+      },
+      create: {
+        companyId,
+        warehouseId: warehouse.id,
+        productId: product.id,
+        lotCode: lot.lotCode,
+        qtyOnHand: qty,
+        qtyReserved: new Prisma.Decimal(0),
+        dlc: new Date(`${lot.dlc}T00:00:00.000Z`),
+        status: 'OPEN',
+      },
+    });
+  }
+
+  await prisma.invBalance.upsert({
+    where: {
+      companyId_warehouseId_productId: {
+        companyId,
+        warehouseId: warehouse.id,
+        productId: product.id,
+      },
+    },
+    update: {
+      onHand: totalOnHand,
+      reserved: new Prisma.Decimal(0),
+    },
+    create: {
+      companyId,
+      warehouseId: warehouse.id,
+      productId: product.id,
+      onHand: totalOnHand,
+      reserved: new Prisma.Decimal(0),
+    },
+  });
+}
+
+/** D100/D102 — products with shelf-life (catalogue) + legacy cheese article sync. */
+async function seedCheeseArticles(companyId: string): Promise<void> {
+  const defs: Array<{
+    sku: string;
+    name: string;
+    shelfLifeDays: number;
+    notes: string;
+  }> = [
+    {
+      sku: 'BRIE-250',
+      name: 'Brie 250g',
+      shelfLifeDays: 30,
+      notes: 'Pâte molle — DLC = emballage + 30 j',
+    },
+    {
+      sku: 'MOZ-FIOR',
+      name: 'Mozzarella fior di latte',
+      shelfLifeDays: 7,
+      notes: 'Frais — DLC = emballage + 7 j',
+    },
+    {
+      sku: 'GRUY-AFF',
+      name: 'Gruyère affiné',
+      shelfLifeDays: 60,
+      notes: 'Affiné — DLC = emballage + 60 j',
+    },
+  ];
+
+  for (const d of defs) {
+    const product = await prisma.prdProduct.upsert({
+      where: { companyId_sku: { companyId, sku: d.sku } },
+      update: {
+        name: d.name,
+        status: 'ACTIVE',
+        trackLot: true,
+        perishable: true,
+        shelfLifeDays: d.shelfLifeDays,
+        deletedAt: null,
+      },
+      create: {
+        companyId,
+        sku: d.sku,
+        name: d.name,
+        typeKey: 'FINISHED',
+        uom: 'kg',
+        storageClassKey: 'COLD',
+        status: 'ACTIVE',
+        trackLot: true,
+        perishable: true,
+        shelfLifeDays: d.shelfLifeDays,
+      },
+    });
+
+    await prisma.invCheeseArticle.upsert({
+      where: {
+        companyId_productId: {
+          companyId,
+          productId: product.id,
+        },
+      },
+      update: {
+        shelfLifeDays: d.shelfLifeDays,
+        active: true,
+        notes: d.notes,
+      },
+      create: {
+        companyId,
+        productId: product.id,
+        shelfLifeDays: d.shelfLifeDays,
+        active: true,
+        notes: d.notes,
       },
     });
   }

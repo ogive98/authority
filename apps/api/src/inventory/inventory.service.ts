@@ -1,7 +1,9 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   InvBalance,
+  InvCheeseArticle,
   InvLot,
+  InvLotAllocStatus,
   InvLotStatus,
   InvMovementType,
   InvWarehouse,
@@ -15,16 +17,21 @@ import {
   INVENTORY_EVENT_TYPES,
 } from './inventory.constants';
 import { InventoryException } from './inventory.exception';
+import { pickFefoSlices, sumDecimal } from './inventory.fefo';
 import type {
   AdjustLotDto,
   AdjustStockDto,
   CreateLotDto,
   CreateWarehouseDto,
   IssueStockDto,
+  PatchCheeseArticleDto,
   PatchLotStatusDto,
+  PreviewDlcDto,
   ReleaseStockDto,
   ReserveStockDto,
+  UpsertCheeseArticleDto,
 } from './inventory.dto';
+import { computeDlcIso, dailyLotCode, tunisClock } from './inventory.shelf';
 
 export type WarehouseDto = {
   id: string;
@@ -84,9 +91,27 @@ export type LotDto = {
   qtyOnHand: string;
   qtyReserved: string;
   available: string;
+  packDate: string | null;
   dlc: string | null;
   status: InvLotStatus;
   version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CheeseArticleDto = {
+  id: string;
+  companyId: string;
+  productId: string;
+  productSku: string | null;
+  productName: string | null;
+  productUom: string | null;
+  shelfLifeDays: number;
+  active: boolean;
+  notes: string | null;
+  version: number;
+  /** Example DLC if packed today (UTC date) — preview only. */
+  sampleDlcToday: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -312,7 +337,10 @@ export class InventoryService {
     }
 
     await this.assertWarehouse(companyId, dto.warehouseId);
-    await this.assertProduct(companyId, dto.productId);
+    const product = await this.assertProduct(companyId, dto.productId);
+    if (product.trackLot) {
+      this.requireLotSource(dto.refType, dto.refId);
+    }
 
     const balance = await this.prisma.$transaction(async (tx) => {
       const bal = await this.lockOrCreateBalance(
@@ -321,6 +349,28 @@ export class InventoryService {
         dto.warehouseId,
         dto.productId,
       );
+
+      if (product.trackLot) {
+        const { sourceType, sourceId } = this.requireLotSource(
+          dto.refType,
+          dto.refId,
+        );
+        const existing = await this.findFefoRowsInTx(tx, {
+          companyId,
+          sourceType,
+          sourceId,
+          productId: dto.productId,
+          warehouseId: dto.warehouseId,
+          status: [
+            InvLotAllocStatus.ALLOCATED,
+            InvLotAllocStatus.CONSUMED,
+          ],
+        });
+        if (existing.length > 0) {
+          return bal;
+        }
+      }
+
       const onHand = bal.onHand;
       const reserved = bal.reserved.add(qty);
       this.assertAvailable(onHand, reserved);
@@ -329,6 +379,10 @@ export class InventoryService {
         onHand,
         reserved,
       });
+
+      if (product.trackLot) {
+        await this.allocateFefoInTx(tx, companyId, dto, qty);
+      }
 
       await tx.invMovement.create({
         data: {
@@ -377,7 +431,7 @@ export class InventoryService {
     }
 
     await this.assertWarehouse(companyId, dto.warehouseId);
-    await this.assertProduct(companyId, dto.productId);
+    const product = await this.assertProduct(companyId, dto.productId);
 
     const balance = await this.prisma.$transaction(async (tx) => {
       const bal = await this.lockOrCreateBalance(
@@ -400,6 +454,10 @@ export class InventoryService {
         onHand,
         reserved,
       });
+
+      if (product.trackLot) {
+        await this.releaseFefoInTx(tx, companyId, dto);
+      }
 
       await tx.invMovement.create({
         data: {
@@ -449,7 +507,14 @@ export class InventoryService {
     }
 
     await this.assertWarehouse(companyId, dto.warehouseId);
-    await this.assertProduct(companyId, dto.productId);
+    const product = await this.assertProduct(companyId, dto.productId);
+    const consumeReserved = dto.consumeReserved !== false;
+    if (product.trackLot) {
+      this.requireLotSource(
+        dto.allocationRefType ?? dto.refType,
+        dto.allocationRefId ?? dto.refId,
+      );
+    }
 
     const balance = await this.prisma.$transaction(async (tx) => {
       const bal = await this.lockOrCreateBalance(
@@ -458,20 +523,47 @@ export class InventoryService {
         dto.warehouseId,
         dto.productId,
       );
-      if (bal.reserved.lt(qty) || bal.onHand.lt(qty)) {
+
+      if (product.trackLot && dto.refId?.trim()) {
+        const already = await this.findFefoRowsInTx(tx, {
+          companyId,
+          consumeRefId: dto.refId.trim(),
+          productId: dto.productId,
+          warehouseId: dto.warehouseId,
+          status: [InvLotAllocStatus.CONSUMED],
+        });
+        if (already.length > 0) {
+          return bal;
+        }
+      }
+
+      if (consumeReserved) {
+        if (bal.reserved.lt(qty) || bal.onHand.lt(qty)) {
+          throw new InventoryException(
+            INVENTORY_ERROR_CODES.INSUFFICIENT,
+            'Cannot issue more than reserved / on_hand.',
+            HttpStatus.CONFLICT,
+          );
+        }
+      } else if (bal.onHand.lt(qty)) {
         throw new InventoryException(
           INVENTORY_ERROR_CODES.INSUFFICIENT,
-          'Cannot issue more than reserved / on_hand.',
+          'Cannot issue more than on_hand.',
           HttpStatus.CONFLICT,
         );
       }
       const onHand = bal.onHand.sub(qty);
-      const reserved = bal.reserved.sub(qty);
+      const reserved = consumeReserved ? bal.reserved.sub(qty) : bal.reserved;
+      this.assertAvailable(onHand, reserved);
 
       const updated = await this.updateBalanceVersioned(tx, bal, {
         onHand,
         reserved,
       });
+
+      if (product.trackLot) {
+        await this.consumeFefoInTx(tx, companyId, dto, qty);
+      }
 
       await tx.invMovement.create({
         data: {
@@ -500,6 +592,64 @@ export class InventoryService {
           reserved: updated.reserved.toString(),
           refType: dto.refType ?? null,
           refId: dto.refId ?? null,
+        },
+      });
+
+      return updated;
+    });
+
+    return this.toBalanceDto(companyId, balance);
+  }
+
+  /** Undo a delivery issue (SKU + lots) without FEFO re-pick. */
+  async reverseIssue(
+    companyId: string,
+    dto: IssueStockDto,
+  ): Promise<BalanceDto> {
+    const qty = toDecimal(dto.qty);
+    if (qty.lte(0)) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.INVALID_QTY,
+        'qty must be positive.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    await this.assertWarehouse(companyId, dto.warehouseId);
+    const product = await this.assertProduct(companyId, dto.productId);
+    const consumeReserved = dto.consumeReserved !== false;
+
+    const balance = await this.prisma.$transaction(async (tx) => {
+      const bal = await this.lockOrCreateBalance(
+        tx,
+        companyId,
+        dto.warehouseId,
+        dto.productId,
+      );
+      const onHand = bal.onHand.add(qty);
+      const reserved = consumeReserved ? bal.reserved.add(qty) : bal.reserved;
+      this.assertAvailable(onHand, reserved);
+
+      const updated = await this.updateBalanceVersioned(tx, bal, {
+        onHand,
+        reserved,
+      });
+
+      if (product.trackLot) {
+        await this.reverseFefoInTx(tx, companyId, dto);
+      }
+
+      await tx.invMovement.create({
+        data: {
+          companyId,
+          balanceId: updated.id,
+          type: InvMovementType.ADJUST,
+          qty,
+          onHandAfter: updated.onHand,
+          reservedAfter: updated.reserved,
+          reason: 'reverse issue',
+          refType: dto.refType?.trim() || null,
+          refId: dto.refId?.trim() || null,
         },
       });
 
@@ -572,6 +722,380 @@ export class InventoryService {
       ),
       nextCursor,
     };
+  }
+
+  async listCheeseArticles(
+    companyId: string,
+    opts: { activeOnly?: boolean } = {},
+  ): Promise<{ items: CheeseArticleDto[] }> {
+    const rows = await this.prisma.invCheeseArticle.findMany({
+      where: {
+        companyId,
+        ...(opts.activeOnly === undefined ? {} : { active: opts.activeOnly }),
+      },
+      orderBy: [{ updatedAt: 'desc' }],
+    });
+    const productIds = [...new Set(rows.map((r) => r.productId))];
+    const products = await this.prisma.prdProduct.findMany({
+      where: { companyId, id: { in: productIds } },
+      select: { id: true, sku: true, name: true, uom: true },
+    });
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      items: rows.map((row) =>
+        serializeCheeseArticle(row, productMap.get(row.productId), today),
+      ),
+    };
+  }
+
+  async upsertCheeseArticle(
+    companyId: string,
+    dto: UpsertCheeseArticleDto,
+  ): Promise<CheeseArticleDto> {
+    const shelfLifeDays = Math.trunc(Number(dto.shelfLifeDays));
+    if (!Number.isFinite(shelfLifeDays) || shelfLifeDays < 1) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.INVALID_SHELF_LIFE,
+        'shelfLifeDays must be a positive integer (ex. 7, 30, 60).',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    await this.assertProduct(companyId, dto.productId);
+
+    const existing = await this.prisma.invCheeseArticle.findUnique({
+      where: {
+        companyId_productId: {
+          companyId,
+          productId: dto.productId,
+        },
+      },
+    });
+
+    const row = existing
+      ? await this.prisma.invCheeseArticle.update({
+          where: { id: existing.id },
+          data: {
+            shelfLifeDays,
+            active: dto.active ?? existing.active,
+            notes:
+              dto.notes !== undefined
+                ? dto.notes.trim() || null
+                : existing.notes,
+            version: { increment: 1 },
+          },
+        })
+      : await this.prisma.invCheeseArticle.create({
+          data: {
+            companyId,
+            productId: dto.productId,
+            shelfLifeDays,
+            active: dto.active ?? true,
+            notes: dto.notes?.trim() || null,
+          },
+        });
+
+    await this.prisma.prdProduct.updateMany({
+      where: { id: dto.productId, companyId },
+      data: { trackLot: true, shelfLifeDays, perishable: true },
+    });
+
+    const product = await this.prisma.prdProduct.findFirst({
+      where: { id: row.productId, companyId },
+      select: { id: true, sku: true, name: true, uom: true },
+    });
+    const today = new Date().toISOString().slice(0, 10);
+    return serializeCheeseArticle(row, product ?? undefined, today);
+  }
+
+  async patchCheeseArticle(
+    companyId: string,
+    id: string,
+    dto: PatchCheeseArticleDto,
+  ): Promise<CheeseArticleDto> {
+    const existing = await this.prisma.invCheeseArticle.findFirst({
+      where: { id, companyId },
+    });
+    if (!existing) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.ARTICLE_NOT_FOUND,
+        'Cheese article not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    let shelfLifeDays = existing.shelfLifeDays;
+    if (dto.shelfLifeDays !== undefined) {
+      shelfLifeDays = Math.trunc(Number(dto.shelfLifeDays));
+      if (!Number.isFinite(shelfLifeDays) || shelfLifeDays < 1) {
+        throw new InventoryException(
+          INVENTORY_ERROR_CODES.INVALID_SHELF_LIFE,
+          'shelfLifeDays must be a positive integer (ex. 7, 30, 60).',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
+    const row = await this.prisma.invCheeseArticle.update({
+      where: { id: existing.id },
+      data: {
+        shelfLifeDays,
+        ...(dto.active !== undefined ? { active: dto.active } : {}),
+        ...(dto.notes !== undefined
+          ? { notes: dto.notes.trim() || null }
+          : {}),
+        version: { increment: 1 },
+      },
+    });
+
+    await this.prisma.prdProduct.updateMany({
+      where: { id: row.productId, companyId },
+      data: {
+        shelfLifeDays,
+        trackLot: true,
+        perishable: true,
+      },
+    });
+
+    const product = await this.prisma.prdProduct.findFirst({
+      where: { id: row.productId, companyId },
+      select: { id: true, sku: true, name: true, uom: true },
+    });
+    const today = new Date().toISOString().slice(0, 10);
+    return serializeCheeseArticle(row, product ?? undefined, today);
+  }
+
+  previewDlc(dto: PreviewDlcDto): { packDate: string; dlc: string } {
+    try {
+      const shelfLifeDays = Math.trunc(Number(dto.shelfLifeDays));
+      const dlc = computeDlcIso(dto.packDate, shelfLifeDays);
+      return { packDate: dto.packDate.trim(), dlc };
+    } catch (err) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.INVALID_SHELF_LIFE,
+        err instanceof Error ? err.message : 'Invalid packDate / shelfLifeDays.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  /**
+   * D102 — one OPEN lot per ACTIVE product with shelfLifeDays for packDate (Tunis day).
+   * Idempotent on lotCode = SKU-YYYYMMDD.
+   */
+  async generateDailyCheeseLots(
+    companyId: string,
+    opts: { packDate?: string; warehouseId?: string } = {},
+  ): Promise<{
+    packDate: string;
+    warehouseId: string;
+    created: number;
+    skipped: number;
+    items: Array<{ lotCode: string; productSku: string; dlc: string; status: 'created' | 'skipped' }>;
+  }> {
+    const packDate = (opts.packDate?.trim() || tunisClock().date).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(packDate)) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.INVALID_SHELF_LIFE,
+        'packDate must be YYYY-MM-DD.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    let warehouseId = opts.warehouseId?.trim();
+    if (warehouseId) {
+      await this.assertWarehouse(companyId, warehouseId);
+    } else {
+      const main = await this.prisma.invWarehouse.findFirst({
+        where: { companyId, code: 'MAIN', deletedAt: null, active: true },
+      });
+      if (!main) {
+        throw new InventoryException(
+          INVENTORY_ERROR_CODES.NOT_FOUND,
+          'MAIN warehouse not found.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      warehouseId = main.id;
+    }
+
+    const products = await this.prisma.prdProduct.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: PrdProductStatus.ACTIVE,
+        shelfLifeDays: { not: null, gt: 0 },
+      },
+      orderBy: [{ sku: 'asc' }],
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        uom: true,
+        shelfLifeDays: true,
+      },
+    });
+
+    let created = 0;
+    let skipped = 0;
+    const items: Array<{
+      lotCode: string;
+      productSku: string;
+      dlc: string;
+      status: 'created' | 'skipped';
+    }> = [];
+
+    for (const product of products) {
+      const shelfLifeDays = product.shelfLifeDays;
+      if (shelfLifeDays == null || shelfLifeDays < 1) continue;
+      const lotCode = dailyLotCode(product.sku, packDate);
+      const dlcIso = computeDlcIso(packDate, shelfLifeDays);
+      const existing = await this.prisma.invLot.findUnique({
+        where: {
+          companyId_warehouseId_productId_lotCode: {
+            companyId,
+            warehouseId,
+            productId: product.id,
+            lotCode,
+          },
+        },
+      });
+      if (existing) {
+        skipped += 1;
+        items.push({
+          lotCode,
+          productSku: product.sku,
+          dlc: dlcIso,
+          status: 'skipped',
+        });
+        continue;
+      }
+
+      await this.prisma.invLot.create({
+        data: {
+          companyId,
+          warehouseId,
+          productId: product.id,
+          lotCode,
+          packDate: parseDlc(packDate),
+          dlc: parseDlc(dlcIso),
+          status: InvLotStatus.OPEN,
+          qtyOnHand: new Prisma.Decimal(0),
+          qtyReserved: new Prisma.Decimal(0),
+        },
+      });
+      await this.prisma.prdProduct.updateMany({
+        where: { id: product.id, companyId },
+        data: { trackLot: true },
+      });
+      created += 1;
+      items.push({
+        lotCode,
+        productSku: product.sku,
+        dlc: dlcIso,
+        status: 'created',
+      });
+    }
+
+    return { packDate, warehouseId, created, skipped, items };
+  }
+
+  /**
+   * D102 — certificate rows for packDate (auto DLC from product.shelfLifeDays).
+   */
+  async listSalubritaCertificate(
+    companyId: string,
+    opts: { packDate?: string; warehouseId?: string } = {},
+  ): Promise<{
+    packDate: string;
+    warehouseId: string | null;
+    items: Array<{
+      productId: string;
+      productSku: string;
+      productName: string;
+      productionDate: string;
+      packDate: string;
+      dlc: string;
+      daysAfterPack: number;
+      lotCode: string | null;
+      shelfLifeDays: number;
+    }>;
+  }> {
+    const packDate = (opts.packDate?.trim() || tunisClock().date).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(packDate)) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.INVALID_SHELF_LIFE,
+        'packDate must be YYYY-MM-DD.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    let warehouseId = opts.warehouseId?.trim() || null;
+    if (warehouseId) {
+      await this.assertWarehouse(companyId, warehouseId);
+    } else {
+      const main = await this.prisma.invWarehouse.findFirst({
+        where: { companyId, code: 'MAIN', deletedAt: null, active: true },
+      });
+      warehouseId = main?.id ?? null;
+    }
+
+    const products = await this.prisma.prdProduct.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: PrdProductStatus.ACTIVE,
+        shelfLifeDays: { not: null, gt: 0 },
+      },
+      orderBy: [{ sku: 'asc' }],
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        shelfLifeDays: true,
+      },
+    });
+
+    const productIds = products.map((p) => p.id);
+    const lots =
+      warehouseId && productIds.length
+        ? await this.prisma.invLot.findMany({
+            where: {
+              companyId,
+              warehouseId,
+              productId: { in: productIds },
+              packDate: parseDlc(packDate),
+            },
+            select: {
+              productId: true,
+              lotCode: true,
+              packDate: true,
+              dlc: true,
+            },
+          })
+        : [];
+    const lotByProduct = new Map(lots.map((l) => [l.productId, l]));
+
+    const items = products.map((p) => {
+      const shelf = p.shelfLifeDays!;
+      const lot = lotByProduct.get(p.id);
+      const dlcIso = lot?.dlc
+        ? lot.dlc.toISOString().slice(0, 10)
+        : computeDlcIso(packDate, shelf);
+      return {
+        productId: p.id,
+        productSku: p.sku,
+        productName: p.name,
+        productionDate: packDate,
+        packDate,
+        dlc: dlcIso,
+        daysAfterPack: shelf,
+        lotCode: lot?.lotCode ?? dailyLotCode(p.sku, packDate),
+        shelfLifeDays: shelf,
+      };
+    });
+
+    return { packDate, warehouseId, items };
   }
 
   async createLot(companyId: string, dto: CreateLotDto): Promise<LotDto> {
@@ -978,6 +1502,372 @@ export class InventoryService {
     }
   }
 
+  private requireLotSource(
+    refType?: string,
+    refId?: string,
+  ): { sourceType: string; sourceId: string } {
+    const sourceType = refType?.trim();
+    const sourceId = refId?.trim();
+    if (!sourceType || !sourceId) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.LOT_SOURCE_REQUIRED,
+        'refType/refId required to pick or consume lots (prevents double FEFO).',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return { sourceType, sourceId };
+  }
+
+  private async findFefoRowsInTx(
+    tx: Prisma.TransactionClient,
+    where: {
+      companyId: string;
+      productId: string;
+      warehouseId: string;
+      status: InvLotAllocStatus[];
+      sourceType?: string;
+      sourceId?: string;
+      consumeRefId?: string;
+    },
+  ) {
+    return tx.invLotAllocation.findMany({
+      where: {
+        companyId: where.companyId,
+        productId: where.productId,
+        warehouseId: where.warehouseId,
+        status: { in: where.status },
+        ...(where.sourceType ? { sourceType: where.sourceType } : {}),
+        ...(where.sourceId ? { sourceId: where.sourceId } : {}),
+        ...(where.consumeRefId ? { consumeRefId: where.consumeRefId } : {}),
+      },
+    });
+  }
+
+  private async allocateFefoInTx(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    dto: ReserveStockDto,
+    qty: Prisma.Decimal,
+  ): Promise<void> {
+    const { sourceType, sourceId } = this.requireLotSource(
+      dto.refType,
+      dto.refId,
+    );
+    const existing = await tx.invLotAllocation.findMany({
+      where: {
+        companyId,
+        sourceType,
+        sourceId,
+        productId: dto.productId,
+        warehouseId: dto.warehouseId,
+        status: {
+          in: [InvLotAllocStatus.ALLOCATED, InvLotAllocStatus.CONSUMED],
+        },
+      },
+    });
+    if (existing.length > 0) {
+      return;
+    }
+
+    const lots = await tx.invLot.findMany({
+      where: {
+        companyId,
+        warehouseId: dto.warehouseId,
+        productId: dto.productId,
+        status: InvLotStatus.OPEN,
+      },
+      orderBy: [
+        { dlc: { sort: 'asc', nulls: 'last' } },
+        { lotCode: 'asc' },
+      ],
+    });
+    const slices = pickFefoSlices(lots, qty);
+    if (!slices) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.INSUFFICIENT,
+        'Insufficient OPEN lot quantity for FEFO reserve.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    for (const slice of slices) {
+      const lotRow = lots.find((l) => l.id === slice.lotId);
+      if (!lotRow) continue;
+      const nextReserved = lotRow.qtyReserved.add(slice.qty);
+      await this.updateLotVersioned(tx, lotRow, {
+        qtyOnHand: lotRow.qtyOnHand,
+        qtyReserved: nextReserved,
+      });
+      lotRow.qtyReserved = nextReserved;
+      lotRow.version += 1;
+      await tx.invLotAllocation.create({
+        data: {
+          companyId,
+          lotId: slice.lotId,
+          productId: dto.productId,
+          warehouseId: dto.warehouseId,
+          qty: slice.qty,
+          status: InvLotAllocStatus.ALLOCATED,
+          fromReserve: true,
+          sourceType,
+          sourceId,
+        },
+      });
+    }
+  }
+
+  private async releaseFefoInTx(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    dto: ReleaseStockDto,
+  ): Promise<void> {
+    const sourceType = dto.refType?.trim();
+    const sourceId = dto.refId?.trim();
+    if (!sourceType || !sourceId) return;
+
+    const allocated = await tx.invLotAllocation.findMany({
+      where: {
+        companyId,
+        sourceType,
+        sourceId,
+        productId: dto.productId,
+        warehouseId: dto.warehouseId,
+        status: InvLotAllocStatus.ALLOCATED,
+      },
+    });
+    for (const row of allocated) {
+      const lotRow = await tx.invLot.findFirst({
+        where: { id: row.lotId, companyId },
+      });
+      if (!lotRow) continue;
+      const nextReserved = lotRow.qtyReserved.sub(row.qty);
+      if (nextReserved.lt(0)) {
+        throw new InventoryException(
+          INVENTORY_ERROR_CODES.INSUFFICIENT,
+          'Cannot release more lot qty than reserved.',
+          HttpStatus.CONFLICT,
+        );
+      }
+      await this.updateLotVersioned(tx, lotRow, {
+        qtyOnHand: lotRow.qtyOnHand,
+        qtyReserved: nextReserved,
+      });
+      await tx.invLotAllocation.update({
+        where: { id: row.id },
+        data: {
+          status: InvLotAllocStatus.RELEASED,
+          version: { increment: 1 },
+        },
+      });
+    }
+  }
+
+  private async consumeFefoInTx(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    dto: IssueStockDto,
+    qty: Prisma.Decimal,
+  ): Promise<void> {
+    const consumeRefType = dto.refType?.trim() || null;
+    const consumeRefId = dto.refId?.trim() || null;
+    const { sourceType, sourceId } = this.requireLotSource(
+      dto.allocationRefType ?? dto.refType,
+      dto.allocationRefId ?? dto.refId,
+    );
+
+    if (consumeRefId) {
+      const already = await tx.invLotAllocation.findMany({
+        where: {
+          companyId,
+          consumeRefId,
+          productId: dto.productId,
+          warehouseId: dto.warehouseId,
+          status: InvLotAllocStatus.CONSUMED,
+        },
+      });
+      if (already.length > 0) {
+        return;
+      }
+    }
+
+    const allocated = await tx.invLotAllocation.findMany({
+      where: {
+        companyId,
+        sourceType,
+        sourceId,
+        productId: dto.productId,
+        warehouseId: dto.warehouseId,
+        status: InvLotAllocStatus.ALLOCATED,
+      },
+    });
+    if (allocated.length > 0) {
+      const allocatedQty = sumDecimal(allocated.map((a) => a.qty));
+      if (!allocatedQty.eq(qty)) {
+        throw new InventoryException(
+          INVENTORY_ERROR_CODES.INSUFFICIENT,
+          'FEFO allocation qty does not match issue qty.',
+          HttpStatus.CONFLICT,
+        );
+      }
+      for (const row of allocated) {
+        const lotRow = await tx.invLot.findFirst({
+          where: { id: row.lotId, companyId },
+        });
+        if (!lotRow) {
+          throw new InventoryException(
+            INVENTORY_ERROR_CODES.NOT_FOUND,
+            'Allocated lot not found.',
+            HttpStatus.NOT_FOUND,
+          );
+        }
+        const nextOnHand = lotRow.qtyOnHand.sub(row.qty);
+        const nextReserved = lotRow.qtyReserved.sub(row.qty);
+        if (nextOnHand.lt(0) || nextReserved.lt(0)) {
+          throw new InventoryException(
+            INVENTORY_ERROR_CODES.INSUFFICIENT,
+            'Insufficient allocated lot quantity.',
+            HttpStatus.CONFLICT,
+          );
+        }
+        await this.updateLotVersioned(tx, lotRow, {
+          qtyOnHand: nextOnHand,
+          qtyReserved: nextReserved,
+        });
+        await tx.invLotAllocation.update({
+          where: { id: row.id },
+          data: {
+            status: InvLotAllocStatus.CONSUMED,
+            consumeRefType,
+            consumeRefId,
+            version: { increment: 1 },
+          },
+        });
+      }
+      return;
+    }
+
+    const lots = await tx.invLot.findMany({
+      where: {
+        companyId,
+        warehouseId: dto.warehouseId,
+        productId: dto.productId,
+        status: InvLotStatus.OPEN,
+      },
+      orderBy: [
+        { dlc: { sort: 'asc', nulls: 'last' } },
+        { lotCode: 'asc' },
+      ],
+    });
+    const slices = pickFefoSlices(lots, qty);
+    if (!slices) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.INSUFFICIENT,
+        'Insufficient OPEN lot quantity for FEFO issue.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    for (const slice of slices) {
+      const lotRow = lots.find((l) => l.id === slice.lotId);
+      if (!lotRow) continue;
+      const nextOnHand = lotRow.qtyOnHand.sub(slice.qty);
+      if (nextOnHand.lt(0) || nextOnHand.sub(lotRow.qtyReserved).lt(0)) {
+        throw new InventoryException(
+          INVENTORY_ERROR_CODES.INSUFFICIENT,
+          'Insufficient lot quantity for FEFO issue.',
+          HttpStatus.CONFLICT,
+        );
+      }
+      await this.updateLotVersioned(tx, lotRow, {
+        qtyOnHand: nextOnHand,
+        qtyReserved: lotRow.qtyReserved,
+      });
+      lotRow.qtyOnHand = nextOnHand;
+      lotRow.version += 1;
+      await tx.invLotAllocation.create({
+        data: {
+          companyId,
+          lotId: slice.lotId,
+          productId: dto.productId,
+          warehouseId: dto.warehouseId,
+          qty: slice.qty,
+          status: InvLotAllocStatus.CONSUMED,
+          fromReserve: false,
+          sourceType,
+          sourceId,
+          consumeRefType,
+          consumeRefId,
+        },
+      });
+    }
+  }
+
+  private async reverseFefoInTx(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    dto: IssueStockDto,
+  ): Promise<void> {
+    const consumeRefId = dto.refId?.trim();
+    if (!consumeRefId) return;
+
+    const consumed = await tx.invLotAllocation.findMany({
+      where: {
+        companyId,
+        consumeRefId,
+        productId: dto.productId,
+        warehouseId: dto.warehouseId,
+        status: InvLotAllocStatus.CONSUMED,
+      },
+    });
+    for (const row of consumed) {
+      const lotRow = await tx.invLot.findFirst({
+        where: { id: row.lotId, companyId },
+      });
+      if (!lotRow) continue;
+      const nextOnHand = lotRow.qtyOnHand.add(row.qty);
+      const nextReserved = row.fromReserve
+        ? lotRow.qtyReserved.add(row.qty)
+        : lotRow.qtyReserved;
+      await this.updateLotVersioned(tx, lotRow, {
+        qtyOnHand: nextOnHand,
+        qtyReserved: nextReserved,
+      });
+      await tx.invLotAllocation.update({
+        where: { id: row.id },
+        data: {
+          status: row.fromReserve
+            ? InvLotAllocStatus.ALLOCATED
+            : InvLotAllocStatus.RELEASED,
+          consumeRefType: row.fromReserve ? null : row.consumeRefType,
+          consumeRefId: row.fromReserve ? null : row.consumeRefId,
+          version: { increment: 1 },
+        },
+      });
+    }
+  }
+
+  private async updateLotVersioned(
+    tx: Prisma.TransactionClient,
+    lot: InvLot,
+    next: { qtyOnHand: Prisma.Decimal; qtyReserved: Prisma.Decimal },
+  ): Promise<InvLot> {
+    const result = await tx.invLot.updateMany({
+      where: { id: lot.id, version: lot.version },
+      data: {
+        qtyOnHand: next.qtyOnHand,
+        qtyReserved: next.qtyReserved,
+        version: { increment: 1 },
+      },
+    });
+    if (result.count !== 1) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.VERSION_CONFLICT,
+        'Lot changed concurrently — retry.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    return tx.invLot.findUniqueOrThrow({ where: { id: lot.id } });
+  }
+
   private async toBalanceDto(
     companyId: string,
     balance: InvBalance,
@@ -1042,6 +1932,28 @@ function serializeBalance(
   };
 }
 
+function serializeCheeseArticle(
+  row: InvCheeseArticle,
+  product: { sku: string; name: string; uom: string } | undefined,
+  todayIso: string,
+): CheeseArticleDto {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    productId: row.productId,
+    productSku: product?.sku ?? null,
+    productName: product?.name ?? null,
+    productUom: product?.uom ?? null,
+    shelfLifeDays: row.shelfLifeDays,
+    active: row.active,
+    notes: row.notes,
+    version: row.version,
+    sampleDlcToday: computeDlcIso(todayIso, row.shelfLifeDays),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
 function serializeMovement(row: {
   id: string;
   companyId: string;
@@ -1091,6 +2003,7 @@ function serializeLot(
     qtyOnHand: row.qtyOnHand.toString(),
     qtyReserved: row.qtyReserved.toString(),
     available: row.qtyOnHand.sub(row.qtyReserved).toString(),
+    packDate: row.packDate ? row.packDate.toISOString().slice(0, 10) : null,
     dlc: row.dlc ? row.dlc.toISOString().slice(0, 10) : null,
     status: row.status,
     version: row.version,

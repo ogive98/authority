@@ -292,8 +292,8 @@ export default function SettingsPage() {
             <p className="max-w-2xl text-[length:var(--a-text-sm)] text-a-fg-muted">
               Formulaire expert — champs{" "}
               <span className="font-medium text-a-fg">vides par défaut</span>.
-              Aucun taux n’est inventé. Remplir uniquement avec un expert, puis
-              « Valider ».
+              Aucun taux n’est inventé ni seedé. Saisie humaine uniquement ici
+              (Préférences) ; les modules ne consomment qu’après « Valider ».
             </p>
             {expertise.kind === "loading" ? (
               <ASkeleton className="h-48 w-full max-w-3xl" />

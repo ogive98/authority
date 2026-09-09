@@ -2,7 +2,7 @@ import type { ModuleManifest } from '../manifest.types';
 
 export const deliveryManifest: ModuleManifest = {
   id: 'delivery',
-  name: 'Delivery',
+  name: 'Livraison',
   version: '1.0.0',
   apiVersion: '1',
   description: 'Delivery light — assign driver and complete shipments from confirmed orders',

@@ -9,7 +9,11 @@ describe('InventoryService', () => {
   const productId = '33333333-3333-3333-3333-333333333333';
   const balanceId = '44444444-4444-4444-4444-444444444444';
 
-  function build(initial?: { onHand?: string; reserved?: string }) {
+  function build(initial?: {
+    onHand?: string;
+    reserved?: string;
+    trackLot?: boolean;
+  }) {
     const warehouse = {
       id: warehouseId,
       companyId,
@@ -28,7 +32,7 @@ describe('InventoryService', () => {
       name: 'Brie 250',
       uom: 'kg',
       status: 'ACTIVE',
-      trackLot: false,
+      trackLot: initial?.trackLot ?? false,
       deletedAt: null,
     };
 
@@ -143,5 +147,19 @@ describe('InventoryService', () => {
     });
     expect(released.reserved).toBe('0');
     expect(released.available).toBe('20');
+  });
+
+  it('trackLot reserve without source ref is rejected (no anonymous FEFO)', async () => {
+    const { service } = build({ trackLot: true });
+    await expect(
+      service.reserve(companyId, {
+        productId,
+        warehouseId,
+        qty: 2,
+      }),
+    ).rejects.toMatchObject({
+      response: { code: INVENTORY_ERROR_CODES.LOT_SOURCE_REQUIRED },
+      status: HttpStatus.BAD_REQUEST,
+    });
   });
 });

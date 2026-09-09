@@ -441,49 +441,31 @@ export class DeliveryService {
     try {
       for (const line of order.lines) {
         const qty = Number(line.qty.toString());
-        if (reserveOnConfirm) {
-          await this.inventory.issue(companyId, {
-            productId: line.productId,
-            warehouseId: order.warehouseId,
-            qty,
-            refType: DELIVERY_ISSUE_REF_TYPE,
-            refId: row.id,
-          });
-        } else {
-          await this.inventory.adjust(companyId, {
-            productId: line.productId,
-            warehouseId: order.warehouseId,
-            qtyDelta: -qty,
-            reason: `delivery complete ${row.number}`,
-          });
-        }
+        await this.inventory.issue(companyId, {
+          productId: line.productId,
+          warehouseId: order.warehouseId,
+          qty,
+          refType: DELIVERY_ISSUE_REF_TYPE,
+          refId: row.id,
+          allocationRefType: SALES_RESERVE_REF_TYPE,
+          allocationRefId: order.id,
+          consumeReserved: reserveOnConfirm,
+        });
         issued.push({ productId: line.productId, qty });
       }
     } catch (err) {
       for (const r of issued.reverse()) {
         try {
-          if (reserveOnConfirm) {
-            await this.inventory.reserve(companyId, {
-              productId: r.productId,
-              warehouseId: order.warehouseId,
-              qty: r.qty,
-              refType: SALES_RESERVE_REF_TYPE,
-              refId: order.id,
-            });
-            await this.inventory.adjust(companyId, {
-              productId: r.productId,
-              warehouseId: order.warehouseId,
-              qtyDelta: r.qty,
-              reason: `compensate failed issue ${row.number}`,
-            });
-          } else {
-            await this.inventory.adjust(companyId, {
-              productId: r.productId,
-              warehouseId: order.warehouseId,
-              qtyDelta: r.qty,
-              reason: `compensate failed delivery ${row.number}`,
-            });
-          }
+          await this.inventory.reverseIssue(companyId, {
+            productId: r.productId,
+            warehouseId: order.warehouseId,
+            qty: r.qty,
+            refType: DELIVERY_ISSUE_REF_TYPE,
+            refId: row.id,
+            allocationRefType: SALES_RESERVE_REF_TYPE,
+            allocationRefId: order.id,
+            consumeReserved: reserveOnConfirm,
+          });
         } catch {
           // best-effort compensate
         }

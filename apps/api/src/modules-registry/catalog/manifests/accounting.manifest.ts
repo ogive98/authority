@@ -2,7 +2,7 @@ import type { ModuleManifest } from '../manifest.types';
 
 export const accountingManifest: ModuleManifest = {
   id: 'accounting',
-  name: 'Accounting',
+  name: 'Comptabilité',
   version: '1.0.0',
   apiVersion: '1',
   description:

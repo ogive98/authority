@@ -194,7 +194,13 @@ export default function InventoryLotsPage() {
               href="/inventory"
               className="text-[13px] font-medium text-a-accent hover:underline"
             >
-              Soldes →
+              Inventaire →
+            </Link>
+            <Link
+              href="/inventory/certificat-salubrite"
+              className="text-[13px] font-medium text-a-accent hover:underline"
+            >
+              Certificat →
             </Link>
             <AButton type="button" size="sm" onClick={openCreate}>
               Nouveau lot
@@ -278,6 +284,7 @@ export default function InventoryLotsPage() {
                   <p className="mt-0.5 truncate text-[12px] text-a-fg-muted">
                     {lot.productSku ?? "—"} · {lot.productName ?? "Produit"} ·{" "}
                     {lot.warehouseCode}
+                    {lot.packDate ? ` · emb. ${lot.packDate}` : ""}
                     {lot.dlc ? ` · DLC ${lot.dlc}` : ""}
                   </p>
                 </div>

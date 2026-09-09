@@ -98,12 +98,14 @@ export function SyncModuleFromRoute() {
         return;
       }
     }
-    // Shell preview + home — Accueil until sales owns /preview routes.
-    if (
-      pathname === "/" ||
-      pathname === "" ||
-      pathname.startsWith("/preview")
-    ) {
+    // Launchpad `/` — do NOT force Accueil: sidebar sets the selected module
+    // so the grid shows that module’s apps (Contiental D095).
+    if (pathname === "/" || pathname === "") {
+      setFeatureMenuOpen(false);
+      return;
+    }
+    // Preview stubs until owned by sales.
+    if (pathname.startsWith("/preview")) {
       if (has("home")) setSelectedModuleId("home");
       setFeatureMenuOpen(false);
     }

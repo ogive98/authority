@@ -2,10 +2,10 @@ import type { ModuleManifest } from '../manifest.types';
 
 export const productsManifest: ModuleManifest = {
   id: 'products',
-  name: 'Products',
+  name: 'Produits',
   version: '1.0.0',
   apiVersion: '1',
-  description: 'Product catalogue (V0 CRUD)',
+  description: 'Catalogue produits (CRUD)',
   capabilities: [
     {
       key: 'products.read',

@@ -7,6 +7,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateProductDto {
@@ -37,6 +38,13 @@ export class CreateProductDto {
   @IsOptional()
   @IsBoolean()
   perishable?: boolean;
+
+  /** Conservation days after packaging (salubrité / DLC). Null clears. */
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsInt()
+  @Min(1)
+  shelfLifeDays?: number | null;
 
   @IsString()
   @MinLength(1)
@@ -75,6 +83,12 @@ export class UpdateProductDto {
   @IsOptional()
   @IsBoolean()
   perishable?: boolean;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsInt()
+  @Min(1)
+  shelfLifeDays?: number | null;
 
   @IsOptional()
   @IsString()

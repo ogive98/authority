@@ -9,6 +9,7 @@ export type Product = {
   uom: string;
   trackLot: boolean;
   perishable: boolean;
+  shelfLifeDays: number | null;
   storageClassKey: string;
   allergenFlags: string[];
   status: ProductStatus;
@@ -43,6 +44,7 @@ export type ProductWriteBody = {
   uom: string;
   trackLot: boolean;
   perishable: boolean;
+  shelfLifeDays?: number | null;
   storageClassKey: string;
   allergenFlags: string[];
   version?: number;
@@ -108,6 +110,34 @@ export async function fetchProducts(q?: string): Promise<
       };
     }
     return { ok: true, data: (await res.json()) as ProductListResponse };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchProduct(id: string): Promise<
+  | { ok: true; data: Product }
+  | { ok: false; status: number; code?: string; message: string }
+> {
+  try {
+    const res = await fetch(`/api/v1/products/${encodeURIComponent(id)}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as {
+        code?: string;
+        message?: string;
+      };
+      return {
+        ok: false,
+        status: res.status,
+        code: body.code,
+        message: body.message ?? `HTTP ${res.status}`,
+      };
+    }
+    return { ok: true, data: (await res.json()) as Product };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }

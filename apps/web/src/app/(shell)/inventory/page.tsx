@@ -131,9 +131,15 @@ export default function InventoryPage() {
       <AScreenHeader
         kicker="Stock"
         title="Inventaire"
-        description="Soldes on-hand / reserved par entrepôt (light)."
+        description="Soldes on-hand / reserved par entrepôt."
         actions={
           <div className="flex items-center gap-3">
+            <Link
+              href="/inventory/certificat-salubrite"
+              className="text-[13px] font-medium text-a-accent hover:underline"
+            >
+              Certificat →
+            </Link>
             <Link
               href="/inventory/lots"
               className="text-[13px] font-medium text-a-accent hover:underline"

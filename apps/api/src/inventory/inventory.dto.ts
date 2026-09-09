@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
@@ -161,4 +162,76 @@ export class IssueStockDto {
   @IsString()
   @MaxLength(64)
   refId?: string;
+
+  /** Sales order (or other pick source) — consume existing FEFO allocations, never pick again. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  allocationRefType?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  allocationRefId?: string;
+
+  /** When false, decrease on_hand only (no prior SKU reserve). Default true. */
+  @IsOptional()
+  @IsBoolean()
+  consumeReserved?: boolean;
+}
+
+export class UpsertCheeseArticleDto {
+  @IsUUID()
+  productId!: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  shelfLifeDays!: number;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  notes?: string;
+}
+
+export class PatchCheeseArticleDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  shelfLifeDays?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  notes?: string;
+}
+
+export class PreviewDlcDto {
+  @IsString()
+  @MinLength(10)
+  @MaxLength(10)
+  packDate!: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  shelfLifeDays!: number;
+}
+
+export class GenerateDailyLotsDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  packDate?: string;
+
+  @IsOptional()
+  @IsUUID()
+  warehouseId?: string;
 }

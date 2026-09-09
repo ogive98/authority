@@ -15,6 +15,7 @@ export type ProductDto = {
   uom: string;
   trackLot: boolean;
   perishable: boolean;
+  shelfLifeDays: number | null;
   storageClassKey: string;
   allergenFlags: string[];
   status: PrdProductStatus;
@@ -93,11 +94,20 @@ export class ProductsService {
           uom,
           trackLot: dto.trackLot ?? false,
           perishable: dto.perishable ?? false,
+          shelfLifeDays:
+            dto.shelfLifeDays === undefined ? null : dto.shelfLifeDays,
           storageClassKey,
           allergenFlags,
           status: PrdProductStatus.DRAFT,
         },
       });
+      if (row.shelfLifeDays != null && row.shelfLifeDays > 0) {
+        await this.syncCheeseArticleShelfLife(
+          companyId,
+          row.id,
+          row.shelfLifeDays,
+        );
+      }
       return serialize(row);
     } catch (err) {
       if (
@@ -151,12 +161,63 @@ export class ProductsService {
         ...(dto.uom !== undefined ? { uom } : {}),
         ...(dto.trackLot !== undefined ? { trackLot: dto.trackLot } : {}),
         ...(dto.perishable !== undefined ? { perishable: dto.perishable } : {}),
+        ...(dto.shelfLifeDays !== undefined
+          ? { shelfLifeDays: dto.shelfLifeDays }
+          : {}),
         ...(dto.storageClassKey !== undefined ? { storageClassKey } : {}),
         ...(dto.allergenFlags !== undefined ? { allergenFlags } : {}),
         version: { increment: 1 },
       },
     });
+
+    if (dto.shelfLifeDays !== undefined) {
+      await this.syncCheeseArticleShelfLife(
+        companyId,
+        id,
+        dto.shelfLifeDays,
+      );
+    }
+
     return serialize(row);
+  }
+
+  /** Keep legacy inv_cheese_article in sync when catalogue owns shelf life (D102). */
+  private async syncCheeseArticleShelfLife(
+    companyId: string,
+    productId: string,
+    shelfLifeDays: number | null,
+  ): Promise<void> {
+    const existing = await this.prisma.invCheeseArticle.findUnique({
+      where: { companyId_productId: { companyId, productId } },
+    });
+    if (shelfLifeDays == null || shelfLifeDays < 1) {
+      if (existing) {
+        await this.prisma.invCheeseArticle.update({
+          where: { id: existing.id },
+          data: { active: false, version: { increment: 1 } },
+        });
+      }
+      return;
+    }
+    if (existing) {
+      await this.prisma.invCheeseArticle.update({
+        where: { id: existing.id },
+        data: {
+          shelfLifeDays,
+          active: true,
+          version: { increment: 1 },
+        },
+      });
+      return;
+    }
+    await this.prisma.invCheeseArticle.create({
+      data: {
+        companyId,
+        productId,
+        shelfLifeDays,
+        active: true,
+      },
+    });
   }
 
   async activate(companyId: string, id: string): Promise<ProductDto> {
@@ -218,6 +279,7 @@ function serialize(row: PrdProduct): ProductDto {
     uom: row.uom,
     trackLot: row.trackLot,
     perishable: row.perishable,
+    shelfLifeDays: row.shelfLifeDays,
     storageClassKey: row.storageClassKey,
     allergenFlags: asStringArray(row.allergenFlags),
     status: row.status,

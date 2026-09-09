@@ -6,7 +6,7 @@ import type { ModuleManifest } from '../manifest.types';
  */
 export const repairManifest: ModuleManifest = {
   id: 'repair',
-  name: 'Scan & Repair',
+  name: 'Réparation',
   version: '1.0.0',
   apiVersion: '1',
   description:
@@ -106,7 +106,7 @@ export const repairManifest: ModuleManifest = {
   navigationEntries: [
     {
       id: 'repair-home',
-      label: 'Scan & Repair',
+      label: 'Réparation',
       href: '/repair',
     },
     {

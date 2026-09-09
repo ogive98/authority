@@ -3,16 +3,59 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+/** UI métier = français (ids techniques restent en anglais dans l’URL). */
 const LABELS: Record<string, string> = {
   "": "Accueil",
   settings: "Paramètres",
   preferences: "Préférences",
   preview: "Aperçu",
+  products: "Produits",
+  customers: "Clients",
+  sales: "Ventes",
+  inventory: "Stock",
   lots: "Lots",
+  "certificat-salubrite": "Certificat de salubrité",
+  articles: "Certificat de salubrité",
+  delivery: "Livraison",
+  finance: "Finance",
+  invoices: "Factures",
+  payments: "Encaissements",
+  instruments: "Instruments",
+  promises: "Promesses",
+  accounting: "Comptabilité",
+  tax: "Fiscalité",
+  hr: "Ressources humaines",
+  production: "Production",
+  repair: "Réparation",
+  documents: "Documents",
+  help: "Aide",
+  guide: "Guide",
   commandes: "Commandes",
+  search: "Recherche",
+  portal: "Portail",
 };
 
-/** Soft macOS path bar — no frames. */
+function looksLikeRecordId(part: string): boolean {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(part)) {
+    return true;
+  }
+  // Prisma cuid / cuid2
+  if (/^c[a-z0-9]{20,}$/i.test(part)) return true;
+  return false;
+}
+
+function labelForPart(part: string, parent: string | undefined): string {
+  if (LABELS[part]) return LABELS[part];
+  if (looksLikeRecordId(part)) {
+    if (parent === "products") return "Fiche";
+    if (parent === "customers") return "Fiche";
+    if (parent === "finance" || parent === "invoices") return "Détail";
+    return "Détail";
+  }
+  return part;
+}
+
+/** Soft macOS path bar — no frames. Labels FR, jamais d’id brut. */
 export function ShellBreadcrumbs() {
   const pathname = usePathname();
   if (pathname === "/") return null;
@@ -22,7 +65,7 @@ export function ShellBreadcrumbs() {
     { href: "/", label: "Accueil" },
     ...parts.map((part, i) => ({
       href: "/" + parts.slice(0, i + 1).join("/"),
-      label: LABELS[part] ?? part,
+      label: labelForPart(part, i > 0 ? parts[i - 1] : undefined),
     })),
   ];
 

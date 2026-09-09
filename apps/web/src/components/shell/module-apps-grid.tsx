@@ -134,7 +134,7 @@ export function ModuleAppsGrid({
             <div className="flex h-full min-h-0 flex-col items-center justify-center px-6 py-4 md:px-10">
               <header className="mb-6 shrink-0 text-center sm:mb-8">
                 <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
-                  Apps
+                  Applications
                 </p>
                 <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.022em] text-a-fg">
                   {mod.name}

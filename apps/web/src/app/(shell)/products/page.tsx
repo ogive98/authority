@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AButton,
@@ -15,11 +16,9 @@ import {
 import {
   STATUS_LABELS,
   activateProduct,
-  archiveProduct,
   createProduct,
   fetchProducts,
   fetchRefs,
-  updateProduct,
   type Product,
   type RefValue,
 } from "@/lib/products";
@@ -37,6 +36,7 @@ type FormState = {
   uom: string;
   trackLot: boolean;
   perishable: boolean;
+  shelfLifeDays: string;
   storageClassKey: string;
   allergenFlags: string;
 };
@@ -48,7 +48,6 @@ export default function ProductsPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -62,11 +61,6 @@ export default function ProductsPage() {
     return (code: string) => m.get(code) ?? code;
   }, [types]);
 
-  const storageLabel = useMemo(() => {
-    const m = new Map(storages.map((t) => [t.code, t.label]));
-    return (code: string) => m.get(code) ?? code;
-  }, [storages]);
-
   const emptyForm = useCallback((): FormState => {
     return {
       sku: "",
@@ -75,6 +69,7 @@ export default function ProductsPage() {
       uom: uoms[0]?.code ?? "",
       trackLot: false,
       perishable: false,
+      shelfLifeDays: "",
       storageClassKey: storages[0]?.code ?? "",
       allergenFlags: "",
     };
@@ -119,52 +114,40 @@ export default function ProductsPage() {
   }, [load, loadRefs]);
 
   function openCreate() {
-    setEditing(null);
     setForm(emptyForm());
-    setFormError(null);
-    setDrawerOpen(true);
-  }
-
-  function openEdit(row: Product) {
-    setEditing(row);
-    setForm({
-      sku: row.sku,
-      name: row.name,
-      typeKey: row.typeKey,
-      uom: row.uom,
-      trackLot: row.trackLot,
-      perishable: row.perishable,
-      storageClassKey: row.storageClassKey,
-      allergenFlags: row.allergenFlags.join(", "),
-    });
     setFormError(null);
     setDrawerOpen(true);
   }
 
   async function submitForm() {
     if (!form) return;
+    const shelfRaw = form.shelfLifeDays.trim();
+    let shelfLifeDays: number | null = null;
+    if (shelfRaw) {
+      const n = Number(shelfRaw);
+      if (!Number.isFinite(n) || n < 1) {
+        setFormError("Conservation : entier ≥ 1 (ex. 7, 30, 60) ou vide.");
+        return;
+      }
+      shelfLifeDays = Math.trunc(n);
+    }
     setBusy(true);
     setFormError(null);
     const allergenList = form.allergenFlags
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-    const payload = {
+    const res = await createProduct({
       sku: form.sku.trim(),
       name: form.name.trim(),
       typeKey: form.typeKey,
       uom: form.uom,
-      trackLot: form.trackLot,
-      perishable: form.perishable,
+      trackLot: form.trackLot || shelfLifeDays != null,
+      perishable: form.perishable || shelfLifeDays != null,
+      shelfLifeDays,
       storageClassKey: form.storageClassKey,
       allergenFlags: allergenList,
-    };
-    const res = editing
-      ? await updateProduct(editing.id, {
-          ...payload,
-          version: editing.version,
-        })
-      : await createProduct(payload);
+    });
     setBusy(false);
     if (!res.ok) {
       setFormError(res.message);
@@ -183,21 +166,12 @@ export default function ProductsPage() {
     await load(q);
   }
 
-  async function onArchive(row: Product) {
-    const res = await archiveProduct(row.id);
-    if (!res.ok) {
-      setState({ kind: "error", message: res.message });
-      return;
-    }
-    await load(q);
-  }
-
   return (
     <>
       <AScreenHeader
         kicker="Produits"
         title="Catalogue"
-        description="Listes paramétrables par société (industry pack)."
+        description="Listes paramétrables · conservation (jours) pour certificat de salubrité."
         actions={
           <AButton type="button" size="sm" onClick={openCreate}>
             Nouveau produit
@@ -262,9 +236,9 @@ export default function ProductsPage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle">
+          <div className="overflow-x-auto rounded-[var(--a-radius-md)] bg-a-surface-2">
             <table className="w-full min-w-[40rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="border-b border-a-border-subtle bg-a-surface-2 text-a-fg-muted">
+              <thead className="bg-a-surface-3 text-a-fg-muted">
                 <tr>
                   <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
                     SKU
@@ -276,10 +250,7 @@ export default function ProductsPage() {
                     Type
                   </th>
                   <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    UoM
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Stockage
+                    Conserv.
                   </th>
                   <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
                     Statut
@@ -296,13 +267,12 @@ export default function ProductsPage() {
                     className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
                   >
                     <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      <button
-                        type="button"
-                        className="text-left text-a-accent hover:underline"
-                        onClick={() => openEdit(row)}
+                      <Link
+                        href={`/products/${row.id}`}
+                        className="text-a-accent hover:underline"
                       >
                         {row.sku}
-                      </button>
+                      </Link>
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
                       {row.name}
@@ -310,11 +280,10 @@ export default function ProductsPage() {
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
                       {typeLabel(row.typeKey)}
                     </td>
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      {row.uom}
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
-                      {storageLabel(row.storageClassKey)}
+                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
+                      {row.shelfLifeDays != null
+                        ? `${row.shelfLifeDays} j`
+                        : "—"}
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
                       <span
@@ -331,6 +300,11 @@ export default function ProductsPage() {
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
                       <div className="flex flex-wrap gap-2">
+                        <Link href={`/products/${row.id}`}>
+                          <AButton type="button" size="sm" variant="secondary">
+                            Modifier
+                          </AButton>
+                        </Link>
                         {row.status === "DRAFT" ? (
                           <AButton
                             type="button"
@@ -341,14 +315,6 @@ export default function ProductsPage() {
                             Activer
                           </AButton>
                         ) : null}
-                        <AButton
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => void onArchive(row)}
-                        >
-                          Archiver
-                        </AButton>
                       </div>
                     </td>
                   </tr>
@@ -362,8 +328,8 @@ export default function ProductsPage() {
       <ADrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        title={editing ? "Modifier le produit" : "Nouveau produit"}
-        description="Référentiels société (industry pack)"
+        title="Nouveau produit"
+        description="Référentiels société · conservation optionnelle"
         footer={
           <div className="flex justify-end gap-2">
             <AButton
@@ -391,7 +357,6 @@ export default function ProductsPage() {
               <AInput
                 id="prd-sku"
                 value={form.sku}
-                disabled={Boolean(editing)}
                 onChange={(e) =>
                   setForm((f) => (f ? { ...f, sku: e.target.value } : f))
                 }
@@ -458,6 +423,35 @@ export default function ProductsPage() {
                 ))}
               </select>
             </Field>
+            <Field
+              label="Conservation (jours après emballage)"
+              htmlFor="prd-shelf"
+            >
+              <AInput
+                id="prd-shelf"
+                value={form.shelfLifeDays}
+                onChange={(e) => {
+                  const shelfLifeDays = e.target.value;
+                  const hasDays = shelfLifeDays.trim().length > 0;
+                  setForm((f) =>
+                    f
+                      ? {
+                          ...f,
+                          shelfLifeDays,
+                          ...(hasDays
+                            ? { trackLot: true, perishable: true }
+                            : {}),
+                        }
+                      : f,
+                  );
+                }}
+                placeholder="7, 30, 60… (vide = hors certificat)"
+                inputMode="numeric"
+              />
+              <p className="text-[11px] text-a-fg-subtle">
+                Sert au certificat de salubrité et au calcul de la DLC.
+              </p>
+            </Field>
             <Field label="Allergènes (codes, virgules)" htmlFor="prd-allergens">
               <AInput
                 id="prd-allergens"
@@ -472,21 +466,27 @@ export default function ProductsPage() {
                 }
               />
             </Field>
-            <div className="flex flex-col gap-3">
+            <div className="space-y-1.5">
               <ASwitch
-                label="Suivi lot"
-                checked={form.trackLot}
+                label="Suivi par lot et DLC"
+                checked={form.trackLot || form.perishable}
                 onCheckedChange={(v) =>
-                  setForm((f) => (f ? { ...f, trackLot: v } : f))
+                  setForm((f) =>
+                    f
+                      ? {
+                          ...f,
+                          trackLot: v,
+                          perishable: v,
+                          ...(v ? {} : { shelfLifeDays: "" }),
+                        }
+                      : f,
+                  )
                 }
               />
-              <ASwitch
-                label="Périssable"
-                checked={form.perishable}
-                onCheckedChange={(v) =>
-                  setForm((f) => (f ? { ...f, perishable: v } : f))
-                }
-              />
+              <p className="text-[11px] text-a-fg-subtle">
+                Obligatoire pour fromage / FEFO. Activé si conservation
+                renseignée.
+              </p>
             </div>
             {formError ? (
               <p

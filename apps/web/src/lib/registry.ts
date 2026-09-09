@@ -45,6 +45,11 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       key: "inventory",
       name: "Stock",
       features: [
+        {
+          id: "salubrita",
+          label: "Certificat de salubrité",
+          href: "/inventory/certificat-salubrite",
+        },
         { id: "lots", label: "Lots", href: "/inventory/lots" },
         { id: "inventory", label: "Inventaire", href: "/inventory" },
       ],
@@ -86,9 +91,9 @@ export const FALLBACK_REGISTRY: MeRegistry = {
     },
     {
       key: "repair",
-      name: "Scan & Repair",
+      name: "Réparation",
       features: [
-        { id: "repair-home", label: "Scan & Repair", href: "/repair" },
+        { id: "repair-home", label: "Réparation", href: "/repair" },
         {
           id: "repair-diagnostics",
           label: "Diagnostics",
@@ -101,6 +106,13 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       name: "Documents",
       features: [
         { id: "library", label: "Documents", href: "/documents" },
+      ],
+    },
+    {
+      key: "products",
+      name: "Produits",
+      features: [
+        { id: "catalogue", label: "Catalogue", href: "/products" },
       ],
     },
     {
@@ -120,13 +132,26 @@ export const FALLBACK_REGISTRY: MeRegistry = {
   flags: [],
 };
 
-/** Ensure Accueil (+ Paramètres if missing) so the icon rail never goes blank. */
+/** Ensure Accueil (+ Paramètres if missing) so the icon rail never goes blank.
+ * Also merge FALLBACK features into known modules (e.g. new Inventory apps).
+ */
 export function ensureShellModules(data: MeRegistry): MeRegistry {
   if (!data.modules?.length) {
     return FALLBACK_REGISTRY;
   }
   const keys = new Set(data.modules.map((m) => m.key));
-  const modules = [...data.modules];
+  const modules = data.modules.map((mod) => {
+    const fb = FALLBACK_REGISTRY.modules.find((m) => m.key === mod.key);
+    if (!fb?.features?.length) return mod;
+    const seen = new Set(mod.features.map((f) => f.id));
+    const merged = [
+      ...mod.features,
+      ...fb.features.filter((f) => !seen.has(f.id)),
+    ];
+    return merged.length === mod.features.length
+      ? mod
+      : { ...mod, features: merged };
+  });
   for (const fb of FALLBACK_REGISTRY.modules) {
     if (!keys.has(fb.key)) {
       modules.push(fb);

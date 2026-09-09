@@ -5,6 +5,7 @@ import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { InventoryController } from './inventory.controller';
+import { InventoryDailyLotScheduler } from './inventory.daily-lot.scheduler';
 import { InventoryService } from './inventory.service';
 
 @Module({
@@ -16,7 +17,7 @@ import { InventoryService } from './inventory.service';
     AuditModule,
   ],
   controllers: [InventoryController],
-  providers: [InventoryService],
+  providers: [InventoryService, InventoryDailyLotScheduler],
   exports: [InventoryService],
 })
 export class InventoryModule {}
