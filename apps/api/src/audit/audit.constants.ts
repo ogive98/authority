@@ -4,6 +4,8 @@ export const AUDIT_ACTIONS = {
   identityUserReinvite: 'identity.user.reinvite',
   identityUserInviteAccept: 'identity.user.invite_accept',
   identityUserInviteAdminActivate: 'identity.user.invite_admin_activate',
+  identityUserInviteEmailSent: 'identity.user.invite_email_sent',
+  identityUserInviteEmailFailed: 'identity.user.invite_email_failed',
   organizationSiteCreate: 'organization.site.create',
   settingsValueUpdate: 'settings.value.update',
   settingsExpertiseValidate: 'settings.expertise.validate',

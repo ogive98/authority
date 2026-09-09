@@ -21,6 +21,7 @@ import {
   fetchCompanyUsers,
   fetchUserGrants,
   inviteCompanyUser,
+  fetchMailStatus,
   putUserGrants,
   reinviteCompanyUser,
   updateCompanyUser,
@@ -28,6 +29,7 @@ import {
   type CompanyUser,
   type CompanyUserStatus,
   type InviteIssue,
+  type MailStatus,
   type UserGrants,
 } from "@/lib/users";
 
@@ -108,6 +110,7 @@ export default function UsersPage() {
   );
   const [inviteResult, setInviteResult] = useState<InviteIssue | null>(null);
   const [copied, setCopied] = useState(false);
+  const [mailStatus, setMailStatus] = useState<MailStatus | null>(null);
 
   const emptyForm = useCallback(
     (): FormState => ({
@@ -139,6 +142,10 @@ export default function UsersPage() {
     void (async () => {
       const res = await fetchBusinessRoles();
       if (res.ok) setRoles(res.data.items);
+    })();
+    void (async () => {
+      const res = await fetchMailStatus();
+      if (res.ok) setMailStatus(res.data);
     })();
   }, [load]);
 
@@ -199,8 +206,14 @@ export default function UsersPage() {
           await load(q);
           return;
         }
-        if (!form.password.trim() || form.password.trim().length < 8) {
-          setFormError("Mot de passe obligatoire (8 caractères min.).");
+        if (
+          !form.password.trim() ||
+          form.password.trim().length <
+            (mailStatus?.minPasswordLength ?? 8)
+        ) {
+          setFormError(
+            `Mot de passe obligatoire (${mailStatus?.minPasswordLength ?? 8} caractères min.).`,
+          );
           return;
         }
         const res = await createCompanyUser({
@@ -214,6 +227,16 @@ export default function UsersPage() {
           return;
         }
       } else {
+        if (
+          form.password.trim() &&
+          form.password.trim().length <
+            (mailStatus?.minPasswordLength ?? 8)
+        ) {
+          setFormError(
+            `Mot de passe : ${mailStatus?.minPasswordLength ?? 8} caractères min.`,
+          );
+          return;
+        }
         const res = await updateCompanyUser(editing.id, {
           displayName: form.displayName.trim(),
           status: form.status,
@@ -327,9 +350,33 @@ export default function UsersPage() {
         title="Utilisateurs"
         description="Invitation par lien (Outlook) ou mot de passe immédiat · Admin / Comptable / Opérateur"
         actions={
-          <AButton type="button" size="sm" variant="secondary" onClick={openCreate}>
-            Nouvel utilisateur
-          </AButton>
+          <div className="flex flex-wrap items-center gap-2">
+            {mailStatus ? (
+              <ABadge
+                tone={mailStatus.configured ? "success" : "neutral"}
+                title={
+                  mailStatus.configured
+                    ? [
+                        mailStatus.host,
+                        mailStatus.port != null ? `:${mailStatus.port}` : "",
+                        mailStatus.from ? ` · ${mailStatus.from}` : "",
+                        mailStatus.autoSend ? " · auto-send" : " · auto-send off",
+                        ` · TTL ${mailStatus.ttlDays}j`,
+                      ].join("")
+                    : `SMTP off · mailto · TTL ${mailStatus.ttlDays}j`
+                }
+              >
+                {mailStatus.configured
+                  ? `${mailStatus.from ? `SMTP · ${mailStatus.from}` : `SMTP · ${mailStatus.host}`}${
+                      mailStatus.autoSend ? "" : " · manuel"
+                    }`
+                  : "SMTP off · mailto"}
+              </ABadge>
+            ) : null}
+            <AButton type="button" size="sm" variant="secondary" onClick={openCreate}>
+              Nouvel utilisateur
+            </AButton>
+          </div>
         }
       />
 
@@ -545,7 +592,7 @@ export default function UsersPage() {
         }
         description={
           inviteResult
-            ? "Copiez le lien ou ouvrez Outlook — pas d’SMTP serveur pour l’instant"
+            ? "Copiez le lien, Outlook, ou e-mail SMTP si configuré"
             : "Affectation à la société active · rôles Admin / Comptable / Opérateur"
         }
         footer={
@@ -591,6 +638,31 @@ export default function UsersPage() {
                 <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                   {inviteResult.user.displayName} · {inviteResult.user.email}
                 </p>
+                {inviteResult.emailSent ? (
+                  <p
+                    className="rounded-[8px] bg-a-success-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-success-fg"
+                    role="status"
+                  >
+                    {mailStatus?.from
+                      ? `E-mail d’invitation envoyé depuis ${mailStatus.from}.`
+                      : "E-mail d’invitation envoyé via SMTP."}
+                  </p>
+                ) : inviteResult.smtpConfigured && inviteResult.emailError ? (
+                  <p
+                    className="rounded-[8px] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg"
+                    role="alert"
+                  >
+                    SMTP configuré
+                    {mailStatus?.from ? ` (${mailStatus.from})` : ""} mais envoi
+                    échoué : {inviteResult.emailError}. Utilisez Copier /
+                    Outlook.
+                  </p>
+                ) : (
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    SMTP non configuré — Copier le lien ou Ouvrir Outlook.
+                    (Variables SMTP_* dans .env)
+                  </p>
+                )}
                 {inviteResult.inviteUrl ? (
                   <p className="a-mono break-all rounded-[8px] bg-a-surface-3 px-3 py-2 text-[12px] text-a-fg">
                     {inviteResult.inviteUrl}
@@ -731,12 +803,17 @@ export default function UsersPage() {
                   onChange={(e) =>
                     setForm({ ...form, password: e.target.value })
                   }
-                  minLength={editing ? undefined : 8}
+                  minLength={
+                    editing
+                      ? undefined
+                      : (mailStatus?.minPasswordLength ?? 8)
+                  }
                 />
                 {!editing ? (
                   <p className="mt-1.5 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Vous définissez le mot de passe ici et le transmettez à la
-                    personne.
+                    Vous définissez le mot de passe ici (
+                    {mailStatus?.minPasswordLength ?? 8} caractères min.) et le
+                    transmettez à la personne.
                   </p>
                 ) : form.status === "INVITED" ? (
                   <p className="mt-1.5 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -747,8 +824,11 @@ export default function UsersPage() {
               </Field>
             ) : (
               <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                Un lien d’activation (7 jours) sera généré. Ouvrez Outlook pour
-                l’envoyer — pas d’SMTP serveur pour l’instant.
+                Un lien d’activation (
+                {mailStatus?.ttlDays ?? 7} jours) sera généré. Envoi SMTP selon
+                Préférences → Envois (auto-send
+                {mailStatus?.autoSend === false ? " désactivé" : ""}
+                ) — sinon Copier / Outlook.
               </p>
             )}
 

@@ -32,7 +32,7 @@ export class CreateCompanyUserDto {
   displayName!: string;
 
   @IsString()
-  @MinLength(8)
+  @MinLength(6)
   @MaxLength(128)
   password!: string;
 
@@ -58,7 +58,7 @@ export class InviteCompanyUserDto {
 /** Public accept invite body (D118). */
 export class AcceptInviteDto {
   @IsString()
-  @MinLength(8)
+  @MinLength(6)
   @MaxLength(128)
   password!: string;
 }
@@ -80,7 +80,7 @@ export class UpdateCompanyUserDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(8)
+  @MinLength(6)
   @MaxLength(128)
   password?: string;
 }

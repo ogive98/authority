@@ -4,6 +4,7 @@ import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { AuditModule } from '../audit/audit.module';
+import { MailModule } from '../mail/mail.module';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
@@ -14,6 +15,7 @@ import { UsersService } from './users.service';
     PermissionsModule,
     ModulesRegistryModule,
     AuditModule,
+    MailModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

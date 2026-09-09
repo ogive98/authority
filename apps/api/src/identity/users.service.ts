@@ -15,6 +15,7 @@ import {
 import { IDENTITY_ERROR_CODES } from './identity.constants';
 import { IdentityException } from './identity.exception';
 import { PasswordService } from './password.service';
+import { InviteSettingsResolver } from './invite-settings.resolver';
 import {
   BUSINESS_ROLE_CATALOGUE,
   BUSINESS_ROLE_CODES,
@@ -56,7 +57,22 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
     private readonly audit: AuditService,
+    private readonly inviteSettings: InviteSettingsResolver,
   ) {}
+
+  private async assertPasswordLength(
+    companyId: string,
+    password: string,
+  ): Promise<void> {
+    const cfg = await this.inviteSettings.resolve(companyId);
+    if (password.length < cfg.minPasswordLength) {
+      throw new IdentityException(
+        IDENTITY_ERROR_CODES.VALIDATION,
+        `Mot de passe : ${cfg.minPasswordLength} caractères minimum.`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
 
   listRoles() {
     return {
@@ -128,6 +144,7 @@ export class UsersService {
     companyId: string,
     dto: CreateCompanyUserDto,
   ): Promise<CompanyUserDto> {
+    await this.assertPasswordLength(companyId, dto.password);
     const email = dto.email.trim().toLowerCase();
     const existing = await this.prisma.iamUser.findUnique({
       where: { email },
@@ -238,6 +255,10 @@ export class UsersService {
         'Invalid roleCode.',
         HttpStatus.BAD_REQUEST,
       );
+    }
+
+    if (dto.password !== undefined) {
+      await this.assertPasswordLength(companyId, dto.password);
     }
 
     const passwordHash =

@@ -25,6 +25,17 @@ export const SETTINGS_ENTITY_TYPES = {
   setValue: 'set_value',
 } as const;
 
+/** Never echoed in getEffective / audit payloads (D137). Empty PUT keeps previous. */
+export const SECRET_SETTING_KEYS = ['identity.smtp.pass'] as const;
+
+export function isSecretSettingKey(key: string): boolean {
+  return (SECRET_SETTING_KEYS as readonly string[]).includes(key);
+}
+
+export function isSecretValueSet(value: unknown): boolean {
+  return typeof value === 'string' && value.length > 0;
+}
+
 export const SETTINGS_SCOPE = {
   system: 'system',
 } as const;

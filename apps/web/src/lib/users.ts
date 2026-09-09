@@ -114,7 +114,37 @@ export type InviteIssue = {
   mailtoHref: string | null;
   expiresAt: string | null;
   alreadyActive: boolean;
+  emailSent?: boolean;
+  smtpConfigured?: boolean;
+  emailError?: string | null;
 };
+
+export type MailStatus = {
+  configured: boolean;
+  host: string | null;
+  port: number | null;
+  from: string | null;
+  autoSend: boolean;
+  ttlDays: number;
+  minPasswordLength: number;
+  webOrigin: string;
+};
+
+export async function fetchMailStatus(): Promise<
+  { ok: true; data: MailStatus } | ApiFail
+> {
+  try {
+    const res = await fetch("/api/v1/identity/users/mail-status", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as MailStatus };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
 
 export async function inviteCompanyUser(body: {
   email: string;

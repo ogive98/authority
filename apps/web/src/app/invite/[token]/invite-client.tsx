@@ -8,7 +8,13 @@ import { ASkipLink } from "@/components/a/a-skip-link";
 
 type Peek =
   | { kind: "loading" }
-  | { kind: "ok"; email: string; displayName: string; expiresAt: string }
+  | {
+      kind: "ok";
+      email: string;
+      displayName: string;
+      expiresAt: string;
+      minPasswordLength: number;
+    }
   | { kind: "error"; message: string };
 
 export default function InviteAcceptClient() {
@@ -47,8 +53,13 @@ export default function InviteAcceptClient() {
           email: string;
           displayName: string;
           expiresAt: string;
+          minPasswordLength?: number;
         };
-        setPeek({ kind: "ok", ...data });
+        setPeek({
+          kind: "ok",
+          ...data,
+          minPasswordLength: data.minPasswordLength ?? 8,
+        });
       } catch {
         if (!cancelled) {
           setPeek({ kind: "error", message: "Réseau indisponible." });
@@ -62,8 +73,11 @@ export default function InviteAcceptClient() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (password.length < 8) {
-      setError("Mot de passe : 8 caractères minimum.");
+    if (peek.kind !== "ok") return;
+    if (password.length < peek.minPasswordLength) {
+      setError(
+        `Mot de passe : ${peek.minPasswordLength} caractères minimum.`,
+      );
       return;
     }
     if (password !== confirm) {
@@ -140,6 +154,10 @@ export default function InviteAcceptClient() {
               {peek.email}
             </p>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+              Lien valide jusqu’au{" "}
+              {new Date(peek.expiresAt).toLocaleString("fr-TN")}.
+            </p>
+            <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Choisissez votre mot de passe pour activer le compte.
             </p>
             <div className="space-y-1.5">
@@ -155,7 +173,7 @@ export default function InviteAcceptClient() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                minLength={8}
+                minLength={peek.minPasswordLength}
                 required
               />
             </div>
@@ -172,7 +190,7 @@ export default function InviteAcceptClient() {
                 autoComplete="new-password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                minLength={8}
+                minLength={peek.minPasswordLength}
                 required
               />
             </div>

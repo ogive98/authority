@@ -1324,7 +1324,7 @@ async function seedSettingsDefinitions(
       valueType: 'boolean',
       defaultJson: true,
       description: 'Reserve stock automatically on sales order confirm',
-      isPrefOnly: false,
+      isPrefOnly: true,
     },
     {
       key: 'sales.auto_confirm_on_create',
@@ -1375,7 +1375,7 @@ async function seedSettingsDefinitions(
       defaultJson: '',
       description:
         'Adresse expéditeur Outlook/mailto pour certificats (vide jusqu’à saisie humaine)',
-      isPrefOnly: false,
+      isPrefOnly: true,
     },
     {
       key: 'salubrita.whatsapp.default_prefix',
@@ -1383,7 +1383,104 @@ async function seedSettingsDefinitions(
       defaultJson: '',
       description:
         'Préfixe téléphone WhatsApp (ex. 216) — vide jusqu’à saisie humaine',
-      isPrefOnly: false,
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.invite.ttl_days',
+      valueType: 'number',
+      defaultJson: 7,
+      description: 'Durée de validité du lien d’invitation (jours)',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.invite.min_password_length',
+      valueType: 'number',
+      defaultJson: 8,
+      description: 'Longueur minimale du mot de passe à l’acceptation invite',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.invite.auto_send',
+      valueType: 'boolean',
+      defaultJson: true,
+      description:
+        'Si true et SMTP configuré, envoi auto à invite/reinvite',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.invite.email_subject',
+      valueType: 'string',
+      defaultJson: 'Invitation AUTHORITY',
+      description: 'Objet e-mail d’invitation',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.invite.email_body_text',
+      valueType: 'string',
+      defaultJson:
+        'Bonjour {{displayName}},\n\nVous êtes invité(e) sur AUTHORITY.\nDéfinissez votre mot de passe via ce lien (valide {{ttlDays}} jours) :\n{{inviteUrl}}\n\n— AUTHORITY',
+      description:
+        'Corps texte invitation — placeholders {{displayName}} {{inviteUrl}} {{ttlDays}} {{email}}',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.invite.email_body_html',
+      valueType: 'string',
+      defaultJson:
+        '<p>Bonjour {{displayName}},</p><p>Vous êtes invité(e) sur <strong>AUTHORITY</strong>.</p><p><a href="{{inviteUrl}}">Définir mon mot de passe</a> (valide {{ttlDays}} jours).</p><p>— AUTHORITY</p>',
+      description:
+        'Corps HTML invitation — mêmes placeholders (displayName échappé)',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.invite.web_origin',
+      valueType: 'string',
+      defaultJson: '',
+      description:
+        'Base URL publique des liens invite (vide = AUTHORITY_WEB_ORIGIN / localhost:3000)',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.smtp.host',
+      valueType: 'string',
+      defaultJson: '',
+      description: 'Hôte SMTP société (vide = fallback env SMTP_HOST)',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.smtp.port',
+      valueType: 'number',
+      defaultJson: 587,
+      description: 'Port SMTP',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.smtp.secure',
+      valueType: 'boolean',
+      defaultJson: false,
+      description: 'SMTP TLS implicite (true pour 465)',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.smtp.user',
+      valueType: 'string',
+      defaultJson: '',
+      description: 'Utilisateur SMTP',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.smtp.pass',
+      valueType: 'string',
+      defaultJson: '',
+      description: 'Mot de passe SMTP (secret société)',
+      isPrefOnly: true,
+    },
+    {
+      key: 'identity.smtp.from',
+      valueType: 'string',
+      defaultJson: '',
+      description: 'Expéditeur From (ex. AUTHORITY <noreply@entreprise.tn>)',
+      isPrefOnly: true,
     },
     {
       key: 'finance.credit.enforce',

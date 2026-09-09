@@ -13,6 +13,8 @@ import {
   buildScopeKey,
   EXPERTISE_CATALOG,
   isExpertiseWritableKey,
+  isSecretSettingKey,
+  isSecretValueSet,
   KERNEL_SETTING_KEYS,
   SETTINGS_ERROR_CODES,
   SETTING_ENUM_VALUES,
@@ -29,6 +31,8 @@ export interface EffectiveSetting {
   source: SetLevel;
   valueType: string;
   description: string | null;
+  /** True when a secret key has a stored value (value itself never returned). */
+  secretSet?: boolean;
 }
 
 export interface EffectiveSettingsResponse {
@@ -405,6 +409,26 @@ export class SettingsService {
       },
     });
 
+    // D137 — empty secret write = keep previous (write-only field).
+    if (
+      isSecretSettingKey(definition.key) &&
+      !isSecretValueSet(params.value)
+    ) {
+      const effective = await this.getEffective(params.context);
+      const current = effective.settings.find((row) => row.key === definition.key);
+      if (!current) {
+        throw new SettingsException(
+          SETTINGS_ERROR_CODES.INVALID,
+          `Setting ${definition.key} could not be resolved.`,
+        );
+      }
+      return current;
+    }
+
+    const auditValue = isSecretSettingKey(definition.key)
+      ? '[redacted]'
+      : params.value;
+
     await this.prisma.$transaction(async (tx) => {
       const saved = existing
         ? await tx.setValue.update({
@@ -431,12 +455,18 @@ export class SettingsService {
         action: AUDIT_ACTIONS.settingsValueUpdate,
         entityType: AUDIT_ENTITY_TYPES.setValue,
         entityId: saved.id,
-        beforeJson: existing ? { value: existing.valueJson } : undefined,
+        beforeJson: existing
+          ? {
+              value: isSecretSettingKey(definition.key)
+                ? '[redacted]'
+                : existing.valueJson,
+            }
+          : undefined,
         afterJson: {
           key: definition.key,
           level: setLevel,
           scopeKey,
-          value: params.value,
+          value: auditValue,
         } as Prisma.InputJsonValue,
         ip: params.ip,
         device: params.userAgent,
@@ -459,7 +489,7 @@ export class SettingsService {
             key: definition.key,
             level: setLevel,
             scopeKey,
-            value: params.value,
+            value: auditValue,
           },
         } as Prisma.InputJsonValue,
       });
@@ -518,13 +548,14 @@ export class SettingsService {
   ): EffectiveSetting {
     const candidates = values.filter((row) => row.defKey === definition.key);
     if (candidates.length === 0) {
-      return {
+      const base: EffectiveSetting = {
         key: definition.key,
         value: definition.defaultJson,
         source: SetLevel.SYSTEM,
         valueType: definition.valueType,
         description: definition.description,
       };
+      return this.redactSecretSetting(base);
     }
 
     const scopePriority = new Map<string, SetLevel>([
@@ -560,12 +591,22 @@ export class SettingsService {
           SETTING_LEVEL_PRIORITY[left.level],
       )[0];
 
-    return {
+    const base: EffectiveSetting = {
       key: definition.key,
       value: winner?.row.valueJson ?? definition.defaultJson,
       source: winner?.level ?? SetLevel.SYSTEM,
       valueType: definition.valueType,
       description: definition.description,
+    };
+    return this.redactSecretSetting(base);
+  }
+
+  private redactSecretSetting(row: EffectiveSetting): EffectiveSetting {
+    if (!isSecretSettingKey(row.key)) return row;
+    return {
+      ...row,
+      value: '',
+      secretSet: isSecretValueSet(row.value),
     };
   }
 

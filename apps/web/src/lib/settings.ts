@@ -175,6 +175,7 @@ export type EffectiveSetting = {
   source: string;
   valueType: string;
   description: string | null;
+  secretSet?: boolean;
 };
 
 export type EffectiveSettings = {

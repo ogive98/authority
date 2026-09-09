@@ -15,8 +15,13 @@ import {
   type BusinessRoleCode,
 } from './business-roles';
 import type { CompanyUserDto } from './users.service';
-
-const INVITE_TTL_DAYS = 7;
+import { MailService } from '../mail/mail.service';
+import {
+  type InviteRuntimeConfig,
+  renderInviteHtml,
+  renderInviteTemplate,
+} from './identity-settings.constants';
+import { InviteSettingsResolver } from './invite-settings.resolver';
 
 export type InviteIssueResult = {
   user: CompanyUserDto;
@@ -24,6 +29,10 @@ export type InviteIssueResult = {
   mailtoHref: string | null;
   expiresAt: string | null;
   alreadyActive: boolean;
+  /** True when SMTP sent the invite successfully (D129). */
+  emailSent: boolean;
+  smtpConfigured: boolean;
+  emailError: string | null;
 };
 
 @Injectable()
@@ -32,7 +41,14 @@ export class InviteService {
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
     private readonly audit: AuditService,
+    private readonly mail: MailService,
+    private readonly inviteSettings: InviteSettingsResolver,
   ) {}
+
+  /** Public for mail-status UI (D131/D136). */
+  resolveConfig(companyId: string): Promise<InviteRuntimeConfig> {
+    return this.inviteSettings.resolve(companyId);
+  }
 
   async invite(
     companyId: string,
@@ -88,12 +104,16 @@ export class InviteService {
         existing.status === IamUserStatus.ACTIVE &&
         existing.passwordHash
       ) {
+        const cfg = await this.inviteSettings.resolve(companyId);
         return {
           user: this.toUserDto(assignment),
           inviteUrl: null,
           mailtoHref: null,
           expiresAt: null,
           alreadyActive: true,
+          emailSent: false,
+          smtpConfigured: this.mail.isConfigured(cfg.smtp),
+          emailError: null,
         };
       }
 
@@ -106,7 +126,8 @@ export class InviteService {
       );
     }
 
-    const { raw, hash, expiresAt } = this.newToken();
+    const cfg = await this.inviteSettings.resolve(companyId);
+    const { raw, hash, expiresAt } = this.newToken(cfg.ttlDays);
     try {
       const created = await this.prisma.$transaction(async (tx) => {
         const user = await tx.iamUser.create({
@@ -164,7 +185,12 @@ export class InviteService {
         });
         return assignment;
       });
-      return this.toIssue(created, raw, expiresAt);
+      return this.trySendInviteEmail(
+        this.toIssue(created, raw, expiresAt, cfg),
+        companyId,
+        actorUserId,
+        cfg,
+      );
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
@@ -216,24 +242,28 @@ export class InviteService {
     email: string;
     displayName: string;
     expiresAt: string;
+    minPasswordLength: number;
   }> {
     const invite = await this.findValidInvite(rawToken);
+    const cfg = await this.inviteSettings.resolve(invite.companyId);
     return {
       email: invite.user.email,
       displayName: invite.user.displayName,
       expiresAt: invite.expiresAt.toISOString(),
+      minPasswordLength: cfg.minPasswordLength,
     };
   }
 
   async accept(rawToken: string, password: string): Promise<{ email: string }> {
-    if (password.length < 8) {
+    const invite = await this.findValidInvite(rawToken);
+    const cfg = await this.inviteSettings.resolve(invite.companyId);
+    if (password.length < cfg.minPasswordLength) {
       throw new IdentityException(
         IDENTITY_ERROR_CODES.VALIDATION,
-        'Mot de passe : 8 caractères minimum.',
+        `Mot de passe : ${cfg.minPasswordLength} caractères minimum.`,
         HttpStatus.BAD_REQUEST,
       );
     }
-    const invite = await this.findValidInvite(rawToken);
     const passwordHash = await this.passwords.hash(password);
     await this.prisma.$transaction(async (tx) => {
       await tx.iamUser.update({
@@ -274,7 +304,8 @@ export class InviteService {
     actorUserId: string | undefined,
     kind: 'invite' | 'reinvite',
   ): Promise<InviteIssueResult> {
-    const { raw, hash, expiresAt } = this.newToken();
+    const cfg = await this.inviteSettings.resolve(companyId);
+    const { raw, hash, expiresAt } = this.newToken(cfg.ttlDays);
     await this.prisma.$transaction(async (tx) => {
       await tx.iamInvite.upsert({
         where: { userId: user.id },
@@ -312,7 +343,97 @@ export class InviteService {
       where: { id: assignmentId },
       include: { user: true },
     });
-    return this.toIssue(assignment, raw, expiresAt);
+    return this.trySendInviteEmail(
+      this.toIssue(assignment, raw, expiresAt, cfg),
+      companyId,
+      actorUserId,
+      cfg,
+    );
+  }
+
+  /** D129/D136 — optional SMTP from Préférences; never fails the invite if mail errors. */
+  private async trySendInviteEmail(
+    result: InviteIssueResult,
+    companyId: string,
+    actorUserId: string | undefined,
+    cfg: InviteRuntimeConfig,
+  ): Promise<InviteIssueResult> {
+    const smtpConfigured = this.mail.isConfigured(cfg.smtp);
+    if (result.alreadyActive || !result.inviteUrl) {
+      return {
+        ...result,
+        emailSent: false,
+        smtpConfigured,
+        emailError: null,
+      };
+    }
+    if (!smtpConfigured || !cfg.autoSend) {
+      return {
+        ...result,
+        emailSent: false,
+        smtpConfigured,
+        emailError: null,
+      };
+    }
+    try {
+      const vars = {
+        displayName: result.user.displayName,
+        inviteUrl: result.inviteUrl,
+        ttlDays: cfg.ttlDays,
+        email: result.user.email,
+      };
+      await this.mail.send(
+        {
+          to: result.user.email,
+          subject: cfg.emailSubject,
+          text: renderInviteTemplate(cfg.emailBodyText, vars),
+          html: renderInviteHtml(cfg.emailBodyHtml, vars),
+        },
+        cfg.smtp,
+      );
+      await this.prisma.$transaction(async (tx) => {
+        await this.audit.append(tx, {
+          companyId,
+          actorUserId,
+          action: AUDIT_ACTIONS.identityUserInviteEmailSent,
+          entityType: AUDIT_ENTITY_TYPES.iamUser,
+          entityId: result.user.id,
+          afterJson: {
+            email: result.user.email,
+            via: 'smtp',
+          },
+        });
+      });
+      return {
+        ...result,
+        emailSent: true,
+        smtpConfigured: true,
+        emailError: null,
+      };
+    } catch (e) {
+      const emailError =
+        e instanceof Error ? e.message : 'Échec envoi SMTP';
+      await this.prisma.$transaction(async (tx) => {
+        await this.audit.append(tx, {
+          companyId,
+          actorUserId,
+          action: AUDIT_ACTIONS.identityUserInviteEmailFailed,
+          entityType: AUDIT_ENTITY_TYPES.iamUser,
+          entityId: result.user.id,
+          afterJson: {
+            email: result.user.email,
+            via: 'smtp',
+            error: emailError,
+          },
+        });
+      });
+      return {
+        ...result,
+        emailSent: false,
+        smtpConfigured: true,
+        emailError,
+      };
+    }
   }
 
   private async findValidInvite(rawToken: string) {
@@ -343,23 +464,16 @@ export class InviteService {
     return invite;
   }
 
-  private newToken() {
+  private newToken(ttlDays: number) {
     const raw = randomBytes(32).toString('base64url');
     const expiresAt = new Date(
-      Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000,
+      Date.now() + ttlDays * 24 * 60 * 60 * 1000,
     );
     return { raw, hash: this.hashToken(raw), expiresAt };
   }
 
   private hashToken(raw: string) {
     return createHash('sha256').update(raw, 'utf8').digest('hex');
-  }
-
-  private webOrigin() {
-    return (
-      process.env.AUTHORITY_WEB_ORIGIN?.replace(/\/$/, '') ||
-      'http://localhost:3000'
-    );
   }
 
   private toUserDto(assignment: {
@@ -411,11 +525,18 @@ export class InviteService {
     },
     raw: string,
     expiresAt: Date,
+    cfg: InviteRuntimeConfig,
   ): InviteIssueResult {
-    const inviteUrl = `${this.webOrigin()}/invite/${raw}`;
-    const subject = encodeURIComponent('Invitation AUTHORITY');
+    const inviteUrl = `${cfg.webOrigin}/invite/${raw}`;
+    const vars = {
+      displayName: assignment.user.displayName,
+      inviteUrl,
+      ttlDays: cfg.ttlDays,
+      email: assignment.user.email,
+    };
+    const subject = encodeURIComponent(cfg.emailSubject);
     const body = encodeURIComponent(
-      `Bonjour ${assignment.user.displayName},\n\nVous êtes invité(e) sur AUTHORITY.\nDéfinissez votre mot de passe via ce lien (valide ${INVITE_TTL_DAYS} jours) :\n${inviteUrl}\n\n— AUTHORITY`,
+      renderInviteTemplate(cfg.emailBodyText, vars),
     );
     return {
       user: {
@@ -426,6 +547,9 @@ export class InviteService {
       mailtoHref: `mailto:${assignment.user.email}?subject=${subject}&body=${body}`,
       expiresAt: expiresAt.toISOString(),
       alreadyActive: false,
+      emailSent: false,
+      smtpConfigured: false,
+      emailError: null,
     };
   }
 }

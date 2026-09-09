@@ -146,6 +146,26 @@ Health :
 
 ---
 
+## SMTP / invitations (D129–D136)
+
+**Siège :** Préférences → **Envois** — TTL, templates, auto-send, SMTP (`identity.invite.*` / `identity.smtp.*`).
+
+**Fallback serveur** (si hôte société vide) :
+
+```env
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=AUTHORITY <noreply@example.com>
+AUTHORITY_WEB_ORIGIN=http://localhost:3000
+```
+
+Après mise à jour des `set_def` (seed), redémarrer `dev:api`. Un échec SMTP **n’annule pas** l’invitation.
+
+---
+
 ## Dev light (RAM laptop) — D115
 
 Si Docker / Nest / Next saturent la RAM (95–100 %), **Thunder ne résout pas** le problème : les workers BullMQ sont déjà dans l’API dès que `REDIS_URL` est set.

@@ -30,6 +30,7 @@ import { UsersService } from './users.service';
 import { InviteService } from './invite.service';
 import { CurrentUser } from './identity.decorators';
 import type { IamUser } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
 
 @Controller('api/v1/identity/users')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
@@ -38,12 +39,27 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly inviteService: InviteService,
+    private readonly mail: MailService,
   ) {}
 
   @Get('roles')
   @RequirePermission(PERMISSION_KEYS.identityUserManage)
   roles() {
     return this.usersService.listRoles();
+  }
+
+  @Get('mail-status')
+  @RequirePermission(PERMISSION_KEYS.identityUserManage)
+  async mailStatus(@CurrentTenancy() tenancy: TenancyContext) {
+    const cfg = await this.inviteService.resolveConfig(tenancy.companyId);
+    const smtp = this.mail.status(cfg.smtp);
+    return {
+      ...smtp,
+      autoSend: cfg.autoSend,
+      ttlDays: cfg.ttlDays,
+      minPasswordLength: cfg.minPasswordLength,
+      webOrigin: cfg.webOrigin,
+    };
   }
 
   @Post('invite')

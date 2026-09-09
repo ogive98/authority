@@ -127,6 +127,20 @@ export default function SettingsPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [outlookFrom, setOutlookFrom] = useState("");
   const [waPrefix, setWaPrefix] = useState("");
+  const [inviteTtl, setInviteTtl] = useState("7");
+  const [inviteMinPwd, setInviteMinPwd] = useState("8");
+  const [inviteAutoSend, setInviteAutoSend] = useState(true);
+  const [inviteSubject, setInviteSubject] = useState("");
+  const [inviteBodyText, setInviteBodyText] = useState("");
+  const [inviteBodyHtml, setInviteBodyHtml] = useState("");
+  const [inviteWebOrigin, setInviteWebOrigin] = useState("");
+  const [smtpHost, setSmtpHost] = useState("");
+  const [smtpPort, setSmtpPort] = useState("587");
+  const [smtpSecure, setSmtpSecure] = useState(false);
+  const [smtpUser, setSmtpUser] = useState("");
+  const [smtpPass, setSmtpPass] = useState("");
+  const [smtpPassSet, setSmtpPassSet] = useState(false);
+  const [smtpFrom, setSmtpFrom] = useState("");
   const [envoisBusy, setEnvoisBusy] = useState(false);
   const [envoisMsg, setEnvoisMsg] = useState<string | null>(null);
   const [envoisError, setEnvoisError] = useState<string | null>(null);
@@ -224,16 +238,42 @@ export default function SettingsPage() {
       setEnvoisError(res.message);
       return;
     }
-    const from = res.data.settings.find(
-      (s) => s.key === "salubrita.outlook.from_email",
+    const get = (key: string) =>
+      res.data.settings.find((s) => s.key === key)?.value;
+    const str = (key: string) => {
+      const v = get(key);
+      return typeof v === "string" ? v : v == null ? "" : String(v);
+    };
+    const num = (key: string, fallback: string) => {
+      const v = get(key);
+      if (typeof v === "number") return String(v);
+      if (typeof v === "string" && v.trim()) return v;
+      return fallback;
+    };
+    const bool = (key: string, fallback: boolean) => {
+      const v = get(key);
+      if (typeof v === "boolean") return v;
+      return fallback;
+    };
+    setOutlookFrom(str("salubrita.outlook.from_email"));
+    setWaPrefix(str("salubrita.whatsapp.default_prefix"));
+    setInviteTtl(num("identity.invite.ttl_days", "7"));
+    setInviteMinPwd(num("identity.invite.min_password_length", "8"));
+    setInviteAutoSend(bool("identity.invite.auto_send", true));
+    setInviteSubject(str("identity.invite.email_subject"));
+    setInviteBodyText(str("identity.invite.email_body_text"));
+    setInviteBodyHtml(str("identity.invite.email_body_html"));
+    setInviteWebOrigin(str("identity.invite.web_origin"));
+    setSmtpHost(str("identity.smtp.host"));
+    setSmtpPort(num("identity.smtp.port", "587"));
+    setSmtpSecure(bool("identity.smtp.secure", false));
+    setSmtpUser(str("identity.smtp.user"));
+    const passRow = res.data.settings.find(
+      (s) => s.key === "identity.smtp.pass",
     );
-    const pref = res.data.settings.find(
-      (s) => s.key === "salubrita.whatsapp.default_prefix",
-    );
-    setOutlookFrom(
-      from && typeof from.value === "string" ? from.value : "",
-    );
-    setWaPrefix(pref && typeof pref.value === "string" ? pref.value : "");
+    setSmtpPass("");
+    setSmtpPassSet(Boolean(passRow?.secretSet));
+    setSmtpFrom(str("identity.smtp.from"));
   }, [canCompanyWrite]);
 
   useEffect(() => {
@@ -247,24 +287,44 @@ export default function SettingsPage() {
     setEnvoisBusy(true);
     setEnvoisMsg(null);
     setEnvoisError(null);
-    const a = await putCompanySetting(
-      "salubrita.outlook.from_email",
-      outlookFrom.trim(),
-    );
-    if (!a.ok) {
-      setEnvoisBusy(false);
-      setEnvoisError(a.message);
-      return;
+    const puts: Array<{ key: string; value: unknown }> = [
+      { key: "salubrita.outlook.from_email", value: outlookFrom.trim() },
+      { key: "salubrita.whatsapp.default_prefix", value: waPrefix.trim() },
+      {
+        key: "identity.invite.ttl_days",
+        value: Math.max(1, Number(inviteTtl) || 7),
+      },
+      {
+        key: "identity.invite.min_password_length",
+        value: Math.max(6, Number(inviteMinPwd) || 8),
+      },
+      { key: "identity.invite.auto_send", value: inviteAutoSend },
+      { key: "identity.invite.email_subject", value: inviteSubject },
+      { key: "identity.invite.email_body_text", value: inviteBodyText },
+      { key: "identity.invite.email_body_html", value: inviteBodyHtml },
+      {
+        key: "identity.invite.web_origin",
+        value: inviteWebOrigin.trim(),
+      },
+      { key: "identity.smtp.host", value: smtpHost.trim() },
+      {
+        key: "identity.smtp.port",
+        value: Math.max(1, Number(smtpPort) || 587),
+      },
+      { key: "identity.smtp.secure", value: smtpSecure },
+      { key: "identity.smtp.user", value: smtpUser.trim() },
+      { key: "identity.smtp.pass", value: smtpPass },
+      { key: "identity.smtp.from", value: smtpFrom.trim() },
+    ];
+    for (const row of puts) {
+      const r = await putCompanySetting(row.key, row.value);
+      if (!r.ok) {
+        setEnvoisBusy(false);
+        setEnvoisError(`${row.key}: ${r.message}`);
+        return;
+      }
     }
-    const b = await putCompanySetting(
-      "salubrita.whatsapp.default_prefix",
-      waPrefix.trim(),
-    );
     setEnvoisBusy(false);
-    if (!b.ok) {
-      setEnvoisError(b.message);
-      return;
-    }
     setEnvoisMsg("Envois enregistrés.");
     setSavedFlash(true);
     window.setTimeout(() => setSavedFlash(false), 1600);
@@ -639,12 +699,16 @@ export default function SettingsPage() {
         ) : null}
 
         {tab === "envois" && canCompanyWrite ? (
-          <section className="max-w-xl space-y-5">
+          <section className="max-w-2xl space-y-5">
             <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Paramètres société pour le certificat de salubrité. Champs vides
-              jusqu’à saisie — aucun défaut inventé. Les destinataires se
-              choisissent sur la fiche client (canaux Outlook / WhatsApp /
-              Portail).
+              Tous les paramètres d’envoi société (salubrité, invitations,
+              SMTP). Rien en dur côté produit — les défauts catalogue
+              s’appliquent tant que les champs ne sont pas surchargés.
+              Placeholders invite :{" "}
+              <span className="a-mono text-a-fg">
+                {"{{displayName}} {{inviteUrl}} {{ttlDays}} {{email}}"}
+              </span>
+              .
             </p>
             {envoisError ? (
               <AErrorState
@@ -653,7 +717,11 @@ export default function SettingsPage() {
                 onRetry={() => void loadEnvois()}
               />
             ) : null}
+
             <div className="space-y-4 rounded-[14px] bg-a-surface-2 p-4">
+              <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                Salubrité
+              </h2>
               <div className="space-y-1">
                 <label
                   htmlFor="salubrita-outlook-from"
@@ -668,9 +736,6 @@ export default function SettingsPage() {
                   onChange={(e) => setOutlookFrom(e.target.value)}
                   placeholder="ex. qualite@entreprise.tn"
                 />
-                <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                  Utilisé comme référence pour les envois mailto du certificat.
-                </p>
               </div>
               <div className="space-y-1">
                 <label
@@ -686,11 +751,225 @@ export default function SettingsPage() {
                   placeholder="ex. 216"
                   className="a-mono"
                 />
-                <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                  Préfixé aux numéros clients sans indicatif international.
-                </p>
               </div>
             </div>
+
+            <div className="space-y-4 rounded-[14px] bg-a-surface-2 p-4">
+              <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                Invitations
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label
+                    htmlFor="invite-ttl"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Durée du lien (jours)
+                  </label>
+                  <AInput
+                    id="invite-ttl"
+                    type="number"
+                    min={1}
+                    value={inviteTtl}
+                    onChange={(e) => setInviteTtl(e.target.value)}
+                    className="a-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="invite-min-pwd"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    MDP min. (caractères)
+                  </label>
+                  <AInput
+                    id="invite-min-pwd"
+                    type="number"
+                    min={6}
+                    value={inviteMinPwd}
+                    onChange={(e) => setInviteMinPwd(e.target.value)}
+                    className="a-mono"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[length:var(--a-text-sm)] text-a-fg">
+                    Envoi SMTP automatique
+                  </p>
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                    Si SMTP configuré — sinon Copier / Outlook.
+                  </p>
+                </div>
+                <ASwitch
+                  checked={inviteAutoSend}
+                  onCheckedChange={setInviteAutoSend}
+                  label="Envoi SMTP automatique"
+                />
+              </div>
+              <div className="space-y-1">
+                <label
+                  htmlFor="invite-web-origin"
+                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                >
+                  URL publique (liens invite)
+                </label>
+                <AInput
+                  id="invite-web-origin"
+                  value={inviteWebOrigin}
+                  onChange={(e) => setInviteWebOrigin(e.target.value)}
+                  placeholder="vide = AUTHORITY_WEB_ORIGIN / localhost:3000"
+                  className="a-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <label
+                  htmlFor="invite-subject"
+                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                >
+                  Objet e-mail
+                </label>
+                <AInput
+                  id="invite-subject"
+                  value={inviteSubject}
+                  onChange={(e) => setInviteSubject(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label
+                  htmlFor="invite-body-text"
+                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                >
+                  Corps texte
+                </label>
+                <textarea
+                  id="invite-body-text"
+                  value={inviteBodyText}
+                  onChange={(e) => setInviteBodyText(e.target.value)}
+                  rows={6}
+                  className="w-full rounded-[10px] bg-a-surface-3 px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                />
+              </div>
+              <div className="space-y-1">
+                <label
+                  htmlFor="invite-body-html"
+                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                >
+                  Corps HTML
+                </label>
+                <textarea
+                  id="invite-body-html"
+                  value={inviteBodyHtml}
+                  onChange={(e) => setInviteBodyHtml(e.target.value)}
+                  rows={5}
+                  className="a-mono w-full rounded-[10px] bg-a-surface-3 px-3 py-2 text-[12px] text-a-fg outline-none ring-a-accent focus:ring-2"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-[14px] bg-a-surface-2 p-4">
+              <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                SMTP société
+              </h2>
+              <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                Hôte vide → fallback variables d’environnement SMTP_* du
+                serveur.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1 sm:col-span-2">
+                  <label
+                    htmlFor="smtp-host"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Hôte
+                  </label>
+                  <AInput
+                    id="smtp-host"
+                    value={smtpHost}
+                    onChange={(e) => setSmtpHost(e.target.value)}
+                    placeholder="smtp.exemple.tn"
+                    className="a-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="smtp-port"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Port
+                  </label>
+                  <AInput
+                    id="smtp-port"
+                    type="number"
+                    value={smtpPort}
+                    onChange={(e) => setSmtpPort(e.target.value)}
+                    className="a-mono"
+                  />
+                </div>
+                <div className="flex items-end justify-between gap-3 pb-1">
+                  <div>
+                    <p className="text-[length:var(--a-text-sm)] text-a-fg">
+                      Secure (465)
+                    </p>
+                  </div>
+                  <ASwitch
+                    checked={smtpSecure}
+                    onCheckedChange={setSmtpSecure}
+                    label="SMTP secure"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="smtp-user"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Utilisateur
+                  </label>
+                  <AInput
+                    id="smtp-user"
+                    value={smtpUser}
+                    onChange={(e) => setSmtpUser(e.target.value)}
+                    className="a-mono"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="smtp-pass"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Mot de passe
+                  </label>
+                  <AInput
+                    id="smtp-pass"
+                    type="password"
+                    value={smtpPass}
+                    onChange={(e) => setSmtpPass(e.target.value)}
+                    autoComplete="new-password"
+                    placeholder={
+                      smtpPassSet
+                        ? "•••• enregistré — laisser vide pour conserver"
+                        : "saisir le mot de passe SMTP"
+                    }
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label
+                    htmlFor="smtp-from"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    From
+                  </label>
+                  <AInput
+                    id="smtp-from"
+                    value={smtpFrom}
+                    onChange={(e) => setSmtpFrom(e.target.value)}
+                    placeholder="AUTHORITY &lt;noreply@entreprise.tn&gt;"
+                  />
+                </div>
+              </div>
+            </div>
+
             {envoisMsg ? (
               <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                 {envoisMsg}
