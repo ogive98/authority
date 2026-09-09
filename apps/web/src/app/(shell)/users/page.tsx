@@ -30,6 +30,24 @@ import {
 const selectClass =
   "flex h-9 w-full rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-3 text-[length:var(--a-text-sm)] text-a-fg";
 
+const FALLBACK_ROLES: BusinessRole[] = [
+  {
+    code: "admin",
+    label: "Administrateur",
+    description: "Utilisateurs et Préférences société",
+  },
+  {
+    code: "accountant",
+    label: "Comptable",
+    description: "Finance / compta — pas users ni Préférences",
+  },
+  {
+    code: "operator",
+    label: "Opérateur",
+    description: "Stock / livraison — pas users ni Préférences",
+  },
+];
+
 type LoadState =
   | { kind: "loading" }
   | { kind: "ok"; items: CompanyUser[] }
@@ -196,14 +214,32 @@ export default function UsersPage() {
   }
 
   const roleLabel = (code: string | null) =>
-    roles.find((r) => r.code === code)?.label ?? code ?? "—";
+    roles.find((r) => r.code === code)?.label ??
+    FALLBACK_ROLES.find((r) => r.code === code)?.label ??
+    code ??
+    "—";
+
+  const roleTone = (
+    code: string | null,
+  ): "success" | "warning" | "danger" | "neutral" => {
+    switch (code) {
+      case "admin":
+        return "warning";
+      case "accountant":
+        return "success";
+      case "operator":
+        return "neutral";
+      default:
+        return "neutral";
+    }
+  };
 
   return (
     <>
       <AScreenHeader
         kicker="Identité"
         title="Utilisateurs"
-        description="Comptes métier de la société active · rôles admin / opérateur"
+        description="Comptes métier de la société active · Admin / Comptable / Opérateur"
         actions={
           <AButton type="button" size="sm" variant="secondary" onClick={openCreate}>
             Nouvel utilisateur
@@ -300,7 +336,9 @@ export default function UsersPage() {
                       {row.email}
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg">
-                      {roleLabel(row.roleCode)}
+                      <ABadge tone={roleTone(row.roleCode)}>
+                        {roleLabel(row.roleCode)}
+                      </ABadge>
                     </td>
                     <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
                       <ABadge tone={statusTone(row.status)}>
@@ -329,7 +367,7 @@ export default function UsersPage() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title={editing ? "Éditer utilisateur" : "Nouvel utilisateur"}
-        description="Affectation à la société active · rôle fixe admin / opérateur"
+        description="Affectation à la société active · rôles Admin / Comptable / Opérateur"
         footer={
           <div className="flex justify-end gap-2">
             <AButton
@@ -385,13 +423,7 @@ export default function UsersPage() {
                   setForm({ ...form, roleCode: e.target.value })
                 }
               >
-                {(roles.length
-                  ? roles
-                  : [
-                      { code: "admin", label: "Administrateur" },
-                      { code: "operator", label: "Opérateur" },
-                    ]
-                ).map((r) => (
+                {(roles.length ? roles : FALLBACK_ROLES).map((r) => (
                   <option key={r.code} value={r.code}>
                     {r.label}
                   </option>

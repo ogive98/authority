@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ABadge,
   AButton,
@@ -13,6 +13,7 @@ import {
   ASkeleton,
   ASwitch,
 } from "@/components/a";
+import { useMeRegistry } from "@/hooks/use-me-registry";
 import {
   fetchEffectiveSettings,
   fetchExpertiseCatalog,
@@ -29,6 +30,12 @@ type Tab =
   | "notifications"
   | "expertise"
   | "envois";
+
+type CompanyTab = "expertise" | "envois";
+
+function isCompanyTab(tab: Tab): tab is CompanyTab {
+  return tab === "expertise" || tab === "envois";
+}
 
 type ExpertiseLoad =
   | { kind: "loading" }
@@ -97,7 +104,20 @@ function statusLabel(status: ExpertiseSlot["status"]): string {
 }
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<Tab>("expertise");
+  const { data: registry, isFetched } = useMeRegistry();
+  const canCompanyWrite = useMemo(
+    () =>
+      registry.modules.some(
+        (m) =>
+          m.key === "settings" &&
+          m.features.some((f) => f.id === "prefs" || f.id === "expertise"),
+      ),
+    [registry.modules],
+  );
+
+  const [tab, setTab] = useState<Tab>("apparence");
+  const tabInited = useRef(false);
+  const [companyDeniedHint, setCompanyDeniedHint] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [expertise, setExpertise] = useState<ExpertiseLoad>({
     kind: "loading",
@@ -129,13 +149,39 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.location.hash === "#expertise") {
-      setTab("expertise");
+    if (!isFetched) return;
+    const hashExpertise =
+      typeof window !== "undefined" && window.location.hash === "#expertise";
+
+    if (!tabInited.current) {
+      tabInited.current = true;
+      if (hashExpertise) {
+        if (canCompanyWrite) {
+          setTab("expertise");
+          setCompanyDeniedHint(false);
+        } else {
+          setTab("apparence");
+          setCompanyDeniedHint(true);
+        }
+        return;
+      }
+      if (canCompanyWrite) setTab("expertise");
+      return;
     }
-  }, []);
+
+    if (!canCompanyWrite && isCompanyTab(tab)) {
+      setTab("apparence");
+    }
+  }, [isFetched, canCompanyWrite, tab]);
 
   const loadExpertise = useCallback(async () => {
+    if (!canCompanyWrite) {
+      setExpertise({
+        kind: "forbidden",
+        message: "Réservé à l’administrateur société.",
+      });
+      return;
+    }
     setExpertise({ kind: "loading" });
     const res = await fetchExpertiseCatalog();
     if (!res.ok) {
@@ -159,15 +205,19 @@ export default function SettingsPage() {
       items: res.data.items,
       pending: res.data.pendingExpertCount,
     });
-  }, []);
+  }, [canCompanyWrite]);
 
   useEffect(() => {
-    if (tab === "expertise") {
+    if (tab === "expertise" && canCompanyWrite) {
       void loadExpertise();
     }
-  }, [tab, loadExpertise]);
+  }, [tab, loadExpertise, canCompanyWrite]);
 
   const loadEnvois = useCallback(async () => {
+    if (!canCompanyWrite) {
+      setEnvoisError("Réservé à l’administrateur société.");
+      return;
+    }
     setEnvoisError(null);
     const res = await fetchEffectiveSettings();
     if (!res.ok) {
@@ -184,15 +234,16 @@ export default function SettingsPage() {
       from && typeof from.value === "string" ? from.value : "",
     );
     setWaPrefix(pref && typeof pref.value === "string" ? pref.value : "");
-  }, []);
+  }, [canCompanyWrite]);
 
   useEffect(() => {
-    if (tab === "envois") {
+    if (tab === "envois" && canCompanyWrite) {
       void loadEnvois();
     }
-  }, [tab, loadEnvois]);
+  }, [tab, loadEnvois, canCompanyWrite]);
 
   async function onSaveEnvois() {
+    if (!canCompanyWrite) return;
     setEnvoisBusy(true);
     setEnvoisMsg(null);
     setEnvoisError(null);
@@ -228,6 +279,12 @@ export default function SettingsPage() {
   }
 
   function selectTab(id: Tab) {
+    if (isCompanyTab(id) && !canCompanyWrite) {
+      setCompanyDeniedHint(true);
+      setTab("apparence");
+      return;
+    }
+    setCompanyDeniedHint(false);
     setTab(id);
     if (id === "expertise" && typeof window !== "undefined") {
       window.history.replaceState(null, "", "/settings#expertise");
@@ -235,6 +292,20 @@ export default function SettingsPage() {
       window.history.replaceState(null, "", "/settings");
     }
   }
+
+  const tabs = (
+    [
+      ...(canCompanyWrite
+        ? ([
+            ["expertise", "Expertise légale"],
+            ["envois", "Envois"],
+          ] as const)
+        : []),
+      ["general", "Général"],
+      ["apparence", "Apparence"],
+      ["notifications", "Notifications"],
+    ] as const
+  );
 
   function patchDraft(key: string, patch: Partial<ExpertDraft>) {
     setDrafts((prev) => ({
@@ -311,9 +382,13 @@ export default function SettingsPage() {
     <>
       <AScreenHeader
         title="Préférences"
-        description="Apparence du poste · expertise légale société. Une préférence n’outrepasse jamais une permission."
+        description={
+          canCompanyWrite
+            ? "Apparence du poste · expertise légale société. Une préférence n’outrepasse jamais une permission."
+            : "Apparence et notifications de votre poste. Les paramètres société sont réservés à l’administrateur."
+        }
         actions={
-          tab === "envois" ? (
+          tab === "envois" && canCompanyWrite ? (
             <AButton
               type="button"
               size="sm"
@@ -327,16 +402,13 @@ export default function SettingsPage() {
         }
       />
       <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+        {companyDeniedHint ? (
+          <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+            Expertise légale et Envois : réservés à l’administrateur société.
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-1 border-b border-a-border-subtle">
-          {(
-            [
-              ["expertise", "Expertise légale"],
-              ["envois", "Envois"],
-              ["general", "Général"],
-              ["apparence", "Apparence"],
-              ["notifications", "Notifications"],
-            ] as const
-          ).map(([id, label]) => (
+          {tabs.map(([id, label]) => (
             <button
               key={id}
               type="button"
@@ -353,7 +425,7 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        {tab === "expertise" ? (
+        {tab === "expertise" && canCompanyWrite ? (
           <section className="space-y-5">
             <p className="max-w-2xl text-[length:var(--a-text-sm)] text-a-fg-muted">
               Formulaire expert — champs{" "}
@@ -566,7 +638,7 @@ export default function SettingsPage() {
           </section>
         ) : null}
 
-        {tab === "envois" ? (
+        {tab === "envois" && canCompanyWrite ? (
           <section className="max-w-xl space-y-5">
             <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
               Paramètres société pour le certificat de salubrité. Champs vides

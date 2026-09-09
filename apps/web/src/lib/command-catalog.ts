@@ -68,8 +68,7 @@ export const COMMAND_CATALOG: CommandItem[] = [
     label: "Préférences",
     group: "navigation",
     href: "/settings",
-    keywords: ["settings", "config"],
-    shortcut: { keys: ["Ctrl", ","], key: ",", ctrl: true },
+    keywords: ["settings", "config", "apparence", "préférences"],
   },
   {
     id: "nav-products",
