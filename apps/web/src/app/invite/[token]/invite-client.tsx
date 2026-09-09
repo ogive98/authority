@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AButton } from "@/components/a/a-button";
 import { AInput } from "@/components/a/a-input";
 import { ASkipLink } from "@/components/a/a-skip-link";
+import { CompanyBrandPlate } from "@/components/shell/company-brand-plate";
 
 type Peek =
   | { kind: "loading" }
@@ -31,10 +33,13 @@ export default function InviteAcceptClient() {
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch(`/api/v1/identity/invites/${encodeURIComponent(token)}`, {
-          headers: { Accept: "application/json" },
-          cache: "no-store",
-        });
+        const res = await fetch(
+          `/api/v1/identity/invites/${encodeURIComponent(token)}`,
+          {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          },
+        );
         if (cancelled) return;
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as {
@@ -123,13 +128,15 @@ export default function InviteAcceptClient() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-a-surface-1 px-[var(--a-space-6)] text-a-fg">
       <ASkipLink href="#invite" />
-      <main id="invite" className="w-full max-w-sm space-y-[var(--a-space-5)]">
-        <p className="text-center text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
+      <main
+        id="invite"
+        className="flex w-full max-w-sm flex-col items-center space-y-[var(--a-space-5)]"
+      >
+        <CompanyBrandPlate variant="hero" href="/login" />
+
+        <p className="text-center text-[11px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
           Invitation
         </p>
-        <h1 className="text-center text-[length:var(--a-text-xl)] font-medium tracking-tight">
-          AUTHORITY
-        </h1>
 
         {peek.kind === "loading" ? (
           <p className="text-center text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -138,15 +145,32 @@ export default function InviteAcceptClient() {
         ) : null}
 
         {peek.kind === "error" ? (
-          <p className="text-center text-[length:var(--a-text-sm)] text-a-danger">
-            {peek.message}
-          </p>
+          <div
+            className="w-full space-y-3 rounded-[14px] bg-a-surface-2 px-[var(--a-space-5)] py-[var(--a-space-5)] text-center"
+            role="alert"
+          >
+            <p className="text-[length:var(--a-text-md)] font-medium tracking-tight text-a-fg">
+              Lien indisponible
+            </p>
+            <p className="text-[length:var(--a-text-sm)] leading-relaxed text-a-fg-muted">
+              {peek.message}
+            </p>
+            <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+              Le lien a peut‑être déjà été utilisé, a expiré, ou est incorrect.
+            </p>
+            <Link
+              href="/login"
+              className="inline-flex h-9 items-center justify-center rounded-[10px] bg-a-accent px-4 text-[length:var(--a-text-sm)] font-medium text-a-accent-fg transition-colors hover:bg-a-accent-hover"
+            >
+              Aller à la connexion
+            </Link>
+          </div>
         ) : null}
 
         {peek.kind === "ok" ? (
           <form
             onSubmit={(e) => void onSubmit(e)}
-            className="space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]"
+            className="w-full space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]"
           >
             <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
               Bonjour <span className="text-a-fg">{peek.displayName}</span>
@@ -195,7 +219,10 @@ export default function InviteAcceptClient() {
               />
             </div>
             {error ? (
-              <p className="text-[length:var(--a-text-sm)] text-a-danger">
+              <p
+                className="rounded-[10px] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg"
+                role="alert"
+              >
                 {error}
               </p>
             ) : null}
