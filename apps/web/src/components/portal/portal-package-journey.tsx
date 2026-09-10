@@ -233,25 +233,25 @@ export function PortalPackageJourney({
                 onClick={() => setFocus(step.id)}
                 aria-current={state === "current" ? "step" : undefined}
                 className={cn(
-                  "flex w-full flex-col items-start gap-2 rounded-[var(--a-radius-md)] border px-3 py-3 text-left transition-colors",
+                  "flex w-full flex-col items-start gap-2 rounded-md px-3 py-3 text-left transition-colors a-underlay",
                   selected
-                    ? "border-a-accent bg-a-accent-muted/60 ring-2 ring-a-focus-ring/40"
-                    : "border-a-border-subtle bg-a-surface-2 hover:border-a-accent/40 hover:bg-a-surface-3/50",
+                    ? "bg-a-accent-muted/60 ring-2 ring-a-focus-ring/40"
+                    : "hover:bg-a-accent-muted/40",
                   state === "todo" && !selected && "opacity-60",
                 )}
               >
                 <span className="flex w-full items-center justify-between gap-2">
                   <span
                     className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-full border",
+                      "flex h-8 w-8 items-center justify-center rounded-full",
                       state === "done" &&
-                        "border-a-accent bg-a-accent text-a-accent-fg",
+                        "bg-a-accent text-a-accent-fg",
                       state === "current" &&
-                        "border-a-accent bg-a-accent-muted text-a-accent",
+                        "bg-a-accent-muted text-a-accent",
                       state === "failed" &&
-                        "border-a-warning bg-a-warning-soft text-a-warning-fg",
+                        "bg-a-warning-soft text-a-warning-fg",
                       state === "todo" &&
-                        "border-a-border-strong bg-a-surface-3 text-a-fg-muted",
+                        "bg-a-surface-3 text-a-fg-muted",
                     )}
                   >
                     {state === "done" ? (
@@ -287,10 +287,8 @@ export function PortalPackageJourney({
       {/* Focus panel */}
       <div
         className={cn(
-          "mt-4 rounded-[var(--a-radius-md)] border px-4 py-3",
-          focusedState === "failed"
-            ? "border-a-warning/40 bg-a-warning-soft/50"
-            : "border-a-border-subtle bg-a-surface-3/50",
+          "mt-4 rounded-md px-4 py-3 a-underlay",
+          focusedState === "failed" && "bg-a-warning-soft/50",
         )}
         role="status"
       >

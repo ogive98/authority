@@ -1,5 +1,5 @@
-/**
- * Documented usage tips — AUTHORITY Contiental Apple.
+﻿/**
+ * Documented usage tips — AUTHORITY Soft Glass Enterprise OS.
  * Each tip links to Help / User Guide / a métier screen.
  */
 
@@ -46,7 +46,7 @@ export const USAGE_TIPS: UsageTip[] = [
     routes: ["/"],
     modules: ["home"],
     title: "Un clic module = liste métier",
-    body: "La sidebar liste seulement les modules (icône outline + nom). Un clic sélectionne le module et affiche ses fonctionnalités en liste dense sur l’accueil — Contiental, sans grille d’icônes sous-module. Pas de sous-menus dans la sidebar.",
+    body: "La sidebar liste seulement les modules (icône outline + nom). Un clic sélectionne le module et affiche ses fonctionnalités en liste Soft Glass sur Mission Control. Pas de sous-menus dans la sidebar.",
     category: "navigation",
     action: { kind: "link", href: "/help#modules", label: "Guide modules" },
   },
@@ -73,10 +73,10 @@ export const USAGE_TIPS: UsageTip[] = [
     id: "nav-breadcrumbs",
     routes: ["/finance", "/sales", "/inventory", "/delivery"],
     modules: [],
-    title: "Fil d’Ariane vers le Launchpad",
-    body: "Sur les écrans métier, le fil Accueil › … remonte au Launchpad du module sans perdre la sélection sidebar. Utile après une plongée facture / BL / OF.",
+    title: "Fil d’Ariane vers le Mission Control",
+    body: "Sur les écrans métier, le fil Accueil › … remonte au Mission Control du module sans perdre la sélection sidebar. Utile après une plongée facture / BL / OF.",
     category: "navigation",
-    action: { kind: "link", href: "/", label: "Retour Launchpad" },
+    action: { kind: "link", href: "/", label: "Retour Mission Control" },
   },
   {
     id: "nav-sidebar-collapse",
@@ -397,7 +397,7 @@ export const USAGE_TIPS: UsageTip[] = [
     routes: ["/help", "/help/guide"],
     modules: [],
     title: "Raccourcis",
-    body: "⌘K recherche · Aide sidebar · clic module = Launchpad · SPECTRE dans la toolbar.",
+    body: "⌘K recherche · Aide sidebar · clic module = Mission Control · SPECTRE dans la toolbar.",
     shortcut: "⌘K · ?",
     category: "guide",
     action: { kind: "link", href: "/help#shortcuts", label: "Liste raccourcis" },
@@ -407,7 +407,7 @@ export const USAGE_TIPS: UsageTip[] = [
     routes: ["/preview"],
     modules: ["home"],
     title: "Écrans aperçu",
-    body: "Laboratoire UI (lots, commandes) — même chrome Contiental Apple.",
+    body: "Laboratoire UI (lots, commandes) — même chrome Soft Glass.",
     category: "navigation",
     action: { kind: "link", href: "/preview", label: "Aperçu" },
   },
@@ -654,7 +654,7 @@ export const USAGE_TIPS: UsageTip[] = [
     title: "Icône usine",
     body: "Survolez Production : fumée discrète + micro-mouvement — même outline Lucide.",
     category: "navigation",
-    action: { kind: "link", href: "/", label: "Launchpad" },
+    action: { kind: "link", href: "/", label: "Mission Control" },
   },
   {
     id: "repair-stepup",
@@ -705,7 +705,7 @@ export const USAGE_TIPS: UsageTip[] = [
     routes: ["/"],
     modules: ["home"],
     title: "Rail compact",
-    body: "Réduisez la sidebar : icônes outline animées sans labels — plus d’espace Launchpad.",
+    body: "Réduisez la sidebar : icônes outline animées sans labels — plus d’espace Mission Control.",
     category: "navigation",
     action: { kind: "link", href: "/help#sidebar", label: "Sidebar" },
   },
@@ -743,7 +743,7 @@ export const USAGE_TIPS: UsageTip[] = [
     routes: ['/'],
     modules: ['home'],
     title: 'Un clic module = liste métier',
-    body: 'La sidebar liste seulement les modules (icône outline + nom). Un clic sélectionne le module et affiche ses fonctionnalités en liste dense sur l’accueil. Navigation Finder + liste Contiental (D159).',
+    body: 'La sidebar liste seulement les modules (icône outline + nom). Un clic sélectionne le module et affiche ses fonctionnalités en liste dense sur l’accueil. Navigation Finder + liste Soft Glass (D161).',
     category: 'navigation',
     action: { kind: 'link', href: '/help#tip-story-sidebar-click', label: 'Lire dans l’aide' },
   },
@@ -788,7 +788,7 @@ export const USAGE_TIPS: UsageTip[] = [
     routes: ['/delivery', '/'],
     modules: ['delivery'],
     title: 'Livraison : le camion qui roule',
-    body: 'Survolez Livraison (sidebar ou Launchpad) : l’icône camion anime une avancée. Métier : planifiez la tournée après confirmation commande, puis en route → livré. Les quantités et adresses restent tabulaires / lisibles hors SPECTRE.',
+    body: 'Survolez Livraison (sidebar ou Mission Control) : l’icône camion anime une avancée. Métier : planifiez la tournée après confirmation commande, puis en route → livré. Les quantités et adresses restent tabulaires / lisibles hors SPECTRE.',
     category: 'stock',
     action: { kind: 'link', href: '/delivery', label: 'Ouvrir Livraison' },
   },

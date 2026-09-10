@@ -14,6 +14,7 @@ import {
   PORTAL_FINANCE_INVOICES_PATH,
   PORTAL_FINANCE_PATH,
 } from "@/lib/customer-portal";
+import { softPageBody, softTile } from "@/lib/soft-glass-ui";
 
 export default async function PortalFinancePage() {
   const [
@@ -63,9 +64,9 @@ export default async function PortalFinancePage() {
         title="Finance"
         description="Factures émises · créances ouvertes · montants enregistrés (lecture seule — pas de TVA calculée)"
       />
-      <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
+      <div className={softPageBody}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3">
+          <div className={softTile}>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Solde ouvert
             </p>
@@ -73,7 +74,7 @@ export default async function PortalFinancePage() {
               {outstanding}
             </p>
           </div>
-          <div className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3">
+          <div className={softTile}>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Plafond crédit
             </p>

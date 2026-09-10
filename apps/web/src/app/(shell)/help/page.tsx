@@ -49,9 +49,9 @@ export default function HelpPage() {
           <h2 className="text-[15px] font-semibold text-a-fg">Modules</h2>
           <p className="mx-auto mt-2 max-w-lg text-[13px] text-a-fg-muted">
             Sidebar Finder : icône outline animée + nom. Un clic ouvre les
-            fonctionnalités en liste Contiental sur{" "}
+            fonctionnalités en liste Soft Glass sur{" "}
             <Link href="/" className="text-a-accent hover:underline">
-              /
+              Mission Control
             </Link>
             .
           </p>
@@ -76,7 +76,8 @@ export default function HelpPage() {
         <section id="theme" className="text-center">
           <h2 className="text-[15px] font-semibold text-a-fg">Thème</h2>
           <p className="mx-auto mt-2 max-w-lg text-[13px] text-a-fg-muted">
-            Clair `#f5f5f7` / sombre `#1c1c1e` — matériaux vibrancy, sans cadres.
+            Clair `#e8eef7` / sombre `#0a1628` — Soft Glass (teal), sous-couches
+            sans cadres.
           </p>
         </section>
 
@@ -84,7 +85,7 @@ export default function HelpPage() {
           <h2 className="text-[15px] font-semibold text-a-fg">Accessibilité</h2>
           <p className="mx-auto mt-2 max-w-lg text-[13px] text-a-fg-muted">
             Le lien « Aller au contenu » n’apparaît qu’au focus clavier (Tab) —
-            il n’encombre pas le chrome Apple.
+            il n’encombre pas le chrome Soft Glass.
           </p>
         </section>
 

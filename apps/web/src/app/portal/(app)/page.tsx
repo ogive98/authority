@@ -14,6 +14,7 @@ import {
   portalInsightSeverityLabel,
   type PortalInsight,
 } from "@/lib/customer-portal";
+import { softGhostBtn, softPageBody, softTile } from "@/lib/soft-glass-ui";
 
 export default async function PortalDashboardPage() {
   const [{ data: me }, { data: dashboard }] = await Promise.all([
@@ -47,21 +48,15 @@ export default async function PortalDashboardPage() {
             >
               Nouvelle commande
             </Link>
-            <Link
-              href={`${PORTAL_CLAIMS_PATH}/new`}
-              className="rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-2 px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium text-a-fg hover:bg-a-surface-3"
-            >
+            <Link href={`${PORTAL_CLAIMS_PATH}/new`} className={softGhostBtn}>
               Réclamation
             </Link>
           </div>
         }
       />
-      <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
+      <div className={softPageBody}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <Link
-            href={PORTAL_ORDERS_PATH}
-            className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
-          >
+          <Link href={PORTAL_ORDERS_PATH} className={softTile}>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Commandes ouvertes
             </p>
@@ -72,10 +67,7 @@ export default async function PortalDashboardPage() {
               Voir / créer →
             </p>
           </Link>
-          <Link
-            href={PORTAL_DELIVERIES_PATH}
-            className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
-          >
+          <Link href={PORTAL_DELIVERIES_PATH} className={softTile}>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Livraisons en cours
             </p>
@@ -86,10 +78,7 @@ export default async function PortalDashboardPage() {
               Suivre →
             </p>
           </Link>
-          <Link
-            href={PORTAL_FINANCE_PATH}
-            className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
-          >
+          <Link href={PORTAL_FINANCE_PATH} className={softTile}>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Solde
             </p>
@@ -100,10 +89,7 @@ export default async function PortalDashboardPage() {
               Créances →
             </p>
           </Link>
-          <Link
-            href={PORTAL_CLAIMS_PATH}
-            className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
-          >
+          <Link href={PORTAL_CLAIMS_PATH} className={softTile}>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Réclamations ouvertes
             </p>
@@ -114,10 +100,7 @@ export default async function PortalDashboardPage() {
               Voir / ouvrir →
             </p>
           </Link>
-          <Link
-            href={PORTAL_DOCUMENTS_PATH}
-            className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
-          >
+          <Link href={PORTAL_DOCUMENTS_PATH} className={softTile}>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Documents
             </p>
@@ -139,11 +122,11 @@ export default async function PortalDashboardPage() {
 function InsightsPanel({ insights }: { insights: PortalInsight[] }) {
   if (insights.length === 0) {
     return (
-      <section className="rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3">
+      <section className={`${softTile} space-y-1`}>
         <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
           Alertes
         </h2>
-        <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
+        <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
           Aucune alerte pour le moment.
         </p>
       </section>
@@ -160,7 +143,7 @@ function InsightsPanel({ insights }: { insights: PortalInsight[] }) {
           <li key={insight.id}>
             <Link
               href={insight.href}
-              className="flex items-start gap-3 rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-4 py-3 transition-colors hover:border-a-accent/40 hover:bg-a-accent-muted/40"
+              className={`flex items-start gap-3 ${softTile}`}
             >
               <ABadge tone={portalInsightBadgeTone(insight.severity)}>
                 {portalInsightSeverityLabel(insight.severity)}

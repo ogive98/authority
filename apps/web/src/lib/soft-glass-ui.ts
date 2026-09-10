@@ -23,6 +23,14 @@ export const softTr =
 /** Form / panel block without framed card. */
 export const softPanel = "a-underlay space-y-4 rounded-md p-4 md:p-5";
 
+/** KPI / nav tile — Soft Glass underlay (portal + shell). */
+export const softTile =
+  "a-underlay rounded-md px-4 py-3 transition-colors hover:bg-a-accent-muted/40";
+
+/** Secondary text button without border chrome. */
+export const softGhostBtn =
+  "rounded-[var(--a-radius-sm)] bg-a-surface-3 px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium text-a-fg transition-colors hover:bg-a-surface-4";
+
 /** Native select aligned Soft Glass. */
 export const softSelect =
   "flex h-9 w-full rounded-md bg-a-surface-3 px-3 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2";

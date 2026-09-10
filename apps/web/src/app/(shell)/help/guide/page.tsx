@@ -10,7 +10,7 @@ const CHAPTERS = [
   {
     id: "modules",
     title: "2. Modules & liste d’accueil",
-    body: "Activez un module par clic dans la sidebar. Les fonctionnalités s’affichent en liste dense Contiental sur l’accueil (plus de grille d’icônes sous-module).",
+    body: "Activez un module par clic dans la sidebar. Les fonctionnalités s’affichent en liste Soft Glass sur Mission Control (accueil).",
   },
   {
     id: "stock",
