@@ -461,7 +461,7 @@ export default function FinanceInvoicesPage() {
               {form.lines.map((line, idx) => (
                 <div
                   key={idx}
-                  className="space-y-2 border-b border-a-border-subtle pb-3"
+                  className="space-y-2 pb-3"
                 >
                   <AInput
                     placeholder="Description"
@@ -605,7 +605,7 @@ export default function FinanceInvoicesPage() {
                 {detail.lines.map((l) => (
                   <li
                     key={l.id}
-                    className="border-b border-a-border-subtle pb-2"
+                    className="a-underlay rounded-md px-2 py-2"
                   >
                     <p>{l.description}</p>
                     <p className="a-mono text-a-fg-muted">

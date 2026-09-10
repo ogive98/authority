@@ -544,7 +544,7 @@ export default function FinancePaymentsPage() {
                 {plan.lines.map((l) => (
                   <li
                     key={l.openItemId}
-                    className="flex justify-between border-b border-a-border-subtle py-1"
+                    className="flex justify-between a-underlay rounded-md px-2 py-1.5"
                   >
                     <span className="a-mono">{l.openItemNumber}</span>
                     <span className="a-mono tabular-nums">

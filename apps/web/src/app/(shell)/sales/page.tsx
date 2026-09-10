@@ -33,7 +33,7 @@ import {
   type SalesOrderStatus,
 } from "@/lib/sales";
 import { suggestCustomerPrice } from "@/lib/customers";
-import { softPageBody } from "@/lib/soft-glass-ui";
+import { softList, softListRow, softPageBody } from "@/lib/soft-glass-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
 
 function orderBadgeTone(
@@ -387,12 +387,9 @@ function SalesPageInner() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <ul className="space-y-1">
+          <ul className={softList}>
             {state.items.map((row) => (
-              <li
-                key={row.id}
-                className="flex flex-wrap items-center gap-3 rounded-[12px] px-3 py-3 hover:bg-a-surface-3/70"
-              >
+              <li key={row.id} className={softListRow}>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="a-mono text-[13px] font-semibold text-a-fg">

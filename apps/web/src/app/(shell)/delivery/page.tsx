@@ -33,8 +33,11 @@ import {
 } from "@/lib/delivery";
 import {
   softChipClass,
+  softList,
+  softListRow,
   softPageBody,
 } from "@/lib/soft-glass-ui";
+import { cn } from "@/lib/utils";
 import { useStatusLabel } from "@/hooks/use-status-label";
 import { shouldHideDeliveryRoute } from "@/lib/ops-visibility";
 import { usePrefsStore } from "@/stores/prefs-store";
@@ -512,11 +515,11 @@ export default function DeliveryPage() {
                     {rows.length}
                   </span>
                 </p>
-                <ul className="space-y-1">
+                <ul className={softList}>
                   {rows.map((row) => (
                     <li
                       key={row.id}
-                      className="space-y-2 rounded-[12px] px-3 py-3 hover:bg-a-surface-3/70"
+                      className={cn(softListRow, "items-start")}
                     >
                       <div className="flex flex-wrap items-start gap-3">
                         <div className="min-w-0 flex-1">

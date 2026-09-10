@@ -24,7 +24,7 @@ import {
   type InventoryWarehouse,
   type ProductOption,
 } from "@/lib/inventory";
-import { softPageBody, softSelect } from "@/lib/soft-glass-ui";
+import { softList, softListRow, softPageBody, softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -264,12 +264,9 @@ export default function InventoryLotsPage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <ul className="space-y-1">
+          <ul className={softList}>
             {state.items.map((lot) => (
-              <li
-                key={lot.id}
-                className="flex flex-wrap items-center gap-3 rounded-[12px] px-3 py-3 hover:bg-a-surface-3/70"
-              >
+              <li key={lot.id} className={softListRow}>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="a-mono text-[13px] font-semibold text-a-fg">

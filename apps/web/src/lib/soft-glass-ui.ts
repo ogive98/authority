@@ -33,6 +33,14 @@ export const softThead =
 export const softTr =
   "transition-colors hover:bg-a-surface-3/45";
 
+/** Stacked list host (D186) — underlay, no card border. */
+export const softList =
+  "a-underlay space-y-0.5 rounded-md p-1.5";
+
+/** Soft Glass list row — hover underlay only. */
+export const softListRow =
+  "flex flex-wrap items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-a-surface-3/55";
+
 /** Form / panel block without framed card. */
 export const softPanel = "a-underlay space-y-4 rounded-md p-4 md:p-5";
 
