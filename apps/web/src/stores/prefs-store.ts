@@ -2,6 +2,10 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import {
+  OPS_VISIBILITY_DEFAULTS,
+  type OpsVisibilityPrefs,
+} from "@/lib/ops-visibility";
 
 export type Density = "comfortable" | "compact" | "spacious";
 export type SurfaceMode = "patch" | "ghost" | "solid" | "minimal";
@@ -9,27 +13,19 @@ export type SurfaceMode = "patch" | "ghost" | "solid" | "minimal";
 type PrefsState = {
   density: Density;
   surfaceMode: SurfaceMode;
-  /** Show offline SSE banner when stream is disconnected. */
   showSseBanner: boolean;
-  /** Include Thunder/job alerts in the activity center filter (client UX). */
   jobAlerts: boolean;
-  /**
-   * Auto-collapse Finder sidebar after N seconds without hover.
-   * `0` = disabled (manual only). Default 10.
-   */
   sidebarAutoCollapseSec: number;
-  /**
-   * Calculator unlock code to exit SPECTRE / PATCH / GHOST (D162/D170).
-   * Company setting `ops.unlock_code` is source of truth; localStorage is cache.
-   * Default 3141 until hydrate.
-   */
   opsUnlockCode: string;
+  /** D180 — company ops visibility (cache; source = settings). */
+  opsVisibility: OpsVisibilityPrefs;
   setDensity: (d: Density) => void;
   setSurfaceMode: (m: SurfaceMode) => void;
   setShowSseBanner: (v: boolean) => void;
   setJobAlerts: (v: boolean) => void;
   setSidebarAutoCollapseSec: (sec: number) => void;
   setOpsUnlockCode: (code: string) => void;
+  setOpsVisibility: (v: Partial<OpsVisibilityPrefs>) => void;
   applyDensityToDom: (d: Density) => void;
   applySurfaceToDom: (m: SurfaceMode) => void;
 };
@@ -53,6 +49,7 @@ export const usePrefsStore = create<PrefsState>()(
       jobAlerts: true,
       sidebarAutoCollapseSec: 10,
       opsUnlockCode: "3141",
+      opsVisibility: { ...OPS_VISIBILITY_DEFAULTS },
       setDensity: (density) => {
         writeDensityAttr(density);
         set({ density });
@@ -75,6 +72,10 @@ export const usePrefsStore = create<PrefsState>()(
         if (cleaned.length < 4) return;
         set({ opsUnlockCode: cleaned });
       },
+      setOpsVisibility: (partial) =>
+        set((s) => ({
+          opsVisibility: { ...s.opsVisibility, ...partial },
+        })),
       applyDensityToDom: writeDensityAttr,
       applySurfaceToDom: writeSurfaceAttr,
     }),

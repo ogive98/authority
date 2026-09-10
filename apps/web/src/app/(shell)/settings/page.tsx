@@ -159,6 +159,7 @@ export default function SettingsPage() {
   const setSurfaceMode = usePrefsStore((s) => s.setSurfaceMode);
   const opsUnlockCode = usePrefsStore((s) => s.opsUnlockCode);
   const setOpsUnlockCode = usePrefsStore((s) => s.setOpsUnlockCode);
+  const opsVisibility = usePrefsStore((s) => s.opsVisibility);
   const [unlockDraft, setUnlockDraft] = useState(opsUnlockCode);
   const [unlockBusy, setUnlockBusy] = useState(false);
   const [unlockMsg, setUnlockMsg] = useState<string | null>(null);
@@ -1240,6 +1241,61 @@ export default function SettingsPage() {
                     {unlockError}
                   </p>
                 ) : null}
+              </div>
+            ) : null}
+            {canCompanyWrite ? (
+              <div>
+                <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                  Modes ops — visibilité (D180)
+                </p>
+                <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  GHOST / PATCH : masquer BL et/ou limiter la compta. Valeurs
+                  société (Admin). Super Admin : même siège Préférences.
+                </p>
+                <div className="space-y-2">
+                  {(
+                    [
+                      [
+                        "ops.ghost.hide_delivery",
+                        "GHOST masque livraison (BL)",
+                        "ghostHideDelivery",
+                      ],
+                      [
+                        "ops.patch.hide_delivery",
+                        "PATCH masque livraison (BL)",
+                        "patchHideDelivery",
+                      ],
+                      [
+                        "ops.patch.accounting_partial",
+                        "PATCH compta partielle (CoA seul)",
+                        "patchAccountingPartial",
+                      ],
+                      [
+                        "ops.ghost.accounting_partial",
+                        "GHOST compta partielle (CoA seul)",
+                        "ghostAccountingPartial",
+                      ],
+                    ] as const
+                  ).map(([key, label, field]) => (
+                    <ASwitch
+                      key={key}
+                      label={label}
+                      checked={opsVisibility[field]}
+                      onCheckedChange={(on) => {
+                        usePrefsStore.getState().setOpsVisibility({
+                          [field]: on,
+                        });
+                        void putCompanySetting(key, on).then((r) => {
+                          if (!r.ok) {
+                            usePrefsStore.getState().setOpsVisibility({
+                              [field]: !on,
+                            });
+                          }
+                        });
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
             ) : null}
             <div>

@@ -36,6 +36,9 @@ import {
   softPageBody,
 } from "@/lib/soft-glass-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
+import { shouldHideDeliveryRoute } from "@/lib/ops-visibility";
+import { usePrefsStore } from "@/stores/prefs-store";
+import { useShellStore } from "@/stores/shell-store";
 
 type LoadState =
   | { kind: "loading" }
@@ -376,6 +379,30 @@ export default function DeliveryPage() {
     }
     setFailDraft(null);
     await load(q, statusFilter);
+  }
+
+  const ghostEnabled = useShellStore((s) => s.ghostEnabled);
+  const patchEnabled = useShellStore((s) => s.patchEnabled);
+  const opsVisibility = usePrefsStore((s) => s.opsVisibility);
+  const hideBl = shouldHideDeliveryRoute({
+    ghostEnabled,
+    patchEnabled,
+    prefs: opsVisibility,
+  });
+
+  if (hideBl) {
+    return (
+      <>
+        <AScreenHeader
+          kicker="Logistique"
+          title="Livraison masquée"
+          description="Mode GHOST / PATCH — bons de livraison masqués (préférence société)."
+        />
+        <div className={softPageBody}>
+          <AForbiddenState message="BL masqué en mode ops. Sortir via le code calculatrice, ou ajuster les prefs Admin (ops.*.hide_delivery)." />
+        </div>
+      </>
+    );
   }
 
   return (

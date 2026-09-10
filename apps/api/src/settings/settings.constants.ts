@@ -28,8 +28,14 @@ export const SETTINGS_ENTITY_TYPES = {
 /** Never echoed in getEffective / audit payloads (D137). Empty PUT keeps previous. */
 export const SECRET_SETTING_KEYS = ['identity.smtp.pass'] as const;
 
-/** Company-scoped only — no USER override (D170). */
-export const COMPANY_ONLY_SETTING_KEYS = ['ops.unlock_code'] as const;
+/** Company-scoped only — no USER override (D170/D180). */
+export const COMPANY_ONLY_SETTING_KEYS = [
+  'ops.unlock_code',
+  'ops.ghost.hide_delivery',
+  'ops.patch.hide_delivery',
+  'ops.patch.accounting_partial',
+  'ops.ghost.accounting_partial',
+] as const;
 
 export function isCompanyOnlySettingKey(key: string): boolean {
   return (COMPANY_ONLY_SETTING_KEYS as readonly string[]).includes(key);
@@ -38,6 +44,24 @@ export function isCompanyOnlySettingKey(key: string): boolean {
 /** Ops calculator unlock PIN (D162/D170). */
 export const OPS_UNLOCK_CODE_KEY = 'ops.unlock_code';
 export const OPS_UNLOCK_CODE_DEFAULT = '3141';
+
+/** Ops visibility — defaults match GHOST/PATCH product intent (D180). Prefs Admin later. */
+export const OPS_VISIBILITY_SETTING_KEYS = {
+  GHOST_HIDE_DELIVERY: 'ops.ghost.hide_delivery',
+  PATCH_HIDE_DELIVERY: 'ops.patch.hide_delivery',
+  PATCH_ACCOUNTING_PARTIAL: 'ops.patch.accounting_partial',
+  GHOST_ACCOUNTING_PARTIAL: 'ops.ghost.accounting_partial',
+} as const;
+
+export const OPS_VISIBILITY_DEFAULTS: Record<
+  (typeof OPS_VISIBILITY_SETTING_KEYS)[keyof typeof OPS_VISIBILITY_SETTING_KEYS],
+  boolean
+> = {
+  [OPS_VISIBILITY_SETTING_KEYS.GHOST_HIDE_DELIVERY]: true,
+  [OPS_VISIBILITY_SETTING_KEYS.PATCH_HIDE_DELIVERY]: true,
+  [OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_PARTIAL]: true,
+  [OPS_VISIBILITY_SETTING_KEYS.GHOST_ACCOUNTING_PARTIAL]: false,
+};
 
 export function normalizeOpsUnlockCode(value: unknown): string | null {
   if (typeof value !== 'string') return null;

@@ -18,6 +18,8 @@ const SETTING_META: Record<
     'GL account code for Bank (Finance→GL payment)',
   [ACCOUNTING_SETTING_KEYS.REVENUE]:
     'GL account code for Revenue (Finance→GL invoice)',
+  [ACCOUNTING_SETTING_KEYS.VAT]:
+    'GL account code for VAT collected (as-recorded tax only)',
   [ACCOUNTING_SETTING_KEYS.SALES_JOURNAL]:
     'Sales journal code for invoice GL posting',
   [ACCOUNTING_SETTING_KEYS.BANK_JOURNAL]:
@@ -85,6 +87,7 @@ export class AccountingGlMappingResolver {
       ar: read(ACCOUNTING_SETTING_KEYS.AR),
       bank: read(ACCOUNTING_SETTING_KEYS.BANK),
       revenue: read(ACCOUNTING_SETTING_KEYS.REVENUE),
+      vat: read(ACCOUNTING_SETTING_KEYS.VAT),
       salesJournal: read(ACCOUNTING_SETTING_KEYS.SALES_JOURNAL),
       bankJournal: read(ACCOUNTING_SETTING_KEYS.BANK_JOURNAL),
     };

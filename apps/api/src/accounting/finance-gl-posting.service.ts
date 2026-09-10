@@ -23,19 +23,22 @@ export class FinanceGlPostingService {
     private readonly glMapping: AccountingGlMappingResolver,
   ) {}
 
-  /** Invoice issued → Dr Clients / Cr Ventes (mapped codes). */
+  /** Invoice issued → Dr Clients TTC / Cr Ventes HT [/ Cr TVA as-recorded]. */
   async postInvoiceIssued(
     companyId: string,
     input: {
       sourceId: string;
       invoiceId: string;
+      /** TTC — always required for AR. */
       amount: number;
+      amountHt?: number;
+      amountTax?: number;
       entryDate: string;
       description?: string;
     },
   ): Promise<FinanceGlPostResult> {
-    const amount = round3(input.amount);
-    if (amount <= 0) {
+    const amountTtc = round3(input.amount);
+    if (amountTtc <= 0) {
       return { outcome: 'skipped', reason: 'non-positive amount' };
     }
 
@@ -53,6 +56,61 @@ export class FinanceGlPostingService {
     }
 
     const map = await this.glMapping.resolve(companyId);
+    const tax = round3(input.amountTax ?? 0);
+    const ht =
+      input.amountHt != null
+        ? round3(input.amountHt)
+        : round3(amountTtc - tax);
+
+    const useVatSplit =
+      tax > 0 &&
+      Math.abs(round3(ht + tax) - amountTtc) < 0.002;
+
+    if (useVatSplit) {
+      const accounts = await this.resolveAccounts(companyId, [
+        map.ar,
+        map.revenue,
+        map.vat,
+      ]);
+      if (!accounts) {
+        return {
+          outcome: 'skipped',
+          reason: `missing CoA ${map.ar}/${map.revenue}/${map.vat}`,
+        };
+      }
+      return this.createAndPost(companyId, {
+        sourceType: 'fin_invoice',
+        sourceId: input.sourceId,
+        entryDate: input.entryDate,
+        description:
+          input.description ?? `invoice:${input.invoiceId}`,
+        journalCode: map.salesJournal,
+        lines: [
+          {
+            accountId: accounts[map.ar]!,
+            debit: amountTtc,
+            credit: 0,
+            lineNo: 1,
+            memo: 'AR TTC',
+          },
+          {
+            accountId: accounts[map.revenue]!,
+            debit: 0,
+            credit: ht,
+            lineNo: 2,
+            memo: 'Revenue HT',
+          },
+          {
+            accountId: accounts[map.vat]!,
+            debit: 0,
+            credit: tax,
+            lineNo: 3,
+            memo: 'VAT as-recorded',
+          },
+        ],
+      });
+    }
+
     const accounts = await this.resolveAccounts(companyId, [
       map.ar,
       map.revenue,
@@ -74,7 +132,7 @@ export class FinanceGlPostingService {
       lines: [
         {
           accountId: accounts[map.ar]!,
-          debit: amount,
+          debit: amountTtc,
           credit: 0,
           lineNo: 1,
           memo: 'AR',
@@ -82,12 +140,88 @@ export class FinanceGlPostingService {
         {
           accountId: accounts[map.revenue]!,
           debit: 0,
-          credit: amount,
+          credit: amountTtc,
           lineNo: 2,
           memo: 'Revenue',
         },
       ],
     });
+  }
+
+  /**
+   * Décomptabilisation facture — reverse all POSTED fin_invoice GL rows for invoice.
+   * Idempotent on reverseSourceId.
+   */
+  async reverseInvoiceIssued(
+    companyId: string,
+    input: { invoiceId: string; reverseSourceId: string },
+  ): Promise<FinanceGlPostResult> {
+    const already = await this.findBySource(
+      companyId,
+      'fin_invoice_deaccount',
+      input.reverseSourceId,
+    );
+    if (already) {
+      return {
+        outcome: 'existing',
+        entryId: already.id,
+        number: already.number,
+      };
+    }
+
+    const marker = `invoice:${input.invoiceId}`;
+    const targets = await this.prisma.accJournalEntry.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: AccEntryStatus.POSTED,
+        sourceType: 'fin_invoice',
+        OR: [
+          { description: marker },
+          { description: { startsWith: `${marker}` } },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (targets.length === 0) {
+      return { outcome: 'skipped', reason: 'no posted invoice GL to reverse' };
+    }
+
+    let last: { id: string; number: string } = {
+      id: targets[0]!.id,
+      number: targets[0]!.number,
+    };
+    for (const entry of targets) {
+      try {
+        const reversed = await this.accounting.reverseEntry(
+          companyId,
+          entry.id,
+        );
+        last = { id: reversed.id, number: reversed.number };
+      } catch (error) {
+        this.logger.warn(
+          `GL deaccount failed for ${entry.number}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        return { outcome: 'skipped', reason: 'reverse failed' };
+      }
+    }
+
+    await this.prisma.accJournalEntry.update({
+      where: { id: last.id },
+      data: {
+        sourceType: 'fin_invoice_deaccount',
+        sourceId: input.reverseSourceId,
+      },
+    });
+
+    return {
+      outcome: 'posted',
+      entryId: last.id,
+      number: last.number,
+    };
   }
 
   /** Payment allocated → Dr Banque / Cr Clients (mapped codes). */

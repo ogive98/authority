@@ -1521,6 +1521,14 @@ async function seedSettingsDefinitions(
       isPrefOnly: true,
     },
     {
+      key: 'accounting.gl.vat',
+      valueType: 'string',
+      defaultJson: '4367',
+      description:
+        'GL account code for VAT collected (as-recorded amounts only — not a tax rate)',
+      isPrefOnly: true,
+    },
+    {
       key: 'accounting.gl.sales_journal',
       valueType: 'string',
       defaultJson: 'VEN',
@@ -1532,6 +1540,36 @@ async function seedSettingsDefinitions(
       valueType: 'string',
       defaultJson: 'BQ',
       description: 'Bank journal code for payment GL posting',
+      isPrefOnly: true,
+    },
+    {
+      key: 'ops.ghost.hide_delivery',
+      valueType: 'boolean',
+      defaultJson: true,
+      description: 'GHOST mode: hide Delivery (BL) from navigation',
+      isPrefOnly: true,
+    },
+    {
+      key: 'ops.patch.hide_delivery',
+      valueType: 'boolean',
+      defaultJson: true,
+      description: 'PATCH mode: hide Delivery (BL) from navigation',
+      isPrefOnly: true,
+    },
+    {
+      key: 'ops.patch.accounting_partial',
+      valueType: 'boolean',
+      defaultJson: true,
+      description:
+        'PATCH mode: CoA only (hide entries / trial balance / mapping write)',
+      isPrefOnly: true,
+    },
+    {
+      key: 'ops.ghost.accounting_partial',
+      valueType: 'boolean',
+      defaultJson: false,
+      description:
+        'GHOST mode: CoA only (hide entries / trial balance / mapping write)',
       isPrefOnly: true,
     },
   ] as const;
@@ -1784,6 +1822,11 @@ async function seedAccountingGl(companyId: string): Promise<void> {
     { code: '411', name: 'Clients', type: 'ASSET' as const },
     { code: '512', name: 'Banque', type: 'ASSET' as const },
     { code: '701', name: 'Ventes', type: 'REVENUE' as const },
+    {
+      code: '4367',
+      name: 'TVA collectée',
+      type: 'LIABILITY' as const,
+    },
   ]) {
     await prisma.accAccount.upsert({
       where: {

@@ -67,6 +67,10 @@ describe('SettingsService hierarchy', () => {
     };
     inviteSettings = { resolve: jest.fn() };
     mail = { isConfigured: jest.fn(), send: jest.fn() };
+    const opsVisibility = {
+      ensureDefinitions: jest.fn().mockResolvedValue(undefined),
+      resolve: jest.fn(),
+    };
 
     service = new SettingsService(
       prisma as never,
@@ -74,6 +78,7 @@ describe('SettingsService hierarchy', () => {
       outboxService as never,
       inviteSettings as never,
       mail as never,
+      opsVisibility as never,
     );
   });
 

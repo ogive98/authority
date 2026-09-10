@@ -29,6 +29,7 @@ import {
 } from './accounting.dto';
 import { AccountingService } from './accounting.service';
 import { AccountingGlMappingResolver } from './accounting-gl-mapping.resolver';
+import { FinanceGlPostingService } from './finance-gl-posting.service';
 
 @Controller('api/v1/accounting')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
@@ -37,6 +38,7 @@ export class AccountingController {
   constructor(
     private readonly accounting: AccountingService,
     private readonly glMapping: AccountingGlMappingResolver,
+    private readonly financeGl: FinanceGlPostingService,
   ) {}
 
   /** D179 — ensure prefs defs + return effective Finance→GL codes. */
@@ -226,6 +228,20 @@ export class AccountingController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.accounting.reverseEntry(tenancy.companyId, id);
+  }
+
+  /** D180 — décomptabilisation facture (reverse Finance→GL invoice entries). */
+  @Post('deaccount/invoice/:invoiceId')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.accountingPost)
+  deaccountInvoice(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('invoiceId', ParseUUIDPipe) invoiceId: string,
+  ) {
+    return this.financeGl.reverseInvoiceIssued(tenancy.companyId, {
+      invoiceId,
+      reverseSourceId: `manual-deaccount:${invoiceId}`,
+    });
   }
 
   // ─── Trial balance ───────────────────────────────────────────────────────

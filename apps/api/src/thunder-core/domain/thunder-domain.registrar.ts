@@ -187,6 +187,8 @@ export class ThunderDomainRegistrar implements OnModuleInit {
       const invoiceId =
         stringPayload(envelope.payload, 'invoiceId') || envelope.aggregateId;
       const amount = numberPayload(envelope.payload, 'amountTotal');
+      const amountHt = numberPayload(envelope.payload, 'amountHt');
+      const amountTax = numberPayload(envelope.payload, 'amountTax');
       if (!invoiceId || amount == null) {
         this.logger.warn('accounting.postFromFinance invoice: missing fields');
         return;
@@ -195,6 +197,8 @@ export class ThunderDomainRegistrar implements OnModuleInit {
         sourceId: envelope.eventId,
         invoiceId,
         amount,
+        amountHt: amountHt ?? undefined,
+        amountTax: amountTax ?? undefined,
         entryDate: today,
         description: `invoice:${invoiceId}`,
       });

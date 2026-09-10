@@ -65,6 +65,7 @@ export const GL_MAPPING_KEYS = {
   ar: "accounting.gl.ar",
   bank: "accounting.gl.bank",
   revenue: "accounting.gl.revenue",
+  vat: "accounting.gl.vat",
   salesJournal: "accounting.gl.sales_journal",
   bankJournal: "accounting.gl.bank_journal",
 } as const;
@@ -73,6 +74,7 @@ export const GL_MAPPING_DEFAULTS = {
   ar: "411",
   bank: "512",
   revenue: "701",
+  vat: "4367",
   salesJournal: "VEN",
   bankJournal: "BQ",
 } as const;
@@ -207,6 +209,7 @@ export async function fetchGlMapping(): Promise<
         ar: string;
         bank: string;
         revenue: string;
+        vat: string;
         salesJournal: string;
         bankJournal: string;
       };
@@ -227,6 +230,7 @@ export async function fetchGlMapping(): Promise<
           ar: string;
           bank: string;
           revenue: string;
+          vat: string;
           salesJournal: string;
           bankJournal: string;
         };
@@ -251,6 +255,63 @@ export async function postEntry(
     );
     if (!res.ok) return parseFail(res);
     return { ok: true, data: (await res.json()) as AccJournalEntry };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function reverseEntry(
+  id: string,
+): Promise<{ ok: true; data: AccJournalEntry } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/accounting/entries/${encodeURIComponent(id)}/reverse`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as AccJournalEntry };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function deaccountInvoice(
+  invoiceId: string,
+): Promise<
+  | {
+      ok: true;
+      data: {
+        outcome: string;
+        entryId?: string;
+        number?: string;
+        reason?: string;
+      };
+    }
+  | ApiFail
+> {
+  try {
+    const res = await fetch(
+      `/api/v1/accounting/deaccount/invoice/${encodeURIComponent(invoiceId)}`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as {
+        outcome: string;
+        entryId?: string;
+        number?: string;
+        reason?: string;
+      },
+    };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }

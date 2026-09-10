@@ -6,6 +6,7 @@ import { OrganizationModule } from '../organization/organization.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { ExpertiseResolverService } from './expertise-resolver.service';
+import { OpsVisibilityResolver } from './ops-visibility.resolver';
 import { SettingsController } from './settings.controller';
 import { SettingsService } from './settings.service';
 
@@ -19,7 +20,15 @@ import { SettingsService } from './settings.service';
     AuditModule,
   ],
   controllers: [SettingsController],
-  providers: [SettingsService, ExpertiseResolverService],
-  exports: [SettingsService, ExpertiseResolverService],
+  providers: [
+    SettingsService,
+    ExpertiseResolverService,
+    OpsVisibilityResolver,
+  ],
+  exports: [
+    SettingsService,
+    ExpertiseResolverService,
+    OpsVisibilityResolver,
+  ],
 })
 export class SettingsModule {}

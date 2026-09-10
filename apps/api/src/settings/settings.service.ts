@@ -30,6 +30,7 @@ import {
 } from './settings.constants';
 import { SettingsException } from './settings.exception';
 import type { UpsertExpertiseDto } from './upsert-expertise.dto';
+import { OpsVisibilityResolver } from './ops-visibility.resolver';
 
 export interface EffectiveSetting {
   key: string;
@@ -83,12 +84,14 @@ export class SettingsService {
     private readonly outboxService: OutboxService,
     private readonly inviteSettings: InviteSettingsResolver,
     private readonly mail: MailService,
+    private readonly opsVisibility: OpsVisibilityResolver,
   ) {}
 
   async getEffective(
     context: ResolveContext,
   ): Promise<EffectiveSettingsResponse> {
     await this.ensureOpsUnlockDefinition();
+    await this.opsVisibility.ensureDefinitions();
 
     const definitions = await this.prisma.setDef.findMany({
       orderBy: { key: 'asc' },

@@ -20,6 +20,7 @@ import {
   GL_MAPPING_DEFAULTS,
   GL_MAPPING_KEYS,
   postEntry,
+  reverseEntry,
   type AccAccount,
   type AccJournal,
   type AccJournalEntry,
@@ -27,6 +28,7 @@ import {
   type TrialBalanceRow,
 } from "@/lib/accounting";
 import { putCompanySetting } from "@/lib/settings";
+import { isAccountingPartialMode } from "@/lib/ops-visibility";
 import {
   softChipClass,
   softPageBody,
@@ -37,6 +39,8 @@ import {
   softTr,
 } from "@/lib/soft-glass-ui";
 import { cn } from "@/lib/utils";
+import { usePrefsStore } from "@/stores/prefs-store";
+import { useShellStore } from "@/stores/shell-store";
 
 type Tab = "coa" | "trial" | "entries" | "mapping";
 
@@ -44,6 +48,7 @@ type GlMapForm = {
   ar: string;
   bank: string;
   revenue: string;
+  vat: string;
   salesJournal: string;
   bankJournal: string;
 };
@@ -79,6 +84,14 @@ export default function AccountingPage() {
   const [mapBusy, setMapBusy] = useState(false);
   const [mapMsg, setMapMsg] = useState<string | null>(null);
   const [postBusy, setPostBusy] = useState<string | null>(null);
+  const ghostEnabled = useShellStore((s) => s.ghostEnabled);
+  const patchEnabled = useShellStore((s) => s.patchEnabled);
+  const opsVisibility = usePrefsStore((s) => s.opsVisibility);
+  const partial = isAccountingPartialMode({
+    ghostEnabled,
+    patchEnabled,
+    prefs: opsVisibility,
+  });
 
   const load = useCallback(async (periodId?: string) => {
     setState({ kind: "loading" });
@@ -160,6 +173,7 @@ export default function AccountingPage() {
       [GL_MAPPING_KEYS.ar, mapDraft.ar],
       [GL_MAPPING_KEYS.bank, mapDraft.bank],
       [GL_MAPPING_KEYS.revenue, mapDraft.revenue],
+      [GL_MAPPING_KEYS.vat, mapDraft.vat],
       [GL_MAPPING_KEYS.salesJournal, mapDraft.salesJournal],
       [GL_MAPPING_KEYS.bankJournal, mapDraft.bankJournal],
     ];
@@ -187,12 +201,32 @@ export default function AccountingPage() {
     void load(state.kind === "ok" ? state.periodId : undefined);
   }
 
+  async function onReverse(id: string) {
+    setPostBusy(id);
+    const r = await reverseEntry(id);
+    setPostBusy(null);
+    if (!r.ok) {
+      setMapMsg(r.message);
+      return;
+    }
+    setMapMsg(`Décomptabilisé → ${r.data.number}`);
+    void load(state.kind === "ok" ? state.periodId : undefined);
+  }
+
+  useEffect(() => {
+    if (partial && tab !== "coa") setTab("coa");
+  }, [partial, tab]);
+
   return (
     <>
       <AScreenHeader
         kicker="Comptabilité"
         title="Grand livre"
-        description="Plan comptable, écritures, balance et mapping Finance→GL — débit = crédit ; aucun taux inventé."
+        description={
+          partial
+            ? "Mode ops — vue partielle (plan comptable seul). Préférences Admin : ops.*.accounting_partial."
+            : "Plan comptable, écritures, décomptabilisation, TVA as-recorded, mapping Finance→GL."
+        }
       />
       <div className={softPageBody}>
         {state.kind === "loading" ? (
@@ -212,12 +246,14 @@ export default function AccountingPage() {
           <>
             <div className="flex flex-wrap gap-2">
               {(
-                [
-                  ["coa", "Plan comptable"],
-                  ["trial", "Balance"],
-                  ["entries", "Écritures"],
-                  ["mapping", "Mapping GL"],
-                ] as const
+                (
+                  [
+                    ["coa", "Plan comptable"],
+                    ["trial", "Balance"],
+                    ["entries", "Écritures"],
+                    ["mapping", "Mapping GL"],
+                  ] as const
+                ).filter(([id]) => !partial || id === "coa")
               ).map(([id, label]) => (
                 <button
                   key={id}
@@ -385,16 +421,31 @@ export default function AccountingPage() {
                               {e.sourceType ?? "—"}
                             </td>
                             <td className="a-table-cell text-right">
-                              {e.status === "DRAFT" ? (
-                                <AButton
-                                  type="button"
-                                  size="sm"
-                                  disabled={postBusy === e.id}
-                                  onClick={() => void onPost(e.id)}
-                                >
-                                  {postBusy === e.id ? "…" : "Poster"}
-                                </AButton>
-                              ) : null}
+                              <div className="flex flex-wrap justify-end gap-1">
+                                {e.status === "DRAFT" ? (
+                                  <AButton
+                                    type="button"
+                                    size="sm"
+                                    disabled={postBusy === e.id}
+                                    onClick={() => void onPost(e.id)}
+                                  >
+                                    {postBusy === e.id ? "…" : "Poster"}
+                                  </AButton>
+                                ) : null}
+                                {e.status === "POSTED" ? (
+                                  <AButton
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    disabled={postBusy === e.id}
+                                    onClick={() => void onReverse(e.id)}
+                                  >
+                                    {postBusy === e.id
+                                      ? "…"
+                                      : "Décomptabiliser"}
+                                  </AButton>
+                                ) : null}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -417,6 +468,7 @@ export default function AccountingPage() {
                       ["ar", "Clients (AR)", "account"],
                       ["bank", "Banque", "account"],
                       ["revenue", "Ventes / produits", "account"],
+                      ["vat", "TVA collectée (as-recorded)", "account"],
                       ["salesJournal", "Journal ventes", "journal"],
                       ["bankJournal", "Journal banque", "journal"],
                     ] as const
