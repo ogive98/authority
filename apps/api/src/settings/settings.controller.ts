@@ -5,10 +5,12 @@ import {
   Get,
   HttpCode,
   Param,
+  Post,
   Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
+import type { IamUser } from '@prisma/client';
 import type { Request } from 'express';
 import { CurrentUser } from '../identity/identity.decorators';
 import { SessionGuard } from '../identity/session.guard';
@@ -72,6 +74,26 @@ export class SettingsController {
       tenancy.companyId,
     );
     return this.settingsService.listExpertise(tenancy.companyId);
+  }
+
+  /** D150/D154 — SMTP test to current admin (Préférences → Envois). */
+  @Post('mail-test')
+  @HttpCode(200)
+  @UseGuards(TenancyGuard)
+  async mailTest(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+  ) {
+    await this.assertPermission(
+      user.id,
+      PERMISSION_KEYS.settingsCompanyWrite,
+      tenancy.companyId,
+    );
+    return this.settingsService.sendSmtpTest({
+      companyId: tenancy.companyId,
+      actorUserId: user.id,
+      actorEmail: user.email,
+    });
   }
 
   /** Expert capture — requires lawRef + expertValidatedAt; never invents rates. */

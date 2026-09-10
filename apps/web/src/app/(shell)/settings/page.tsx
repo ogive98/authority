@@ -17,10 +17,12 @@ import { useMeRegistry } from "@/hooks/use-me-registry";
 import {
   fetchEffectiveSettings,
   fetchExpertiseCatalog,
+  postMailTest,
   putCompanySetting,
   upsertExpertise,
   type ExpertiseSlot,
 } from "@/lib/settings";
+import { fetchMailStatus, type MailStatus } from "@/lib/users";
 import { cn } from "@/lib/utils";
 import { usePrefsStore, type Density } from "@/stores/prefs-store";
 
@@ -142,8 +144,10 @@ export default function SettingsPage() {
   const [smtpPassSet, setSmtpPassSet] = useState(false);
   const [smtpFrom, setSmtpFrom] = useState("");
   const [envoisBusy, setEnvoisBusy] = useState(false);
+  const [mailTestBusy, setMailTestBusy] = useState(false);
   const [envoisMsg, setEnvoisMsg] = useState<string | null>(null);
   const [envoisError, setEnvoisError] = useState<string | null>(null);
+  const [mailStatus, setMailStatus] = useState<MailStatus | null>(null);
 
   const density = usePrefsStore((s) => s.density);
   const setDensity = usePrefsStore((s) => s.setDensity);
@@ -274,6 +278,8 @@ export default function SettingsPage() {
     setSmtpPass("");
     setSmtpPassSet(Boolean(passRow?.secretSet));
     setSmtpFrom(str("identity.smtp.from"));
+    const status = await fetchMailStatus();
+    setMailStatus(status.ok ? status.data : null);
   }, [canCompanyWrite]);
 
   useEffect(() => {
@@ -328,6 +334,21 @@ export default function SettingsPage() {
     setEnvoisMsg("Envois enregistrés.");
     setSavedFlash(true);
     window.setTimeout(() => setSavedFlash(false), 1600);
+    void loadEnvois();
+  }
+
+  async function onMailTest() {
+    if (!canCompanyWrite || mailTestBusy || envoisBusy) return;
+    setMailTestBusy(true);
+    setEnvoisMsg(null);
+    setEnvoisError(null);
+    const res = await postMailTest();
+    setMailTestBusy(false);
+    if (!res.ok) {
+      setEnvoisError(res.message);
+      return;
+    }
+    setEnvoisMsg(`Test envoyé à ${res.to}${res.from ? ` (from ${res.from})` : ""}.`);
   }
 
   function applyDensity(next: Density) {
@@ -449,15 +470,59 @@ export default function SettingsPage() {
         }
         actions={
           tab === "envois" && canCompanyWrite ? (
-            <AButton
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={envoisBusy}
-              onClick={() => void onSaveEnvois()}
-            >
-              {envoisBusy ? "…" : savedFlash ? "Enregistré" : "Enregistrer"}
-            </AButton>
+            <div className="flex flex-wrap items-center gap-2">
+              {mailStatus ? (
+                <ABadge
+                  tone={mailStatus.configured ? "success" : "neutral"}
+                  title={
+                    mailStatus.configured
+                      ? [
+                          mailStatus.host,
+                          mailStatus.port != null ? `:${mailStatus.port}` : "",
+                          mailStatus.from ? ` · ${mailStatus.from}` : "",
+                          mailStatus.autoSend
+                            ? " · auto-send"
+                            : " · auto-send off",
+                          ` · TTL ${mailStatus.ttlDays}j`,
+                        ].join("")
+                      : `SMTP off · mailto · TTL ${mailStatus.ttlDays}j`
+                  }
+                >
+                  {mailStatus.configured
+                    ? `${mailStatus.from ? `SMTP · ${mailStatus.from}` : `SMTP · ${mailStatus.host}`}${
+                        mailStatus.autoSend ? "" : " · manuel"
+                      }`
+                    : "SMTP off · mailto"}
+                </ABadge>
+              ) : null}
+              <AButton
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={
+                  envoisBusy ||
+                  mailTestBusy ||
+                  mailStatus?.configured === false
+                }
+                title={
+                  mailStatus?.configured === false
+                    ? "SMTP non configuré — renseignez l’hôte, Enregistrer, puis retestez"
+                    : undefined
+                }
+                onClick={() => void onMailTest()}
+              >
+                {mailTestBusy ? "…" : "Tester l’envoi"}
+              </AButton>
+              <AButton
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={envoisBusy || mailTestBusy}
+                onClick={() => void onSaveEnvois()}
+              >
+                {envoisBusy ? "…" : savedFlash ? "Enregistré" : "Enregistrer"}
+              </AButton>
+            </div>
           ) : null
         }
       />
@@ -519,7 +584,7 @@ export default function SettingsPage() {
                     return (
                       <div
                         key={row.key}
-                        className="rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2 p-4"
+                        className="rounded-[var(--a-radius-lg)] bg-a-surface-2 p-4"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
@@ -564,7 +629,7 @@ export default function SettingsPage() {
                   return (
                     <div
                       key={row.key}
-                      className="space-y-4 rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2 p-4"
+                      className="space-y-4 rounded-[var(--a-radius-lg)] bg-a-surface-2 p-4"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
@@ -968,6 +1033,10 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
+              <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                « Tester l’envoi » utilise la config enregistrée (Enregistrer
+                d’abord) et envoie un message à votre compte admin.
+              </p>
             </div>
 
             {envoisMsg ? (

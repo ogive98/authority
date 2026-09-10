@@ -7,6 +7,8 @@ import {
 } from '../audit/audit.constants';
 import { AuditService } from '../audit/audit.service';
 import { OutboxService } from '../audit/outbox.service';
+import { InviteSettingsResolver } from '../identity/invite-settings.resolver';
+import { MailService } from '../mail/mail.service';
 import { isCataloguedPermission } from '../permissions/permission.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -75,6 +77,8 @@ export class SettingsService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
+    private readonly inviteSettings: InviteSettingsResolver,
+    private readonly mail: MailService,
   ) {}
 
   async getEffective(
@@ -665,6 +669,66 @@ export class SettingsService {
       default:
         throw invalidValue(definition.key);
     }
+  }
+
+  /** D150/D154 — SMTP test to actor; audits sent/failed (no secrets). */
+  async sendSmtpTest(input: {
+    companyId: string;
+    actorUserId: string;
+    actorEmail: string;
+  }): Promise<{ ok: true; to: string; from: string }> {
+    const cfg = await this.inviteSettings.resolve(input.companyId);
+    if (!this.mail.isConfigured(cfg.smtp)) {
+      throw new SettingsException(
+        SETTINGS_ERROR_CODES.INVALID,
+        'SMTP non configuré. Renseignez host (et auth) dans Envois, puis Enregistrer.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const to = input.actorEmail;
+    const from =
+      cfg.smtp.from?.trim() ||
+      cfg.smtp.user?.trim() ||
+      'AUTHORITY';
+    try {
+      await this.mail.send(
+        {
+          to,
+          subject: 'AUTHORITY — test SMTP',
+          text: `Test d’envoi SMTP réussi.\n\nDestinataire : ${to}\nSociété : ${input.companyId}\n\n— AUTHORITY`,
+          html: `<p>Test d’envoi SMTP réussi.</p><p>Destinataire : <strong>${to}</strong></p><p>— AUTHORITY</p>`,
+        },
+        cfg.smtp,
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Échec envoi SMTP';
+      await this.prisma.$transaction(async (tx) => {
+        await this.auditService.append(tx, {
+          companyId: input.companyId,
+          actorUserId: input.actorUserId,
+          action: AUDIT_ACTIONS.settingsMailTestFailed,
+          entityType: AUDIT_ENTITY_TYPES.iamUser,
+          entityId: input.actorUserId,
+          afterJson: { to, from, via: 'smtp', error: msg },
+        });
+      });
+      throw new SettingsException(
+        SETTINGS_ERROR_CODES.INVALID,
+        msg,
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await this.auditService.append(tx, {
+        companyId: input.companyId,
+        actorUserId: input.actorUserId,
+        action: AUDIT_ACTIONS.settingsMailTestSent,
+        entityType: AUDIT_ENTITY_TYPES.iamUser,
+        entityId: input.actorUserId,
+        afterJson: { to, from, via: 'smtp' },
+      });
+    });
+    return { ok: true, to, from };
   }
 }
 

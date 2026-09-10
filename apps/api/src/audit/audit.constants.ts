@@ -9,6 +9,8 @@ export const AUDIT_ACTIONS = {
   organizationSiteCreate: 'organization.site.create',
   settingsValueUpdate: 'settings.value.update',
   settingsExpertiseValidate: 'settings.expertise.validate',
+  settingsMailTestSent: 'settings.mail.test_sent',
+  settingsMailTestFailed: 'settings.mail.test_failed',
   moduleEnable: 'module.enable',
   moduleDisable: 'module.disable',
   thunderBreakerForceOpen: 'thunder.breaker.force_open',

@@ -239,3 +239,31 @@ export async function putCompanySetting(
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
 }
+
+export type MailTestResult = {
+  ok: true;
+  to: string;
+  from: string;
+};
+
+/** D150 — test SMTP to the signed-in admin (Préférences → Envois). */
+export async function postMailTest(): Promise<MailTestResult | ApiFail> {
+  const MAIL_TEST_TIMEOUT_MS = 20_000;
+  try {
+    const res = await fetch("/api/v1/settings/mail-test", {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(MAIL_TEST_TIMEOUT_MS),
+    });
+    if (!res.ok) return parseError(res);
+    const data = (await res.json()) as { ok: boolean; to: string; from: string };
+    return { ok: true, to: data.to, from: data.from };
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      message: "Timeout ou réseau — vérifiez SMTP / API.",
+    };
+  }
+}

@@ -1,4 +1,6 @@
 import { SetLevel } from '@prisma/client';
+import { AUDIT_ACTIONS } from '../audit/audit.constants';
+import { SettingsException } from './settings.exception';
 import { SettingsService } from './settings.service';
 
 describe('SettingsService hierarchy', () => {
@@ -21,6 +23,9 @@ describe('SettingsService hierarchy', () => {
     taxRate: { findFirst: jest.Mock };
     $transaction: jest.Mock;
   };
+  let auditService: { append: jest.Mock };
+  let inviteSettings: { resolve: jest.Mock };
+  let mail: { isConfigured: jest.Mock; send: jest.Mock };
   let service: SettingsService;
 
   beforeEach(() => {
@@ -46,15 +51,19 @@ describe('SettingsService hierarchy', () => {
       ),
     };
 
-    const auditService = { append: jest.fn().mockResolvedValue({ id: 'a1' }) };
+    auditService = { append: jest.fn().mockResolvedValue({ id: 'a1' }) };
     const outboxService = {
       enqueue: jest.fn().mockResolvedValue({ id: 'o1' }),
     };
+    inviteSettings = { resolve: jest.fn() };
+    mail = { isConfigured: jest.fn(), send: jest.fn() };
 
     service = new SettingsService(
       prisma as never,
       auditService as never,
       outboxService as never,
+      inviteSettings as never,
+      mail as never,
     );
   });
 
@@ -401,6 +410,77 @@ describe('SettingsService hierarchy', () => {
       expect(row.secretSet).toBe(true);
       expect(prisma.setValue.create).not.toHaveBeenCalled();
       expect(prisma.setValue.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('sendSmtpTest (D154)', () => {
+    const actor = {
+      companyId: 'company-demo',
+      actorUserId: 'admin-1',
+      actorEmail: 'demo@authority.local',
+    };
+    const smtp = {
+      host: 'smtp.test',
+      port: 587,
+      secure: false,
+      user: 'u',
+      pass: 'p',
+      from: 'noreply@test.tn',
+    };
+
+    it('rejects when SMTP not configured', async () => {
+      inviteSettings.resolve.mockResolvedValue({ smtp: { host: '' } });
+      mail.isConfigured.mockReturnValue(false);
+      await expect(service.sendSmtpTest(actor)).rejects.toBeInstanceOf(
+        SettingsException,
+      );
+      expect(mail.send).not.toHaveBeenCalled();
+      expect(auditService.append).not.toHaveBeenCalled();
+    });
+
+    it('sends and audits test_sent', async () => {
+      inviteSettings.resolve.mockResolvedValue({ smtp });
+      mail.isConfigured.mockReturnValue(true);
+      mail.send.mockResolvedValue(undefined);
+      const res = await service.sendSmtpTest(actor);
+      expect(res).toEqual({
+        ok: true,
+        to: 'demo@authority.local',
+        from: 'noreply@test.tn',
+      });
+      expect(mail.send).toHaveBeenCalled();
+      expect(auditService.append).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          action: AUDIT_ACTIONS.settingsMailTestSent,
+          companyId: 'company-demo',
+          actorUserId: 'admin-1',
+          afterJson: expect.objectContaining({
+            to: 'demo@authority.local',
+            from: 'noreply@test.tn',
+            via: 'smtp',
+          }),
+        }),
+      );
+    });
+
+    it('audits test_failed then throws on SMTP error', async () => {
+      inviteSettings.resolve.mockResolvedValue({ smtp });
+      mail.isConfigured.mockReturnValue(true);
+      mail.send.mockRejectedValue(new Error('relay denied'));
+      await expect(service.sendSmtpTest(actor)).rejects.toBeInstanceOf(
+        SettingsException,
+      );
+      expect(auditService.append).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          action: AUDIT_ACTIONS.settingsMailTestFailed,
+          afterJson: expect.objectContaining({
+            error: 'relay denied',
+            via: 'smtp',
+          }),
+        }),
+      );
     });
   });
 });
