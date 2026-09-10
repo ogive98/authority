@@ -5,6 +5,7 @@ import { useEffect, useId, useState } from "react";
 import { AButton } from "@/components/a/a-button";
 import { AInput } from "@/components/a/a-input";
 import { createIdempotencyKey } from "@/lib/idempotency";
+import { useUiT } from "@/lib/i18n/route-labels";
 import { cn } from "@/lib/utils";
 
 export type ConfirmRisk = "stock" | "money" | "destroy" | "send" | "generic";
@@ -46,6 +47,7 @@ export function AConfirmDialog({
   cancelLabel = "Annuler",
   onConfirm,
 }: AConfirmDialogProps) {
+  const { t } = useUiT();
   const phraseId = useId();
   const [typed, setTyped] = useState("");
   const [idemKey, setIdemKey] = useState<string | null>(null);
@@ -62,6 +64,9 @@ export function AConfirmDialog({
   const needsType = Boolean(confirmPhrase);
   const unlocked = !needsType || typed.trim() === confirmPhrase;
   const isDanger = risk === "stock" || risk === "money" || risk === "destroy";
+  const resolvedTitle = t(title ?? DEFAULT_TITLES[risk]);
+  const resolvedConfirm = t(confirmLabel);
+  const resolvedCancel = t(cancelLabel);
 
   async function handleConfirm() {
     if (!unlocked || !idemKey || busy) return;
@@ -85,7 +90,7 @@ export function AConfirmDialog({
           )}
         >
           <Dialog.Title className="text-[length:var(--a-text-lg)] font-semibold">
-            {title ?? DEFAULT_TITLES[risk]}
+            {resolvedTitle}
           </Dialog.Title>
           <Dialog.Description className="mt-2 text-[length:var(--a-text-sm)] text-a-fg-muted">
             {consequence}
@@ -94,8 +99,12 @@ export function AConfirmDialog({
           {(risk === "stock" || risk === "money") && (
             <p className="mt-3 text-[length:var(--a-text-xs)] font-medium text-a-warning">
               {risk === "stock"
-                ? "Impact stock — irréversible sans correction d’inventaire."
-                : "Impact financier (TND) — vérifiez le montant avant confirmation."}
+                ? t(
+                    "Impact stock — irréversible sans correction d’inventaire.",
+                  )
+                : t(
+                    "Impact financier (TND) — vérifiez le montant avant confirmation.",
+                  )}
             </p>
           )}
 
@@ -105,9 +114,9 @@ export function AConfirmDialog({
                 htmlFor={phraseId}
                 className="text-[length:var(--a-text-sm)] text-a-fg"
               >
-                Tapez{" "}
+                {t("Tapez")}{" "}
                 <span className="a-mono font-medium text-a-fg">{confirmPhrase}</span>{" "}
-                pour confirmer
+                {t("pour confirmer")}
               </label>
               <AInput
                 id={phraseId}
@@ -133,7 +142,7 @@ export function AConfirmDialog({
               onClick={() => onOpenChange(false)}
               disabled={busy}
             >
-              {cancelLabel}
+              {resolvedCancel}
             </AButton>
             <AButton
               type="button"
@@ -142,7 +151,7 @@ export function AConfirmDialog({
               disabled={!unlocked || busy}
               onClick={() => void handleConfirm()}
             >
-              {confirmLabel}
+              {resolvedConfirm}
             </AButton>
           </div>
         </Dialog.Content>

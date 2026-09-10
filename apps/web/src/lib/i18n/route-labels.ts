@@ -1,8 +1,10 @@
+"use client";
+
 import type { ShellLocale } from "@/stores/locale-store";
+import { useLocaleStore } from "@/stores/locale-store";
 
 /**
- * Route / UI string overlays (D184) — FR is source; IT client overlay.
- * Covers breadcrumbs + common screen headers / tabs without rewriting every page.
+ * Route / UI string overlays (D184+D188) — FR is source; IT client overlay.
  */
 
 export const ROUTE_LABELS_FR: Record<string, string> = {
@@ -77,7 +79,7 @@ export const ROUTE_LABELS_IT: Record<string, string> = {
   fiche: "Scheda",
 };
 
-/** Exact FR → IT for screen headers, kickers, tab chips, common chrome. */
+/** Exact FR → IT for chrome, actions, empty states (D188). */
 export const UI_STRINGS_IT: Record<string, string> = {
   Accueil: "Home",
   Finance: "Finanza",
@@ -121,11 +123,63 @@ export const UI_STRINGS_IT: Record<string, string> = {
   Actions: "Azioni",
   Statut: "Stato",
   Client: "Cliente",
+  Méthode: "Metodo",
+  Montant: "Importo",
+  "Non affecté": "Non assegnato",
   "Nouvelle facture": "Nuova fattura",
   "Nouveau client": "Nuovo cliente",
+  "Nouvelle commande": "Nuovo ordine",
+  "Nouvelle livraison": "Nuova consegna",
+  "Nouvelle tournée": "Nuovo giro",
   Filtrer: "Filtra",
   Émettre: "Emetti",
   Annuler: "Annulla",
+  Confirmer: "Conferma",
+  Affecter: "Assegna",
+  Contrepasser: "Storna",
+  Ajuster: "Rettifica",
+  Livré: "Consegnato",
+  "En route": "In viaggio",
+  Créer: "Crea",
+  Enregistrer: "Salva",
+  Fermer: "Chiudi",
+  Valider: "Convalida",
+  Modifier: "Modifica",
+  "Ajuster le stock": "Rettifica scorte",
+  "Créer la tournée": "Crea il giro",
+  "Confirmer livraison": "Conferma consegna",
+  "Confirmer un mouvement de stock": "Conferma movimento scorte",
+  "Confirmer un montant": "Conferma importo",
+  "Confirmer la destruction": "Conferma distruzione",
+  "Confirmer l’envoi": "Conferma invio",
+  "Aucune commande": "Nessun ordine",
+  "Aucune facture": "Nessuna fattura",
+  "Aucun paiement": "Nessun pagamento",
+  "Aucun client": "Nessun cliente",
+  "Aucune livraison": "Nessuna consegna",
+  "Aucun lot": "Nessun lotto",
+  "Aucun solde": "Nessun saldo",
+  "Aucun résultat": "Nessun risultato",
+  "Aucun produit": "Nessun prodotto",
+  "Aucun compte": "Nessun conto",
+  "Chargement…": "Caricamento…",
+  "Création…": "Creazione…",
+  "Enregistrement…": "Salvataggio…",
+  "TVA Tunisie": "IVA Tunisia",
+  "Ouvrir Finance →": "Apri Finanza →",
+  "Hub financier": "Hub finanziario",
+  Encours: "Esposizione",
+  Échu: "Scaduto",
+  Disponible: "Disponibile",
+  Ouverts: "Aperti",
+  "Crédit dépassé": "Credito superato",
+  "Pression crédit": "Pressione credito",
+  "Impact stock — irréversible sans correction d’inventaire.":
+    "Impatto scorte — irreversibile senza correzione inventario.",
+  "Impact financier (TND) — vérifiez le montant avant confirmation.":
+    "Impatto finanziario (TND) — verificare l’importo prima di confermare.",
+  Tapez: "Digita",
+  "pour confirmer": "per confermare",
 };
 
 export function routeLabel(
@@ -153,4 +207,13 @@ export function localizeUiString(
   if (!value) return value;
   if (locale !== "it") return value;
   return UI_STRINGS_IT[value] ?? value;
+}
+
+/** Hook — localize known FR chrome strings for the active locale. */
+export function useUiT() {
+  const locale = useLocaleStore((s) => s.locale);
+  return {
+    locale,
+    t: (fr: string) => localizeUiString(fr, locale) ?? fr,
+  };
 }

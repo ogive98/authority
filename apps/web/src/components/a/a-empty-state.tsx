@@ -1,6 +1,9 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { AButton } from "@/components/a/a-button";
+import { useUiT } from "@/lib/i18n/route-labels";
 
 export type AEmptyStateProps = {
   title: string;
@@ -22,6 +25,7 @@ export function AEmptyState({
   icon,
   className,
 }: AEmptyStateProps) {
+  const { t } = useUiT();
   return (
     <div
       className={cn(
@@ -37,7 +41,7 @@ export function AEmptyState({
       ) : null}
       <div>
         <h3 className="text-[length:var(--a-text-lg)] font-medium text-a-fg">
-          {title}
+          {t(title)}
         </h3>
         {description ? (
           <p className="mt-1 max-w-md text-[length:var(--a-text-sm)] text-a-fg-muted">
