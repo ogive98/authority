@@ -207,10 +207,8 @@ export function RepairMissionRail({
 
       <div
         className={cn(
-          "repair-ops-detail rounded-[var(--a-radius-lg)] bg-[var(--a-gradient-canvas)] px-5 py-4 transition-all duration-300",
-          danger && activePhase === focusId
-            ? "ring-1 ring-a-danger/30"
-            : "ring-1 ring-a-border-subtle/60",
+          "repair-ops-detail a-underlay rounded-md px-5 py-4 transition-all duration-300",
+          danger && activePhase === focusId && "bg-a-danger-soft",
         )}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">

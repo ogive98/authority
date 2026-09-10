@@ -68,7 +68,7 @@ export function RepairWorkflowCanvas({
   }));
 
   return (
-    <div className="repair-canvas relative overflow-hidden rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-[var(--a-gradient-canvas)]">
+    <div className="repair-canvas relative overflow-hidden rounded-[var(--a-radius-lg)] a-underlay bg-[var(--a-gradient-canvas)]">
       <svg
         viewBox={`0 0 ${width} ${height}`}
         className="h-auto w-full"

@@ -9,7 +9,7 @@ export type AKpiCardProps = {
   masked?: boolean;
 };
 
-/** KPI strip — glass card; amounts stay solid tabular (readable). */
+/** KPI strip — Soft Glass underlay (no framed card); amounts solid tabular. */
 export function AKpiCard({
   label,
   value,
@@ -27,7 +27,7 @@ export function AKpiCard({
           : "text-a-fg-muted";
 
   return (
-    <article className="a-card relative overflow-hidden p-[var(--a-space-5)]">
+    <article className="a-underlay relative overflow-hidden rounded-md p-[var(--a-space-5)]">
       <div className="flex items-start justify-between gap-3">
         <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg-muted">
           {label}

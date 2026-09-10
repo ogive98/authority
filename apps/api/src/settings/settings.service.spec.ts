@@ -5,7 +5,7 @@ import { SettingsService } from './settings.service';
 
 describe('SettingsService hierarchy', () => {
   let prisma: {
-    setDef: { findMany: jest.Mock; findUnique: jest.Mock };
+    setDef: { findMany: jest.Mock; findUnique: jest.Mock; upsert: jest.Mock };
     setValue: {
       findMany: jest.Mock;
       findUnique: jest.Mock;
@@ -30,7 +30,17 @@ describe('SettingsService hierarchy', () => {
 
   beforeEach(() => {
     prisma = {
-      setDef: { findMany: jest.fn(), findUnique: jest.fn() },
+      setDef: {
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        upsert: jest.fn().mockResolvedValue({
+          key: 'ops.unlock_code',
+          valueType: 'string',
+          defaultJson: '3141',
+          description: 'ops unlock',
+          isPrefOnly: true,
+        }),
+      },
       setValue: {
         findMany: jest.fn(),
         findUnique: jest.fn(),

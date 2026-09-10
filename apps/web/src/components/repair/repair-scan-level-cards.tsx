@@ -33,11 +33,11 @@ type Props = {
   onSelect: (id: ScanDepth) => void;
 };
 
-/** Depth picker — underline strip, no card frames (Utility Cube density). */
+/** Depth picker — Soft Glass chips (no underline strip / frames). */
 export function RepairScanLevelCards({ levels, selected, onSelect }: Props) {
   return (
     <div
-      className="flex flex-wrap gap-1 border-b border-a-border-subtle"
+      className="flex flex-wrap gap-2"
       role="tablist"
       aria-label="Profondeur de scan"
     >
@@ -52,25 +52,17 @@ export function RepairScanLevelCards({ levels, selected, onSelect }: Props) {
             aria-selected={active}
             onClick={() => onSelect(level.id)}
             className={cn(
-              "group relative flex min-w-[7.5rem] flex-1 flex-col gap-1 px-3 py-3 text-left transition-colors",
+              "flex min-w-[7.5rem] flex-1 flex-col gap-1 rounded-md px-3 py-3 text-left transition-colors",
               active
-                ? "text-a-accent-hover"
-                : "text-a-fg-muted hover:text-a-fg",
+                ? "bg-a-accent text-white"
+                : "a-underlay text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
             )}
           >
-            <span
-              className={cn(
-                "absolute inset-x-2 bottom-0 h-0.5 rounded-full transition-all",
-                active
-                  ? "bg-a-accent repair-underline-glow"
-                  : "bg-transparent group-hover:bg-a-surface-4",
-              )}
-            />
             <span className="flex items-center gap-2">
               <Icon
                 className={cn(
                   "h-4 w-4 transition-transform duration-300",
-                  active && "scale-110 text-a-accent",
+                  active && "scale-110",
                 )}
                 strokeWidth={1.75}
               />
@@ -81,7 +73,12 @@ export function RepairScanLevelCards({ levels, selected, onSelect }: Props) {
             <span className="text-[length:var(--a-text-sm)] font-medium text-inherit">
               {level.label}
             </span>
-            <span className="a-mono text-[length:var(--a-text-xs)] text-a-fg-subtle">
+            <span
+              className={cn(
+                "a-mono text-[length:var(--a-text-xs)]",
+                active ? "text-white/75" : "text-a-fg-subtle",
+              )}
+            >
               {level.hint} · {level.duration}
             </span>
           </button>

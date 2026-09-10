@@ -334,7 +334,7 @@ export default function AccountPage() {
 
         {me ? (
           <>
-            <section className="space-y-5 rounded-[14px] bg-a-surface-2 p-5">
+            <section className="space-y-5 a-underlay rounded-md p-5">
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
                 <div className="relative shrink-0">
                   {photoSrc ? (
@@ -463,7 +463,7 @@ export default function AccountPage() {
             </section>
 
             {companies.length > 0 ? (
-              <section className="space-y-3 rounded-[14px] bg-a-surface-2 p-5">
+              <section className="space-y-3 a-underlay rounded-md p-5">
                 <h2 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
                   Société active
                 </h2>
@@ -488,7 +488,7 @@ export default function AccountPage() {
               </section>
             ) : null}
 
-            <section className="space-y-4 rounded-[14px] bg-a-surface-2 p-5">
+            <section className="space-y-4 a-underlay rounded-md p-5">
               <h2 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
                 Informations
               </h2>
@@ -548,7 +548,7 @@ export default function AccountPage() {
               </AButton>
             </section>
 
-            <section className="space-y-3 rounded-[14px] bg-a-surface-2 p-5">
+            <section className="space-y-3 a-underlay rounded-md p-5">
               <h2 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
                 Sessions actives
               </h2>
@@ -590,7 +590,7 @@ export default function AccountPage() {
               )}
             </section>
 
-            <section className="space-y-3 rounded-[14px] bg-a-surface-2 p-5">
+            <section className="space-y-3 a-underlay rounded-md p-5">
               <h2 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
                 Raccourcis
               </h2>
@@ -610,7 +610,7 @@ export default function AccountPage() {
               </div>
             </section>
 
-            <section className="space-y-4 rounded-[14px] bg-a-surface-2 p-5">
+            <section className="space-y-4 a-underlay rounded-md p-5">
               <div>
                 <h2 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
                   Mot de passe

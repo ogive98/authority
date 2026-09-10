@@ -70,12 +70,12 @@ export function RepairStepper({
             <div key={step.id} className="flex items-center gap-2">
               <div
                 className={cn(
-                  "flex items-center gap-2 rounded-full border px-3 py-1.5 text-[length:var(--a-text-sm)] transition-colors",
+                  "flex items-center gap-2 rounded-full px-3 py-1.5 text-[length:var(--a-text-sm)] transition-colors",
                   isCurrent
-                    ? "border-a-accent bg-a-accent-muted text-a-accent-hover"
+                    ? "bg-a-accent-muted text-a-accent-hover"
                     : done
-                      ? "border-a-success/40 bg-a-success-soft text-a-success-fg"
-                      : "border-a-border-subtle bg-a-surface-1 text-a-fg-muted",
+                      ? "bg-a-success-soft text-a-success-fg"
+                      : "bg-a-surface-3 text-a-fg-muted",
                 )}
               >
                 {isCurrent && running ? (
@@ -99,7 +99,7 @@ export function RepairStepper({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <section className="a-card space-y-3 p-4">
+        <section className="a-underlay rounded-md space-y-3 p-4">
           <div className="flex items-center justify-between gap-2">
             <p className="text-[length:var(--a-text-sm)] font-medium">
               Progression
@@ -133,7 +133,7 @@ export function RepairStepper({
           </ul>
         </section>
 
-        <section className="a-card flex flex-col items-center justify-center gap-2 p-4 text-center">
+        <section className="a-underlay rounded-md flex flex-col items-center justify-center gap-2 p-4 text-center">
           <div className="relative flex h-24 w-24 items-center justify-center">
             <svg viewBox="0 0 96 96" className="absolute inset-0 -rotate-90">
               <circle

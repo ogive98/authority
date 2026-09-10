@@ -46,7 +46,7 @@ export function RepairStepUpDialog({
       aria-modal="true"
       aria-labelledby="repair-stepup-title"
     >
-      <div className="w-full max-w-md rounded-[var(--a-radius-lg)] bg-a-surface-1 p-5 shadow-[0_20px_50px_rgb(0_0_0_/0.18)] ring-1 ring-a-border-subtle">
+      <div className="w-full max-w-md a-underlay rounded-md p-5 shadow-[0_20px_50px_rgb(0_0_0_/0.18)]">
         <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-danger">
           Re-authentification
         </p>

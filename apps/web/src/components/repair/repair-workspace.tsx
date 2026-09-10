@@ -442,7 +442,7 @@ export function RepairWorkspace() {
     <div className="space-y-5">
       {error ? (
         <p
-          className="rounded-[var(--a-radius-md)] border border-a-danger/30 bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg"
+          className="rounded-md bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg"
           role="alert"
         >
           {error}
@@ -567,17 +567,17 @@ export function RepairWorkspace() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1 border-b border-a-border-subtle pb-px">
+      <div className="flex flex-wrap gap-1 rounded-md bg-a-surface-3 p-0.5">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => void loadTab(t.id)}
             className={cn(
-              "border-b-2 px-3 py-2 text-[length:var(--a-text-sm)] transition-colors",
+              "rounded-md px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium transition-colors",
               tab === t.id
-                ? "border-a-accent font-medium text-a-accent-hover"
-                : "border-transparent text-a-fg-muted hover:text-a-fg",
+                ? "bg-a-accent text-white"
+                : "text-a-fg-muted hover:bg-a-surface-4 hover:text-a-fg",
             )}
           >
             {t.label}
@@ -675,10 +675,10 @@ export function RepairWorkspace() {
                 type="button"
                 onClick={() => setSeverityFilter(s)}
                 className={cn(
-                  "rounded-full border px-3 py-1 text-[length:var(--a-text-xs)] font-medium",
+                  "rounded-full px-3 py-1 text-[length:var(--a-text-xs)] font-medium transition-colors",
                   severityFilter === s
-                    ? "border-a-accent bg-a-accent-muted text-a-accent-hover"
-                    : "border-a-border-subtle text-a-fg-muted",
+                    ? "bg-a-accent text-white"
+                    : "bg-a-surface-3 text-a-fg-muted hover:bg-a-surface-4 hover:text-a-fg",
                 )}
               >
                 {s === "ALL" ? "Tous" : s}
@@ -686,7 +686,7 @@ export function RepairWorkspace() {
             ))}
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <section className="a-card p-4">
+            <section className="a-underlay rounded-md p-4">
               <h2 className="mb-3 flex items-center gap-2 font-medium">
                 <ClipboardList className="h-4 w-4 text-a-accent" strokeWidth={1.75} />
                 Findings
@@ -702,7 +702,7 @@ export function RepairWorkspace() {
                       <button
                         type="button"
                         onClick={() => setSelectedFinding(f)}
-                        className="flex w-full flex-wrap items-center justify-between gap-2 rounded-[var(--a-radius-md)] border border-a-border-subtle px-3 py-2 text-left hover:border-a-accent/40 hover:bg-a-accent-muted/40"
+                        className="flex w-full flex-wrap items-center justify-between gap-2 rounded-md a-underlay px-3 py-2 text-left hover:bg-a-accent-muted/40"
                       >
                         <div className="min-w-0">
                           <p className="text-[length:var(--a-text-sm)] font-medium">
@@ -736,7 +736,7 @@ export function RepairWorkspace() {
                 )}
               </ul>
             </section>
-            <section className="a-card p-4">
+            <section className="a-underlay rounded-md p-4">
               <h2 className="mb-3 flex items-center gap-2 font-medium">
                 <Shield className="h-4 w-4 text-[color:var(--a-violet)]" strokeWidth={1.75} />
                 Incidents
@@ -750,7 +750,7 @@ export function RepairWorkspace() {
                   incidents.map((i) => (
                     <li
                       key={i.id}
-                      className="rounded-[var(--a-radius-md)] border border-a-border-subtle px-3 py-2"
+                      className="rounded-[var(--a-radius-md)] a-underlay px-3 py-2"
                     >
                       <p className="text-[length:var(--a-text-sm)] font-medium">
                         {i.title}
@@ -832,8 +832,8 @@ export function RepairWorkspace() {
                 <article
                   key={s.id}
                   className={cn(
-                    "a-card flex flex-col gap-3 p-4",
-                    blocked && "border-a-danger/25",
+                    "a-underlay rounded-md flex flex-col gap-3 p-4",
+                    blocked && "bg-a-danger-soft",
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -883,7 +883,7 @@ export function RepairWorkspace() {
 
       {tab === "snapshot" ? (
         <div className="space-y-4">
-          <section className="a-card space-y-3 p-4">
+          <section className="a-underlay rounded-md space-y-3 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="font-medium">Recovery (safe)</h2>
@@ -953,13 +953,10 @@ export function RepairWorkspace() {
                 <article
                   key={p.id}
                   className={cn(
-                    "rounded-[var(--a-radius-md)] px-3 py-3 ring-1",
-                    p.status === "REJECTED" &&
-                      "bg-a-danger-soft/40 ring-a-danger/25",
-                    p.status === "DEFERRED" &&
-                      "bg-a-warning-soft/30 ring-a-warning/20",
-                    p.status === "ALLOWED" &&
-                      "bg-a-accent-muted/40 ring-a-accent/20",
+                    "a-underlay rounded-md px-3 py-3",
+                    p.status === "REJECTED" && "bg-a-danger-soft/40",
+                    p.status === "DEFERRED" && "bg-a-warning-soft/30",
+                    p.status === "ALLOWED" && "bg-a-accent-muted/40",
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -989,7 +986,7 @@ export function RepairWorkspace() {
       ) : null}
 
       {tab === "reporting" ? (
-        <section className="a-card space-y-3 p-4">
+        <section className="a-underlay rounded-md space-y-3 p-4">
           <h2 className="mb-1 flex items-center gap-2 font-medium">
             <Layers className="h-4 w-4 text-a-accent" strokeWidth={1.75} />
             Central Reporting
@@ -1025,7 +1022,7 @@ export function RepairWorkspace() {
       ) : null}
 
       {tab === "maintenance" ? (
-        <section className="a-card space-y-2 p-4">
+        <section className="a-underlay rounded-md space-y-2 p-4">
           <h2 className="font-medium">Maintenance</h2>
           <p className="a-mono text-[length:var(--a-text-sm)]">
             status: {maintenance?.status ?? "—"}
@@ -1039,7 +1036,7 @@ export function RepairWorkspace() {
       ) : null}
 
       {tab === "audit" ? (
-        <section className="a-card space-y-2 p-4">
+        <section className="a-underlay rounded-md space-y-2 p-4">
           <h2 className="font-medium">Audit / exécutions récentes</h2>
           <pre className="a-mono max-h-80 overflow-auto rounded-[var(--a-radius-md)] bg-a-surface-1 p-3 text-[length:var(--a-text-xs)]">
             {JSON.stringify(audit, null, 2)}
@@ -1047,7 +1044,7 @@ export function RepairWorkspace() {
         </section>
       ) : null}
 
-      <section className="rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-1 p-3">
+      <section className="rounded-[var(--a-radius-lg)] a-underlay bg-a-surface-1 p-3">
         <div className="mb-2 flex items-center gap-2 text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
           <Square className="h-3 w-3" strokeWidth={1.75} />
           Journal session
@@ -1093,7 +1090,7 @@ export function RepairWorkspace() {
       >
         {selectedFinding ? (
           <div className="space-y-4">
-            <div className="rounded-[var(--a-radius-md)] border border-a-accent/30 bg-a-accent-muted p-4">
+            <div className="rounded-md bg-a-accent-muted p-4">
               <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-accent-hover">
                 Action primaire
               </p>
