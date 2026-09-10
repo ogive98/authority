@@ -655,8 +655,6 @@ export default function CustomersPage() {
               </p>
             ) : null}
 
-            </div>
-
             {editing ? (
               <div className="a-underlay space-y-3 rounded-md p-3">
                 <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
