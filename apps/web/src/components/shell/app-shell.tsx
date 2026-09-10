@@ -5,7 +5,6 @@ import { NotificationsHost } from "./notifications-host";
 import { ShellBreadcrumbs } from "./breadcrumbs";
 import { ShellHeader } from "./header";
 import { MobileBottomNav } from "./mobile-bottom-nav";
-import { ResourceMonitor } from "./resource-monitor";
 import { ShellSidebar } from "./sidebar";
 import { PrefsHydrator } from "./prefs-hydrator";
 import { OpsModeOverlays } from "./ops-mode-overlays";
@@ -15,7 +14,7 @@ import { FloatingToolbox } from "./floating-toolbox";
 import { SmartActionDock } from "./smart-action-dock";
 
 /**
- * Enterprise OS shell (D162) — full-width topbar; sidebar + main + dock underneath.
+ * Enterprise OS shell (D184) — topbar; sidebar + main + dock (online/sync/resources).
  */
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -32,9 +31,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <ShellBreadcrumbs />
           <ShellMain>{children}</ShellMain>
-          <div className="hidden md:block">
-            <ResourceMonitor />
-          </div>
         </div>
         <SmartActionDock />
       </div>

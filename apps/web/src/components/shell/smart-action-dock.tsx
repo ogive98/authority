@@ -43,51 +43,7 @@ const DENSITIES: { id: Density; label: string }[] = [
   { id: "spacious", label: "Spacious" },
 ];
 
-/** Teal family steps — same hue family as --a-accent, distinct per tile. */
-const DOCK_TEAL_FAMILY = [
-  {
-    tile: "bg-[#0d9488] text-white hover:bg-[#0f766e]",
-    iconWrap: "bg-white/20",
-    glyph: "text-white",
-    sub: "text-white/75",
-    collapsed: "bg-[#0d9488] text-white",
-  },
-  {
-    tile: "bg-[#14b8a6] text-white hover:bg-[#0d9488]",
-    iconWrap: "bg-white/20",
-    glyph: "text-white",
-    sub: "text-white/75",
-    collapsed: "bg-[#14b8a6] text-white",
-  },
-  {
-    tile: "bg-[#2dd4bf] text-[#042f2e] hover:bg-[#5eead4]",
-    iconWrap: "bg-[#042f2e]/12",
-    glyph: "text-[#042f2e]",
-    sub: "text-[#042f2e]/70",
-    collapsed: "bg-[#2dd4bf] text-[#042f2e]",
-  },
-  {
-    tile: "bg-[#5eead4] text-[#042f2e] hover:bg-[#99f6e4]",
-    iconWrap: "bg-[#042f2e]/10",
-    glyph: "text-[#042f2e]",
-    sub: "text-[#042f2e]/65",
-    collapsed: "bg-[#5eead4] text-[#042f2e]",
-  },
-  {
-    tile: "bg-[color-mix(in_srgb,var(--a-accent)_28%,transparent)] text-a-fg hover:bg-[color-mix(in_srgb,var(--a-accent)_38%,transparent)]",
-    iconWrap: "bg-a-accent/25 text-a-accent",
-    glyph: "text-a-accent",
-    sub: "text-a-fg-subtle",
-    collapsed: "bg-a-accent-muted text-a-accent",
-  },
-  {
-    tile: "bg-[color-mix(in_srgb,var(--a-accent)_16%,transparent)] text-a-fg hover:bg-[color-mix(in_srgb,var(--a-accent)_26%,transparent)]",
-    iconWrap: "bg-a-accent/20 text-a-accent",
-    glyph: "text-a-accent",
-    sub: "text-a-fg-subtle",
-    collapsed: "bg-a-accent-muted text-a-accent",
-  },
-] as const;
+const SIDEBAR_STROKE = 1.5;
 
 function dockIconFor(action: ActionDefinition): LucideIcon {
   const hay = `${action.id} ${action.moduleId ?? ""} ${action.href ?? ""}`.toLowerCase();
@@ -98,39 +54,6 @@ function dockIconFor(action: ActionDefinition): LucideIcon {
   if (/ai|intel|spark/.test(hay)) return Sparkles;
   if (/home|nav-home|dashboard/.test(hay)) return Zap;
   return PlusCircle;
-}
-
-function StatusDot({
-  ok,
-  label,
-  detail,
-  leading,
-}: {
-  ok: boolean | null;
-  label: string;
-  detail?: string;
-  leading?: React.ReactNode;
-}) {
-  return (
-    <li className="flex items-center gap-2 text-[length:var(--a-text-xs)]">
-      {leading ?? (
-        <span
-          className={cn(
-            "h-2 w-2 shrink-0 rounded-sm",
-            ok == null
-              ? "bg-a-fg-subtle"
-              : ok
-                ? "bg-[var(--a-success)] shadow-[0_0_8px_var(--a-success)]"
-                : "bg-[var(--a-danger)]",
-          )}
-        />
-      )}
-      <span className="text-a-fg-muted">{label}</span>
-      {detail ? (
-        <span className="a-mono ml-auto text-a-fg-subtle">{detail}</span>
-      ) : null}
-    </li>
-  );
 }
 
 function WifiIndicator({ online }: { online: boolean }) {
@@ -146,10 +69,10 @@ function WifiIndicator({ online }: { online: boolean }) {
   if (phase === "scan") {
     return (
       <span
-        className="inline-flex items-center gap-1 text-a-fg-subtle"
+        className="inline-flex items-center justify-center text-a-fg-subtle"
         title={t("wifiScanning")}
       >
-        <Wifi className="h-3.5 w-3.5 animate-pulse" strokeWidth={2} />
+        <Wifi className="h-4 w-4 animate-pulse" strokeWidth={SIDEBAR_STROKE} />
       </span>
     );
   }
@@ -157,42 +80,38 @@ function WifiIndicator({ online }: { online: boolean }) {
   if (!online) {
     return (
       <span
-        className="inline-flex text-[var(--a-danger)]"
+        className="inline-flex items-center justify-center text-[var(--a-danger)]"
         title={t("wifiOffline")}
       >
-        <WifiOff className="h-3.5 w-3.5" strokeWidth={2} />
+        <WifiOff className="h-4 w-4" strokeWidth={SIDEBAR_STROKE} />
       </span>
     );
   }
 
   return (
     <span
-      className="inline-flex text-[var(--a-success)] drop-shadow-[0_0_6px_var(--a-success)]"
+      className="inline-flex items-center justify-center text-[var(--a-success)] drop-shadow-[0_0_6px_var(--a-success)]"
       title={t("wifiOnline")}
     >
-      <Wifi className="h-3.5 w-3.5" strokeWidth={2} />
+      <Wifi className="h-4 w-4" strokeWidth={SIDEBAR_STROKE} />
     </span>
   );
 }
 
-function SyncArrows({ active }: { active: boolean }) {
+/** Single sync circle (RefreshCw) — D184. */
+function SyncCircle({ active }: { active: boolean }) {
   const { t } = useShellT();
   return (
     <span
-      className="inline-flex items-center gap-0.5"
+      className={cn(
+        "inline-flex h-8 w-8 items-center justify-center rounded-full",
+        active ? "bg-a-accent-muted text-a-accent" : "text-a-fg-muted",
+      )}
       title={active ? t("syncActive") : t("syncIdle")}
     >
       <RefreshCw
-        className={cn("h-3 w-3 text-a-accent", active && "animate-spin")}
-        strokeWidth={2.25}
-      />
-      <RefreshCw
-        className={cn(
-          "h-3 w-3 text-sky-400",
-          active && "animate-spin [animation-direction:reverse]",
-        )}
-        strokeWidth={2.25}
-        style={active ? { animationDuration: "1.1s" } : undefined}
+        className={cn("h-4 w-4", active && "animate-spin")}
+        strokeWidth={SIDEBAR_STROKE}
       />
     </span>
   );
@@ -305,16 +224,13 @@ function ThunderCoreDialog({
 
 function ActionTile({
   action,
-  index,
   collapsed,
 }: {
   action: ActionDefinition;
-  index: number;
   collapsed: boolean;
 }) {
   if (!action.href) return null;
   const Icon = dockIconFor(action);
-  const tone = DOCK_TEAL_FAMILY[index % DOCK_TEAL_FAMILY.length]!;
   const shortcut = action.shortcut
     ? action.shortcut.keys.join("+")
     : null;
@@ -324,12 +240,9 @@ function ActionTile({
       <Link
         href={action.href}
         title={action.label}
-        className={cn(
-          "inline-flex h-11 w-11 items-center justify-center rounded-md",
-          tone.collapsed,
-        )}
+        className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-md text-a-orange hover:bg-a-surface-3"
       >
-        <Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+        <Icon className="h-5 w-5" strokeWidth={SIDEBAR_STROKE} aria-hidden />
       </Link>
     );
   }
@@ -337,27 +250,19 @@ function ActionTile({
   return (
     <Link
       href={action.href}
-      className={cn(
-        "flex items-center gap-2.5 rounded-md px-2.5 py-2 transition-colors",
-        tone.tile,
-      )}
+      className="a-nav-row group flex w-full items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left hover:bg-a-surface-3"
     >
-      <span
-        className={cn(
-          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
-          tone.iconWrap,
-        )}
-      >
-        <Icon className={cn("h-4 w-4", tone.glyph)} strokeWidth={1.75} />
-      </span>
+      <Icon
+        className="h-5 w-5 shrink-0 text-a-orange"
+        strokeWidth={SIDEBAR_STROKE}
+        aria-hidden
+      />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[length:var(--a-text-sm)] font-medium">
+        <span className="block truncate text-[12.5px] font-medium tracking-[-0.015em] text-a-fg-muted group-hover:text-a-fg">
           {action.label}
         </span>
         {shortcut ? (
-          <span className={cn("a-mono text-[10px]", tone.sub)}>
-            {shortcut}
-          </span>
+          <span className="a-mono text-[10px] text-a-fg-subtle">{shortcut}</span>
         ) : null}
       </span>
     </Link>
@@ -436,18 +341,42 @@ export function SmartActionDock() {
     >
       <div
         className={cn(
-          "flex items-center",
-          dockCollapsed ? "justify-center" : "justify-between",
+          "flex gap-2",
+          dockCollapsed ? "flex-col items-center" : "items-start justify-between",
         )}
       >
-        {!dockCollapsed ? (
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-a-fg-subtle">
-            {t("smartActions")}
-          </p>
-        ) : null}
+        <div className="min-w-0 flex-1 space-y-1">
+          <div
+            className={cn(
+              "flex items-center gap-2",
+              dockCollapsed && "flex-col gap-2",
+            )}
+            title={platformOk ? t("online") : t("wifiOffline")}
+          >
+            <WifiIndicator online={platformOk} />
+            {!dockCollapsed ? (
+              <span
+                className={cn(
+                  "text-[11px] font-medium",
+                  platformOk ? "text-a-success-fg" : "text-a-danger",
+                )}
+              >
+                {t("online")}
+              </span>
+            ) : null}
+            <SyncCircle active={syncing} />
+          </div>
+          {!dockCollapsed && snap ? (
+            <p className="a-mono text-[10px] text-a-fg-subtle">
+              CPU {Math.round((snap.cpu.usageRatio ?? 0) * 100)}% · RAM{" "}
+              {Math.round(snap.ram.usageRatio * 100)}% · Jobs{" "}
+              {snap.jobs.running}/{snap.jobs.pending}
+            </p>
+          ) : null}
+        </div>
         <button
           type="button"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
           aria-label={dockCollapsed ? t("expandDock") : t("collapseDock")}
           onClick={() => setDockCollapsed(!dockCollapsed)}
         >
@@ -459,9 +388,15 @@ export function SmartActionDock() {
         </button>
       </div>
 
+      {!dockCollapsed ? (
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-a-fg-subtle">
+          {t("smartActions")}
+        </p>
+      ) : null}
+
       <div
         className={cn(
-          "flex flex-col gap-1.5",
+          "flex flex-col gap-0.5",
           dockCollapsed && "items-center",
         )}
       >
@@ -470,13 +405,8 @@ export function SmartActionDock() {
             {t("kpiEmpty")}
           </p>
         ) : (
-          unique.map((a, i) => (
-            <ActionTile
-              key={a.id}
-              action={a}
-              index={i}
-              collapsed={dockCollapsed}
-            />
+          unique.map((a) => (
+            <ActionTile key={a.id} action={a} collapsed={dockCollapsed} />
           ))
         )}
       </div>
@@ -487,68 +417,28 @@ export function SmartActionDock() {
             {t("system")}
           </p>
         ) : null}
-        <ul
-          className={cn(
-            "space-y-2 rounded-md bg-a-surface-3/40 px-3 py-2.5",
-            dockCollapsed && "flex flex-col items-center gap-2 px-1.5",
-          )}
-        >
-          {dockCollapsed ? (
-            <>
-              <WifiIndicator online={platformOk} />
-              <SyncArrows active={syncing} />
-              <button
-                type="button"
-                aria-label={t("thunderCoreOpen")}
-                onClick={() => setThunderOpen(true)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-a-accent hover:bg-a-surface-3"
-              >
-                <Zap
-                  className="h-4 w-4"
-                  strokeWidth={2}
-                  fill="currentColor"
-                  fillOpacity={0.3}
-                />
-              </button>
-            </>
-          ) : monitor.isPending ? (
-            <li className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-              {t("loading")}
-            </li>
-          ) : (
-            <>
-              <StatusDot
-                ok={platformOk}
-                label={t("online")}
-                detail={snap?.systemMode ?? (netOnline ? "ok" : "off")}
-                leading={<WifiIndicator online={platformOk} />}
+        <ul className={cn(dockCollapsed && "flex flex-col items-center")}>
+          <li>
+            <button
+              type="button"
+              onClick={() => setThunderOpen(true)}
+              className={cn(
+                "a-nav-row flex w-full items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
+                dockCollapsed && "justify-center px-0.5",
+              )}
+              aria-label={t("thunderCoreOpen")}
+            >
+              <Zap
+                className="h-5 w-5 shrink-0 text-a-orange"
+                strokeWidth={SIDEBAR_STROKE}
               />
-              <StatusDot
-                ok={!syncing || !snap?.pressure.shedP4}
-                label={syncing ? t("syncActive") : t("syncIdle")}
-                detail={
-                  snap ? `${snap.jobs.running}/${snap.jobs.pending}` : "—"
-                }
-                leading={<SyncArrows active={syncing} />}
-              />
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setThunderOpen(true)}
-                  className="flex w-full items-center gap-2 rounded-md px-0.5 py-0.5 text-left text-[length:var(--a-text-xs)] text-a-fg-muted transition-colors hover:text-a-fg"
-                >
-                  <Zap
-                    className="h-3.5 w-3.5 shrink-0 text-a-accent"
-                    strokeWidth={2}
-                    fill="currentColor"
-                    fillOpacity={0.3}
-                  />
-                  <span>{t("thunderCore")}</span>
-                  <span className="a-mono ml-auto text-a-fg-subtle">···</span>
-                </button>
-              </li>
-            </>
-          )}
+              {!dockCollapsed ? (
+                <span className="truncate text-[12.5px] font-medium">
+                  {t("thunderCore")}
+                </span>
+              ) : null}
+            </button>
+          </li>
         </ul>
       </div>
 
@@ -556,9 +446,12 @@ export function SmartActionDock() {
         <div className="mt-auto pt-1">
           <Link
             href="/settings#apparence"
-            className="flex items-center gap-2 rounded-md px-2.5 py-2 text-[length:var(--a-text-sm)] text-a-fg-muted transition-colors hover:bg-a-surface-3 hover:text-a-fg"
+            className="a-nav-row flex items-center gap-2.5 rounded-md px-1.5 py-1.5 text-[12.5px] font-medium text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
           >
-            <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+            <Settings2
+              className="h-5 w-5 shrink-0 text-a-orange"
+              strokeWidth={SIDEBAR_STROKE}
+            />
             {t("preferences")}
           </Link>
         </div>
@@ -567,9 +460,9 @@ export function SmartActionDock() {
           <Link
             href="/settings#apparence"
             aria-label={t("preferences")}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-a-fg-muted hover:bg-a-surface-3"
+            className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-md text-a-orange hover:bg-a-surface-3"
           >
-            <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+            <Settings2 className="h-5 w-5" strokeWidth={SIDEBAR_STROKE} />
           </Link>
         </div>
       )}
@@ -642,14 +535,9 @@ function MobileDockBody({ onClose }: { onClose: () => void }) {
       <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-a-fg-subtle">
         {t("smartActions")}
       </p>
-      {tiles.map((a, i) =>
+      {tiles.map((a) =>
         a.href ? (
-          <ActionTile
-            key={a.id}
-            action={a}
-            index={i}
-            collapsed={false}
-          />
+          <ActionTile key={a.id} action={a} collapsed={false} />
         ) : null,
       )}
       <button

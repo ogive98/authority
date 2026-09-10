@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  BookOpen,
+  FileText,
+  GitBranch,
+  Scale,
+  type LucideIcon,
+} from "lucide-react";
+import {
   ABadge,
   AButton,
   AEmptyState,
@@ -29,16 +36,18 @@ import {
 } from "@/lib/accounting";
 import { putCompanySetting } from "@/lib/settings";
 import { isAccountingPartialMode } from "@/lib/ops-visibility";
+import { localizeUiString } from "@/lib/i18n/route-labels";
+import { useLocaleStore } from "@/stores/locale-store";
+import { cn } from "@/lib/utils";
 import {
-  softChipClass,
   softPageBody,
   softPanel,
   softSelect,
   softTableWrap,
   softThead,
   softTr,
+  softUnderlineTabClass,
 } from "@/lib/soft-glass-ui";
-import { cn } from "@/lib/utils";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 
@@ -78,6 +87,7 @@ function entryTone(
 }
 
 export default function AccountingPage() {
+  const locale = useLocaleStore((s) => s.locale);
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [tab, setTab] = useState<Tab>("coa");
   const [mapDraft, setMapDraft] = useState<GlMapForm | null>(null);
@@ -244,26 +254,39 @@ export default function AccountingPage() {
         ) : null}
         {state.kind === "ok" ? (
           <>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-5 border-b border-transparent">
               {(
                 (
                   [
-                    ["coa", "Plan comptable"],
-                    ["trial", "Balance"],
-                    ["entries", "Écritures"],
-                    ["mapping", "Mapping GL"],
-                  ] as const
+                    ["coa", "Plan comptable", BookOpen],
+                    ["trial", "Balance", Scale],
+                    ["entries", "Écritures", FileText],
+                    ["mapping", "Mapping GL", GitBranch],
+                  ] as const satisfies ReadonlyArray<
+                    readonly [Tab, string, LucideIcon]
+                  >
                 ).filter(([id]) => !partial || id === "coa")
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={softChipClass(tab === id)}
-                  onClick={() => setTab(id)}
-                >
-                  {label}
-                </button>
-              ))}
+              ).map(([id, label, Icon]) => {
+                const active = tab === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={softUnderlineTabClass(active)}
+                    onClick={() => setTab(id)}
+                  >
+                    <Icon
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        active ? "text-white" : "text-white/55",
+                      )}
+                      strokeWidth={1.5}
+                      aria-hidden
+                    />
+                    <span>{localizeUiString(label, locale) ?? label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {mapMsg ? (
@@ -284,9 +307,15 @@ export default function AccountingPage() {
                     <table className="w-full border-collapse text-left text-[length:var(--a-text-sm)]">
                       <thead className={softThead}>
                         <tr>
-                          <th className="a-table-cell font-medium">Code</th>
-                          <th className="a-table-cell font-medium">Nom</th>
-                          <th className="a-table-cell font-medium">Type</th>
+                          <th className="a-table-cell font-medium">
+                            {localizeUiString("Code", locale) ?? "Code"}
+                          </th>
+                          <th className="a-table-cell font-medium">
+                            {localizeUiString("Nom", locale) ?? "Nom"}
+                          </th>
+                          <th className="a-table-cell font-medium">
+                            {localizeUiString("Type", locale) ?? "Type"}
+                          </th>
                         </tr>
                       </thead>
                       <tbody>

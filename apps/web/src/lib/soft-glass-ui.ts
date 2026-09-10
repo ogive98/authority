@@ -10,6 +10,19 @@ export function softChipClass(active: boolean): string {
   );
 }
 
+/**
+ * Module section tabs (D184) — no filled teal frame.
+ * White/light icon + teal underline when active.
+ */
+export function softUnderlineTabClass(active: boolean): string {
+  return cn(
+    "inline-flex items-center gap-2 border-b-2 px-1 pb-2 pt-0.5 text-[length:var(--a-text-sm)] font-medium transition-colors",
+    active
+      ? "border-a-accent text-a-fg"
+      : "border-transparent text-a-fg-muted hover:text-a-fg",
+  );
+}
+
 /** Table host — underlay only, zero frame. */
 export const softTableWrap =
   "a-underlay overflow-x-auto rounded-md";

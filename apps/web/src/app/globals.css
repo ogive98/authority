@@ -790,11 +790,11 @@
 
   .a-toolbox-item {
     position: absolute;
-    right: 0.4rem;
-    bottom: 0.4rem;
+    right: 0.35rem;
+    bottom: 0.35rem;
     display: flex;
-    width: 3.35rem;
-    height: 3.35rem;
+    width: 2.5rem;
+    height: 2.5rem;
     align-items: center;
     justify-content: center;
     opacity: 0;
@@ -823,9 +823,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 2.85rem;
-    height: 2.85rem;
-    gap: 0.2rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    gap: 0;
     background: transparent;
     border: 0;
     padding: 0;
@@ -865,97 +865,56 @@
     transform: translate(0, -50%);
   }
 
-  /* iOS liquid-glass tool discs — sit on white quarter arc */
+  /* Flat orange glyphs — same family as left sidebar (no disc frame). */
   .a-toolbox-glyph,
   .a-liquid-icon {
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.65rem;
-    height: 2.65rem;
-    border-radius: 999px;
-    overflow: hidden;
-    color: #fff;
-    isolation: isolate;
-    box-shadow:
-      0 10px 22px rgb(0 0 0 / 0.22),
-      inset 0 1px 0 rgb(255 255 255 / 0.55),
-      inset 0 -1px 0 rgb(0 0 0 / 0.12);
-    transition:
-      transform 280ms cubic-bezier(0.32, 0.72, 0, 1),
-      box-shadow 280ms ease;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0;
+    overflow: visible;
+    color: var(--a-orange);
+    isolation: auto;
+    background: transparent;
+    box-shadow: none;
+    transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .a-liquid-shine {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background:
-      radial-gradient(circle at 32% 22%, rgb(255 255 255 / 0.72), transparent 42%),
-      linear-gradient(165deg, rgb(255 255 255 / 0.28), transparent 48%);
-    pointer-events: none;
-    z-index: 1;
+    display: none;
   }
 
   .a-liquid-glyph {
     position: relative;
     z-index: 2;
-    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.25));
+    filter: none;
   }
 
-  .a-liquid-calc {
-    background:
-      linear-gradient(145deg, #fb923c 0%, #f97316 42%, #c2410c 100%);
-  }
-  .a-liquid-calendar {
-    background:
-      linear-gradient(145deg, #38bdf8 0%, #0ea5e9 45%, #0369a1 100%);
-  }
-  .a-liquid-agenda {
-    background:
-      linear-gradient(145deg, #818cf8 0%, #6366f1 45%, #4338ca 100%);
-  }
-  .a-liquid-translate {
-    background:
-      linear-gradient(145deg, #2dd4bf 0%, #14b8a6 45%, #0f766e 100%);
-  }
-  .a-liquid-notes {
-    background:
-      linear-gradient(145deg, #fbbf24 0%, #f59e0b 45%, #b45309 100%);
-  }
-
-  /* AI liquid discs — violet family lock, distinct chroma per kind */
-  .a-liquid-ai-stock {
-    background: linear-gradient(145deg, #c4b5fd 0%, #8b5cf6 48%, #5b21b6 100%);
-  }
-  .a-liquid-ai-forecast {
-    background: linear-gradient(145deg, #a78bfa 0%, #7c3aed 48%, #4c1d95 100%);
-  }
-  .a-liquid-ai-pricing {
-    background: linear-gradient(145deg, #e9d5ff 0%, #a855f7 48%, #6b21a8 100%);
-  }
-  .a-liquid-ai-quality {
-    background: linear-gradient(145deg, #ddd6fe 0%, #7c3aed 42%, #5b21b6 100%);
-  }
-  .a-liquid-ai-ops {
-    background: linear-gradient(145deg, #c4b5fd 0%, #6d28d9 50%, #4c1d95 100%);
-  }
+  .a-liquid-calc,
+  .a-liquid-calendar,
+  .a-liquid-agenda,
+  .a-liquid-translate,
+  .a-liquid-notes,
+  .a-liquid-ai-stock,
+  .a-liquid-ai-forecast,
+  .a-liquid-ai-pricing,
+  .a-liquid-ai-quality,
+  .a-liquid-ai-ops,
   .a-liquid-ai-generic {
-    background: linear-gradient(145deg, #d8b4fe 0%, #9333ea 48%, #6b21a8 100%);
+    background: transparent;
   }
 
   .a-toolbox-row:hover .a-toolbox-glyph,
   .a-toolbox-row:focus-visible .a-toolbox-glyph {
-    transform: scale(1.12);
-    box-shadow:
-      0 14px 28px rgb(0 0 0 / 0.28),
-      inset 0 1px 0 rgb(255 255 255 / 0.65),
-      0 0 24px color-mix(in srgb, currentColor 25%, transparent);
+    transform: scale(1.08);
+    box-shadow: none;
   }
 
   .a-toolbox-row:active .a-toolbox-glyph {
-    transform: scale(0.94);
+    transform: scale(0.96);
   }
 
   .a-toolbox-tone-orange,

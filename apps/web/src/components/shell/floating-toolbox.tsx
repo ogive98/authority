@@ -69,10 +69,10 @@ const TOOLS: ToolDef[] = [
 
 const IDLE_MS = 3200;
 
-/** Icons sit on the white quarter-circle arc (radius ≈ fan edge). */
+/** Icons sit on a clean quarter-circle arc (up → left from FAB). */
 function arcOffset(index: number, total: number, radiusPx: number) {
-  const start = Math.PI * 0.88;
-  const end = Math.PI * 0.38;
+  const start = Math.PI / 2;
+  const end = Math.PI;
   const t = total <= 1 ? 0.5 : index / (total - 1);
   const angle = start + (end - start) * t;
   return {
@@ -97,7 +97,7 @@ export function FloatingToolbox() {
   sheetRef.current = sheet;
 
   const arc = useMemo(
-    () => TOOLS.map((_, i) => arcOffset(i, TOOLS.length, 158)),
+    () => TOOLS.map((_, i) => arcOffset(i, TOOLS.length, 118)),
     [],
   );
 
@@ -244,8 +244,8 @@ export function FloatingToolbox() {
               >
                 <span className="a-toolbox-glyph">
                   <Icon
-                    className="h-7 w-7 text-a-orange"
-                    strokeWidth={1.35}
+                    className="h-5 w-5 text-a-orange"
+                    strokeWidth={1.5}
                     aria-hidden
                   />
                 </span>

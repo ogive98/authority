@@ -14,7 +14,6 @@ import { useNotificationsStore } from "@/stores/notifications-store";
 import { unreadCount } from "@/lib/notifications";
 import { useShellStore } from "@/stores/shell-store";
 import { useLocaleStore, useShellT } from "@/stores/locale-store";
-import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
 import { CompanyBrandPlate } from "./company-brand-plate";
 import { ThemeModeSwitch } from "./mode-switch";
 import { UserMenu } from "./user-menu";
@@ -85,55 +84,9 @@ function OpsModeIcon({
   );
 }
 
-function MetricRing({
-  label,
-  ratio,
-}: {
-  label: string;
-  ratio: number | null;
-}) {
-  const pct =
-    ratio == null || Number.isNaN(ratio)
-      ? null
-      : Math.max(0, Math.min(100, Math.round(ratio * 100)));
-  const r = 10;
-  const c = 2 * Math.PI * r;
-  const dash = pct == null ? 0 : (pct / 100) * c;
-  return (
-    <div
-      className="flex flex-col items-center gap-0.5"
-      title={pct == null ? `${label} —` : `${label} ${pct}%`}
-    >
-      <svg viewBox="0 0 28 28" className="h-7 w-7 -rotate-90" aria-hidden>
-        <circle
-          cx="14"
-          cy="14"
-          r={r}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          className="text-a-surface-4"
-        />
-        <circle
-          cx="14"
-          cy="14"
-          r={r}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeDasharray={`${dash} ${c - dash}`}
-          className="text-a-accent transition-[stroke-dasharray] duration-700"
-        />
-      </svg>
-      <span className="a-mono text-[8px] text-a-fg-subtle">{label}</span>
-    </div>
-  );
-}
-
 /**
- * Full-width topbar (D162) — brand left · search · rings · modes · theme · lang · user.
- * Sidebar collapses underneath; does not move this bar.
+ * Full-width topbar (D184) — brand · search · notifs · modes · theme · lang · user.
+ * Online/sync live in Smart Action Dock (right rail).
  */
 export function ShellHeader() {
   const { t, unread: unreadLabel } = useShellT();
@@ -151,8 +104,6 @@ export function ShellHeader() {
   const setInboxOpen = useNotificationsStore((s) => s.setInboxOpen);
   const items = useNotificationsStore((s) => s.items);
   const unread = unreadCount(items);
-  const monitor = useMonitorSnapshot();
-  const snap = monitor.data;
 
   useEffect(() => {
     const current =
@@ -225,27 +176,6 @@ export function ShellHeader() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-        {snap ? (
-          <div className="mr-1 hidden items-center gap-2.5 lg:flex">
-            <span className="text-[10px] font-medium text-a-success-fg">
-              {t("online")}
-            </span>
-            <MetricRing label="CPU" ratio={snap.cpu.usageRatio} />
-            <MetricRing label="RAM" ratio={snap.ram.usageRatio} />
-            <MetricRing
-              label="JOB"
-              ratio={
-                snap.jobs.pending + snap.jobs.running === 0
-                  ? 0
-                  : Math.min(
-                      1,
-                      (snap.jobs.running + snap.jobs.pending) / 20,
-                    )
-              }
-            />
-          </div>
-        ) : null}
-
         <IconBtn
           label={unread > 0 ? unreadLabel(unread) : t("notifications")}
           onClick={() => setInboxOpen(true)}
