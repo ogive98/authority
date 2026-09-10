@@ -276,3 +276,129 @@ export class CreatePromiseDto {
   @MaxLength(500)
   notes?: string;
 }
+
+/** D189 — company bank account (multi-bank). */
+export class CreateBankAccountDto {
+  @IsString()
+  @MaxLength(32)
+  code!: string;
+
+  @IsString()
+  @MaxLength(160)
+  label!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  bankName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  rib?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  iban?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  glAccountCode?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isDefault?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  notes?: string;
+}
+
+export class UpdateBankAccountDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  label?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  bankName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  rib?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  iban?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  glAccountCode?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isDefault?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  notes?: string;
+}
+
+export class CreateBankStatementLineDto {
+  @IsDateString()
+  lineDate!: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  amount!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  reference?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  counterparty?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  memo?: string;
+}
+
+export class CreateBankStatementLinesDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateBankStatementLineDto)
+  lines!: CreateBankStatementLineDto[];
+}
+
+export class MatchBankLineDto {
+  @IsOptional()
+  @IsUUID()
+  paymentId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  instrumentId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  note?: string;
+}

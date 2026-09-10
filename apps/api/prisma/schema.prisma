@@ -1552,6 +1552,7 @@ model FinPayment {
 
   allocations FinAllocation[]
   instruments FinPaymentInstrument[]
+  bankMatches FinBankMatch[]
 
   @@unique([companyId, number])
   @@index([companyId, customerId, paymentDate(sort: Desc)])
@@ -1602,11 +1603,99 @@ model FinPaymentInstrument {
   updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime?           @map("deleted_at") @db.Timestamptz(6)
 
-  payment FinPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payment     FinPayment     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  bankMatches FinBankMatch[]
 
   @@index([companyId, paymentId])
   @@index([companyId, status, dueDate])
   @@map("fin_payment_instrument")
+}
+
+/** Soft bank recon status — no accounting period lock (D189). */
+enum FinBankLineStatus {
+  UNMATCHED
+  MATCHED
+  IGNORED
+}
+
+/** Company bank accounts — multi-bank; GL code optional (defaults to accounting.gl.bank). */
+model FinBankAccount {
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @map("company_id") @db.Uuid
+  code          String
+  label         String
+  bankName      String?   @map("bank_name")
+  /** Tunisian RIB / IBAN as opaque free text — no invented directory. */
+  rib           String?
+  iban          String?
+  /** Optional CoA code; empty → use accounting.gl.bank at report time. */
+  glAccountCode String?   @map("gl_account_code")
+  currency      String    @default("TND")
+  active        Boolean   @default(true)
+  isDefault     Boolean   @default(false) @map("is_default")
+  notes         String?
+  version       Int       @default(0)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  lines FinBankStatementLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId, active])
+  @@map("fin_bank_account")
+}
+
+/** Manual bank statement line (AR receipts V0 — no OFX/CSV). */
+model FinBankStatementLine {
+  id            String            @id @default(uuid()) @db.Uuid
+  companyId     String            @map("company_id") @db.Uuid
+  bankAccountId String            @map("bank_account_id") @db.Uuid
+  lineDate      DateTime          @map("line_date") @db.Date
+  /** Signed TND as-recorded: + credit (in) / − debit (out). */
+  amount        Decimal           @db.Decimal(18, 3)
+  currency      String            @default("TND")
+  reference     String?
+  counterparty  String?
+  memo          String?
+  status        FinBankLineStatus @default(UNMATCHED)
+  version       Int               @default(0)
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  bankAccount FinBankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  match       FinBankMatch?
+
+  @@index([companyId, bankAccountId, lineDate(sort: Desc)])
+  @@index([companyId, status])
+  @@map("fin_bank_statement_line")
+}
+
+/**
+ * Soft match statement line ↔ payment and/or instrument.
+ * No GL side-effect — bank GL stays on allocate (D073/D189).
+ */
+model FinBankMatch {
+  id              String   @id @default(uuid()) @db.Uuid
+  companyId       String   @map("company_id") @db.Uuid
+  statementLineId String   @unique @map("statement_line_id") @db.Uuid
+  paymentId       String?  @map("payment_id") @db.Uuid
+  instrumentId    String?  @map("instrument_id") @db.Uuid
+  note            String?
+  matchedAt       DateTime @default(now()) @map("matched_at") @db.Timestamptz(6)
+  version         Int      @default(0)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  statementLine FinBankStatementLine  @relation(fields: [statementLineId], references: [id], onDelete: Cascade)
+  payment       FinPayment?           @relation(fields: [paymentId], references: [id])
+  instrument    FinPaymentInstrument? @relation(fields: [instrumentId], references: [id])
+
+  @@unique([paymentId])
+  @@unique([instrumentId])
+  @@index([companyId, matchedAt(sort: Desc)])
+  @@map("fin_bank_match")
 }
 
 /** Collections promise-to-pay V0 (D087) — no auto-block on sales. */

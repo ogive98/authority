@@ -7,6 +7,7 @@ import { ModulesRegistryModule } from '../modules-registry/modules-registry.modu
 import { TaxModule } from '../tax/tax.module';
 import { SettingsModule } from '../settings/settings.module';
 import { AllocationEngineService } from './allocation-engine.service';
+import { BankingService } from './banking.service';
 import { CollectionScheduleResolver } from './collection-schedule.resolver';
 import { CreditPressureResolver } from './credit-pressure.resolver';
 import { FinanceController } from './finance.controller';
@@ -32,6 +33,7 @@ import { PromiseService } from './promise.service';
     PaymentService,
     AllocationEngineService,
     PromiseService,
+    BankingService,
     CollectionScheduleResolver,
     CreditPressureResolver,
   ],
@@ -40,6 +42,7 @@ import { PromiseService } from './promise.service';
     InvoiceService,
     PaymentService,
     PromiseService,
+    BankingService,
     CollectionScheduleResolver,
     CreditPressureResolver,
   ],

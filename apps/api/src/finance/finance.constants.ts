@@ -13,6 +13,11 @@ export const FINANCE_ERROR_CODES = {
   ALREADY_ALLOCATED: 'FIN.ALREADY_ALLOCATED',
   PROMISE_EXISTS: 'FIN.PROMISE_EXISTS',
   PROMISE_NOT_FOUND: 'FIN.PROMISE_NOT_FOUND',
+  BANK_ACCOUNT_NOT_FOUND: 'FIN.BANK_ACCOUNT_NOT_FOUND',
+  BANK_LINE_NOT_FOUND: 'FIN.BANK_LINE_NOT_FOUND',
+  BANK_ALREADY_MATCHED: 'FIN.BANK_ALREADY_MATCHED',
+  BANK_MATCH_TARGET: 'FIN.BANK_MATCH_TARGET',
+  BANK_AMOUNT_MISMATCH: 'FIN.BANK_AMOUNT_MISMATCH',
 } as const;
 
 export type FinanceErrorCode =
@@ -30,6 +35,8 @@ export const FINANCE_EVENT_TYPES = {
   INSTRUMENT_REJECTED: 'finance.instrument.rejected.v1',
   PROMISE_CREATED: 'finance.promise.created.v1',
   PROMISE_STATUS: 'finance.promise.status.v1',
+  BANK_MATCHED: 'finance.bank.matched.v1',
+  BANK_UNMATCHED: 'finance.bank.unmatched.v1',
 } as const;
 
 /** Company settings — credit exposure check on sales confirm (default off). */

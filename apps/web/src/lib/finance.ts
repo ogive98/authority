@@ -768,3 +768,241 @@ export function invoiceBadgeTone(
   if (status === "DRAFT") return "warning";
   return "neutral";
 }
+
+/** D189 banking soft recon */
+export type BankLineStatus = "UNMATCHED" | "MATCHED" | "IGNORED";
+
+export type FinBankAccount = {
+  id: string;
+  companyId: string;
+  code: string;
+  label: string;
+  bankName: string | null;
+  rib: string | null;
+  iban: string | null;
+  glAccountCode: string | null;
+  currency: string;
+  active: boolean;
+  isDefault: boolean;
+  notes: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  unmatchedCount: number;
+};
+
+export type FinBankMatch = {
+  id: string;
+  paymentId: string | null;
+  instrumentId: string | null;
+  note: string | null;
+  matchedAt: string;
+  paymentNumber: string | null;
+  instrumentNumber: string | null;
+};
+
+export type FinBankStatementLine = {
+  id: string;
+  companyId: string;
+  bankAccountId: string;
+  lineDate: string;
+  amount: string;
+  currency: string;
+  reference: string | null;
+  counterparty: string | null;
+  memo: string | null;
+  status: BankLineStatus;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  match: FinBankMatch | null;
+};
+
+export type BankMatchCandidates = {
+  line: FinBankStatementLine;
+  payments: {
+    id: string;
+    number: string;
+    amount: string;
+    method: string;
+    paymentDate: string;
+    customerName: string | null;
+    reference: string | null;
+  }[];
+  instruments: {
+    id: string;
+    number: string;
+    type: string;
+    status: string;
+    amount: string;
+    paymentId: string;
+    paymentNumber: string;
+    bankName: string | null;
+  }[];
+};
+
+export async function fetchBankAccounts(): Promise<
+  { ok: true; data: { items: FinBankAccount[] } } | ApiFail
+> {
+  try {
+    const res = await fetch("/api/v1/finance/bank-accounts", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as { items: FinBankAccount[] },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function createBankAccount(body: {
+  code: string;
+  label: string;
+  bankName?: string;
+  rib?: string;
+  iban?: string;
+  glAccountCode?: string;
+  isDefault?: boolean;
+  notes?: string;
+}): Promise<{ ok: true; data: FinBankAccount } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/finance/bank-accounts", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinBankAccount };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchBankLines(
+  accountId: string,
+  opts?: { status?: string },
+): Promise<{ ok: true; data: { items: FinBankStatementLine[] } } | ApiFail> {
+  try {
+    const sp = new URLSearchParams();
+    if (opts?.status) sp.set("status", opts.status);
+    const qs = sp.toString();
+    const res = await fetch(
+      `/api/v1/finance/bank-accounts/${accountId}/lines${qs ? `?${qs}` : ""}`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as { items: FinBankStatementLine[] },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function addBankLines(
+  accountId: string,
+  lines: {
+    lineDate: string;
+    amount: number;
+    reference?: string;
+    counterparty?: string;
+    memo?: string;
+  }[],
+): Promise<{ ok: true; data: { items: FinBankStatementLine[] } } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/bank-accounts/${accountId}/lines`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ lines }),
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as { items: FinBankStatementLine[] },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchBankMatchCandidates(
+  lineId: string,
+): Promise<{ ok: true; data: BankMatchCandidates } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/bank-lines/${lineId}/candidates`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as BankMatchCandidates };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function matchBankLine(
+  lineId: string,
+  body: { paymentId?: string; instrumentId?: string; note?: string },
+): Promise<{ ok: true; data: FinBankStatementLine } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/bank-lines/${lineId}/match`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinBankStatementLine };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function unmatchBankLine(
+  lineId: string,
+): Promise<{ ok: true; data: FinBankStatementLine } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/bank-lines/${lineId}/unmatch`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinBankStatementLine };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export function bankLineBadgeTone(
+  status: BankLineStatus,
+): "success" | "warning" | "accent" | "neutral" {
+  if (status === "MATCHED") return "success";
+  if (status === "UNMATCHED") return "warning";
+  return "neutral";
+}

@@ -22,13 +22,18 @@ import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
   AllocateOpenItemDto,
   ConfirmAllocationDto,
+  CreateBankAccountDto,
+  CreateBankStatementLinesDto,
   CreateInvoiceDto,
   CreateOpenItemDto,
   CreatePaymentDto,
   CreatePromiseDto,
+  MatchBankLineDto,
   SimulateAllocationDto,
   TransitionInstrumentDto,
+  UpdateBankAccountDto,
 } from './finance.dto';
+import { BankingService } from './banking.service';
 import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentService } from './payment.service';
@@ -44,6 +49,7 @@ export class FinanceController {
     private readonly invoiceService: InvoiceService,
     private readonly paymentService: PaymentService,
     private readonly promiseService: PromiseService,
+    private readonly bankingService: BankingService,
     private readonly expertise: ExpertiseResolverService,
   ) {}
 
@@ -375,5 +381,89 @@ export class FinanceController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.promiseService.cancel(tenancy.companyId, id);
+  }
+
+  /** D189 — multi-bank accounts + soft statement match (no GL). */
+  @Get('bank-accounts')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  listBankAccounts(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.bankingService.listAccounts(tenancy.companyId);
+  }
+
+  @Post('bank-accounts')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  createBankAccount(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateBankAccountDto,
+  ) {
+    return this.bankingService.createAccount(tenancy.companyId, dto);
+  }
+
+  @Patch('bank-accounts/:id')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  updateBankAccount(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBankAccountDto,
+  ) {
+    return this.bankingService.updateAccount(tenancy.companyId, id, dto);
+  }
+
+  @Get('bank-accounts/:id/lines')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  listBankLines(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.bankingService.listLines(tenancy.companyId, id, {
+      status,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Post('bank-accounts/:id/lines')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  addBankLines(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateBankStatementLinesDto,
+  ) {
+    return this.bankingService.addLines(tenancy.companyId, id, dto);
+  }
+
+  @Get('bank-lines/:id/candidates')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  bankMatchCandidates(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.bankingService.matchCandidates(tenancy.companyId, id);
+  }
+
+  @Post('bank-lines/:id/match')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeAllocate)
+  matchBankLine(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: MatchBankLineDto,
+  ) {
+    return this.bankingService.matchLine(tenancy.companyId, id, dto);
+  }
+
+  @Post('bank-lines/:id/unmatch')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeAllocate)
+  unmatchBankLine(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.bankingService.unmatchLine(tenancy.companyId, id);
   }
 }

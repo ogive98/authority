@@ -6,13 +6,14 @@ export const financeManifest: ModuleManifest = {
   version: '1.1.0',
   apiVersion: '1',
   description:
-    'Finance AR — invoices with HT/TVA/TTC lines, open items, payments, instruments, promises',
+    'Finance AR — invoices, payments, instruments, promises, bank soft recon',
   capabilities: [
     {
       key: 'finance.ar.read',
       moduleId: 'finance',
       version: '1',
-      description: 'List and read AR invoices / open items / payments / credit',
+      description:
+        'List and read AR invoices / open items / payments / credit / bank lines',
       permissionKey: 'finance.ar.read',
       riskLevel: 'low',
     },
@@ -20,7 +21,8 @@ export const financeManifest: ModuleManifest = {
       key: 'finance.ar.write',
       moduleId: 'finance',
       version: '1',
-      description: 'Create / issue AR invoices and open items',
+      description:
+        'Create / issue AR invoices, open items, bank accounts and statement lines',
       permissionKey: 'finance.ar.write',
       riskLevel: 'medium',
       requiresAudit: true,
@@ -29,7 +31,8 @@ export const financeManifest: ModuleManifest = {
       key: 'finance.allocate',
       moduleId: 'finance',
       version: '1',
-      description: 'Record payments, allocate (simulate/confirm), instruments',
+      description:
+        'Record payments, allocate, instruments, bank match/unmatch (no GL on match)',
       permissionKey: 'finance.allocate',
       riskLevel: 'high',
       requiresAudit: true,
@@ -45,6 +48,10 @@ export const financeManifest: ModuleManifest = {
     'finance.payment.allocate',
     'finance.payment.reverse',
     'finance.instrument.transition',
+    'finance.bank.account.create',
+    'finance.bank.line.create',
+    'finance.bank.match',
+    'finance.bank.unmatch',
   ],
   queries: [
     'finance.open_items.list',
@@ -53,6 +60,8 @@ export const financeManifest: ModuleManifest = {
     'finance.payments.list',
     'finance.instruments.list',
     'finance.credit.snapshot',
+    'finance.bank.accounts.list',
+    'finance.bank.lines.list',
   ],
   permissions: [
     'finance.ar.read',
@@ -77,6 +86,8 @@ export const financeManifest: ModuleManifest = {
     'finance.instrument.rejected.v1',
     'finance.promise.created.v1',
     'finance.promise.status.v1',
+    'finance.bank.matched.v1',
+    'finance.bank.unmatched.v1',
   ],
   consumedEvents: ['delivery.shipment.delivered.v1'],
   navigationEntries: [
@@ -85,5 +96,6 @@ export const financeManifest: ModuleManifest = {
     { id: 'payments', label: 'Encaissements', href: '/finance/payments' },
     { id: 'instruments', label: 'Instruments', href: '/finance/instruments' },
     { id: 'promises', label: 'Promesses', href: '/finance/promises' },
+    { id: 'banking', label: 'Banque', href: '/finance/banking' },
   ],
 };

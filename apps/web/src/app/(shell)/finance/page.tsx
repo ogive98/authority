@@ -258,6 +258,12 @@ export default function FinancePage() {
             >
               Promesses
             </Link>
+            <Link
+              href="/finance/banking"
+              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
+            >
+              Banque
+            </Link>
             <AButton type="button" size="sm" onClick={openCreate}>
               Nouvelle créance
             </AButton>
