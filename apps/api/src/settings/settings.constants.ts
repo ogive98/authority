@@ -36,6 +36,7 @@ export const COMPANY_ONLY_SETTING_KEYS = [
   'ops.patch.accounting_partial',
   'ops.ghost.accounting_partial',
   'finance.collection.remind_days',
+  'finance.credit.warn_ratio',
 ] as const;
 
 export function isCompanyOnlySettingKey(key: string): boolean {

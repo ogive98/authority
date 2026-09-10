@@ -36,10 +36,13 @@ export const FINANCE_SETTING_KEYS = {
   CREDIT_ENFORCE: 'finance.credit.enforce',
   /** Days past due milestones for FIN-INTEL collections (D182). */
   COLLECTION_REMIND_DAYS: 'finance.collection.remind_days',
+  /** Warn ratio outstanding/limit for FIN-INTEL credit pressure (D185). */
+  CREDIT_WARN_RATIO: 'finance.credit.warn_ratio',
 } as const;
 
 export const FINANCE_SETTING_DEFAULTS = {
   [FINANCE_SETTING_KEYS.CREDIT_ENFORCE]: false,
   /** Empty = binary overdue; product default milestones when seeded. */
   [FINANCE_SETTING_KEYS.COLLECTION_REMIND_DAYS]: [1, 7, 15, 30],
+  [FINANCE_SETTING_KEYS.CREDIT_WARN_RATIO]: 0.8,
 } as const;

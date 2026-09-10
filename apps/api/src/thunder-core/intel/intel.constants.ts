@@ -7,6 +7,8 @@ export const THUNDER_SIGNAL_TYPES = {
   FinanceOverdueOpenItems: 'FinanceOverdueOpenItems',
   /** D182 — overdue past a company collection milestone (J+n). */
   FinanceCollectionMilestone: 'FinanceCollectionMilestone',
+  /** D185 — AR outstanding vs creditLimit (warn / breach). */
+  FinanceCreditPressure: 'FinanceCreditPressure',
   FinanceBrokenPromises: 'FinanceBrokenPromises',
 } as const;
 

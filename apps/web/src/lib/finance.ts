@@ -182,6 +182,11 @@ export type CustomerFinancialOverview = {
   openCount: number;
   overdueCount: number;
   availableCredit: string | null;
+  creditPressure?: {
+    level: "ok" | "warn" | "breach" | null;
+    ratio: number | null;
+    warnRatio: number;
+  };
   currency: string;
 };
 

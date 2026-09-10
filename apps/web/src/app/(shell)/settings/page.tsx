@@ -1310,6 +1310,18 @@ export default function SettingsPage() {
                 <CollectionRemindDaysEditor canWrite={canCompanyWrite} />
               </div>
             ) : null}
+            {canCompanyWrite ? (
+              <div>
+                <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                  Crédit — seuil pression (D185)
+                </p>
+                <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Ratio encours / plafond pour signal Thunder (défaut 0,80).
+                  Dépassement = 100 %. Pas un barème fiscal.
+                </p>
+                <CreditWarnRatioEditor canWrite={canCompanyWrite} />
+              </div>
+            ) : null}
             <div>
               <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
                 Sidebar — auto-réduction
@@ -1441,6 +1453,76 @@ function CollectionRemindDaysEditor({ canWrite }: { canWrite: boolean }) {
           onChange={(e) => setDraft(e.target.value)}
           placeholder="1,7,15,30"
           aria-label="Jalons jours de retard"
+        />
+        <AButton
+          type="button"
+          size="sm"
+          variant="primary"
+          disabled={busy}
+          onClick={() => void onSave()}
+        >
+          {busy ? "…" : "Enregistrer"}
+        </AButton>
+      </div>
+      {msg ? (
+        <p className="text-[length:var(--a-text-xs)] text-a-success">{msg}</p>
+      ) : null}
+      {err ? (
+        <p className="text-[length:var(--a-text-xs)] text-a-danger">{err}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function CreditWarnRatioEditor({ canWrite }: { canWrite: boolean }) {
+  const [draft, setDraft] = useState("0.80");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!canWrite) return;
+    void (async () => {
+      const res = await fetchEffectiveSettings();
+      if (!res.ok) return;
+      const row = res.data.settings.find(
+        (s) => s.key === "finance.credit.warn_ratio",
+      );
+      if (typeof row?.value === "number") {
+        setDraft(row.value.toFixed(2));
+      }
+    })();
+  }, [canWrite]);
+
+  async function onSave() {
+    if (!canWrite || busy) return;
+    const n = Number(draft.replace(",", "."));
+    if (!Number.isFinite(n) || n < 0.05 || n > 1) {
+      setErr("Ratio entre 0,05 et 1,00.");
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    setErr(null);
+    const r = await putCompanySetting("finance.credit.warn_ratio", n);
+    setBusy(false);
+    if (!r.ok) {
+      setErr(r.message);
+      return;
+    }
+    setDraft(n.toFixed(2));
+    setMsg("Seuil enregistré.");
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          className="a-mono h-9 w-28 rounded-xl bg-a-surface-3 px-3 text-[length:var(--a-text-sm)] text-a-fg outline-none focus:ring-2 focus:ring-a-accent"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="0.80"
+          aria-label="Seuil pression crédit"
         />
         <AButton
           type="button"

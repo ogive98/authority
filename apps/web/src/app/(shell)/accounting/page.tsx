@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
@@ -239,6 +240,20 @@ export default function AccountingPage() {
         }
       />
       <div className={softPageBody}>
+        <div className={cn(softPanel, "flex flex-wrap items-center gap-3 py-3")}>
+          <ABadge tone="neutral">IA DISABLED</ABadge>
+          <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+            Comptabilité intelligente = Thunder FIN-INTEL (pression crédit,
+            jalons recouvrement, décompta) — jamais une dépendance runtime IA.
+            Préférences : seuils Admin.
+          </p>
+          <Link
+            href="/customers"
+            className="text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
+          >
+            Hub clients →
+          </Link>
+        </div>
         {state.kind === "loading" ? (
           <ASkeleton className="h-32 w-full" />
         ) : null}

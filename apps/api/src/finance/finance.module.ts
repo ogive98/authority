@@ -8,6 +8,7 @@ import { TaxModule } from '../tax/tax.module';
 import { SettingsModule } from '../settings/settings.module';
 import { AllocationEngineService } from './allocation-engine.service';
 import { CollectionScheduleResolver } from './collection-schedule.resolver';
+import { CreditPressureResolver } from './credit-pressure.resolver';
 import { FinanceController } from './finance.controller';
 import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
@@ -32,6 +33,7 @@ import { PromiseService } from './promise.service';
     AllocationEngineService,
     PromiseService,
     CollectionScheduleResolver,
+    CreditPressureResolver,
   ],
   exports: [
     FinanceService,
@@ -39,6 +41,7 @@ import { PromiseService } from './promise.service';
     PaymentService,
     PromiseService,
     CollectionScheduleResolver,
+    CreditPressureResolver,
   ],
 })
 export class FinanceModule {}

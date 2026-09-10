@@ -93,6 +93,7 @@ export class SettingsService {
     await this.ensureOpsUnlockDefinition();
     await this.opsVisibility.ensureDefinitions();
     await this.ensureCollectionRemindDefinition();
+    await this.ensureCreditWarnDefinition();
 
     const definitions = await this.prisma.setDef.findMany({
       orderBy: { key: 'asc' },
@@ -682,6 +683,27 @@ export class SettingsService {
     });
   }
 
+  private async ensureCreditWarnDefinition(): Promise<SetDef> {
+    return this.prisma.setDef.upsert({
+      where: { key: 'finance.credit.warn_ratio' },
+      update: {
+        valueType: 'number',
+        defaultJson: 0.8,
+        description:
+          'Credit pressure warn ratio (outstanding/limit). Breach at ≥1. Not tax.',
+        isPrefOnly: true,
+      },
+      create: {
+        key: 'finance.credit.warn_ratio',
+        valueType: 'number',
+        defaultJson: 0.8,
+        description:
+          'Credit pressure warn ratio (outstanding/limit). Breach at ≥1. Not tax.',
+        isPrefOnly: true,
+      },
+    });
+  }
+
   private async loadWritableDefinition(key: string): Promise<SetDef> {
     if (isCataloguedPermission(key)) {
       throw new SettingsException(
@@ -696,6 +718,9 @@ export class SettingsService {
     }
     if (key === 'finance.collection.remind_days') {
       return this.ensureCollectionRemindDefinition();
+    }
+    if (key === 'finance.credit.warn_ratio') {
+      return this.ensureCreditWarnDefinition();
     }
 
     const definition = await this.prisma.setDef.findUnique({ where: { key } });
@@ -725,6 +750,12 @@ export class SettingsService {
         return;
       case 'number':
         if (typeof value !== 'number' || !Number.isFinite(value)) {
+          throw invalidValue(definition.key);
+        }
+        if (
+          definition.key === 'finance.credit.warn_ratio' &&
+          (value < 0.05 || value > 1)
+        ) {
           throw invalidValue(definition.key);
         }
         return;

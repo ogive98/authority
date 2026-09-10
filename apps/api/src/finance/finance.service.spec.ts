@@ -163,6 +163,9 @@ describe('FinanceService', () => {
       outbox as never,
       invoices as never,
       promises as never,
+      {
+        resolveWarnRatio: jest.fn().mockResolvedValue(0.8),
+      } as never,
     );
     return { service, prisma, outbox, invoices, promises, getItem: () => item };
   }

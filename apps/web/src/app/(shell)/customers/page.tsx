@@ -629,6 +629,32 @@ export default function CustomersPage() {
                 ) : null}
                 {financeHub.kind === "ok" ? (
                   <>
+                    {financeHub.data.creditPressure?.level === "warn" ||
+                    financeHub.data.creditPressure?.level === "breach" ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ABadge
+                          tone={
+                            financeHub.data.creditPressure.level === "breach"
+                              ? "danger"
+                              : "warning"
+                          }
+                        >
+                          {financeHub.data.creditPressure.level === "breach"
+                            ? "Crédit dépassé"
+                            : "Pression crédit"}
+                        </ABadge>
+                        <span className="a-mono text-[11px] text-a-fg-muted">
+                          {financeHub.data.creditPressure.ratio != null
+                            ? `${Math.round(financeHub.data.creditPressure.ratio * 100)}%`
+                            : "—"}{" "}
+                          du plafond · seuil{" "}
+                          {Math.round(
+                            financeHub.data.creditPressure.warnRatio * 100,
+                          )}
+                          %
+                        </span>
+                      </div>
+                    ) : null}
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <div>
                         <p className="text-[10px] text-a-fg-muted">Encours</p>

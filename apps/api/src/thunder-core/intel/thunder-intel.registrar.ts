@@ -18,6 +18,7 @@ import { CollectionScheduleResolver } from '../../finance/collection-schedule.re
 import {
   matchedMilestones,
 } from '../../finance/collection-schedule.resolver';
+import { CreditPressureResolver } from '../../finance/credit-pressure.resolver';
 
 @Injectable()
 export class ThunderIntelRegistrar implements OnModuleInit {
@@ -29,6 +30,7 @@ export class ThunderIntelRegistrar implements OnModuleInit {
     private readonly recommendations: RecommendationService,
     private readonly prisma: PrismaService,
     private readonly collectionSchedule: CollectionScheduleResolver,
+    private readonly creditPressure: CreditPressureResolver,
   ) {}
 
   onModuleInit(): void {
@@ -59,13 +61,16 @@ export class ThunderIntelRegistrar implements OnModuleInit {
         return;
       case THUNDER_INTEL_EVENT_TYPES.salesConfirmed:
         await this.onSalesConfirmed(envelope);
+        await this.maybeEmitCreditPressure(envelope);
         return;
       case THUNDER_INTEL_EVENT_TYPES.financeAllocation:
         await this.onFinanceAllocation(envelope);
         await this.maybeEmitOverdue(envelope);
+        await this.maybeEmitCreditPressure(envelope);
         return;
       case THUNDER_INTEL_EVENT_TYPES.financeOpenItemCreated:
         await this.maybeEmitOverdue(envelope);
+        await this.maybeEmitCreditPressure(envelope);
         return;
       case THUNDER_INTEL_EVENT_TYPES.financePromiseCreated:
       case THUNDER_INTEL_EVENT_TYPES.financePromiseStatus:
@@ -279,6 +284,90 @@ export class ThunderIntelRegistrar implements OnModuleInit {
 
     this.logger.log(
       `signal ${signalType} customer=${customerId} count=${overdueCount} maxDays=${maxDaysPastDue} milestones=${milestones.join(',')}`,
+    );
+  }
+
+  /** Credit: outstanding vs limit — warn/breach (D185). Autonomy 2 / record_only. */
+  private async maybeEmitCreditPressure(
+    envelope: AuthorityEventEnvelope,
+  ): Promise<void> {
+    const companyId = envelope.companyId!;
+    let customerId =
+      typeof envelope.payload.customerId === 'string'
+        ? envelope.payload.customerId
+        : null;
+    if (!customerId && envelope.aggregateType === 'fin_open_item') {
+      const item = await this.prisma.finOpenItem.findFirst({
+        where: {
+          id: envelope.aggregateId,
+          companyId,
+          deletedAt: null,
+        },
+        select: { customerId: true },
+      });
+      customerId = item?.customerId ?? null;
+    }
+    if (!customerId) return;
+
+    const evaled = await this.creditPressure.evaluate(companyId, customerId);
+    if (evaled.level !== 'warn' && evaled.level !== 'breach') return;
+
+    const signal = await this.signals.create({
+      companyId,
+      siteId: envelope.siteId,
+      type: THUNDER_SIGNAL_TYPES.FinanceCreditPressure,
+      severity: evaled.level === 'breach' ? 'CRITICAL' : 'WARN',
+      source: THUNDER_INTEL_CONSUMER_ID,
+      sourceEventId: envelope.eventId,
+      sourceEventType: envelope.eventType,
+      correlationId: envelope.correlationId,
+      evidence: {
+        customerId,
+        level: evaled.level,
+        ratio: evaled.ratio,
+        warnRatio: evaled.warnRatio,
+        outstanding: evaled.outstanding,
+        creditLimit: evaled.creditLimit,
+        aggregateType: envelope.aggregateType,
+        aggregateId: envelope.aggregateId,
+      },
+      occurredAt: new Date(envelope.occurredAt),
+    });
+
+    const pct =
+      evaled.ratio != null ? Math.round(evaled.ratio * 100) : null;
+    const problem =
+      evaled.level === 'breach'
+        ? `Customer credit breached (${pct}% of limit, outstanding ${evaled.outstanding} TND) — review AR / limit`
+        : `Customer credit pressure (${pct}% ≥ warn ${Math.round(evaled.warnRatio * 100)}%) — review AR / limit`;
+
+    await this.recommendations.create({
+      companyId,
+      signalId: signal.id,
+      problem,
+      evidence: {
+        signalId: signal.id,
+        customerId,
+        level: evaled.level,
+        ratio: evaled.ratio,
+        warnRatio: evaled.warnRatio,
+      },
+      options: [
+        { id: 'review_customer', label: 'Open customer hub' },
+        { id: 'review_finance', label: 'Open Créances' },
+        { id: 'ack', label: 'Acknowledge without action' },
+      ],
+      autonomyLevel: 2,
+      proposedAction: {
+        type: 'record_only',
+        capabilityHint: 'finance.ar.read',
+        aggregateId: customerId,
+      },
+      correlationId: envelope.correlationId,
+    });
+
+    this.logger.log(
+      `signal FinanceCreditPressure customer=${customerId} level=${evaled.level} ratio=${evaled.ratio}`,
     );
   }
 

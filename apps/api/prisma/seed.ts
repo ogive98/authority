@@ -1508,6 +1508,14 @@ async function seedSettingsDefinitions(
       isPrefOnly: true,
     },
     {
+      key: 'finance.credit.warn_ratio',
+      valueType: 'number',
+      defaultJson: 0.8,
+      description:
+        'FIN-INTEL credit pressure warn when outstanding/limit ≥ ratio (0–1). Breach at ≥1. Not tax.',
+      isPrefOnly: true,
+    },
+    {
       key: 'accounting.gl.ar',
       valueType: 'string',
       defaultJson: '411',

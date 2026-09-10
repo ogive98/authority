@@ -18,6 +18,15 @@ describe('ThunderIntelRegistrar', () => {
   const collectionSchedule = {
     resolveRemindDays: jest.fn().mockResolvedValue([1, 7, 15, 30]),
   };
+  const creditPressure = {
+    evaluate: jest.fn().mockResolvedValue({
+      level: null,
+      ratio: null,
+      warnRatio: 0.8,
+      outstanding: 0,
+      creditLimit: null,
+    }),
+  };
 
   let registrar: ThunderIntelRegistrar;
 
@@ -34,6 +43,7 @@ describe('ThunderIntelRegistrar', () => {
         },
       } as never,
       collectionSchedule as never,
+      creditPressure as never,
     );
   });
 
@@ -74,6 +84,7 @@ describe('ThunderIntelRegistrar', () => {
       recommendations as never,
       prisma as never,
       collectionSchedule as never,
+      creditPressure as never,
     );
     signals.create.mockResolvedValue({ id: 'sig-1' });
     recommendations.create.mockResolvedValue({ id: 'rec-1' });
@@ -127,6 +138,7 @@ describe('ThunderIntelRegistrar', () => {
       recommendations as never,
       prisma as never,
       collectionSchedule as never,
+      creditPressure as never,
     );
 
     await registrar.handle({
@@ -143,5 +155,41 @@ describe('ThunderIntelRegistrar', () => {
     });
 
     expect(signals.create).not.toHaveBeenCalled();
+  });
+
+  it('emits FinanceCreditPressure on breach', async () => {
+    creditPressure.evaluate.mockResolvedValue({
+      level: 'breach',
+      ratio: 1.2,
+      warnRatio: 0.8,
+      outstanding: 1200,
+      creditLimit: 1000,
+    });
+    signals.create.mockResolvedValue({ id: 'sig-cp' });
+    recommendations.create.mockResolvedValue({ id: 'rec-cp' });
+
+    await registrar.handle({
+      eventId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+      eventType: THUNDER_INTEL_EVENT_TYPES.financeOpenItemCreated,
+      eventVersion: 1,
+      occurredAt: new Date().toISOString(),
+      source: 'finance',
+      companyId: '11111111-1111-1111-1111-111111111111',
+      correlationId: null,
+      aggregateType: 'fin_open_item',
+      aggregateId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      payload: { customerId: '22222222-2222-2222-2222-222222222222' },
+    });
+
+    expect(signals.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: THUNDER_SIGNAL_TYPES.FinanceCreditPressure,
+        severity: 'CRITICAL',
+        evidence: expect.objectContaining({
+          level: 'breach',
+          ratio: 1.2,
+        }),
+      }),
+    );
   });
 });

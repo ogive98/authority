@@ -16,6 +16,10 @@ import type { AllocateOpenItemDto, CreateOpenItemDto } from './finance.dto';
 import { FinanceException } from './finance.exception';
 import { InvoiceService } from './invoice.service';
 import { PromiseService } from './promise.service';
+import {
+  evaluateCreditPressure,
+  CreditPressureResolver,
+} from './credit-pressure.resolver';
 
 export type OpenItemDto = {
   id: string;
@@ -76,6 +80,12 @@ export type CustomerFinancialOverviewDto = {
   openCount: number;
   overdueCount: number;
   availableCredit: string | null;
+  /** D185 — null level when no creditLimit. */
+  creditPressure: {
+    level: 'ok' | 'warn' | 'breach' | null;
+    ratio: number | null;
+    warnRatio: number;
+  };
   currency: 'TND';
 };
 
@@ -86,6 +96,7 @@ export class FinanceService {
     private readonly outbox: OutboxService,
     private readonly invoices: InvoiceService,
     private readonly promises: PromiseService,
+    private readonly creditPressure: CreditPressureResolver,
   ) {}
 
   async list(
@@ -563,6 +574,14 @@ export class FinanceService {
       ).toFixed(3);
     }
 
+    const warnRatio = await this.creditPressure.resolveWarnRatio(companyId);
+    const pressure = evaluateCreditPressure({
+      outstanding: Number(credit.outstandingBalance),
+      creditLimit:
+        credit.creditLimit != null ? Number(credit.creditLimit) : null,
+      warnRatio,
+    });
+
     return {
       customerId,
       credit,
@@ -570,6 +589,11 @@ export class FinanceService {
       openCount,
       overdueCount,
       availableCredit,
+      creditPressure: {
+        level: pressure.level,
+        ratio: pressure.ratio,
+        warnRatio: pressure.warnRatio,
+      },
       currency: 'TND',
     };
   }
