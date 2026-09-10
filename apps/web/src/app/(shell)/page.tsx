@@ -1,15 +1,15 @@
 "use client";
 
-import { ModuleAppsGrid } from "@/components/shell/module-apps-grid";
+import { MissionControl } from "@/components/shell/mission-control";
 
 /**
- * Home = Launchpad viewport (aligned with sidebar / Déconnexion).
- * Extra content = iOS-style page dots inside ModuleAppsGrid.
+ * Home = Mission Control (D161) — adaptive widgets + module features.
+ * Sidebar selects module; dock exposes registry actions.
  */
 export default function HomePage() {
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      <ModuleAppsGrid className="min-h-0 flex-1" />
+      <MissionControl className="min-h-0 flex-1" />
     </div>
   );
 }

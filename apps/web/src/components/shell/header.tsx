@@ -1,17 +1,22 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Bell, Menu, Search } from "lucide-react";
+import {
+  Bell,
+  Eye,
+  Ghost,
+  Menu,
+  Search,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import { useNotificationsStore } from "@/stores/notifications-store";
 import { unreadCount } from "@/lib/notifications";
 import { useShellStore } from "@/stores/shell-store";
+import { useLocaleStore, useShellT } from "@/stores/locale-store";
+import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
 import { CompanyBrandPlate } from "./company-brand-plate";
-import {
-  ModeSwitch,
-  PatchIcon,
-  SpectreIcon,
-  ThemeModeSwitch,
-} from "./mode-switch";
+import { ThemeModeSwitch } from "./mode-switch";
 import { UserMenu } from "./user-menu";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +38,7 @@ function IconBtn({
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded-full text-a-fg-muted transition-colors duration-150 hover:bg-a-surface-3 hover:text-a-fg",
+        "inline-flex h-9 w-9 items-center justify-center rounded-full text-a-fg-muted transition-colors duration-150 hover:bg-a-surface-3 hover:text-a-fg",
         className,
       )}
     >
@@ -42,26 +47,120 @@ function IconBtn({
   );
 }
 
-/** Horizontal topbar — logo left, search loupe, utilities. Independent of sidebar collapse. */
+/** Animated enter-only ops mode icon — disappears while mode is active. */
+function OpsModeIcon({
+  active,
+  label,
+  lockedHint,
+  icon: Icon,
+  toneClass,
+  onEnter,
+}: {
+  active: boolean;
+  label: string;
+  lockedHint: string;
+  icon: LucideIcon;
+  toneClass: string;
+  onEnter: () => void;
+}) {
+  if (active) return null;
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={onEnter}
+      className={cn(
+        "a-ops-mode-icon group relative inline-flex h-9 w-9 items-center justify-center rounded-full",
+        "text-a-fg-muted transition-all duration-300 hover:scale-110 hover:bg-a-surface-3",
+        toneClass,
+      )}
+    >
+      <Icon
+        className="h-4 w-4 transition-transform duration-500 group-hover:rotate-12"
+        strokeWidth={1.5}
+      />
+      <span className="sr-only">{lockedHint}</span>
+    </button>
+  );
+}
+
+function MetricRing({
+  label,
+  ratio,
+}: {
+  label: string;
+  ratio: number | null;
+}) {
+  const pct =
+    ratio == null || Number.isNaN(ratio)
+      ? null
+      : Math.max(0, Math.min(100, Math.round(ratio * 100)));
+  const r = 10;
+  const c = 2 * Math.PI * r;
+  const dash = pct == null ? 0 : (pct / 100) * c;
+  return (
+    <div
+      className="flex flex-col items-center gap-0.5"
+      title={pct == null ? `${label} —` : `${label} ${pct}%`}
+    >
+      <svg viewBox="0 0 28 28" className="h-7 w-7 -rotate-90" aria-hidden>
+        <circle
+          cx="14"
+          cy="14"
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          className="text-a-surface-4"
+        />
+        <circle
+          cx="14"
+          cy="14"
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${c - dash}`}
+          className="text-a-accent transition-[stroke-dasharray] duration-700"
+        />
+      </svg>
+      <span className="a-mono text-[8px] text-a-fg-subtle">{label}</span>
+    </div>
+  );
+}
+
+/**
+ * Full-width topbar (D162) — brand left · search · rings · modes · theme · lang · user.
+ * Sidebar collapses underneath; does not move this bar.
+ */
 export function ShellHeader() {
-  const [theme, setTheme] = useState<"dark" | "light">("light");
+  const { t, unread: unreadLabel } = useShellT();
+  const locale = useLocaleStore((s) => s.locale);
+  const toggleLocale = useLocaleStore((s) => s.toggleLocale);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
   const setPaletteOpen = useShellStore((s) => s.setPaletteOpen);
   const spectreEnabled = useShellStore((s) => s.spectreEnabled);
   const patchEnabled = useShellStore((s) => s.patchEnabled);
-  const setSpectreEnabled = useShellStore((s) => s.setSpectreEnabled);
-  const setPatchEnabled = useShellStore((s) => s.setPatchEnabled);
+  const ghostEnabled = useShellStore((s) => s.ghostEnabled);
+  const enterSpectre = useShellStore((s) => s.enterSpectre);
+  const enterPatch = useShellStore((s) => s.enterPatch);
+  const enterGhost = useShellStore((s) => s.enterGhost);
   const setInboxOpen = useNotificationsStore((s) => s.setInboxOpen);
   const items = useNotificationsStore((s) => s.items);
   const unread = unreadCount(items);
+  const monitor = useMonitorSnapshot();
+  const snap = monitor.data;
 
   useEffect(() => {
     const current =
       (document.documentElement.getAttribute("data-theme") as
         | "dark"
         | "light"
-        | null) ?? "light";
-    setTheme(current);
+        | null) ?? "dark";
+    setTheme(current === "light" ? "light" : "dark");
   }, []);
 
   useEffect(() => {
@@ -78,74 +177,143 @@ export function ShellHeader() {
     );
   }, [patchEnabled]);
 
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      "data-ghost",
+      ghostEnabled ? "on" : "off",
+    );
+  }, [ghostEnabled]);
+
   function applyTheme(next: "dark" | "light") {
     document.documentElement.setAttribute("data-theme", next);
     setTheme(next);
   }
 
+  const anyOps = spectreEnabled || patchEnabled || ghostEnabled;
+
   return (
-    <header className="a-glass sticky top-0 z-[var(--a-z-sticky)] flex h-14 shrink-0 items-center gap-3 px-3 md:px-4">
+    <header className="a-glass relative z-[var(--a-z-sticky)] flex h-[3.75rem] w-full shrink-0 items-center gap-3 px-3 md:px-5">
       <button
         type="button"
-        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-a-fg-muted hover:bg-a-surface-3 md:hidden"
-        aria-label="Ouvrir les modules"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-a-fg-muted hover:bg-a-surface-3 md:hidden"
+        aria-label={t("expandNav")}
         aria-controls="shell-sidebar-mobile"
         onClick={() => setMobileNavOpen(true)}
       >
         <Menu className="h-4 w-4" strokeWidth={1.5} />
       </button>
 
-      <CompanyBrandPlate className="min-w-0" />
+      <CompanyBrandPlate className="min-w-0 shrink-0" />
 
-      <div className="flex min-w-0 flex-1 justify-end sm:justify-center">
-        <IconBtn
-          label="Rechercher (⌘K)"
+      <div className="flex min-w-0 flex-1 justify-center px-1 md:px-4">
+        <button
+          type="button"
           onClick={() => setPaletteOpen(true)}
+          className={cn(
+            "a-underlay flex h-10 w-full max-w-2xl items-center gap-2.5 rounded-full px-4",
+            "text-left text-[length:var(--a-text-sm)] text-a-fg-muted transition-colors",
+            "hover:bg-a-surface-3 hover:text-a-fg",
+          )}
+          aria-label={t("searchAria")}
         >
-          <Search className="h-4 w-4" strokeWidth={1.5} />
-        </IconBtn>
+          <Search className="h-4 w-4 shrink-0 text-a-accent" strokeWidth={1.5} />
+          <span className="min-w-0 flex-1 truncate">{t("searchPlaceholder")}</span>
+          <kbd className="a-mono hidden shrink-0 rounded-md bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-subtle sm:inline">
+            ⌘K
+          </kbd>
+        </button>
       </div>
 
-      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+        {snap ? (
+          <div className="mr-1 hidden items-center gap-2.5 lg:flex">
+            <span className="text-[10px] font-medium text-a-success-fg">
+              {t("online")}
+            </span>
+            <MetricRing label="CPU" ratio={snap.cpu.usageRatio} />
+            <MetricRing label="RAM" ratio={snap.ram.usageRatio} />
+            <MetricRing
+              label="JOB"
+              ratio={
+                snap.jobs.pending + snap.jobs.running === 0
+                  ? 0
+                  : Math.min(
+                      1,
+                      (snap.jobs.running + snap.jobs.pending) / 20,
+                    )
+              }
+            />
+          </div>
+        ) : null}
+
         <IconBtn
-          label={
-            unread > 0
-              ? `Notifications — ${unread} non lu${unread > 1 ? "s" : ""}`
-              : "Notifications"
-          }
+          label={unread > 0 ? unreadLabel(unread) : t("notifications")}
           onClick={() => setInboxOpen(true)}
           className="relative"
         >
           <Bell className="h-4 w-4" strokeWidth={1.5} />
           {unread > 0 ? (
-            <span
-              className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-a-danger"
-              aria-hidden
-            />
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-a-danger px-1 text-[9px] font-semibold text-white">
+              {unread > 9 ? "9+" : unread}
+            </span>
           ) : null}
         </IconBtn>
 
-        <ModeSwitch
-          className="hidden sm:inline-flex"
-          label="SPECTRE MODE"
-          icon={SpectreIcon}
-          checked={spectreEnabled}
-          onCheckedChange={setSpectreEnabled}
+        <div className="mx-0.5 hidden h-6 w-px bg-a-surface-4 sm:block" aria-hidden />
+
+        <OpsModeIcon
+          active={spectreEnabled}
+          label={t("spectreEnter")}
+          lockedHint={t("modeLockedHint")}
+          icon={Eye}
+          toneClass="hover:text-a-spectre"
+          onEnter={enterSpectre}
         />
-        <ModeSwitch
-          className="hidden xl:inline-flex"
-          label="PATCH MODE"
-          icon={PatchIcon}
-          checked={patchEnabled}
-          onCheckedChange={setPatchEnabled}
+        <OpsModeIcon
+          active={patchEnabled}
+          label={t("patchEnter")}
+          lockedHint={t("modeLockedHint")}
+          icon={Wrench}
+          toneClass="hover:text-a-warning"
+          onEnter={enterPatch}
         />
-        {patchEnabled ? (
-          <span className="a-mono hidden rounded-full bg-a-warning-soft px-2 py-0.5 text-[10px] font-medium text-a-warning xl:inline">
-            PATCH
+        <OpsModeIcon
+          active={ghostEnabled}
+          label={t("ghostEnter")}
+          lockedHint={t("modeLockedHint")}
+          icon={Ghost}
+          toneClass="hover:text-a-accent-2"
+          onEnter={enterGhost}
+        />
+
+        {anyOps ? (
+          <span
+            className="a-mono hidden max-w-[7rem] truncate rounded-full bg-a-surface-3 px-2 py-0.5 text-[9px] text-a-fg-subtle xl:inline"
+            title={t("modeLockedHint")}
+          >
+            {[
+              spectreEnabled ? "SPECTRE" : null,
+              patchEnabled ? "PATCH" : null,
+              ghostEnabled ? "GHOST" : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </span>
         ) : null}
 
         <ThemeModeSwitch theme={theme} onThemeChange={applyTheme} />
+
+        <button
+          type="button"
+          onClick={toggleLocale}
+          title={t("langToggle")}
+          aria-label={t("langToggle")}
+          className="inline-flex h-9 items-center gap-1 rounded-full bg-a-surface-3 px-2.5 text-[11px] font-semibold tracking-wide text-a-fg transition-colors hover:bg-a-surface-4"
+        >
+          <span aria-hidden>{locale === "fr" ? "🇫🇷" : "🇮🇹"}</span>
+          <span className="a-mono uppercase">{locale}</span>
+        </button>
+
         <UserMenu />
       </div>
     </header>

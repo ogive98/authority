@@ -13,7 +13,6 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 import {
-  COMMAND_CATALOG,
   DEMO_ENABLED_MODULES,
   DEMO_PERMISSION_GRANTS,
   filterCommands,
@@ -21,6 +20,7 @@ import {
   groupCommands,
   type CommandItem,
 } from "@/lib/command-catalog";
+import { ACTION_REGISTRY } from "@/lib/action-registry";
 
 export type ACommandPaletteProps = {
   open: boolean;
@@ -30,7 +30,7 @@ export type ACommandPaletteProps = {
 };
 
 /**
- * Spotlight-style command palette — Contiental Apple materials.
+ * Spotlight-style command palette — Soft Glass / Enterprise OS (Action Registry).
  */
 export function ACommandPalette({
   open,
@@ -46,7 +46,7 @@ export function ACommandPalette({
 
   const filtered = useMemo(
     () =>
-      filterCommands(COMMAND_CATALOG, {
+      filterCommands(ACTION_REGISTRY, {
         query,
         grants,
         enabledModules,

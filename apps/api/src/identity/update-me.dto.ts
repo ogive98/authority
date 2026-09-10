@@ -19,16 +19,28 @@ export class UpdateMeDto {
   @MaxLength(16)
   locale?: string;
 
-  /** Required when setting a new password. */
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(64)
+  timezone?: string;
+
+  /** Required when setting a new password. Floor 6 = prefs min; company may be higher (D156). */
   @ValidateIf((o: UpdateMeDto) => Boolean(o.password?.trim()))
   @IsString()
-  @MinLength(8)
+  @MinLength(1)
   @MaxLength(128)
   currentPassword?: string;
 
   @IsOptional()
   @IsString()
-  @MinLength(8)
+  @MinLength(6)
   @MaxLength(128)
   password?: string;
+
+  /** HTTPS avatar URL, or empty string to clear external/local URL (D158). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  avatarUrl?: string;
 }

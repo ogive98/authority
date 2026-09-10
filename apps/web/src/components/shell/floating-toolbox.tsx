@@ -11,23 +11,21 @@ import {
 import {
   Calculator,
   CalendarDays,
-  CloudSun,
   Languages,
-  LayoutGrid,
-  MapPinned,
   NotebookPen,
   StickyNote,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-type ToolTone = "accent" | "violet" | "orange" | "sky" | "neutral";
+import { useShellStore } from "@/stores/shell-store";
+import { usePrefsStore } from "@/stores/prefs-store";
+import { useShellT } from "@/stores/locale-store";
 
 type ToolDef = {
   id: string;
   label: string;
   icon: LucideIcon;
-  tone: ToolTone;
   url?: string;
   sheet?: "calculator" | "notes";
 };
@@ -37,57 +35,40 @@ const TOOLS: ToolDef[] = [
     id: "calc",
     label: "Calculatrice",
     icon: Calculator,
-    tone: "orange",
     sheet: "calculator",
   },
   {
     id: "calendar",
     label: "Calendrier",
     icon: CalendarDays,
-    tone: "accent",
     url: "https://calendar.google.com/calendar/u/0/r",
   },
   {
     id: "agenda",
     label: "Agenda",
     icon: NotebookPen,
-    tone: "violet",
     url: "https://calendar.google.com/calendar/u/0/r/agenda",
   },
   {
     id: "translate",
-    label: "Traducteur Google",
+    label: "Traducteur",
     icon: Languages,
-    tone: "sky",
     url: "https://translate.google.com/?sl=auto&tl=fr",
-  },
-  {
-    id: "maps",
-    label: "Plans",
-    icon: MapPinned,
-    tone: "accent",
-    url: "https://maps.google.com/",
-  },
-  {
-    id: "weather",
-    label: "Météo",
-    icon: CloudSun,
-    tone: "orange",
-    url: "https://www.google.com/search?q=m%C3%A9t%C3%A9o",
   },
   {
     id: "notes",
     label: "Notes",
     icon: StickyNote,
-    tone: "neutral",
     sheet: "notes",
   },
 ];
 
-/** Half-circle from left (π) to up (π/2), opening toward the canvas. */
+const IDLE_MS = 3200;
+
+/** Quarter arc from left (π) toward up — icons clear of tip labels on the left. */
 function arcOffset(index: number, total: number, radiusPx: number) {
-  const start = Math.PI; // 180°
-  const end = Math.PI * 0.48; // ~86°
+  const start = Math.PI * 0.92;
+  const end = Math.PI * 0.42;
   const t = total <= 1 ? 0.5 : index / (total - 1);
   const angle = start + (end - start) * t;
   return {
@@ -97,15 +78,17 @@ function arcOffset(index: number, total: number, radiusPx: number) {
 }
 
 /**
- * Floating iOS utility toolbox — semicircle fan, outline icons, no chrome frames.
+ * Floating toolbox — frost fan, orange icons, idle → expandable bar.
  */
 export function FloatingToolbox() {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sheetRef = useRef<"calculator" | "notes" | null>(null);
   const [open, setOpen] = useState(false);
   const [sheet, setSheet] = useState<"calculator" | "notes" | null>(null);
+  const [idleBar, setIdleBar] = useState(false);
   sheetRef.current = sheet;
 
   const arc = useMemo(
@@ -120,25 +103,56 @@ export function FloatingToolbox() {
     }
   }
 
+  function clearIdleTimer() {
+    if (idleTimer.current != null) {
+      clearTimeout(idleTimer.current);
+      idleTimer.current = null;
+    }
+  }
+
+  function bumpActivity() {
+    clearIdleTimer();
+    setIdleBar(false);
+    if (open || sheetRef.current) return;
+    idleTimer.current = setTimeout(() => {
+      if (!sheetRef.current && !useShellStore.getState().paletteOpen) {
+        setIdleBar(true);
+      }
+    }, IDLE_MS);
+  }
+
   function openMenu() {
     clearLeaveTimer();
+    clearIdleTimer();
+    setIdleBar(false);
     setOpen(true);
   }
 
   function scheduleClose() {
     clearLeaveTimer();
     leaveTimer.current = setTimeout(() => {
-      if (!sheetRef.current) setOpen(false);
+      if (!sheetRef.current) {
+        setOpen(false);
+        bumpActivity();
+      }
     }, 420);
   }
 
-  useEffect(() => () => clearLeaveTimer(), []);
+  useEffect(() => {
+    bumpActivity();
+    return () => {
+      clearLeaveTimer();
+      clearIdleTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+  }, []);
 
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
       if (!rootRef.current?.contains(e.target as Node)) {
         clearLeaveTimer();
         setOpen(false);
+        bumpActivity();
       }
     }
     document.addEventListener("pointerdown", onPointerDown);
@@ -149,11 +163,13 @@ export function FloatingToolbox() {
     if (tool.url) {
       window.open(tool.url, "_blank", "noopener,noreferrer");
       setOpen(false);
+      bumpActivity();
       return;
     }
     if (tool.sheet) {
       setSheet(tool.sheet);
       setOpen(true);
+      setIdleBar(false);
     }
   }
 
@@ -164,8 +180,15 @@ export function FloatingToolbox() {
         "a-toolbox",
         open && "a-toolbox-open",
         sheet && "a-toolbox-sheet-open",
+        idleBar && !open && !sheet && "a-toolbox-idle",
       )}
-      onMouseEnter={openMenu}
+      onMouseEnter={() => {
+        if (idleBar) {
+          setIdleBar(false);
+          clearIdleTimer();
+        }
+        openMenu();
+      }}
       onMouseLeave={(e) => {
         const next = e.relatedTarget;
         if (next instanceof Node && rootRef.current?.contains(next)) return;
@@ -173,12 +196,23 @@ export function FloatingToolbox() {
       }}
     >
       <div className="a-toolbox-hit" aria-hidden />
+      <div className="a-toolbox-fan" aria-hidden />
 
       {sheet === "calculator" ? (
-        <MiniCalculator onClose={() => setSheet(null)} />
+        <MiniCalculator
+          onClose={() => {
+            setSheet(null);
+            bumpActivity();
+          }}
+        />
       ) : null}
       {sheet === "notes" ? (
-        <MiniNotes onClose={() => setSheet(null)} />
+        <MiniNotes
+          onClose={() => {
+            setSheet(null);
+            bumpActivity();
+          }}
+        />
       ) : null}
 
       <ul id={listId} className="a-toolbox-arc" aria-hidden={!open}>
@@ -202,12 +236,10 @@ export function FloatingToolbox() {
                 onMouseEnter={openMenu}
                 onClick={() => runTool(tool)}
               >
-                <span className="a-toolbox-tip">{tool.label}</span>
-                <span
-                  className={cn("a-toolbox-glyph", `a-toolbox-tone-${tool.tone}`)}
-                >
-                  <Icon className="h-6 w-6" strokeWidth={1.25} />
+                <span className="a-toolbox-glyph">
+                  <Icon className="h-7 w-7" strokeWidth={1.35} />
                 </span>
+                <span className="a-toolbox-tip">{tool.label}</span>
               </button>
             </li>
           );
@@ -217,22 +249,42 @@ export function FloatingToolbox() {
       <button
         type="button"
         className="a-toolbox-fab"
-        aria-label={open ? "Fermer la boîte à outils" : "Boîte à outils"}
+        aria-label={
+          idleBar
+            ? "Outils — étendre"
+            : open
+              ? "Fermer la boîte à outils"
+              : "Boîte à outils"
+        }
         aria-expanded={open}
         aria-controls={listId}
-        onMouseEnter={openMenu}
-        onFocus={openMenu}
+        onMouseEnter={() => {
+          setIdleBar(false);
+          clearIdleTimer();
+          openMenu();
+        }}
+        onFocus={() => {
+          setIdleBar(false);
+          clearIdleTimer();
+          openMenu();
+        }}
         onClick={(e) => {
           if (sheet) {
             setSheet(null);
+            bumpActivity();
             return;
           }
-          // Touch: toggle. Desktop hover already opens — don't close on the same click.
+          if (idleBar) {
+            setIdleBar(false);
+            setOpen(true);
+            return;
+          }
           const coarse =
             typeof window !== "undefined" &&
             window.matchMedia("(pointer: coarse)").matches;
           if (coarse) {
             setOpen((v) => !v);
+            if (open) bumpActivity();
             return;
           }
           e.preventDefault();
@@ -240,9 +292,12 @@ export function FloatingToolbox() {
         }}
       >
         <span className="a-toolbox-fab-glow" aria-hidden />
-        <LayoutGrid
-          className="a-toolbox-fab-icon h-5 w-5"
-          strokeWidth={1.25}
+        <span className="a-toolbox-fab-label">Outils</span>
+        <Zap
+          className="a-toolbox-fab-icon h-6 w-6"
+          strokeWidth={2.25}
+          fill="currentColor"
+          fillOpacity={0.28}
         />
       </button>
     </div>
@@ -254,12 +309,32 @@ function MiniCalculator({ onClose }: { onClose: () => void }) {
   const [acc, setAcc] = useState<number | null>(null);
   const [op, setOp] = useState<"+" | "-" | "*" | "/" | null>(null);
   const [fresh, setFresh] = useState(true);
+  const [unlockFlash, setUnlockFlash] = useState(false);
+  const { t } = useShellT();
+  const anyOps = useShellStore(
+    (s) => s.spectreEnabled || s.patchEnabled || s.ghostEnabled,
+  );
+
+  function tryOpsUnlock(value: string) {
+    const shell = useShellStore.getState();
+    if (!shell.anyOpsMode()) return;
+    const code = usePrefsStore.getState().opsUnlockCode;
+    const digits = value.replace(/\D/g, "");
+    if (!code || digits !== code) return;
+    shell.clearOpsModes();
+    setUnlockFlash(true);
+    setDisplay("0");
+    setAcc(null);
+    setOp(null);
+    setFresh(true);
+    window.setTimeout(() => setUnlockFlash(false), 1600);
+  }
 
   function inputDigit(d: string) {
     setDisplay((cur) => {
-      if (fresh || cur === "0") return d;
-      if (cur.length >= 14) return cur;
-      return cur + d;
+      const next = fresh || cur === "0" ? d : cur.length >= 14 ? cur : cur + d;
+      queueMicrotask(() => tryOpsUnlock(next));
+      return next;
     });
     setFresh(false);
   }
@@ -294,6 +369,7 @@ function MiniCalculator({ onClose }: { onClose: () => void }) {
   }
 
   function equals() {
+    tryOpsUnlock(display);
     if (acc == null || op == null) return;
     const n = Number.parseFloat(display);
     const r = compute(acc, n, op);
@@ -334,6 +410,15 @@ function MiniCalculator({ onClose }: { onClose: () => void }) {
           Fermer
         </button>
       </header>
+      {unlockFlash ? (
+        <p className="px-3 pb-1 text-center text-[11px] font-medium text-a-success-fg">
+          {t("unlockSuccess")}
+        </p>
+      ) : anyOps ? (
+        <p className="px-3 pb-1 text-center text-[10px] text-a-fg-subtle">
+          {t("modeLockedHint")}
+        </p>
+      ) : null}
       <p className="a-toolbox-calc-display a-mono" aria-live="polite">
         {display}
       </p>

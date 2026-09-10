@@ -142,6 +142,8 @@ model IamUser {
   locale      String        @default("fr-TN")
   timezone    String        @default("Africa/Tunis")
   mfaEnabled  Boolean       @default(false) @map("mfa_enabled")
+  /** Public path or absolute URL for profile photo (D157). */
+  avatarUrl   String?       @map("avatar_url")
   passwordHash String?      @map("password_hash")
   version     Int           @default(0)
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)

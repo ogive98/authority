@@ -1,50 +1,56 @@
 ---
-description: AUTHORITY visual identity — Contiental Apple (D095)
+description: AUTHORITY visual identity — Soft Glass Enterprise OS (D161)
 alwaysApply: true
 ---
 
-# Visual identity lock (Contiental Apple) — NON-NÉGOCIABLE
+# Visual identity lock (Soft Glass Enterprise OS) — D161
 
-This lock applies to **every** future screen, module, gate, widget, and PR.  
+This lock applies to **every** future screen, module, gate, widget, and PR.
 No parallel design system.
 
-**Supersedes** Utility Cube · Contiental Wick D094.
+**Supersedes** Contiental Apple D095 · Utility Cube · Wick.
 
 ## Before any UI work
 
 1. Read `apps/web/src/app/globals.css` (`--a-*` tokens only).
-2. Reuse `AppShell` + `ModuleAppsGrid` + `AScreenHeader` + `A*`.
-3. Match reference: `/` (Launchpad) · module pages · `/settings`.
+2. Reuse `AppShell` + `MissionControl` / `ModuleFeatureList` + `SmartActionDock` + `A*`.
+3. Match reference: `/` (Mission Control) · dock · `/settings`.
 4. If a screen diverges → **fix that screen**, never invent a second look.
+5. **Registry-driven** — never hardcode sidebar, dashboard widgets, or actions.
 
-## Locked identity (D095 — 2026-09-08)
+## Locked identity (D161 — 2026-09-10)
 
 | Token | Value |
 |-------|--------|
-| Fonts | **-apple-system / SF Pro** stack + JetBrains Mono (tabular) |
-| Accent | Apple Blue `#0071e3` |
-| Accents | Violet / Sky / Orange for **app icons only** |
-| Theme | Light `#f5f5f7` · dark `#1c1c1e` |
-| Materials | Vibrancy `saturate(180%) blur(20px)` · **zero frames** |
-| Radius | 8 / 10 / 20 (app icons) |
-| Ops | SPECTRE + PATCH |
+| Fonts | **Outfit** + JetBrains Mono (tabular) |
+| Accent | Teal `#2dd4bf` (dark) / `#0d9488` (light) · sky secondary |
+| Accent special | Violet **only** for priority / AI surfaces |
+| Theme | Dark navy `#0a1628` default · light cool `#e8eef7` |
+| Surface | `data-surface=patch\|ghost\|solid\|minimal` |
+| Density | comfortable · compact · spacious |
+| Materials | Glassmorphism blur · **zero frames / borders** |
+| Hierarchy | Soft underlays (`.a-underlay`) only |
+| Motion | Stagger rows · glow pulse · nav slide · shimmer |
 
 ## Chrome (mandatory)
 
-- Sidebar Finder: **icon + module name** + **small toggle on the RIGHT**
-- Features **never** listed in sidebar → **Launchpad grid** on `/` (`ModuleAppsGrid`: icon + label below)
-- Topbar: translucent search pill · no borders
-- Pages: no `border-a-*` boxes · soft surfaces only
+- **Full-width topbar** above everything — logo + Powered by AUTHORITY left; search pill center; monitor rings · notifs · SPECTRE/PATCH/GHOST animated enter-icons · theme toggle · FR/IT · user photo
+- Sidebar Finder + Smart Action Dock sit **under** the topbar (collapse does not move the bar)
+- Features **never** in sidebar → Mission Control + embedded feature list
+- Ops modes exit **only** via calculator unlock code (Admin-configurable)
+- Right rail: Smart Action Dock (color shortcuts · system · resources · surface)
+- Pages: no `border-a-*` boxes · soft underlays only · width = remaining main column
 - Status = pastel `ABadge` only
-- Gates `/dev/*` = `ADevPage` only
 - Montants TND / stock = solid tabular
+- AI panels: `DISABLED` / `UNAVAILABLE` — no crash if off
 
 ## Forbidden
 
 - Framed cards / tables / panels (`border` chrome)
-- Feature lists or badge tiles inside the sidebar
-- Space Grotesk / Inter / emerald as product look
-- Raw hex in `components/` (except icon gradient utilities already tokenized via tone helpers)
+- Feature lists inside the sidebar
+- Hardcoded sidebar / home actions / fake KPI widgets
+- Contiental Apple soft empty Launchpad icons
+- Purple-on-white cliché theme
 - Second design system
 
 ## New modules

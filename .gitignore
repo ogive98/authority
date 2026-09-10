@@ -11,3 +11,4 @@ apps/*/node_modules/
 apps/*/.next/
 apps/*/dist/
 *.tsbuildinfo
+apps/api/data/

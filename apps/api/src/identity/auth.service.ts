@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { IamSessionRealm, IamUser, IamUserStatus } from '@prisma/client';
 import {
@@ -14,6 +15,8 @@ import { PasswordService } from './password.service';
 import { SessionService } from './session.service';
 import { BUSINESS_ROLE_CATALOGUE } from './business-roles';
 import type { BusinessRoleCode } from './business-roles';
+import { InviteSettingsResolver } from './invite-settings.resolver';
+import { AvatarService } from './avatar.service';
 
 export interface LoginResult {
   user: {
@@ -37,6 +40,8 @@ export class AuthService {
     private readonly sessionService: SessionService,
     private readonly auditService: AuditService,
     private readonly outboxService: OutboxService,
+    private readonly inviteSettings: InviteSettingsResolver,
+    private readonly avatarService: AvatarService,
   ) {}
 
   async login(params: {
@@ -142,6 +147,8 @@ export class AuthService {
     locale: string;
     timezone: string;
     mfaEnabled: boolean;
+    avatarUrl?: string | null;
+    createdAt?: Date;
   }) {
     return {
       id: user.id,
@@ -151,8 +158,15 @@ export class AuthService {
       locale: user.locale,
       timezone: user.timezone,
       mfaEnabled: user.mfaEnabled,
+      avatarUrl: user.avatarUrl ?? null,
+      gravatarUrl: this.gravatarUrlForEmail(user.email),
+      createdAt: user.createdAt
+        ? user.createdAt.toISOString()
+        : null,
+      lastLoginAt: null as string | null,
       roleCode: null as string | null,
       roleLabel: null as string | null,
+      minPasswordLength: null as number | null,
     };
   }
 
@@ -166,12 +180,22 @@ export class AuthService {
       locale: string;
       timezone: string;
       mfaEnabled: boolean;
+      avatarUrl?: string | null;
+      createdAt?: Date;
     },
     companyId?: string | null,
   ) {
     const base = this.toMeResponse(user);
+
+    const lastOk = await this.prisma.iamLoginAttempt.findFirst({
+      where: { userId: user.id, success: true },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true, ip: true },
+    });
+    base.lastLoginAt = lastOk?.createdAt.toISOString() ?? null;
+
     if (!companyId) {
-      return base;
+      return { ...base, lastLoginIp: lastOk?.ip ?? null };
     }
 
     const assignment = await this.prisma.orgUserAssignment.findFirst({
@@ -190,17 +214,36 @@ export class AuthService {
         )?.label ?? roleCode)
       : null;
 
+    let minPasswordLength: number | null = null;
+    try {
+      const cfg = await this.inviteSettings.resolve(companyId);
+      minPasswordLength = cfg.minPasswordLength;
+    } catch {
+      minPasswordLength = 8;
+    }
+
     return {
       ...base,
+      lastLoginIp: lastOk?.ip ?? null,
       roleCode,
       roleLabel,
+      minPasswordLength,
     };
+  }
+
+  private gravatarUrlForEmail(email: string): string {
+    const hash = createHash('md5')
+      .update(email.trim().toLowerCase())
+      .digest('hex');
+    return `https://www.gravatar.com/avatar/${hash}?s=256&d=identicon`;
   }
 
   async updateProfile(params: {
     userId: string;
     displayName?: string;
     locale?: string;
+    timezone?: string;
+    avatarUrl?: string;
     currentPassword?: string;
     password?: string;
     companyId?: string;
@@ -210,16 +253,37 @@ export class AuthService {
     correlationId?: string;
   }): Promise<Awaited<ReturnType<AuthService['buildMeResponse']>>> {
     const wantsPassword = Boolean(params.password?.trim());
+    const wantsAvatar = params.avatarUrl !== undefined;
     if (
       !params.displayName &&
       !params.locale &&
-      !wantsPassword
+      !params.timezone &&
+      !wantsPassword &&
+      !wantsAvatar
     ) {
       throw new IdentityException(
         IDENTITY_ERROR_CODES.VALIDATION,
-        'Provide displayName, locale, and/or password.',
+        'Provide displayName, locale, timezone, avatarUrl, and/or password.',
         HttpStatus.BAD_REQUEST,
       );
+    }
+
+    let nextAvatarUrl: string | null | undefined;
+    if (wantsAvatar) {
+      const raw = (params.avatarUrl ?? '').trim();
+      if (!raw) {
+        await this.avatarService.clear(params.userId);
+        nextAvatarUrl = undefined; // already cleared in DB
+      } else if (/^https:\/\//i.test(raw)) {
+        await this.avatarService.clearFilesOnly(params.userId);
+        nextAvatarUrl = raw;
+      } else {
+        throw new IdentityException(
+          IDENTITY_ERROR_CODES.VALIDATION,
+          'URL photo : uniquement https://…',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
     }
 
     let passwordHash: string | undefined;
@@ -228,6 +292,18 @@ export class AuthService {
         throw new IdentityException(
           IDENTITY_ERROR_CODES.VALIDATION,
           'currentPassword is required to change password.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      let minLen = 8;
+      if (params.companyId) {
+        const cfg = await this.inviteSettings.resolve(params.companyId);
+        minLen = cfg.minPasswordLength;
+      }
+      if (params.password!.trim().length < minLen) {
+        throw new IdentityException(
+          IDENTITY_ERROR_CODES.VALIDATION,
+          `Le mot de passe doit faire au moins ${minLen} caractères.`,
           HttpStatus.BAD_REQUEST,
         );
       }
@@ -251,6 +327,10 @@ export class AuthService {
             ? { displayName: params.displayName }
             : {}),
           ...(params.locale !== undefined ? { locale: params.locale } : {}),
+          ...(params.timezone !== undefined
+            ? { timezone: params.timezone.trim() }
+            : {}),
+          ...(nextAvatarUrl !== undefined ? { avatarUrl: nextAvatarUrl } : {}),
           ...(passwordHash !== undefined ? { passwordHash } : {}),
           version: { increment: 1 },
         },

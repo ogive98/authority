@@ -4,19 +4,26 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
   Req,
   Res,
+  StreamableFile,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { IamUser } from '@prisma/client';
 import { IamSessionRealm } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
+import { AvatarService } from './avatar.service';
 import { CurrentSession, CurrentUser } from './identity.decorators';
-import { IDENTITY_COOKIE_NAME } from './identity.constants';
+import { IDENTITY_COOKIE_NAME, IDENTITY_ERROR_CODES } from './identity.constants';
+import { IdentityException } from './identity.exception';
 import { LoginDto } from './login.dto';
 import { ReauthDto } from './reauth.dto';
 import { SessionGuard } from './session.guard';
@@ -36,6 +43,7 @@ export class IdentityController {
   constructor(
     private readonly authService: AuthService,
     private readonly sessionService: SessionService,
+    private readonly avatarService: AvatarService,
   ) {}
 
   @Post('auth/login')
@@ -120,6 +128,84 @@ export class IdentityController {
     return this.authService.buildMeResponse(user, companyId);
   }
 
+  /** D157 — stream own profile photo (session cookie). */
+  @Get('me/avatar')
+  @UseGuards(SessionGuard, PermissionGuard)
+  @RequirePermission(PERMISSION_KEYS.identitySelfRead)
+  async getMyAvatar(
+    @CurrentUser() user: IamUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const file = await this.avatarService.read(user.id);
+    if (!file) {
+      throw new IdentityException(
+        IDENTITY_ERROR_CODES.NOT_FOUND,
+        'Aucune photo de profil.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    res.setHeader('Content-Type', file.mime);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    return new StreamableFile(file.buffer);
+  }
+
+  /** D157 — upload profile photo (JPEG/PNG/WebP, max 2 Mo). */
+  @Post('me/avatar')
+  @HttpCode(200)
+  @UseGuards(SessionGuard, PermissionGuard)
+  @RequirePermission(PERMISSION_KEYS.identitySelfRead)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }),
+  )
+  async uploadMyAvatar(
+    @CurrentUser() user: IamUser,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Req() req: Request,
+  ) {
+    if (!file?.buffer?.length) {
+      throw new IdentityException(
+        IDENTITY_ERROR_CODES.VALIDATION,
+        'Fichier image requis (champ « file »).',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const { avatarUrl } = await this.avatarService.save({
+      userId: user.id,
+      buffer: file.buffer,
+      mime: file.mimetype,
+    });
+    const cookies = (req.cookies ?? {}) as Record<string, string | undefined>;
+    const companyHeader = req.headers[TENANCY_HEADERS.companyId];
+    const companyId =
+      (typeof companyHeader === 'string' ? companyHeader : undefined) ??
+      cookies[TENANCY_COOKIES.companyId];
+    const me = await this.authService.buildMeResponse(
+      { ...user, avatarUrl },
+      companyId,
+    );
+    return me;
+  }
+
+  @Delete('me/avatar')
+  @HttpCode(200)
+  @UseGuards(SessionGuard, PermissionGuard)
+  @RequirePermission(PERMISSION_KEYS.identitySelfRead)
+  async clearMyAvatar(
+    @CurrentUser() user: IamUser,
+    @Req() req: Request,
+  ) {
+    await this.avatarService.clear(user.id);
+    const cookies = (req.cookies ?? {}) as Record<string, string | undefined>;
+    const companyHeader = req.headers[TENANCY_HEADERS.companyId];
+    const companyId =
+      (typeof companyHeader === 'string' ? companyHeader : undefined) ??
+      cookies[TENANCY_COOKIES.companyId];
+    return this.authService.buildMeResponse(
+      { ...user, avatarUrl: null },
+      companyId,
+    );
+  }
+
   @Patch('me')
   @UseGuards(SessionGuard, PermissionGuard)
   @RequirePermission(PERMISSION_KEYS.identitySelfRead)
@@ -139,6 +225,8 @@ export class IdentityController {
       userId: user.id,
       displayName: dto.displayName,
       locale: dto.locale,
+      timezone: dto.timezone,
+      avatarUrl: dto.avatarUrl,
       currentPassword: dto.currentPassword,
       password: dto.password,
       companyId:
@@ -151,6 +239,24 @@ export class IdentityController {
       userAgent: req.headers['user-agent'],
       correlationId: typeof correlation === 'string' ? correlation : undefined,
     });
+  }
+
+  @Get('me/sessions')
+  @UseGuards(SessionGuard, PermissionGuard)
+  @RequirePermission(PERMISSION_KEYS.identitySelfRead)
+  async listMySessions(@CurrentSession() session: SessionWithUser) {
+    const rows = await this.sessionService.listActiveSessions(session.userId);
+    return {
+      currentSessionId: session.id,
+      items: rows.map((r) => ({
+        id: r.id,
+        ip: r.ip,
+        userAgent: r.userAgent,
+        createdAt: r.createdAt.toISOString(),
+        expiresAt: r.expiresAt.toISOString(),
+        current: r.id === session.id,
+      })),
+    };
   }
 
   @Delete('sessions/:id')

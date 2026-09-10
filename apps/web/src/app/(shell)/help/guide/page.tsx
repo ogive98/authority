@@ -9,8 +9,8 @@ const CHAPTERS = [
   },
   {
     id: "modules",
-    title: "2. Modules & Launchpad",
-    body: "Activez un module par clic dans la sidebar. Les apps s’affichent centrées sur l’accueil, icônes outline colorées et animées.",
+    title: "2. Modules & liste d’accueil",
+    body: "Activez un module par clic dans la sidebar. Les fonctionnalités s’affichent en liste dense Contiental sur l’accueil (plus de grille d’icônes sous-module).",
   },
   {
     id: "stock",

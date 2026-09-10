@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   HelpCircle,
   LogOut,
   PanelLeft,
   PanelLeftClose,
+  Settings2,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -17,16 +19,19 @@ import {
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
+import { useShellT } from "@/stores/locale-store";
 import { iconForModule } from "./module-icons";
-import { personalityForModule } from "./icon-personality";
+import type { RegistryModule } from "@/lib/registry";
 
-const STROKE = 1.35;
+const STROKE = 1.5;
+/** Modules that belong under « Système », not the business rail. */
+const SYSTEM_MODULE_KEYS = new Set(["repair", "settings"]);
 
 /**
- * Finder sidebar — modules only. Collapse lives here (does not affect topbar).
- * Auto-collapse after idle (prefs: sidebarAutoCollapseSec).
+ * Finder sidebar — Modules + Système, icônes orange plus grandes.
  */
 export function ShellSidebar() {
+  const { t } = useShellT();
   const pathname = usePathname();
   const router = useRouter();
   const [railCollapsed, setRailCollapsed] = useState(false);
@@ -39,10 +44,19 @@ export function ShellSidebar() {
   const selectedModuleId = useShellStore((s) => s.selectedModuleId);
   const setSelectedModuleId = useShellStore((s) => s.setSelectedModuleId);
   const { data: registry } = useMeRegistry();
-  const modules = registry.modules;
+
+  const { businessModules, systemFromRegistry } = useMemo(() => {
+    const business: RegistryModule[] = [];
+    const system: RegistryModule[] = [];
+    for (const mod of registry.modules) {
+      if (SYSTEM_MODULE_KEYS.has(mod.key)) system.push(mod);
+      else business.push(mod);
+    }
+    return { businessModules: business, systemFromRegistry: system };
+  }, [registry.modules]);
 
   const widthClass = railCollapsed
-    ? "w-[5.25rem]"
+    ? "w-[4.75rem]"
     : "w-[var(--a-sidebar-width)]";
 
   const clearTimer = useCallback(() => {
@@ -62,7 +76,6 @@ export function ShellSidebar() {
 
   useEffect(() => () => clearTimer(), [clearTimer]);
 
-  // Idle collapse while expanded and not hovering (incl. first paint)
   useEffect(() => {
     if (railCollapsed || hoveringRef.current) return;
     scheduleCollapse();
@@ -86,7 +99,6 @@ export function ShellSidebar() {
     setRailCollapsed((c) => {
       const next = !c;
       if (!next && autoCollapseSec > 0 && !hoveringRef.current) {
-        // Expanded via button — still auto-collapse if mouse is outside
         timerRef.current = setTimeout(() => {
           if (!hoveringRef.current) setRailCollapsed(true);
         }, autoCollapseSec * 1000);
@@ -101,24 +113,149 @@ export function ShellSidebar() {
     if (pathname !== "/") router.push("/");
   }
 
+  function SectionLabel({
+    children,
+    expanded,
+  }: {
+    children: string;
+    expanded: boolean;
+  }) {
+    if (!expanded) return null;
+    return (
+      <p className="px-2 pb-0.5 pt-1.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-a-fg-subtle">
+        {children}
+      </p>
+    );
+  }
+
+  function ModuleRow({
+    mod,
+    expanded,
+  }: {
+    mod: RegistryModule;
+    expanded: boolean;
+  }) {
+    const Icon = iconForModule(mod.key);
+    const on = selectedModuleId === mod.key;
+    return (
+      <li>
+        <button
+          type="button"
+          title={mod.name}
+          className={cn(
+            "a-nav-row group flex w-full items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left",
+            on ? "is-active bg-a-orange-soft" : "hover:bg-a-surface-3",
+            !expanded && "justify-center px-0.5",
+          )}
+          aria-current={on ? "true" : undefined}
+          onClick={() => activateModule(mod.key)}
+        >
+          <Icon
+            className={cn(
+              "h-5 w-5 shrink-0 text-a-orange",
+              on && "text-a-orange",
+            )}
+            strokeWidth={STROKE}
+            aria-hidden
+          />
+          {expanded ? (
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate text-[12.5px] tracking-[-0.015em]",
+                on
+                  ? "font-semibold text-a-fg"
+                  : "font-medium text-a-fg-muted",
+              )}
+            >
+              {mod.name}
+            </span>
+          ) : null}
+        </button>
+      </li>
+    );
+  }
+
+  function SystemLink({
+    href,
+    label,
+    icon: Icon,
+    expanded,
+    onClick,
+  }: {
+    href?: string;
+    label: string;
+    icon: typeof HelpCircle;
+    expanded: boolean;
+    onClick?: () => void;
+  }) {
+    const className = cn(
+      "group flex w-full items-center gap-2.5 rounded-md px-1.5 py-1.5 text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
+      !expanded && "justify-center px-0.5",
+    );
+    const inner = (
+      <>
+        <Icon
+          className="h-5 w-5 shrink-0 text-a-orange"
+          strokeWidth={STROKE}
+          aria-hidden
+        />
+        {expanded ? (
+          <span className="truncate text-[12.5px] font-medium">{label}</span>
+        ) : null}
+      </>
+    );
+    if (href) {
+      return (
+        <li>
+          <Link
+            href={href}
+            title={label}
+            className={className}
+            onClick={() => {
+              setMobileNavOpen(false);
+              onClick?.();
+            }}
+          >
+            {inner}
+          </Link>
+        </li>
+      );
+    }
+    return (
+      <li>
+        <button
+          type="button"
+          title={label}
+          className={className}
+          onClick={onClick}
+        >
+          {inner}
+        </button>
+      </li>
+    );
+  }
+
   function NavBody({ mobile = false }: { mobile?: boolean }) {
     const expanded = mobile || !railCollapsed;
+    const repair =
+      systemFromRegistry.find((m) => m.key === "repair") ?? null;
+    const settingsMod =
+      systemFromRegistry.find((m) => m.key === "settings") ?? null;
+
     return (
       <div className="flex h-full min-h-0 flex-col">
         {!mobile ? (
           <div
             className={cn(
-              "flex h-10 shrink-0 items-center px-2",
+              "flex h-9 shrink-0 items-center px-1.5",
               expanded ? "justify-end" : "justify-center",
             )}
           >
             <button
               type="button"
-              title={railCollapsed ? "Étendre" : "Réduire"}
+              title={railCollapsed ? t("expandNav") : t("collapseNav")}
               aria-label={
-                railCollapsed
-                  ? "Étendre la navigation"
-                  : "Réduire la navigation"
+                railCollapsed ? t("expandNav") : t("collapseNav")
               }
               className="inline-flex h-7 w-7 items-center justify-center rounded-md text-a-fg-subtle hover:bg-a-surface-3 hover:text-a-fg"
               onClick={toggleRail}
@@ -131,118 +268,65 @@ export function ShellSidebar() {
             </button>
           </div>
         ) : (
-          <div className="h-3 shrink-0" />
+          <div className="h-2 shrink-0" />
         )}
 
         <nav
-          className="a-ios-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 pb-2 pt-0.5"
-          aria-label="Modules"
+          className="a-ios-scroll min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-1 pb-1.5"
+          aria-label={t("modules")}
         >
-          <ul className="space-y-0.5">
-            {modules.map((mod) => {
-              const Icon = iconForModule(mod.key);
-              const personality = personalityForModule(mod.key);
-              const on = selectedModuleId === mod.key;
+          <SectionLabel expanded={expanded}>{t("modules")}</SectionLabel>
+          <ul className="flex flex-col gap-px">
+            {businessModules.map((mod) => (
+              <ModuleRow key={mod.key} mod={mod} expanded={expanded} />
+            ))}
+          </ul>
 
-              return (
-                <li key={mod.key}>
-                  <button
-                    type="button"
-                    title={mod.name}
-                    className={cn(
-                      "a-nav-row group flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left transition-colors",
-                      `a-motion-${personality.motion}`,
-                      on ? "bg-a-accent/12" : "hover:bg-white/40",
-                      !expanded && "justify-center px-1",
-                    )}
-                    onClick={() => activateModule(mod.key)}
-                  >
-                    <span
-                      className={cn(
-                        "a-app-icon a-nav-icon relative inline-flex shrink-0 items-center justify-center",
-                        personality.colorClass,
-                      )}
-                    >
-                      {personality.motion === "smoke" ? (
-                        <span className="a-fx-smoke" aria-hidden>
-                          <i />
-                          <i />
-                          <i />
-                        </span>
-                      ) : null}
-                      <Icon
-                        className="a-app-glyph h-6 w-6"
-                        strokeWidth={STROKE}
-                        aria-hidden
-                      />
-                    </span>
-                    {expanded ? (
-                      <span
-                        className={cn(
-                          "min-w-0 flex-1 truncate text-[14px] tracking-[-0.015em]",
-                          on
-                            ? "font-semibold text-a-fg"
-                            : "font-medium text-a-fg-muted",
-                        )}
-                      >
-                        {mod.name}
-                      </span>
-                    ) : null}
-                  </button>
-                </li>
-              );
-            })}
+          <div className="my-1.5 mx-2 h-px bg-a-surface-4/80" aria-hidden />
+
+          <SectionLabel expanded={expanded}>{t("systemSection")}</SectionLabel>
+          <ul className="flex flex-col gap-px">
+            {repair ? (
+              <ModuleRow mod={repair} expanded={expanded} />
+            ) : (
+              <SystemLink
+                href="/repair"
+                label="Réparation"
+                icon={Wrench}
+                expanded={expanded}
+                onClick={() => activateModule("repair")}
+              />
+            )}
+            <SystemLink
+              href="/settings"
+              label={settingsMod?.name ?? t("preferences")}
+              icon={Settings2}
+              expanded={expanded}
+              onClick={() => {
+                if (settingsMod) activateModule("settings");
+              }}
+            />
+            <SystemLink
+              href="/help"
+              label={t("help")}
+              icon={HelpCircle}
+              expanded={expanded}
+            />
+            <SystemLink
+              label={t("logout")}
+              icon={LogOut}
+              expanded={expanded}
+              onClick={() => {
+                setMobileNavOpen(false);
+                void (async () => {
+                  await logoutBusiness();
+                  router.replace(BUSINESS_LOGIN_PATH);
+                  router.refresh();
+                })();
+              }}
+            />
           </ul>
         </nav>
-
-        <div
-          className={cn(
-            "shrink-0 space-y-0.5 pb-2",
-            expanded ? "px-2" : "px-1.5",
-          )}
-        >
-          <Link
-            href="/help"
-            className={cn(
-              "group flex items-center gap-2.5 rounded-[10px] px-2 py-2 text-a-fg-muted hover:bg-white/40 hover:text-a-fg",
-              !expanded && "justify-center",
-            )}
-            title="Centre d’aide"
-            onClick={() => setMobileNavOpen(false)}
-          >
-            <HelpCircle
-              className="a-app-glyph h-5 w-5 text-a-fg-subtle"
-              strokeWidth={STROKE}
-            />
-            {expanded ? (
-              <span className="text-[13px] font-medium">Aide</span>
-            ) : null}
-          </Link>
-          <button
-            type="button"
-            title="Déconnexion"
-            className={cn(
-              "group flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-a-fg-muted hover:bg-white/40 hover:text-a-fg",
-              !expanded && "justify-center",
-            )}
-            onClick={() => {
-              setMobileNavOpen(false);
-              void (async () => {
-                await logoutBusiness();
-                router.replace(BUSINESS_LOGIN_PATH);
-                router.refresh();
-              })();
-            }}
-          >
-            <LogOut
-              className="a-app-glyph h-5 w-5 text-a-orange"
-              strokeWidth={STROKE}
-            />
-            {expanded ? (
-              <span className="text-[13px] font-medium">Déconnexion</span>
-            ) : null}
-          </button>
-        </div>
       </div>
     );
   }
@@ -261,7 +345,7 @@ export function ShellSidebar() {
       <aside
         id="shell-sidebar"
         className={cn(
-          "a-glass hidden h-full min-h-0 shrink-0 flex-col md:flex",
+          "a-glass-strong hidden h-full min-h-0 shrink-0 flex-col md:flex",
           "transition-[width] duration-200 ease-out motion-reduce:transition-none",
           widthClass,
         )}
@@ -275,7 +359,7 @@ export function ShellSidebar() {
         id="shell-sidebar-mobile"
         aria-hidden={!mobileOpen}
         className={cn(
-          "a-glass-strong fixed inset-y-0 left-0 z-[var(--a-z-dropdown)] flex w-[var(--a-sidebar-width)] flex-col md:hidden",
+          "a-glass-strong fixed top-[3.75rem] bottom-0 left-0 z-[var(--a-z-dropdown)] flex w-[var(--a-sidebar-width)] flex-col md:hidden",
           "transition-transform duration-200 ease-out",
           mobileOpen
             ? "translate-x-0"

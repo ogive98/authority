@@ -1,3 +1,3 @@
 export { AppShell } from "./app-shell";
-export { ModuleAppsGrid } from "./module-apps-grid";
+export { ModuleFeatureList, ModuleAppsGrid } from "./module-feature-list";
 export { ThemeToggle } from "./theme-toggle";

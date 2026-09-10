@@ -1,50 +1,128 @@
 /**
- * Dashboard widget catalog. Boom widget is a UI-10 isolation gate only.
+ * Widget Registry (D161) — home Mission Control + /dev/dashboard shells.
+ * No invented business KPIs; empty/loading or live monitor/registry only.
  */
+
 export type WidgetLoadStrategy = "immediate" | "viewport";
+
+export type WidgetContext = "home" | "dev" | `module:${string}`;
+
+export type WidgetSize = "sm" | "md" | "lg" | "hero";
 
 export type WidgetDef = {
   id: string;
   title: string;
   description: string;
   loadStrategy: WidgetLoadStrategy;
+  contexts: WidgetContext[];
+  size: WidgetSize;
   /** Gate: this widget throws — host must isolate. */
   boom?: boolean;
 };
 
+/** Legacy /dev dashboard widgets. */
 export const SHELL_WIDGETS: WidgetDef[] = [
   {
     id: "monitor",
     title: "Resource monitor",
     description: "CPU, RAM, files, shed P4 — snapshot Thunder",
     loadStrategy: "immediate",
+    contexts: ["dev", "home"],
+    size: "md",
   },
   {
     id: "modules",
     title: "Modules",
     description: "Modules ENABLED (registry)",
     loadStrategy: "immediate",
+    contexts: ["dev", "home"],
+    size: "md",
   },
   {
     id: "jobs",
     title: "Jobs",
     description: "Pending / running / DLQ",
     loadStrategy: "viewport",
+    contexts: ["dev"],
+    size: "sm",
   },
   {
     id: "audit",
     title: "Activité récente",
     description: "Derniers événements (stub jusqu’au module audit)",
     loadStrategy: "viewport",
+    contexts: ["dev", "home"],
+    size: "md",
   },
   {
     id: "boom",
     title: "Widget cassé (gate)",
     description: "Doit échouer sans crasher le dashboard",
     loadStrategy: "viewport",
+    contexts: ["dev"],
+    size: "sm",
     boom: true,
   },
 ];
+
+/** Home Mission Control widgets (safe — no fake CA/€). */
+export const HOME_WIDGETS: WidgetDef[] = [
+  {
+    id: "hero-context",
+    title: "Contexte",
+    description: "Salutation + rôle depuis /me",
+    loadStrategy: "immediate",
+    contexts: ["home"],
+    size: "hero",
+  },
+  {
+    id: "shell-status",
+    title: "État plateforme",
+    description: "Snapshot monitor Thunder",
+    loadStrategy: "immediate",
+    contexts: ["home"],
+    size: "md",
+  },
+  {
+    id: "module-shortcuts",
+    title: "Raccourcis module",
+    description: "Features du module sélectionné (registry)",
+    loadStrategy: "immediate",
+    contexts: ["home"],
+    size: "lg",
+  },
+  {
+    id: "tasks",
+    title: "Tâches",
+    description: "File vide utile — pas de fake backlog",
+    loadStrategy: "immediate",
+    contexts: ["home"],
+    size: "sm",
+  },
+  {
+    id: "activity",
+    title: "Activité",
+    description: "Notifications locales / SSE",
+    loadStrategy: "immediate",
+    contexts: ["home"],
+    size: "md",
+  },
+  {
+    id: "ai-panel",
+    title: "Assistant IA",
+    description: "Surface DISABLED tant que l’IA n’est pas activée",
+    loadStrategy: "immediate",
+    contexts: ["home"],
+    size: "sm",
+  },
+];
+
+export function widgetsForContext(
+  catalog: WidgetDef[],
+  context: WidgetContext,
+): WidgetDef[] {
+  return catalog.filter((w) => w.contexts.includes(context));
+}
 
 export function sortWidgets(
   catalog: WidgetDef[],
@@ -63,3 +141,4 @@ export function sortWidgets(
 }
 
 export const LAYOUT_STORAGE_KEY = "authority-dashboard-layout";
+export const HOME_LAYOUT_STORAGE_KEY = "authority-home-layout";

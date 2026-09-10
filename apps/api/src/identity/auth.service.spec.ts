@@ -59,6 +59,10 @@ describe('AuthService', () => {
       sessionService as unknown as SessionService,
       { append: jest.fn() } as never,
       { enqueue: jest.fn() } as never,
+      {
+        resolve: jest.fn().mockResolvedValue({ minPasswordLength: 8 }),
+      } as never,
+      { clear: jest.fn(), clearFilesOnly: jest.fn() } as never,
     );
   });
 

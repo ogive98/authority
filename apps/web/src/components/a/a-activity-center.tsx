@@ -8,6 +8,7 @@ import {
   type NotificationItem,
   type NotificationType,
 } from "@/lib/notifications";
+import { FeedGlyph, iconForNotificationType } from "@/components/shell/feed-icons";
 import { ADrawer } from "./a-drawer";
 import { AEmptyState } from "./a-empty-state";
 import { AButton } from "./a-button";
@@ -163,48 +164,52 @@ function NotificationRow({
   onMarkRead: () => void;
 }) {
   const critical = isP0(item);
+  const feed = iconForNotificationType(item.type);
   return (
     <article
       className={cn(
-        "a-card rounded-[var(--a-radius-md)] px-3 py-2.5",
+        "a-underlay rounded-[var(--a-radius-md)] px-3 py-2.5",
         item.read ? "opacity-70" : "",
         critical && !item.read && "bg-a-danger-soft",
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <button
-          type="button"
-          className="min-w-0 flex-1 text-left"
-          onClick={onActivate}
-        >
-          <p className="a-mono text-[length:var(--a-text-xs)] uppercase tracking-wider text-a-fg-subtle">
-            {typeLabel[item.type]}
-            {critical ? " · P0" : ""}
-          </p>
-          <p
-            className={cn(
-              "mt-0.5 text-[length:var(--a-text-sm)]",
-              item.read ? "text-a-fg-muted" : "font-medium text-a-fg",
-            )}
-          >
-            {item.title}
-          </p>
-          <p className="mt-0.5 text-[length:var(--a-text-xs)] text-a-fg-muted">
-            {item.body}
-          </p>
-          <p className="mt-1 a-mono text-[length:var(--a-text-xs)] text-a-fg-subtle">
-            {formatWhen(item.createdAt)}
-          </p>
-        </button>
-        {!item.read ? (
+      <div className="flex items-start gap-2.5">
+        <FeedGlyph def={feed} size={15} />
+        <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
           <button
             type="button"
-            className="shrink-0 text-[length:var(--a-text-xs)] text-a-accent hover:underline"
-            onClick={onMarkRead}
+            className="min-w-0 flex-1 text-left"
+            onClick={onActivate}
           >
-            Lu
+            <p className="a-mono text-[length:var(--a-text-xs)] uppercase tracking-wider text-a-fg-subtle">
+              {typeLabel[item.type]}
+              {critical ? " · P0" : ""}
+            </p>
+            <p
+              className={cn(
+                "mt-0.5 text-[length:var(--a-text-sm)]",
+                item.read ? "text-a-fg-muted" : "font-medium text-a-fg",
+              )}
+            >
+              {item.title}
+            </p>
+            <p className="mt-0.5 text-[length:var(--a-text-xs)] text-a-fg-muted">
+              {item.body}
+            </p>
+            <p className="mt-1 a-mono text-[length:var(--a-text-xs)] text-a-fg-subtle">
+              {formatWhen(item.createdAt)}
+            </p>
           </button>
-        ) : null}
+          {!item.read ? (
+            <button
+              type="button"
+              className="shrink-0 text-[length:var(--a-text-xs)] text-a-accent hover:underline"
+              onClick={onMarkRead}
+            >
+              Lu
+            </button>
+          ) : null}
+        </div>
       </div>
     </article>
   );

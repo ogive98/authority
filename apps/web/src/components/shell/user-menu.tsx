@@ -9,6 +9,7 @@ import {
   fetchBusinessMeClient,
   initialsFromName,
   logoutBusiness,
+  resolveAvatarSrc,
 } from "@/lib/business-auth";
 import { cn } from "@/lib/utils";
 
@@ -76,7 +77,7 @@ export function UserMenu({ user: userProp }: UserMenuProps) {
       role: res.data.roleLabel ?? res.data.roleCode ?? "Compte",
       email: res.data.email,
       initials: initialsFromName(res.data.displayName, res.data.email),
-      avatarUrl: null,
+      avatarUrl: resolveAvatarSrc(res.data),
     });
   }, [userProp]);
 
@@ -183,7 +184,7 @@ export function UserMenu({ user: userProp }: UserMenuProps) {
                 onClick={() => setOpen(false)}
               >
                 <User className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-                Compte
+                Control Center
               </Link>
             </li>
             <li role="none">
@@ -198,7 +199,7 @@ export function UserMenu({ user: userProp }: UserMenuProps) {
                   strokeWidth={1.75}
                   aria-hidden
                 />
-                Préférences
+                Préférences · thème / surface
               </Link>
             </li>
             <li role="none">

@@ -102,6 +102,34 @@ export class SessionService {
     });
   }
 
+  async listActiveSessions(userId: string): Promise<
+    Array<{
+      id: string;
+      ip: string | null;
+      userAgent: string | null;
+      createdAt: Date;
+      expiresAt: Date;
+    }>
+  > {
+    const rows = await this.prisma.iamSession.findMany({
+      where: {
+        userId,
+        realm: IamSessionRealm.BUSINESS,
+        status: IamLifecycleStatus.ACTIVE,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        ip: true,
+        userAgent: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+    });
+    return rows;
+  }
+
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }

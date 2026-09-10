@@ -1,22 +1,37 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { ACommandPalette } from "@/components/a/a-command-palette";
 import {
-  COMMAND_CATALOG,
-  DEMO_ENABLED_MODULES,
   DEMO_PERMISSION_GRANTS,
-  filterCommands,
   matchShortcut,
 } from "@/lib/command-catalog";
+import { resolveActions } from "@/lib/action-registry";
+import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useShellStore } from "@/stores/shell-store";
 
-/** Global Ctrl/Cmd+K + command shortcuts + palette host. */
+/** Global Ctrl/Cmd+K + command shortcuts + palette host (Action Registry). */
 export function CommandPaletteHost() {
   const open = useShellStore((s) => s.paletteOpen);
   const setPaletteOpen = useShellStore((s) => s.setPaletteOpen);
   const router = useRouter();
+  const { data: registry } = useMeRegistry();
+
+  const allowed = useMemo(
+    () =>
+      resolveActions({
+        registry,
+        grants: DEMO_PERMISSION_GRANTS,
+        context: "palette",
+      }),
+    [registry],
+  );
+
+  const enabledModules = useMemo(
+    () => new Set(registry.modules.map((m) => m.key)),
+    [registry],
+  );
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -27,7 +42,6 @@ export function CommandPaletteHost() {
         return;
       }
 
-      // Don't steal typing in inputs (except when palette open — handled inside)
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
       if (
@@ -37,12 +51,6 @@ export function CommandPaletteHost() {
       ) {
         return;
       }
-
-      const allowed = filterCommands(COMMAND_CATALOG, {
-        query: "",
-        grants: DEMO_PERMISSION_GRANTS,
-        enabledModules: DEMO_ENABLED_MODULES,
-      });
 
       for (const item of allowed) {
         if (!item.shortcut || !matchShortcut(e, item.shortcut)) continue;
@@ -66,7 +74,14 @@ export function CommandPaletteHost() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setPaletteOpen, router]);
+  }, [setPaletteOpen, router, allowed]);
 
-  return <ACommandPalette open={open} onOpenChange={setPaletteOpen} />;
+  return (
+    <ACommandPalette
+      open={open}
+      onOpenChange={setPaletteOpen}
+      grants={DEMO_PERMISSION_GRANTS}
+      enabledModules={enabledModules}
+    />
+  );
 }

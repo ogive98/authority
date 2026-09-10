@@ -20,10 +20,28 @@ export type BusinessMe = {
   locale: string;
   timezone: string;
   mfaEnabled: boolean;
+  avatarUrl?: string | null;
+  gravatarUrl?: string | null;
+  createdAt?: string | null;
+  lastLoginAt?: string | null;
+  lastLoginIp?: string | null;
   /** Company-scoped assignment (active tenancy). */
   roleCode?: string | null;
   roleLabel?: string | null;
+  /** From company Préférences Envois (D156). */
+  minPasswordLength?: number | null;
 };
+
+/** Prefer local/custom URL, then Gravatar, else null (initials). */
+export function resolveAvatarSrc(me: {
+  avatarUrl?: string | null;
+  gravatarUrl?: string | null;
+}): string | null {
+  const a = me.avatarUrl?.trim();
+  if (a) return a;
+  const g = me.gravatarUrl?.trim();
+  return g || null;
+}
 
 export type BusinessCompany = {
   id: string;
@@ -170,6 +188,8 @@ export async function fetchBusinessMeClient(): Promise<
 export async function updateBusinessMe(input: {
   displayName?: string;
   locale?: string;
+  timezone?: string;
+  avatarUrl?: string;
   currentPassword?: string;
   password?: string;
 }): Promise<
@@ -198,6 +218,148 @@ export async function updateBusinessMe(input: {
     return { ok: true, data: body };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+/** D157 — multipart profile photo (field « file »). */
+export async function uploadBusinessAvatar(
+  file: File,
+): Promise<
+  | { ok: true; data: BusinessMe }
+  | { ok: false; status: number; message: string }
+> {
+  try {
+    const body = new FormData();
+    body.append("file", file);
+    const res = await fetch(`${BUSINESS_API.me}/avatar`, {
+      method: "POST",
+      credentials: "include",
+      body,
+    });
+    const json = (await res.json().catch(() => ({}))) as BusinessMe & {
+      message?: string | string[];
+    };
+    if (!res.ok) {
+      let message = `HTTP ${res.status}`;
+      if (Array.isArray(json.message)) message = json.message.join(", ");
+      else if (typeof json.message === "string") message = json.message;
+      return { ok: false, status: res.status, message };
+    }
+    return { ok: true, data: json };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function clearBusinessAvatar(): Promise<
+  | { ok: true; data: BusinessMe }
+  | { ok: false; status: number; message: string }
+> {
+  try {
+    const res = await fetch(`${BUSINESS_API.me}/avatar`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    const json = (await res.json().catch(() => ({}))) as BusinessMe & {
+      message?: string | string[];
+    };
+    if (!res.ok) {
+      let message = `HTTP ${res.status}`;
+      if (Array.isArray(json.message)) message = json.message.join(", ");
+      else if (typeof json.message === "string") message = json.message;
+      return { ok: false, status: res.status, message };
+    }
+    return { ok: true, data: json };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export type BusinessSession = {
+  id: string;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  expiresAt: string;
+  current: boolean;
+};
+
+export async function fetchMySessions(): Promise<
+  | { ok: true; data: { currentSessionId: string; items: BusinessSession[] } }
+  | { ok: false; status: number; message: string }
+> {
+  try {
+    const res = await fetch(`${BUSINESS_API.me}/sessions`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      return {
+        ok: false,
+        status: res.status,
+        message: `HTTP ${res.status}`,
+      };
+    }
+    return {
+      ok: true,
+      data: (await res.json()) as {
+        currentSessionId: string;
+        items: BusinessSession[];
+      },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function revokeMySession(
+  sessionId: string,
+): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
+  try {
+    const res = await fetch(`/api/v1/identity/sessions/${sessionId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!res.ok && res.status !== 204) {
+      const body = (await res.json().catch(() => ({}))) as {
+        message?: string;
+      };
+      return {
+        ok: false,
+        status: res.status,
+        message: body.message ?? `HTTP ${res.status}`,
+      };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchBusinessContext(): Promise<
+  | { ok: true; data: { companyId: string | null; siteId: string | null } }
+  | { ok: false; message: string }
+> {
+  try {
+    const res = await fetch(BUSINESS_API.context, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      return { ok: false, message: `HTTP ${res.status}` };
+    }
+    return {
+      ok: true,
+      data: (await res.json()) as {
+        companyId: string | null;
+        siteId: string | null;
+      },
+    };
+  } catch {
+    return { ok: false, message: "Réseau indisponible." };
   }
 }
 

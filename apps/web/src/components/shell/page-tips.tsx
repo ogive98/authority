@@ -15,13 +15,13 @@ function helpHref(tip: UsageTip): string {
 }
 
 /**
- * Long-form tip teasers — Launchpad only (`/`), never on feature pages.
+ * Long-form tip teasers — home `/` only, never on feature pages.
  */
 export function PageTips({ className }: { className?: string }) {
   const pathname = usePathname();
   const moduleKey = useShellStore((s) => s.selectedModuleId);
 
-  // Only on the submodule icons Launchpad — not finance/invoices, delivery, etc.
+  // Only on home module list — not finance/invoices, delivery, etc.
   if (pathname !== "/") return null;
 
   const tips = tipsForPage(pathname, moduleKey, 6);

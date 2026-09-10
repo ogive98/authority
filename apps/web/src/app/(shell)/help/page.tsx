@@ -38,7 +38,7 @@ export default function HelpPage() {
             <li>
               <kbd className="a-mono text-a-fg">⌘K</kbd> — palette de commandes
             </li>
-            <li>Clic module sidebar — apps Launchpad sur l’accueil</li>
+            <li>Clic module sidebar — liste dense sur l’accueil</li>
             <li>
               Toolbar — SPECTRE / PATCH / thème
             </li>
@@ -48,8 +48,8 @@ export default function HelpPage() {
         <section id="modules" className="text-center">
           <h2 className="text-[15px] font-semibold text-a-fg">Modules</h2>
           <p className="mx-auto mt-2 max-w-lg text-[13px] text-a-fg-muted">
-            Sidebar Finder : icône outline animée + nom. Un clic ouvre les apps
-            en grille centrée sur{" "}
+            Sidebar Finder : icône outline animée + nom. Un clic ouvre les
+            fonctionnalités en liste Contiental sur{" "}
             <Link href="/" className="text-a-accent hover:underline">
               /
             </Link>

@@ -17,6 +17,7 @@ export const IDENTITY_ERROR_CODES = {
   USER_NOT_FOUND: 'IAM.USER_NOT_FOUND',
   FORBIDDEN: 'IAM.FORBIDDEN',
   VALIDATION: 'IAM.VALIDATION',
+  NOT_FOUND: 'IAM.NOT_FOUND',
 } as const;
 
 export type IdentityErrorCode =

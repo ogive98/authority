@@ -4,6 +4,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { AuditModule } from '../audit/audit.module';
 import { MailModule } from '../mail/mail.module';
 import { AuthService } from './auth.service';
+import { AvatarService } from './avatar.service';
 import { IdentityController } from './identity.controller';
 import { InvitesController } from './invites.controller';
 import { InviteService } from './invite.service';
@@ -17,6 +18,7 @@ import { SessionService } from './session.service';
   controllers: [IdentityController, InvitesController, PermissionsController],
   providers: [
     AuthService,
+    AvatarService,
     PasswordService,
     SessionService,
     SessionGuard,

@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono, Outfit } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
-/** Tabular only — UI body uses Apple system stack in CSS. */
+/** Aggressive modern UI sans — readable at ERP density (D160). */
+const outfit = Outfit({
+  variable: "--font-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+/** Tabular amounts / codes. */
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
@@ -24,8 +32,9 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      data-theme="light"
-      className={jetbrainsMono.variable}
+      data-theme="dark"
+      data-surface="ghost"
+      className={`${outfit.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">

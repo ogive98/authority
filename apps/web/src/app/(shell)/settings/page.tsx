@@ -151,6 +151,11 @@ export default function SettingsPage() {
 
   const density = usePrefsStore((s) => s.density);
   const setDensity = usePrefsStore((s) => s.setDensity);
+  const surfaceMode = usePrefsStore((s) => s.surfaceMode);
+  const setSurfaceMode = usePrefsStore((s) => s.setSurfaceMode);
+  const opsUnlockCode = usePrefsStore((s) => s.opsUnlockCode);
+  const setOpsUnlockCode = usePrefsStore((s) => s.setOpsUnlockCode);
+  const [unlockDraft, setUnlockDraft] = useState(opsUnlockCode);
   const showSseBanner = usePrefsStore((s) => s.showSseBanner);
   const setShowSseBanner = usePrefsStore((s) => s.setShowSseBanner);
   const jobAlerts = usePrefsStore((s) => s.jobAlerts);
@@ -163,7 +168,13 @@ export default function SettingsPage() {
   );
 
   useEffect(() => {
-    usePrefsStore.getState().applyDensityToDom(usePrefsStore.getState().density);
+    setUnlockDraft(opsUnlockCode);
+  }, [opsUnlockCode]);
+
+  useEffect(() => {
+    const prefs = usePrefsStore.getState();
+    prefs.applyDensityToDom(prefs.density);
+    prefs.applySurfaceToDom(prefs.surfaceMode);
   }, []);
 
   useEffect(() => {
@@ -1104,8 +1115,84 @@ export default function SettingsPage() {
                 >
                   Compact
                 </AButton>
+                <AButton
+                  type="button"
+                  size="sm"
+                  variant={density === "spacious" ? "primary" : "secondary"}
+                  onClick={() => applyDensity("spacious")}
+                >
+                  Spacieux
+                </AButton>
               </div>
             </div>
+            <div>
+              <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                Surface Soft Glass
+              </p>
+              <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                Ghost / Patch / Solid / Minimal — opacité glass et glow (D161).
+                Aussi dans le Smart Action Dock.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["ghost", "Ghost"],
+                    ["patch", "Patch"],
+                    ["solid", "Solid"],
+                    ["minimal", "Minimal"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <AButton
+                    key={id}
+                    type="button"
+                    size="sm"
+                    variant={surfaceMode === id ? "primary" : "secondary"}
+                    onClick={() => setSurfaceMode(id)}
+                  >
+                    {label}
+                  </AButton>
+                ))}
+              </div>
+            </div>
+            {canCompanyWrite ? (
+              <div>
+                <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                  Code sortie modes ops (calculatrice)
+                </p>
+                <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  SPECTRE / PATCH / GHOST : l’icône disparaît à l’entrée. Sortie
+                  uniquement en tapant ce code (4–12 chiffres) sur la
+                  calculatrice du toolbox. Admin / Super Admin.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={unlockDraft}
+                    onChange={(e) =>
+                      setUnlockDraft(e.target.value.replace(/\D/g, "").slice(0, 12))
+                    }
+                    className="a-mono h-9 w-36 rounded-xl bg-a-surface-3 px-3 text-[length:var(--a-text-sm)] text-a-fg outline-none focus:ring-2 focus:ring-a-accent"
+                    aria-label="Code déverrouillage modes"
+                  />
+                  <AButton
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    onClick={() => {
+                      setOpsUnlockCode(unlockDraft);
+                      setUnlockDraft(usePrefsStore.getState().opsUnlockCode);
+                    }}
+                  >
+                    Enregistrer
+                  </AButton>
+                  <span className="a-mono text-[10px] text-a-fg-subtle">
+                    défaut 3141
+                  </span>
+                </div>
+              </div>
+            ) : null}
             <div>
               <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
                 Sidebar — auto-réduction
