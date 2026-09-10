@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -29,6 +30,7 @@ import {
   UnblockCustomerDto,
   UpdateContactDto,
   UpdateCustomerDto,
+  UpsertCustomerPriceDto,
 } from './customers.dto';
 import { CustomersService } from './customers.service';
 
@@ -77,6 +79,54 @@ export class CustomersController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.customersService.get(tenancy.companyId, id);
+  }
+
+  @Get(':id/prices')
+  @RequirePermission(PERMISSION_KEYS.customersRead)
+  listPrices(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.customersService.listPrices(tenancy.companyId, id);
+  }
+
+  @Get(':id/suggest-price')
+  @RequirePermission(PERMISSION_KEYS.customersRead)
+  suggestPrice(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('productId', ParseUUIDPipe) productId: string,
+  ) {
+    return this.customersService.suggestUnitPrice(
+      tenancy.companyId,
+      id,
+      productId,
+    );
+  }
+
+  @Put(':id/prices')
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  upsertPrice(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpsertCustomerPriceDto,
+  ) {
+    return this.customersService.upsertPrice(tenancy.companyId, id, dto);
+  }
+
+  @Delete(':id/prices/:productId')
+  @HttpCode(204)
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  async removePrice(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('productId', ParseUUIDPipe) productId: string,
+  ) {
+    await this.customersService.removePrice(
+      tenancy.companyId,
+      id,
+      productId,
+    );
   }
 
   @Post()

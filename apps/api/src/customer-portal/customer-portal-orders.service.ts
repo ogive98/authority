@@ -18,6 +18,7 @@ import {
   InvoiceService,
   type InvoiceDto,
 } from '../finance/invoice.service';
+import { CustomersService } from '../customers/customers.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalesException } from '../sales/sales.exception';
 import { SalesService, type SalesOrderDto } from '../sales/sales.service';
@@ -96,6 +97,7 @@ export class CustomerPortalOrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly salesService: SalesService,
+    private readonly customersService: CustomersService,
     private readonly deliveryService: DeliveryService,
     private readonly financeService: FinanceService,
     private readonly invoiceService: InvoiceService,
@@ -135,7 +137,7 @@ export class CustomerPortalOrdersService {
     const warehouseId = await this.resolveDefaultWarehouseId(companyId);
     const lines = [];
     for (const line of dto.lines) {
-      const unitPrice = await this.resolveLastUnitPrice(
+      const unitPrice = await this.resolveUnitPrice(
         companyId,
         customerId,
         line.productId,
@@ -143,7 +145,7 @@ export class CustomerPortalOrdersService {
       if (unitPrice == null) {
         throw new CustomerPortalException(
           CUSTOMER_PORTAL_ERROR_CODES.PRICE_UNAVAILABLE,
-          'No prior price for this product — ask your ADV or reorder an existing order.',
+          'No agreed or prior price for this product — ask your ADV.',
           HttpStatus.UNPROCESSABLE_ENTITY,
         );
       }
@@ -238,7 +240,7 @@ export class CustomerPortalOrdersService {
     const page = rows.slice(0, limit);
     const nextCursor = rows.length > limit ? page[page.length - 1].id : null;
     const productIds = page.map((p) => p.id);
-    const priceByProduct = await this.lastUnitPricesByProduct(
+    const priceByProduct = await this.customersService.resolveUnitPrices(
       companyId,
       customerId,
       productIds,
@@ -573,44 +575,17 @@ export class CustomerPortalOrdersService {
     return warehouse.id;
   }
 
-  private async resolveLastUnitPrice(
+  private async resolveUnitPrice(
     companyId: string,
     customerId: string,
     productId: string,
   ): Promise<number | null> {
-    const map = await this.lastUnitPricesByProduct(companyId, customerId, [
-      productId,
-    ]);
+    const map = await this.customersService.resolveUnitPrices(
+      companyId,
+      customerId,
+      [productId],
+    );
     return map.get(productId) ?? null;
-  }
-
-  private async lastUnitPricesByProduct(
-    companyId: string,
-    customerId: string,
-    productIds: string[],
-  ): Promise<Map<string, number>> {
-    const result = new Map<string, number>();
-    if (productIds.length === 0) return result;
-
-    const lines = await this.prisma.salOrderLine.findMany({
-      where: {
-        companyId,
-        productId: { in: productIds },
-        order: {
-          companyId,
-          customerId,
-          deletedAt: null,
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      distinct: ['productId'],
-      select: { productId: true, unitPrice: true },
-    });
-
-    for (const line of lines) {
-      result.set(line.productId, Number(line.unitPrice));
-    }
-    return result;
   }
 
   private async defaultCurrency(companyId: string): Promise<string> {

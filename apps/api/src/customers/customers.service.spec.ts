@@ -48,6 +48,9 @@ describe('CustomersService', () => {
       blocked: opts?.blocked ?? false,
       blockedAt: opts?.blocked ? new Date() : null,
       blockedReason: opts?.blocked ? 'Retard' : null,
+      salubritaEmail: false,
+      salubritaWhatsapp: false,
+      salubritaPortal: true,
       status: CusCustomerStatus.ACTIVE,
       version: opts?.version ?? 0,
       createdAt: new Date(),
@@ -73,6 +76,20 @@ describe('CustomersService', () => {
         findUniqueOrThrow: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn(),
+      },
+      cusCustomerPrice: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn(),
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+      prdProduct: {
+        findFirst: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      salOrderLine: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
       cusZone: {
         findMany: jest.fn().mockResolvedValue([zone]),

@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsEmail,
   IsInt,
+  IsNumber,
   IsNumberString,
   IsOptional,
   IsString,
@@ -225,4 +226,20 @@ export class UpdateContactDto {
   @IsInt()
   @Min(0)
   version!: number;
+}
+
+/** D174 — negotiated HT unit price (TND). */
+export class UpsertCustomerPriceDto {
+  @IsUUID()
+  productId!: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  unitPriceHt!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  currency?: string;
 }

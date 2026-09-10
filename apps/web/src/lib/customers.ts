@@ -48,6 +48,19 @@ export type Customer = {
   createdAt: string;
   updatedAt: string;
   contacts?: CustomerContact[];
+  prices?: CustomerPrice[];
+};
+
+export type CustomerPrice = {
+  id: string;
+  customerId: string;
+  productId: string;
+  productSku: string | null;
+  productName: string | null;
+  unitPriceHt: string;
+  currency: string;
+  version: number;
+  updatedAt: string;
 };
 
 export type CustomerListResponse = {
@@ -315,6 +328,68 @@ export async function addCustomerContact(
     });
     if (!res.ok) return parseError(res);
     return { ok: true, data: (await res.json()) as CustomerContact };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function upsertCustomerPrice(
+  customerId: string,
+  body: { productId: string; unitPriceHt: number; currency?: string },
+): Promise<{ ok: true; data: CustomerPrice } | ApiError> {
+  try {
+    const res = await fetch(`/api/v1/customers/${customerId}/prices`, {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as CustomerPrice };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function deleteCustomerPrice(
+  customerId: string,
+  productId: string,
+): Promise<{ ok: true } | ApiError> {
+  try {
+    const res = await fetch(
+      `/api/v1/customers/${customerId}/prices/${productId}`,
+      { method: "DELETE", credentials: "include" },
+    );
+    if (!res.ok) return parseError(res);
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function suggestCustomerPrice(
+  customerId: string,
+  productId: string,
+): Promise<
+  | { ok: true; data: { unitPrice: string | null; source: "agreed" | "last" | null } }
+  | ApiError
+> {
+  try {
+    const res = await fetch(
+      `/api/v1/customers/${customerId}/suggest-price?productId=${encodeURIComponent(productId)}`,
+      { credentials: "include", headers: { Accept: "application/json" } },
+    );
+    if (!res.ok) return parseError(res);
+    return {
+      ok: true,
+      data: (await res.json()) as {
+        unitPrice: string | null;
+        source: "agreed" | "last" | null;
+      },
+    };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }

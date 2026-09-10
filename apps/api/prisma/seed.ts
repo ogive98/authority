@@ -780,6 +780,7 @@ async function main() {
 
   await seedFefoDemoLots(company.id);
   await seedCheeseArticles(company.id);
+  await seedAgreedPrices(company.id);
 
   await seedSettingsDefinitions(company.id, demoUser.id);
   await seedAccountingGl(company.id);
@@ -1996,6 +1997,58 @@ async function seedCheeseArticles(companyId: string): Promise<void> {
         notes: d.notes,
       },
     });
+  }
+}
+
+/** D174 — negotiated HT prices for ADV + portal demo customers. */
+async function seedAgreedPrices(companyId: string): Promise<void> {
+  const customers = await prisma.cusCustomer.findMany({
+    where: {
+      companyId,
+      deletedAt: null,
+      code: { in: ['C-ATLAS', 'PORTAL-DEMO'] },
+    },
+    select: { id: true, code: true },
+  });
+  const products = await prisma.prdProduct.findMany({
+    where: {
+      companyId,
+      deletedAt: null,
+      sku: { in: ['BRIE-250', 'MOZ-FIOR', 'GRUY-AFF'] },
+    },
+    select: { id: true, sku: true },
+  });
+  const priceBySku: Record<string, number> = {
+    'BRIE-250': 5.25,
+    'MOZ-FIOR': 4.8,
+    'GRUY-AFF': 7.1,
+  };
+  for (const customer of customers) {
+    for (const product of products) {
+      const unitPriceHt = priceBySku[product.sku];
+      if (unitPriceHt == null) continue;
+      await prisma.cusCustomerPrice.upsert({
+        where: {
+          companyId_customerId_productId: {
+            companyId,
+            customerId: customer.id,
+            productId: product.id,
+          },
+        },
+        update: {
+          unitPriceHt,
+          currency: 'TND',
+          deletedAt: null,
+        },
+        create: {
+          companyId,
+          customerId: customer.id,
+          productId: product.id,
+          unitPriceHt,
+          currency: 'TND',
+        },
+      });
+    }
   }
 }
 

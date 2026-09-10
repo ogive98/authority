@@ -82,6 +82,9 @@ describe('CustomerPortalOrdersService', () => {
   let insightsService: {
     listInsights: jest.Mock;
   };
+  let customersService: {
+    resolveUnitPrices: jest.Mock;
+  };
   let service: CustomerPortalOrdersService;
 
   beforeEach(() => {
@@ -101,6 +104,9 @@ describe('CustomerPortalOrdersService', () => {
       getIntakeSettings: jest
         .fn()
         .mockResolvedValue({ defaultCurrency: 'TND' }),
+    };
+    customersService = {
+      resolveUnitPrices: jest.fn().mockResolvedValue(new Map()),
     };
     deliveryService = {
       list: jest.fn(),
@@ -130,6 +136,7 @@ describe('CustomerPortalOrdersService', () => {
     service = new CustomerPortalOrdersService(
       prisma as never,
       salesService as unknown as SalesService,
+      customersService as never,
       deliveryService as never,
       financeService as never,
       invoiceService as never,
@@ -242,10 +249,10 @@ describe('CustomerPortalOrdersService', () => {
     expect(shell.sections).toContain('documents');
   });
 
-  it('creates draft with membership ids, last price, confirmAfter false', async () => {
-    prisma.salOrderLine.findMany.mockResolvedValue([
-      { productId, unitPrice: 5 },
-    ]);
+  it('creates draft with membership ids, agreed/last price, confirmAfter false', async () => {
+    customersService.resolveUnitPrices.mockResolvedValue(
+      new Map([[productId, 5]]),
+    );
     const created = {
       ...ownOrder,
       id: 'new-order',
@@ -274,8 +281,8 @@ describe('CustomerPortalOrdersService', () => {
     expect(JSON.stringify(dto)).not.toContain('INTERNAL');
   });
 
-  it('rejects create when no last price for product', async () => {
-    prisma.salOrderLine.findMany.mockResolvedValue([]);
+  it('rejects create when no agreed or last price for product', async () => {
+    customersService.resolveUnitPrices.mockResolvedValue(new Map());
 
     await expect(
       service.createOrder(companyId, customerId, {

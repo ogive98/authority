@@ -19,22 +19,19 @@ import {
   archiveCustomer,
   blockCustomer,
   createCustomer,
+  deleteCustomerPrice,
   fetchCustomer,
   fetchCustomerZones,
   fetchCustomers,
   setCustomerCredit,
   unblockCustomer,
   updateCustomer,
+  upsertCustomerPrice,
   type Customer,
+  type CustomerPrice,
   type CustomerZone,
 } from "@/lib/customers";
-import {
-  softPageBody,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softPageBody, softSelect, softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -69,6 +66,12 @@ export default function CustomersPage() {
   const [form, setForm] = useState<FormState | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [priceProductId, setPriceProductId] = useState("");
+  const [priceHt, setPriceHt] = useState("");
+  const [priceBusy, setPriceBusy] = useState(false);
+  const [priceProducts, setPriceProducts] = useState<
+    Array<{ id: string; sku: string; name: string }>
+  >([]);
 
   const emptyForm = useCallback(
     (): FormState => ({
@@ -94,6 +97,23 @@ export default function CustomersPage() {
   const loadZones = useCallback(async () => {
     const res = await fetchCustomerZones();
     if (res.ok) setZones(res.data);
+  }, []);
+
+  const loadPriceProducts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/v1/products", { credentials: "include" });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        items: Array<{ id: string; sku: string; name: string; status?: string }>;
+      };
+      setPriceProducts(
+        data.items
+          .filter((p) => !p.status || p.status === "ACTIVE" || p.status === "DRAFT")
+          .map((p) => ({ id: p.id, sku: p.sku, name: p.name })),
+      );
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const load = useCallback(async (query?: string) => {
@@ -124,6 +144,9 @@ export default function CustomersPage() {
 
   async function openEdit(row: Customer) {
     setFormError(null);
+    setPriceProductId("");
+    setPriceHt("");
+    void loadPriceProducts();
     const detail = await fetchCustomer(row.id);
     if (!detail.ok) {
       setState({ kind: "error", message: detail.message });
@@ -274,6 +297,44 @@ export default function CustomersPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function onSavePrice() {
+    if (!editing) return;
+    const ht = Number(priceHt.replace(",", "."));
+    if (!priceProductId || !Number.isFinite(ht) || ht < 0) {
+      setFormError("Tarif : produit et prix HT ≥ 0 requis.");
+      return;
+    }
+    setPriceBusy(true);
+    setFormError(null);
+    const res = await upsertCustomerPrice(editing.id, {
+      productId: priceProductId,
+      unitPriceHt: ht,
+    });
+    setPriceBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    const detail = await fetchCustomer(editing.id);
+    if (detail.ok) setEditing(detail.data);
+    setPriceProductId("");
+    setPriceHt("");
+  }
+
+  async function onDeletePrice(productId: string) {
+    if (!editing) return;
+    setPriceBusy(true);
+    setFormError(null);
+    const res = await deleteCustomerPrice(editing.id, productId);
+    setPriceBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    const detail = await fetchCustomer(editing.id);
+    if (detail.ok) setEditing(detail.data);
   }
 
   return (
@@ -592,6 +653,79 @@ export default function CustomersPage() {
                 Client bloqué
                 {editing.blockedReason ? ` — ${editing.blockedReason}` : ""}
               </p>
+            ) : null}
+
+            </div>
+
+            {editing ? (
+              <div className="a-underlay space-y-3 rounded-md p-3">
+                <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                  Tarifs négociés (HT TND)
+                </p>
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Priorité portail / suggestion ADV — avant dernier prix
+                  commande.
+                </p>
+                {(editing.prices ?? []).length > 0 ? (
+                  <ul className="space-y-1.5 text-[length:var(--a-text-sm)]">
+                    {(editing.prices as CustomerPrice[]).map((p) => (
+                      <li
+                        key={p.id}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <span className="min-w-0 truncate">
+                          {p.productSku ?? "SKU"} · {p.productName ?? "—"}
+                        </span>
+                        <span className="a-mono shrink-0 tabular-nums">
+                          {p.unitPriceHt} {p.currency}
+                        </span>
+                        <AButton
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={priceBusy}
+                          onClick={() => void onDeletePrice(p.productId)}
+                        >
+                          Retirer
+                        </AButton>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                    Aucun tarif agréé.
+                  </p>
+                )}
+                <div className="grid gap-2 sm:grid-cols-[1fr_7rem_auto]">
+                  <select
+                    className={softSelect}
+                    value={priceProductId}
+                    onChange={(e) => setPriceProductId(e.target.value)}
+                  >
+                    <option value="">Produit…</option>
+                    {priceProducts.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.sku} · {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <AInput
+                    value={priceHt}
+                    onChange={(e) => setPriceHt(e.target.value)}
+                    inputMode="decimal"
+                    placeholder="0.000"
+                    className="a-mono"
+                  />
+                  <AButton
+                    type="button"
+                    size="sm"
+                    disabled={priceBusy || !priceProductId || !priceHt}
+                    onClick={() => void onSavePrice()}
+                  >
+                    Enregistrer
+                  </AButton>
+                </div>
+              </div>
             ) : null}
 
             <div className="border-t border-white/5 pt-4">

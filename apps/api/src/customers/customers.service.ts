@@ -12,7 +12,7 @@ import { MasterDataService } from '../master-data/master-data.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CUSTOMERS_ERROR_CODES } from './customers.constants';
 import { CustomersException } from './customers.exception';
-import type {
+import {
   BlockCustomerDto,
   CreateContactDto,
   CreateCustomerDto,
@@ -21,6 +21,7 @@ import type {
   UnblockCustomerDto,
   UpdateContactDto,
   UpdateCustomerDto,
+  UpsertCustomerPriceDto,
 } from './customers.dto';
 
 export type ContactDto = {
@@ -73,6 +74,19 @@ export type CustomerDto = {
   createdAt: string;
   updatedAt: string;
   contacts?: ContactDto[];
+  prices?: CustomerPriceDto[];
+};
+
+export type CustomerPriceDto = {
+  id: string;
+  customerId: string;
+  productId: string;
+  productSku: string | null;
+  productName: string | null;
+  unitPriceHt: string;
+  currency: string;
+  version: number;
+  updatedAt: string;
 };
 
 type CustomerWithParty = CusCustomer & {
@@ -126,14 +140,227 @@ export class CustomersService {
 
   async get(companyId: string, id: string): Promise<CustomerDto> {
     const row = await this.findActive(companyId, id);
-    const contacts = await this.prisma.cusContact.findMany({
-      where: { companyId, customerId: id, deletedAt: null },
-      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-    });
+    const [contacts, prices] = await Promise.all([
+      this.prisma.cusContact.findMany({
+        where: { companyId, customerId: id, deletedAt: null },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      }),
+      this.listPrices(companyId, id),
+    ]);
     return {
       ...serializeCustomer(row),
       contacts: contacts.map(serializeContact),
+      prices,
     };
+  }
+
+  async listPrices(
+    companyId: string,
+    customerId: string,
+  ): Promise<CustomerPriceDto[]> {
+    await this.findActive(companyId, customerId);
+    const rows = await this.prisma.cusCustomerPrice.findMany({
+      where: { companyId, customerId, deletedAt: null },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+    });
+    if (rows.length === 0) return [];
+    const productIds = [...new Set(rows.map((r) => r.productId))];
+    const products = await this.prisma.prdProduct.findMany({
+      where: { companyId, id: { in: productIds } },
+      select: { id: true, sku: true, name: true },
+    });
+    const byId = new Map(products.map((p) => [p.id, p]));
+    return rows.map((r) => {
+      const p = byId.get(r.productId);
+      return {
+        id: r.id,
+        customerId: r.customerId,
+        productId: r.productId,
+        productSku: p?.sku ?? null,
+        productName: p?.name ?? null,
+        unitPriceHt: r.unitPriceHt.toFixed(3),
+        currency: r.currency,
+        version: r.version,
+        updatedAt: r.updatedAt.toISOString(),
+      };
+    });
+  }
+
+  async upsertPrice(
+    companyId: string,
+    customerId: string,
+    dto: UpsertCustomerPriceDto,
+  ): Promise<CustomerPriceDto> {
+    await this.findActive(companyId, customerId);
+    const product = await this.prisma.prdProduct.findFirst({
+      where: {
+        id: dto.productId,
+        companyId,
+        deletedAt: null,
+      },
+      select: { id: true, sku: true, name: true },
+    });
+    if (!product) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.PRODUCT_NOT_FOUND,
+        'Product not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (!Number.isFinite(dto.unitPriceHt) || dto.unitPriceHt < 0) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.PRICE_INVALID,
+        'unitPriceHt must be a non-negative number.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const currency = (dto.currency?.trim() || 'TND').toUpperCase();
+    const existing = await this.prisma.cusCustomerPrice.findUnique({
+      where: {
+        companyId_customerId_productId: {
+          companyId,
+          customerId,
+          productId: dto.productId,
+        },
+      },
+    });
+
+    const row = existing
+      ? await this.prisma.cusCustomerPrice.update({
+          where: { id: existing.id },
+          data: {
+            unitPriceHt: new Prisma.Decimal(dto.unitPriceHt),
+            currency,
+            deletedAt: null,
+            version: { increment: 1 },
+          },
+        })
+      : await this.prisma.cusCustomerPrice.create({
+          data: {
+            companyId,
+            customerId,
+            productId: dto.productId,
+            unitPriceHt: new Prisma.Decimal(dto.unitPriceHt),
+            currency,
+          },
+        });
+
+    return {
+      id: row.id,
+      customerId: row.customerId,
+      productId: row.productId,
+      productSku: product.sku,
+      productName: product.name,
+      unitPriceHt: row.unitPriceHt.toFixed(3),
+      currency: row.currency,
+      version: row.version,
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  async removePrice(
+    companyId: string,
+    customerId: string,
+    productId: string,
+  ): Promise<void> {
+    await this.findActive(companyId, customerId);
+    const existing = await this.prisma.cusCustomerPrice.findFirst({
+      where: {
+        companyId,
+        customerId,
+        productId,
+        deletedAt: null,
+      },
+    });
+    if (!existing) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.PRICE_NOT_FOUND,
+        'Agreed price not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    await this.prisma.cusCustomerPrice.update({
+      where: { id: existing.id },
+      data: { deletedAt: new Date(), version: { increment: 1 } },
+    });
+  }
+
+  /**
+   * Portal / sales suggest: agreed price first, then last order line.
+   */
+  async resolveUnitPrices(
+    companyId: string,
+    customerId: string,
+    productIds: string[],
+  ): Promise<Map<string, number>> {
+    const result = new Map<string, number>();
+    if (productIds.length === 0) return result;
+
+    const agreed = await this.prisma.cusCustomerPrice.findMany({
+      where: {
+        companyId,
+        customerId,
+        productId: { in: productIds },
+        deletedAt: null,
+      },
+      select: { productId: true, unitPriceHt: true },
+    });
+    for (const row of agreed) {
+      result.set(row.productId, Number(row.unitPriceHt));
+    }
+
+    const missing = productIds.filter((id) => !result.has(id));
+    if (missing.length === 0) return result;
+
+    const lines = await this.prisma.salOrderLine.findMany({
+      where: {
+        companyId,
+        productId: { in: missing },
+        order: {
+          companyId,
+          customerId,
+          deletedAt: null,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      distinct: ['productId'],
+      select: { productId: true, unitPrice: true },
+    });
+    for (const line of lines) {
+      if (!result.has(line.productId)) {
+        result.set(line.productId, Number(line.unitPrice));
+      }
+    }
+    return result;
+  }
+
+  async suggestUnitPrice(
+    companyId: string,
+    customerId: string,
+    productId: string,
+  ): Promise<{ unitPrice: string | null; source: 'agreed' | 'last' | null }> {
+    await this.findActive(companyId, customerId);
+    const agreed = await this.prisma.cusCustomerPrice.findFirst({
+      where: {
+        companyId,
+        customerId,
+        productId,
+        deletedAt: null,
+      },
+      select: { unitPriceHt: true },
+    });
+    if (agreed) {
+      return {
+        unitPrice: agreed.unitPriceHt.toFixed(3),
+        source: 'agreed',
+      };
+    }
+    const map = await this.resolveUnitPrices(companyId, customerId, [
+      productId,
+    ]);
+    const v = map.get(productId);
+    if (v == null) return { unitPrice: null, source: null };
+    return { unitPrice: v.toFixed(3), source: 'last' };
   }
 
   async listZones(companyId: string): Promise<ZoneDto[]> {

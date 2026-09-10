@@ -8,6 +8,7 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SalesModule } from '../sales/sales.module';
+import { CustomersModule } from '../customers/customers.module';
 import { CustomerPortalAuthService } from './customer-portal-auth.service';
 import { CustomerPortalClaimsService } from './customer-portal-claims.service';
 import { CustomerPortalController } from './customer-portal.controller';
@@ -21,6 +22,7 @@ import { CustomerPortalSessionGuard } from './customer-portal-session.guard';
     IdentityModule,
     PrismaModule,
     SalesModule,
+    CustomersModule,
     DeliveryModule,
     FinanceModule,
     DocumentsModule,

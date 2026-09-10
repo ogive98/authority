@@ -31,6 +31,7 @@ import {
   type SalesOrder,
   type SalesOrderStatus,
 } from "@/lib/sales";
+import { suggestCustomerPrice } from "@/lib/customers";
 import { softPageBody } from "@/lib/soft-glass-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
 
@@ -628,7 +629,8 @@ function SalesPageInner() {
                       });
                       searchProductForLine(line.key, text);
                     }}
-                    onSelect={(opt) =>
+                    onSelect={(opt) => {
+                      const customerId = form.customerId;
                       setForm({
                         ...form,
                         lines: form.lines.map((l) =>
@@ -640,8 +642,28 @@ function SalesPageInner() {
                               }
                             : l,
                         ),
-                      })
-                    }
+                      });
+                      if (customerId) {
+                        void suggestCustomerPrice(customerId, opt.id).then(
+                          (res) => {
+                            if (!res.ok || !res.data.unitPrice) return;
+                            const price = res.data.unitPrice;
+                            setForm((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    lines: prev.lines.map((l) =>
+                                      l.key === line.key
+                                        ? { ...l, unitPrice: price }
+                                        : l,
+                                    ),
+                                  }
+                                : prev,
+                            );
+                          },
+                        );
+                      }
+                    }}
                     onOpen={() =>
                       searchProductForLine(line.key, line.productLabel)
                     }
