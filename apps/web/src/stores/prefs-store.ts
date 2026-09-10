@@ -19,8 +19,9 @@ type PrefsState = {
    */
   sidebarAutoCollapseSec: number;
   /**
-   * Calculator unlock code to exit SPECTRE / PATCH / GHOST (D162).
-   * Configurable by company Admin (settings). Default 3141.
+   * Calculator unlock code to exit SPECTRE / PATCH / GHOST (D162/D170).
+   * Company setting `ops.unlock_code` is source of truth; localStorage is cache.
+   * Default 3141 until hydrate.
    */
   opsUnlockCode: string;
   setDensity: (d: Density) => void;

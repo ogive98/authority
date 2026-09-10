@@ -14,10 +14,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   buildScopeKey,
   EXPERTISE_CATALOG,
+  isCompanyOnlySettingKey,
   isExpertiseWritableKey,
   isSecretSettingKey,
   isSecretValueSet,
   KERNEL_SETTING_KEYS,
+  normalizeOpsUnlockCode,
+  OPS_UNLOCK_CODE_DEFAULT,
+  OPS_UNLOCK_CODE_KEY,
   SETTINGS_ERROR_CODES,
   SETTING_ENUM_VALUES,
   SETTING_LEVEL_PRIORITY,
@@ -84,6 +88,8 @@ export class SettingsService {
   async getEffective(
     context: ResolveContext,
   ): Promise<EffectiveSettingsResponse> {
+    await this.ensureOpsUnlockDefinition();
+
     const definitions = await this.prisma.setDef.findMany({
       orderBy: { key: 'asc' },
     });
@@ -390,8 +396,24 @@ export class SettingsService {
     ip?: string;
     userAgent?: string;
   }): Promise<EffectiveSetting> {
+    if (isCompanyOnlySettingKey(params.key) && params.level !== 'COMPANY') {
+      throw new SettingsException(
+        SETTINGS_ERROR_CODES.FORBIDDEN_LEVEL,
+        `${params.key} is company-scoped only.`,
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
     const definition = await this.loadWritableDefinition(params.key);
-    this.validateValue(definition, params.value);
+    let value = params.value;
+    if (params.key === OPS_UNLOCK_CODE_KEY) {
+      const normalized = normalizeOpsUnlockCode(params.value);
+      if (!normalized) {
+        throw invalidValue(params.key);
+      }
+      value = normalized;
+    }
+    this.validateValue(definition, value);
 
     const setLevel =
       params.level === 'COMPANY' ? SetLevel.COMPANY : SetLevel.USER;
@@ -416,7 +438,7 @@ export class SettingsService {
     // D137 — empty secret write = keep previous (write-only field).
     if (
       isSecretSettingKey(definition.key) &&
-      !isSecretValueSet(params.value)
+      !isSecretValueSet(value)
     ) {
       const effective = await this.getEffective(params.context);
       const current = effective.settings.find((row) => row.key === definition.key);
@@ -431,14 +453,14 @@ export class SettingsService {
 
     const auditValue = isSecretSettingKey(definition.key)
       ? '[redacted]'
-      : params.value;
+      : value;
 
     await this.prisma.$transaction(async (tx) => {
       const saved = existing
         ? await tx.setValue.update({
             where: { id: existing.id },
             data: {
-              valueJson: params.value as Prisma.InputJsonValue,
+              valueJson: value as Prisma.InputJsonValue,
               deletedAt: null,
               version: { increment: 1 },
             },
@@ -449,7 +471,7 @@ export class SettingsService {
               level: setLevel,
               scopeKey,
               companyId: params.context.companyId,
-              valueJson: params.value as Prisma.InputJsonValue,
+              valueJson: value as Prisma.InputJsonValue,
             },
           });
 
@@ -614,6 +636,27 @@ export class SettingsService {
     };
   }
 
+  private async ensureOpsUnlockDefinition(): Promise<SetDef> {
+    return this.prisma.setDef.upsert({
+      where: { key: OPS_UNLOCK_CODE_KEY },
+      update: {
+        valueType: 'string',
+        defaultJson: OPS_UNLOCK_CODE_DEFAULT,
+        description:
+          'Calculator PIN to exit SPECTRE/PATCH/GHOST (company Admin, 4–12 digits)',
+        isPrefOnly: true,
+      },
+      create: {
+        key: OPS_UNLOCK_CODE_KEY,
+        valueType: 'string',
+        defaultJson: OPS_UNLOCK_CODE_DEFAULT,
+        description:
+          'Calculator PIN to exit SPECTRE/PATCH/GHOST (company Admin, 4–12 digits)',
+        isPrefOnly: true,
+      },
+    });
+  }
+
   private async loadWritableDefinition(key: string): Promise<SetDef> {
     if (isCataloguedPermission(key)) {
       throw new SettingsException(
@@ -621,6 +664,10 @@ export class SettingsService {
         'Settings cannot override permission keys.',
         HttpStatus.FORBIDDEN,
       );
+    }
+
+    if (key === OPS_UNLOCK_CODE_KEY) {
+      return this.ensureOpsUnlockDefinition();
     }
 
     const definition = await this.prisma.setDef.findUnique({ where: { key } });
@@ -635,6 +682,12 @@ export class SettingsService {
   }
 
   private validateValue(definition: SetDef, value: unknown): void {
+    if (definition.key === OPS_UNLOCK_CODE_KEY) {
+      if (!normalizeOpsUnlockCode(value)) {
+        throw invalidValue(definition.key);
+      }
+      return;
+    }
     switch (definition.valueType) {
       case 'string':
         // Empty string allowed — Préférences Envois (SMTP host, templates override).

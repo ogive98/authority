@@ -160,6 +160,9 @@ export default function SettingsPage() {
   const opsUnlockCode = usePrefsStore((s) => s.opsUnlockCode);
   const setOpsUnlockCode = usePrefsStore((s) => s.setOpsUnlockCode);
   const [unlockDraft, setUnlockDraft] = useState(opsUnlockCode);
+  const [unlockBusy, setUnlockBusy] = useState(false);
+  const [unlockMsg, setUnlockMsg] = useState<string | null>(null);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
   const showSseBanner = usePrefsStore((s) => s.showSseBanner);
   const setShowSseBanner = usePrefsStore((s) => s.setShowSseBanner);
   const jobAlerts = usePrefsStore((s) => s.jobAlerts);
@@ -174,6 +177,44 @@ export default function SettingsPage() {
   useEffect(() => {
     setUnlockDraft(opsUnlockCode);
   }, [opsUnlockCode]);
+
+  useEffect(() => {
+    if (tab !== "apparence" || !canCompanyWrite) return;
+    void (async () => {
+      const res = await fetchEffectiveSettings();
+      if (!res.ok) return;
+      const row = res.data.settings.find((s) => s.key === "ops.unlock_code");
+      if (typeof row?.value === "string") {
+        setOpsUnlockCode(row.value);
+      }
+    })();
+  }, [tab, canCompanyWrite, setOpsUnlockCode]);
+
+  async function onSaveUnlockCode() {
+    if (!canCompanyWrite || unlockBusy) return;
+    const cleaned = unlockDraft.replace(/\D/g, "").slice(0, 12);
+    if (cleaned.length < 4) {
+      setUnlockError("4 à 12 chiffres requis.");
+      setUnlockMsg(null);
+      return;
+    }
+    setUnlockBusy(true);
+    setUnlockError(null);
+    setUnlockMsg(null);
+    const r = await putCompanySetting("ops.unlock_code", cleaned);
+    setUnlockBusy(false);
+    if (!r.ok) {
+      setUnlockError(r.message);
+      return;
+    }
+    setOpsUnlockCode(
+      typeof r.data.value === "string" ? r.data.value : cleaned,
+    );
+    setUnlockDraft(usePrefsStore.getState().opsUnlockCode);
+    setUnlockMsg("Code enregistré (société).");
+    setSavedFlash(true);
+    window.setTimeout(() => setSavedFlash(false), 1600);
+  }
 
   useEffect(() => {
     const prefs = usePrefsStore.getState();
@@ -1161,7 +1202,8 @@ export default function SettingsPage() {
                 <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
                   SPECTRE / PATCH / GHOST : l’icône disparaît à l’entrée. Sortie
                   uniquement en tapant ce code (4–12 chiffres) sur la
-                  calculatrice du toolbox. Admin / Super Admin.
+                  calculatrice du toolbox. Persisté côté société (Admin / Super
+                  Admin).
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <input
@@ -1179,17 +1221,25 @@ export default function SettingsPage() {
                     type="button"
                     size="sm"
                     variant="primary"
-                    onClick={() => {
-                      setOpsUnlockCode(unlockDraft);
-                      setUnlockDraft(usePrefsStore.getState().opsUnlockCode);
-                    }}
+                    disabled={unlockBusy}
+                    onClick={() => void onSaveUnlockCode()}
                   >
-                    Enregistrer
+                    {unlockBusy ? "…" : "Enregistrer"}
                   </AButton>
                   <span className="a-mono text-[10px] text-a-fg-subtle">
                     défaut 3141
                   </span>
                 </div>
+                {unlockMsg ? (
+                  <p className="mt-2 text-[length:var(--a-text-xs)] text-a-success">
+                    {unlockMsg}
+                  </p>
+                ) : null}
+                {unlockError ? (
+                  <p className="mt-2 text-[length:var(--a-text-xs)] text-a-danger">
+                    {unlockError}
+                  </p>
+                ) : null}
               </div>
             ) : null}
             <div>

@@ -1483,6 +1483,14 @@ async function seedSettingsDefinitions(
       isPrefOnly: true,
     },
     {
+      key: 'ops.unlock_code',
+      valueType: 'string',
+      defaultJson: '3141',
+      description:
+        'Calculator PIN to exit SPECTRE/PATCH/GHOST (company Admin, 4–12 digits)',
+      isPrefOnly: true,
+    },
+    {
       key: 'finance.credit.enforce',
       valueType: 'boolean',
       defaultJson: false,

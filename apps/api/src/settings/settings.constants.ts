@@ -28,6 +28,24 @@ export const SETTINGS_ENTITY_TYPES = {
 /** Never echoed in getEffective / audit payloads (D137). Empty PUT keeps previous. */
 export const SECRET_SETTING_KEYS = ['identity.smtp.pass'] as const;
 
+/** Company-scoped only — no USER override (D170). */
+export const COMPANY_ONLY_SETTING_KEYS = ['ops.unlock_code'] as const;
+
+export function isCompanyOnlySettingKey(key: string): boolean {
+  return (COMPANY_ONLY_SETTING_KEYS as readonly string[]).includes(key);
+}
+
+/** Ops calculator unlock PIN (D162/D170). */
+export const OPS_UNLOCK_CODE_KEY = 'ops.unlock_code';
+export const OPS_UNLOCK_CODE_DEFAULT = '3141';
+
+export function normalizeOpsUnlockCode(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const cleaned = value.replace(/\D/g, '').slice(0, 12);
+  if (cleaned.length < 4) return null;
+  return cleaned;
+}
+
 export function isSecretSettingKey(key: string): boolean {
   return (SECRET_SETTING_KEYS as readonly string[]).includes(key);
 }
