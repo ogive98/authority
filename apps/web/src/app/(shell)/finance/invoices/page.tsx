@@ -26,6 +26,13 @@ import {
 } from "@/lib/finance";
 import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
+import {
+  softPageBody,
+  softSelect,
+  softTableWrap,
+  softThead,
+  softTr,
+} from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -216,7 +223,7 @@ export default function FinanceInvoicesPage() {
           </div>
         }
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className={softPageBody}>
         <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre"]} />
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
@@ -269,9 +276,9 @@ export default function FinanceInvoicesPage() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2">
+          <div className={softTableWrap}>
             <table className="w-full min-w-[56rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="border-b border-a-border-subtle bg-a-surface-3/80 text-a-fg-muted">
+              <thead className={softThead}>
                 <tr>
                   <th className="a-table-cell font-medium">N°</th>
                   <th className="a-table-cell font-medium">Client</th>
@@ -284,10 +291,7 @@ export default function FinanceInvoicesPage() {
               </thead>
               <tbody>
                 {state.items.map((inv) => (
-                  <tr
-                    key={inv.id}
-                    className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
-                  >
+                  <tr key={inv.id} className={softTr}>
                     <td className="a-mono a-table-cell">{inv.number}</td>
                     <td className="a-table-cell">
                       {inv.customerName ?? inv.customerCode ?? "—"}
@@ -461,7 +465,7 @@ export default function FinanceInvoicesPage() {
                     />
                   </div>
                   <select
-                    className="w-full rounded-[var(--a-radius-md)] border border-a-border bg-a-surface-1 px-3 py-2 text-[length:var(--a-text-sm)]"
+                    className={softSelect}
                     value={line.taxCodeId}
                     onChange={(e) => {
                       const lines = [...form.lines];

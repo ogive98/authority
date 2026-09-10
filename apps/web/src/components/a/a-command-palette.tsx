@@ -12,6 +12,8 @@ import {
   type KeyboardEvent,
 } from "react";
 import { cn } from "@/lib/utils";
+import { useLocaleStore, useShellT } from "@/stores/locale-store";
+import { getActionRegistry } from "@/lib/action-registry";
 import {
   DEMO_ENABLED_MODULES,
   DEMO_PERMISSION_GRANTS,
@@ -20,7 +22,6 @@ import {
   groupCommands,
   type CommandItem,
 } from "@/lib/command-catalog";
-import { ACTION_REGISTRY } from "@/lib/action-registry";
 
 export type ACommandPaletteProps = {
   open: boolean;
@@ -39,22 +40,29 @@ export function ACommandPalette({
   enabledModules = DEMO_ENABLED_MODULES,
 }: ACommandPaletteProps) {
   const router = useRouter();
+  const { t } = useShellT();
+  const locale = useLocaleStore((s) => s.locale);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  const catalog = useMemo(() => getActionRegistry(locale), [locale]);
+
   const filtered = useMemo(
     () =>
-      filterCommands(ACTION_REGISTRY, {
+      filterCommands(catalog, {
         query,
         grants,
         enabledModules,
       }),
-    [query, grants, enabledModules],
+    [catalog, query, grants, enabledModules],
   );
 
-  const groups = useMemo(() => groupCommands(filtered), [filtered]);
+  const groups = useMemo(
+    () => groupCommands(filtered, locale),
+    [filtered, locale],
+  );
   const flat = filtered;
   const listOpen = query.length > 0;
 
@@ -148,7 +156,7 @@ export function ACommandPalette({
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Que cherchez-vous ?"
+              placeholder={t("commandPalettePlaceholder")}
               className="a-palette-input min-w-0 flex-1 bg-transparent text-[16px] font-medium tracking-[-0.02em] text-a-fg outline-none placeholder:font-normal placeholder:text-a-fg-subtle"
               aria-autocomplete="list"
               aria-controls="command-list"

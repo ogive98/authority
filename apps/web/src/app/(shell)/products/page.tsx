@@ -22,6 +22,13 @@ import {
   type Product,
   type RefValue,
 } from "@/lib/products";
+import {
+  softPageBody,
+  softSelect,
+  softTableWrap,
+  softThead,
+  softTr,
+} from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -40,9 +47,6 @@ type FormState = {
   storageClassKey: string;
   allergenFlags: string;
 };
-
-const selectClass =
-  "flex h-9 w-full rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-3 text-[length:var(--a-text-sm)] text-a-fg";
 
 export default function ProductsPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
@@ -178,7 +182,7 @@ export default function ProductsPage() {
           </AButton>
         }
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className={softPageBody}>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
             <label
@@ -236,37 +240,22 @@ export default function ProductsPage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)] bg-a-surface-2">
+          <div className={softTableWrap}>
             <table className="w-full min-w-[40rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="bg-a-surface-3 text-a-fg-muted">
+              <thead className={softThead}>
                 <tr>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    SKU
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Nom
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Type
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Conserv.
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Statut
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Actions
-                  </th>
+                  <th className="a-table-cell font-medium">SKU</th>
+                  <th className="a-table-cell font-medium">Nom</th>
+                  <th className="a-table-cell font-medium">Type</th>
+                  <th className="a-table-cell font-medium">Conserv.</th>
+                  <th className="a-table-cell font-medium">Statut</th>
+                  <th className="a-table-cell font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {state.items.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
-                  >
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                  <tr key={row.id} className={softTr}>
+                    <td className="a-mono a-table-cell">
                       <Link
                         href={`/products/${row.id}`}
                         className="text-a-accent hover:underline"
@@ -274,18 +263,16 @@ export default function ProductsPage() {
                         {row.sku}
                       </Link>
                     </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      {row.name}
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
+                    <td className="a-table-cell">{row.name}</td>
+                    <td className="a-table-cell text-a-fg-muted">
                       {typeLabel(row.typeKey)}
                     </td>
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
+                    <td className="a-mono a-table-cell text-a-fg-muted">
                       {row.shelfLifeDays != null
                         ? `${row.shelfLifeDays} j`
                         : "—"}
                     </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                    <td className="a-table-cell">
                       <span
                         className={
                           row.status === "ACTIVE"
@@ -298,7 +285,7 @@ export default function ProductsPage() {
                         {STATUS_LABELS[row.status]}
                       </span>
                     </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                    <td className="a-table-cell">
                       <div className="flex flex-wrap gap-2">
                         <Link href={`/products/${row.id}`}>
                           <AButton type="button" size="sm" variant="secondary">
@@ -376,7 +363,7 @@ export default function ProductsPage() {
             <Field label="Type" htmlFor="prd-type">
               <select
                 id="prd-type"
-                className={selectClass}
+                className={softSelect}
                 value={form.typeKey}
                 onChange={(e) =>
                   setForm((f) => (f ? { ...f, typeKey: e.target.value } : f))
@@ -392,7 +379,7 @@ export default function ProductsPage() {
             <Field label="Unité" htmlFor="prd-uom">
               <select
                 id="prd-uom"
-                className={selectClass}
+                className={softSelect}
                 value={form.uom}
                 onChange={(e) =>
                   setForm((f) => (f ? { ...f, uom: e.target.value } : f))
@@ -408,7 +395,7 @@ export default function ProductsPage() {
             <Field label="Classe de stockage" htmlFor="prd-storage">
               <select
                 id="prd-storage"
-                className={selectClass}
+                className={softSelect}
                 value={form.storageClassKey}
                 onChange={(e) =>
                   setForm((f) =>

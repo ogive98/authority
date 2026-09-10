@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   isP0,
+  resolveNotificationHref,
   type NotificationItem,
   type NotificationType,
 } from "@/lib/notifications";
@@ -46,6 +47,7 @@ function formatWhen(iso: string): string {
 
 /**
  * Activity / notifications inbox. P0 stays in centre (no toast).
+ * Each row is a shortcut to the exact source route.
  */
 export function AActivityCenter({
   open,
@@ -132,17 +134,15 @@ export function AActivityCenter({
           }
         />
       ) : (
-        <ul className="space-y-2">
+        <ul className="a-scroll-momentum a-notif-list">
           {visible.map((item) => (
-            <li key={item.id}>
+            <li key={item.id} className="a-notif-snap">
               <NotificationRow
                 item={item}
                 onActivate={() => {
                   onMarkRead(item.id);
-                  if (item.href) {
-                    onOpenChange(false);
-                    router.push(item.href);
-                  }
+                  onOpenChange(false);
+                  router.push(resolveNotificationHref(item));
                 }}
                 onMarkRead={() => onMarkRead(item.id)}
               />
@@ -174,7 +174,7 @@ function NotificationRow({
       )}
     >
       <div className="flex items-start gap-2.5">
-        <FeedGlyph def={feed} size={15} />
+        <FeedGlyph def={feed} size={15} liquid />
         <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
           <button
             type="button"

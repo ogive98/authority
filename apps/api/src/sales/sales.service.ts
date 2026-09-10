@@ -132,6 +132,28 @@ export class SalesService {
     };
   }
 
+  /** Mission Control — order counts from DB (no invented CA). */
+  async homeKpis(companyId: string): Promise<{
+    draftCount: number;
+    confirmedCount: number;
+    activeCount: number;
+  }> {
+    const base = { companyId, deletedAt: null as null };
+    const [draftCount, confirmedCount] = await Promise.all([
+      this.prisma.salOrder.count({
+        where: { ...base, status: SalOrderStatus.DRAFT },
+      }),
+      this.prisma.salOrder.count({
+        where: { ...base, status: SalOrderStatus.CONFIRMED },
+      }),
+    ]);
+    return {
+      draftCount,
+      confirmedCount,
+      activeCount: draftCount + confirmedCount,
+    };
+  }
+
   async list(
     companyId: string,
     opts: {

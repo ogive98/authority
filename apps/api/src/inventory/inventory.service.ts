@@ -148,6 +148,24 @@ export class InventoryService {
     return { items: rows.map(serializeWarehouse) };
   }
 
+  /** Mission Control — balance / lot line counts (no fake valuation). */
+  async homeKpis(companyId: string): Promise<{
+    balanceLines: number;
+    positiveAvailableLines: number;
+    openLots: number;
+  }> {
+    const [balanceLines, positiveAvailableLines, openLots] = await Promise.all([
+      this.prisma.invBalance.count({ where: { companyId } }),
+      this.prisma.invBalance.count({
+        where: { companyId, onHand: { gt: 0 } },
+      }),
+      this.prisma.invLot.count({
+        where: { companyId, status: InvLotStatus.OPEN },
+      }),
+    ]);
+    return { balanceLines, positiveAvailableLines, openLots };
+  }
+
   async createWarehouse(
     companyId: string,
     dto: CreateWarehouseDto,

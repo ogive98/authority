@@ -20,6 +20,13 @@ import {
   type HrEmployee,
 } from "@/lib/hr";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
+import {
+  softPageBody,
+  softSelect,
+  softTableWrap,
+  softThead,
+  softTr,
+} from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -28,9 +35,6 @@ type LoadState =
   | { kind: "error"; message: string };
 
 type DrawerMode = "employee" | "contract";
-
-const selectClass =
-  "flex h-9 w-full rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-3 text-[length:var(--a-text-sm)] text-a-fg";
 
 function statusTone(
   status: string,
@@ -162,7 +166,7 @@ export default function HrEmployeesPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <>
       <AScreenHeader
         kicker="Ressources humaines"
         title="Employés"
@@ -174,6 +178,7 @@ export default function HrEmployeesPage() {
         }
       />
 
+      <div className={softPageBody}>
       <ExpertiseHintsStrip keys={["hr.cnss", "hr.irpp", "hr.tfp"]} />
 
       <div className="flex flex-wrap items-center gap-2">
@@ -209,40 +214,37 @@ export default function HrEmployeesPage() {
       ) : null}
 
       {state.kind === "ok" && state.items.length > 0 ? (
-        <div className="overflow-x-auto rounded-[var(--a-radius-lg)] border border-a-border-subtle">
+        <div className={softTableWrap}>
           <table className="w-full min-w-[720px] text-left text-[length:var(--a-text-sm)]">
-            <thead className="bg-a-surface-2 text-a-fg-muted">
+            <thead className={softThead}>
               <tr>
-                <th className="px-4 py-3 font-medium">Matricule</th>
-                <th className="px-4 py-3 font-medium">Nom</th>
-                <th className="px-4 py-3 font-medium">Poste</th>
-                <th className="px-4 py-3 font-medium">CNSS n°</th>
-                <th className="px-4 py-3 font-medium">Statut</th>
-                <th className="px-4 py-3 font-medium">Contrats</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
+                <th className="a-table-cell font-medium">Matricule</th>
+                <th className="a-table-cell font-medium">Nom</th>
+                <th className="a-table-cell font-medium">Poste</th>
+                <th className="a-table-cell font-medium">CNSS n°</th>
+                <th className="a-table-cell font-medium">Statut</th>
+                <th className="a-table-cell font-medium">Contrats</th>
+                <th className="a-table-cell font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {state.items.map((row) => {
                 const active = row.contracts.filter((c) => c.status === "ACTIVE");
                 return (
-                  <tr
-                    key={row.id}
-                    className="border-t border-a-border-subtle hover:bg-a-surface-2/60"
-                  >
-                    <td className="px-4 py-3">
+                  <tr key={row.id} className={softTr}>
+                    <td className="a-table-cell">
                       <span className="a-mono font-medium">{row.matricule}</span>
                     </td>
-                    <td className="px-4 py-3">{row.displayName}</td>
-                    <td className="px-4 py-3 text-a-fg-muted">
+                    <td className="a-table-cell">{row.displayName}</td>
+                    <td className="a-table-cell text-a-fg-muted">
                       {[row.jobTitle, row.department].filter(Boolean).join(" · ") ||
                         "—"}
                     </td>
-                    <td className="a-mono px-4 py-3">{row.cnssNo ?? "—"}</td>
-                    <td className="px-4 py-3">
+                    <td className="a-mono a-table-cell">{row.cnssNo ?? "—"}</td>
+                    <td className="a-table-cell">
                       <ABadge tone={statusTone(row.status)}>{row.status}</ABadge>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="a-table-cell">
                       {active.length === 0 ? (
                         <span className="text-a-fg-muted">—</span>
                       ) : (
@@ -266,7 +268,7 @@ export default function HrEmployeesPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="a-table-cell">
                       {row.status === "ACTIVE" ? (
                         <AButton
                           type="button"
@@ -284,6 +286,7 @@ export default function HrEmployeesPage() {
           </table>
         </div>
       ) : null}
+      </div>
 
       <ADrawer
         open={drawerOpen}
@@ -376,7 +379,7 @@ export default function HrEmployeesPage() {
                   Type
                 </span>
                 <select
-                  className={selectClass}
+                  className={softSelect}
                   value={contractType}
                   onChange={(e) => setContractType(e.target.value)}
                 >
@@ -428,6 +431,6 @@ export default function HrEmployeesPage() {
           )}
         </div>
       </ADrawer>
-    </div>
+    </>
   );
 }

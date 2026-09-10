@@ -86,6 +86,12 @@ export class DeliveryController {
     });
   }
 
+  @Get('home-kpis')
+  @RequirePermission(PERMISSION_KEYS.deliveryRead)
+  homeKpis(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.deliveryService.homeKpis(tenancy.companyId);
+  }
+
   @Get('eligible-orders')
   @RequirePermission(PERMISSION_KEYS.deliveryRead)
   eligible(

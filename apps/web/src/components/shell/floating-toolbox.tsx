@@ -14,7 +14,6 @@ import {
   Languages,
   NotebookPen,
   StickyNote,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,8 +23,15 @@ import { useShellT } from "@/stores/locale-store";
 
 type ToolDef = {
   id: string;
-  label: string;
+  labelKey:
+    | "toolCalc"
+    | "toolCalendar"
+    | "toolAgenda"
+    | "toolTranslate"
+    | "toolNotes";
   icon: LucideIcon;
+  /** Liquid glass accent token. */
+  liquid: string;
   url?: string;
   sheet?: "calculator" | "notes";
 };
@@ -33,42 +39,47 @@ type ToolDef = {
 const TOOLS: ToolDef[] = [
   {
     id: "calc",
-    label: "Calculatrice",
+    labelKey: "toolCalc",
     icon: Calculator,
+    liquid: "calc",
     sheet: "calculator",
   },
   {
     id: "calendar",
-    label: "Calendrier",
+    labelKey: "toolCalendar",
     icon: CalendarDays,
+    liquid: "calendar",
     url: "https://calendar.google.com/calendar/u/0/r",
   },
   {
     id: "agenda",
-    label: "Agenda",
+    labelKey: "toolAgenda",
     icon: NotebookPen,
+    liquid: "agenda",
     url: "https://calendar.google.com/calendar/u/0/r/agenda",
   },
   {
     id: "translate",
-    label: "Traducteur",
+    labelKey: "toolTranslate",
     icon: Languages,
+    liquid: "translate",
     url: "https://translate.google.com/?sl=auto&tl=fr",
   },
   {
     id: "notes",
-    label: "Notes",
+    labelKey: "toolNotes",
     icon: StickyNote,
+    liquid: "notes",
     sheet: "notes",
   },
 ];
 
 const IDLE_MS = 3200;
 
-/** Quarter arc from left (π) toward up — icons clear of tip labels on the left. */
+/** Icons sit on the white quarter-circle arc (radius ≈ fan edge). */
 function arcOffset(index: number, total: number, radiusPx: number) {
-  const start = Math.PI * 0.92;
-  const end = Math.PI * 0.42;
+  const start = Math.PI * 0.88;
+  const end = Math.PI * 0.38;
   const t = total <= 1 ? 0.5 : index / (total - 1);
   const angle = start + (end - start) * t;
   return {
@@ -82,6 +93,7 @@ function arcOffset(index: number, total: number, radiusPx: number) {
  */
 export function FloatingToolbox() {
   const listId = useId();
+  const { t } = useShellT();
   const rootRef = useRef<HTMLDivElement>(null);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,7 +104,7 @@ export function FloatingToolbox() {
   sheetRef.current = sheet;
 
   const arc = useMemo(
-    () => TOOLS.map((_, i) => arcOffset(i, TOOLS.length, 108)),
+    () => TOOLS.map((_, i) => arcOffset(i, TOOLS.length, 158)),
     [],
   );
 
@@ -218,6 +230,7 @@ export function FloatingToolbox() {
       <ul id={listId} className="a-toolbox-arc" aria-hidden={!open}>
         {TOOLS.map((tool, index) => {
           const Icon = tool.icon;
+          const label = t(tool.labelKey);
           const { x, y } = arc[index]!;
           const style = {
             "--a-toolbox-i": String(index),
@@ -231,15 +244,24 @@ export function FloatingToolbox() {
                 type="button"
                 className="a-toolbox-row"
                 tabIndex={open ? 0 : -1}
-                title={tool.label}
-                aria-label={tool.label}
+                title={label}
+                aria-label={label}
                 onMouseEnter={openMenu}
                 onClick={() => runTool(tool)}
               >
-                <span className="a-toolbox-glyph">
-                  <Icon className="h-7 w-7" strokeWidth={1.35} />
+                <span
+                  className={cn(
+                    "a-toolbox-glyph a-liquid-icon",
+                    `a-liquid-${tool.liquid}`,
+                  )}
+                >
+                  <span className="a-liquid-shine" aria-hidden />
+                  <Icon
+                    className="a-liquid-glyph h-[1.15rem] w-[1.15rem]"
+                    strokeWidth={1.75}
+                  />
                 </span>
-                <span className="a-toolbox-tip">{tool.label}</span>
+                <span className="a-toolbox-tip">{label}</span>
               </button>
             </li>
           );
@@ -248,13 +270,13 @@ export function FloatingToolbox() {
 
       <button
         type="button"
-        className="a-toolbox-fab"
+        className="a-toolbox-fab a-toolbox-fab-bar-only"
         aria-label={
           idleBar
-            ? "Outils — étendre"
+            ? t("toolboxExpand")
             : open
-              ? "Fermer la boîte à outils"
-              : "Boîte à outils"
+              ? t("toolboxClose")
+              : t("toolboxOpen")
         }
         aria-expanded={open}
         aria-controls={listId}
@@ -291,14 +313,7 @@ export function FloatingToolbox() {
           setOpen(true);
         }}
       >
-        <span className="a-toolbox-fab-glow" aria-hidden />
-        <span className="a-toolbox-fab-label">Outils</span>
-        <Zap
-          className="a-toolbox-fab-icon h-6 w-6"
-          strokeWidth={2.25}
-          fill="currentColor"
-          fillOpacity={0.28}
-        />
+        <span className="a-toolbox-fab-bar" aria-hidden />
       </button>
     </div>
   );

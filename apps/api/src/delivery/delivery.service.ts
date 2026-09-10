@@ -147,6 +147,33 @@ export class DeliveryService {
     return serializeRound(row, 0);
   }
 
+  /** Mission Control — in-flight shipment counts (READY / ASSIGNED / OUT). */
+  async homeKpis(companyId: string): Promise<{
+    activeCount: number;
+    readyCount: number;
+    assignedCount: number;
+    outCount: number;
+  }> {
+    const base = { companyId, deletedAt: null as null };
+    const [readyCount, assignedCount, outCount] = await Promise.all([
+      this.prisma.dlvShipment.count({
+        where: { ...base, status: DlvShipmentStatus.READY },
+      }),
+      this.prisma.dlvShipment.count({
+        where: { ...base, status: DlvShipmentStatus.ASSIGNED },
+      }),
+      this.prisma.dlvShipment.count({
+        where: { ...base, status: DlvShipmentStatus.OUT },
+      }),
+    ]);
+    return {
+      readyCount,
+      assignedCount,
+      outCount,
+      activeCount: readyCount + assignedCount + outCount,
+    };
+  }
+
   async list(
     companyId: string,
     opts?: {

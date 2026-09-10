@@ -20,7 +20,6 @@ import {
   type InventoryWarehouse,
 } from "@/lib/inventory";
 import {
-  STATUS_LABELS,
   cancelSalesOrder,
   confirmSalesOrder,
   createSalesOrder,
@@ -32,6 +31,8 @@ import {
   type SalesOrder,
   type SalesOrderStatus,
 } from "@/lib/sales";
+import { softPageBody } from "@/lib/soft-glass-ui";
+import { useStatusLabel } from "@/hooks/use-status-label";
 
 function orderBadgeTone(
   status: SalesOrderStatus,
@@ -87,6 +88,7 @@ function newLine(): LineDraft {
 function SalesPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { label: st } = useStatusLabel();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -311,7 +313,7 @@ function SalesPageInner() {
           </AButton>
         }
       />
-      <div className="mx-auto max-w-5xl space-y-6 px-6 pb-16 pt-2 md:px-10">
+      <div className={softPageBody}>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
             <label
@@ -381,7 +383,7 @@ function SalesPageInner() {
                       {row.number}
                     </span>
                     <ABadge tone={orderBadgeTone(row.status)}>
-                      {STATUS_LABELS[row.status]}
+                      {st(row.status)}
                     </ABadge>
                   </div>
                   <p className="mt-0.5 truncate text-[12px] text-a-fg-muted">
@@ -717,7 +719,7 @@ export default function SalesPage() {
   return (
     <Suspense
       fallback={
-        <div className="space-y-2 p-[var(--a-space-6)]">
+        <div className={softPageBody}>
           <ASkeleton className="h-10 w-48" />
           <ASkeleton className="h-10 w-full" />
         </div>

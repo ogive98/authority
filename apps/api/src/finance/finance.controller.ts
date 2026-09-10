@@ -67,6 +67,12 @@ export class FinanceController {
     };
   }
 
+  @Get('home-kpis')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  homeKpis(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.financeService.homeKpis(tenancy.companyId);
+  }
+
   @Get('open-items')
   @RequirePermission(PERMISSION_KEYS.financeArRead)
   list(

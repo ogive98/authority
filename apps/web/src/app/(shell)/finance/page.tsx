@@ -15,10 +15,8 @@ import {
   ASkeleton,
   type AComboboxOption,
 } from "@/components/a";
-import { cn } from "@/lib/utils";
 import { fetchCustomers } from "@/lib/customers";
 import {
-  OPEN_ITEM_STATUS_LABELS,
   allocateOpenItem,
   createOpenItem,
   createPromise,
@@ -28,6 +26,14 @@ import {
   type FinOpenItem,
   type OpenItemStatus,
 } from "@/lib/finance";
+import {
+  softChipClass,
+  softPageBody,
+  softTableWrap,
+  softThead,
+  softTr,
+} from "@/lib/soft-glass-ui";
+import { useStatusLabel } from "@/hooks/use-status-label";
 
 type LoadState =
   | { kind: "loading" }
@@ -62,15 +68,15 @@ type PromiseDraft = {
 
 type FilterMode = "" | OpenItemStatus | "OVERDUE";
 
-const STATUS_FILTERS: Array<{ id: FilterMode; label: string }> = [
-  { id: "", label: "Tous" },
-  { id: "OPEN", label: "Ouvert" },
-  { id: "PARTIAL", label: "Partiel" },
-  { id: "CLOSED", label: "Soldé" },
-  { id: "OVERDUE", label: "Échues" },
-];
-
 export default function FinancePage() {
+  const { label: st } = useStatusLabel();
+  const STATUS_FILTERS: Array<{ id: FilterMode; label: string }> = [
+    { id: "", label: st("ALL", "Tous") },
+    { id: "OPEN", label: st("OPEN") },
+    { id: "PARTIAL", label: st("PARTIAL") },
+    { id: "CLOSED", label: st("CLOSED") },
+    { id: "OVERDUE", label: st("OVERDUE", "Échues") },
+  ];
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterMode>("");
@@ -258,9 +264,9 @@ export default function FinancePage() {
           </div>
         }
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className={softPageBody}>
         <div
-          className="flex flex-wrap gap-1 border-b border-a-border-subtle"
+          className="flex flex-wrap gap-2"
           role="tablist"
           aria-label="Filtrer par statut"
         >
@@ -273,12 +279,7 @@ export default function FinancePage() {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setStatusFilter(chip.id)}
-                className={cn(
-                  "border-b-2 px-3 py-2 text-[length:var(--a-text-sm)]",
-                  active
-                    ? "border-a-accent text-a-fg"
-                    : "border-transparent text-a-fg-muted hover:text-a-fg",
-                )}
+                className={softChipClass(active)}
               >
                 {chip.label}
               </button>
@@ -343,9 +344,9 @@ export default function FinancePage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2">
+          <div className={softTableWrap}>
             <table className="w-full min-w-[52rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="border-b border-a-border-subtle bg-a-surface-3/80 text-a-fg-muted">
+              <thead className={softThead}>
                 <tr>
                   <th className="a-table-cell font-medium">N°</th>
                   <th className="a-table-cell font-medium">Client</th>
@@ -359,10 +360,7 @@ export default function FinancePage() {
               </thead>
               <tbody>
                 {state.items.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
-                  >
+                  <tr key={row.id} className={softTr}>
                     <td className="a-mono a-table-cell">{row.number}</td>
                     <td className="a-table-cell">
                       {row.customerName ?? row.customerCode ?? "—"}
@@ -380,13 +378,13 @@ export default function FinancePage() {
                       {row.dueDate ?? "—"}
                       {isOpenItemOverdue(row) ? (
                         <span className="ml-2 inline-block">
-                          <ABadge tone="warning">Échue</ABadge>
+                          <ABadge tone="warning">{st("OVERDUE")}</ABadge>
                         </span>
                       ) : null}
                     </td>
                     <td className="a-table-cell">
                       <ABadge tone={openItemBadgeTone(row.status)}>
-                        {OPEN_ITEM_STATUS_LABELS[row.status]}
+                        {st(row.status)}
                       </ABadge>
                     </td>
                     <td className="a-table-cell">

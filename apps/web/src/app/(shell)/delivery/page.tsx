@@ -15,7 +15,6 @@ import {
   type AComboboxOption,
 } from "@/components/a";
 import {
-  SHIPMENT_STATUS_LABELS,
   assignShipmentDriver,
   completeShipment,
   createRound,
@@ -30,7 +29,11 @@ import {
   type EligibleOrder,
   type ShipmentStatus,
 } from "@/lib/delivery";
-import { cn } from "@/lib/utils";
+import {
+  softChipClass,
+  softPageBody,
+} from "@/lib/soft-glass-ui";
+import { useStatusLabel } from "@/hooks/use-status-label";
 
 type LoadState =
   | { kind: "loading" }
@@ -53,15 +56,6 @@ type RoundForm = {
 };
 
 type FailDraft = { id: string; number: string; reason: string };
-
-const STATUS_FILTERS: Array<{ id: "" | ShipmentStatus; label: string }> = [
-  { id: "", label: "Tous" },
-  { id: "READY", label: "Prêt" },
-  { id: "ASSIGNED", label: "Assigné" },
-  { id: "OUT", label: "En route" },
-  { id: "DELIVERED", label: "Livré" },
-  { id: "FAILED", label: "Échec" },
-];
 
 function shipmentBadgeTone(
   status: DeliveryShipment["status"],
@@ -105,6 +99,15 @@ function todayIso(): string {
 }
 
 export default function DeliveryPage() {
+  const { label: st } = useStatusLabel();
+  const STATUS_FILTERS: Array<{ id: "" | ShipmentStatus; label: string }> = [
+    { id: "", label: st("ALL", "Tous") },
+    { id: "READY", label: st("READY") },
+    { id: "ASSIGNED", label: st("ASSIGNED") },
+    { id: "OUT", label: st("OUT") },
+    { id: "DELIVERED", label: st("DELIVERED") },
+    { id: "FAILED", label: st("FAILED") },
+  ];
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | ShipmentStatus>("");
@@ -314,9 +317,9 @@ export default function DeliveryPage() {
           </div>
         }
       />
-      <div className="mx-auto max-w-5xl space-y-6 px-6 pb-16 pt-2 md:px-10">
+      <div className={softPageBody}>
         <div
-          className="flex flex-wrap gap-1.5"
+          className="flex flex-wrap gap-2"
           role="tablist"
           aria-label="Filtrer par statut"
         >
@@ -329,12 +332,7 @@ export default function DeliveryPage() {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setStatusFilter(chip.id)}
-                className={cn(
-                  "rounded-[10px] px-3 py-1.5 text-[12px] transition-colors",
-                  active
-                    ? "bg-a-accent text-white"
-                    : "bg-a-surface-3 text-a-fg-muted hover:text-a-fg",
-                )}
+                className={softChipClass(active)}
               >
                 {chip.label}
               </button>
@@ -417,7 +415,7 @@ export default function DeliveryPage() {
                               {row.number}
                             </span>
                             <ABadge tone={shipmentBadgeTone(row.status)}>
-                              {SHIPMENT_STATUS_LABELS[row.status]}
+                              {st(row.status)}
                             </ABadge>
                           </div>
                           <p className="mt-0.5 truncate text-[12px] text-a-fg-muted">

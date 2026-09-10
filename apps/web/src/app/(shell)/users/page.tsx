@@ -13,7 +13,14 @@ import {
   ASkeleton,
   ASwitch,
 } from "@/components/a";
-import { cn } from "@/lib/utils";
+import {
+  softChipClass,
+  softPageBody,
+  softSelect,
+  softTableWrap,
+  softThead,
+  softTr,
+} from "@/lib/soft-glass-ui";
 import {
   STATUS_LABELS,
   createCompanyUser,
@@ -32,9 +39,6 @@ import {
   type MailStatus,
   type UserGrants,
 } from "@/lib/users";
-
-const selectClass =
-  "flex h-9 w-full rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-3 text-[length:var(--a-text-sm)] text-a-fg";
 
 const STATUS_FILTERS: { id: "" | CompanyUserStatus; label: string }[] = [
   { id: "", label: "Tous" },
@@ -380,7 +384,7 @@ export default function UsersPage() {
         }
       />
 
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className={softPageBody}>
         <div
           className="flex flex-wrap gap-1.5"
           role="tablist"
@@ -395,12 +399,7 @@ export default function UsersPage() {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setStatusFilter(chip.id)}
-                className={cn(
-                  "rounded-[10px] px-3 py-1.5 text-[12px] transition-colors",
-                  active
-                    ? "bg-a-accent text-white"
-                    : "bg-a-surface-3 text-a-fg-muted hover:text-a-fg",
-                )}
+                className={softChipClass(active)}
               >
                 {chip.label}
                 {state.kind === "ok" ? (
@@ -479,42 +478,32 @@ export default function UsersPage() {
         ) : null}
 
         {state.kind === "ok" && visibleItems.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)]">
+          <div className={softTableWrap}>
             <table className="w-full min-w-[40rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="bg-a-surface-2 text-a-fg-muted">
+              <thead className={softThead}>
                 <tr>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Nom
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    E-mail
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Rôle
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Statut
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Actions
-                  </th>
+                  <th className="a-table-cell font-medium">Nom</th>
+                  <th className="a-table-cell font-medium">E-mail</th>
+                  <th className="a-table-cell font-medium">Rôle</th>
+                  <th className="a-table-cell font-medium">Statut</th>
+                  <th className="a-table-cell font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleItems.map((row) => (
-                  <tr key={row.id} className="hover:bg-a-surface-3/60">
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium text-a-fg">
+                  <tr key={row.id} className={softTr}>
+                    <td className="a-table-cell font-medium text-a-fg">
                       {row.displayName}
                     </td>
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
+                    <td className="a-mono a-table-cell text-a-fg-muted">
                       {row.email}
                     </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg">
+                    <td className="a-table-cell text-a-fg">
                       <ABadge tone={roleTone(row.roleCode)}>
                         {roleLabel(row.roleCode)}
                       </ABadge>
                     </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                    <td className="a-table-cell">
                       <div className="space-y-0.5">
                         <ABadge
                           tone={
@@ -538,7 +527,7 @@ export default function UsersPage() {
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                    <td className="a-table-cell">
                       <div className="flex flex-wrap gap-2">
                         <AButton
                           type="button"
@@ -710,7 +699,7 @@ export default function UsersPage() {
             {!editing ? (
               <Field label="Mode">
                 <select
-                  className={selectClass}
+                  className={softSelect}
                   value={createMode}
                   onChange={(e) =>
                     setCreateMode(e.target.value as "invite" | "password")
@@ -746,7 +735,7 @@ export default function UsersPage() {
             </Field>
             <Field label="Rôle">
               <select
-                className={selectClass}
+                className={softSelect}
                 value={form.roleCode}
                 onChange={(e) =>
                   setForm({ ...form, roleCode: e.target.value })
@@ -762,7 +751,7 @@ export default function UsersPage() {
             {editing ? (
               <Field label="Statut">
                 <select
-                  className={selectClass}
+                  className={softSelect}
                   value={form.status}
                   onChange={(e) =>
                     setForm({
@@ -833,7 +822,7 @@ export default function UsersPage() {
             )}
 
             {editing ? (
-              <div className="space-y-3 border-t border-a-border-subtle pt-4">
+              <div className="space-y-3 border-t border-transparent pt-4">
                 <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
                   Droits société (USER)
                 </p>

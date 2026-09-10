@@ -1,0 +1,32 @@
+import { cn } from "@/lib/utils";
+
+/** Soft Glass filter chips — no underline / border chrome (D163). */
+export function softChipClass(active: boolean): string {
+  return cn(
+    "rounded-md px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium transition-colors",
+    active
+      ? "bg-a-accent text-white"
+      : "bg-a-surface-3 text-a-fg-muted hover:bg-a-surface-4 hover:text-a-fg",
+  );
+}
+
+/** Table host — underlay only, zero frame. */
+export const softTableWrap =
+  "a-underlay overflow-x-auto rounded-md";
+
+export const softThead =
+  "bg-a-surface-3/55 text-a-fg-muted";
+
+export const softTr =
+  "transition-colors hover:bg-a-surface-3/45";
+
+/** Form / panel block without framed card. */
+export const softPanel = "a-underlay space-y-4 rounded-md p-4 md:p-5";
+
+/** Native select aligned Soft Glass. */
+export const softSelect =
+  "flex h-9 w-full rounded-md bg-a-surface-3 px-3 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2";
+
+/** Page body padding consistent with shell. */
+export const softPageBody =
+  "space-y-5 p-4 md:space-y-6 md:p-6";

@@ -59,7 +59,7 @@ export function ADrawer({
               <X className="h-4 w-4" strokeWidth={1.75} />
             </Dialog.Close>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
+          <div className="a-scroll-momentum min-h-0 flex-1 p-5">{children}</div>
           {footer ? (
             <div className="a-glass shrink-0 px-5 py-4">
               {footer}

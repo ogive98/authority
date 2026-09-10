@@ -1,6 +1,6 @@
 /**
- * Widget Registry (D161) — home Mission Control + /dev/dashboard shells.
- * No invented business KPIs; empty/loading or live monitor/registry only.
+ * Widget Registry (D161+) — home Mission Control + /dev/dashboard shells.
+ * KPIs = live /home-kpis only (D165); never invent CA/€.
  */
 
 export type WidgetLoadStrategy = "immediate" | "viewport";
@@ -65,7 +65,7 @@ export const SHELL_WIDGETS: WidgetDef[] = [
   },
 ];
 
-/** Home Mission Control widgets (safe — no fake CA/€). */
+/** Home Mission Control widgets — live KPIs from module /home-kpis (D165). */
 export const HOME_WIDGETS: WidgetDef[] = [
   {
     id: "hero-context",
@@ -74,6 +74,15 @@ export const HOME_WIDGETS: WidgetDef[] = [
     loadStrategy: "immediate",
     contexts: ["home"],
     size: "hero",
+  },
+  {
+    id: "kpi-strip",
+    title: "Indicateurs",
+    description:
+      "AR TND + commandes + stock + échues — agrégats DB, pas de CA inventé",
+    loadStrategy: "immediate",
+    contexts: ["home"],
+    size: "lg",
   },
   {
     id: "shell-status",

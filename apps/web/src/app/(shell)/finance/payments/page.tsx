@@ -27,6 +27,13 @@ import {
   type FinPayment,
   type PaymentMethod,
 } from "@/lib/finance";
+import {
+  softPageBody,
+  softSelect,
+  softTableWrap,
+  softThead,
+  softTr,
+} from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -222,7 +229,7 @@ export default function FinancePaymentsPage() {
           </div>
         }
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className={softPageBody}>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
             <label
@@ -263,9 +270,9 @@ export default function FinancePaymentsPage() {
           <AEmptyState title="Aucun paiement" description="Enregistrez un encaissement puis simulez l’affectation." />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2">
+          <div className={softTableWrap}>
             <table className="w-full min-w-[52rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="border-b border-a-border-subtle bg-a-surface-3/80 text-a-fg-muted">
+              <thead className={softThead}>
                 <tr>
                   <th className="a-table-cell font-medium">N°</th>
                   <th className="a-table-cell font-medium">Client</th>
@@ -278,10 +285,7 @@ export default function FinancePaymentsPage() {
               </thead>
               <tbody>
                 {state.items.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
-                  >
+                  <tr key={p.id} className={softTr}>
                     <td className="a-mono a-table-cell">{p.number}</td>
                     <td className="a-table-cell">
                       {p.customerName ?? p.customerCode ?? "—"}
@@ -381,7 +385,7 @@ export default function FinancePaymentsPage() {
                 Méthode
               </label>
               <select
-                className="a-input w-full rounded-[var(--a-radius-md)] border border-a-border bg-a-surface px-3 py-2 text-[13px]"
+                className={softSelect}
                 value={form.method}
                 onChange={(e) =>
                   setForm({
@@ -495,7 +499,7 @@ export default function FinancePaymentsPage() {
               Politique
             </label>
             <select
-              className="a-input w-full rounded-[var(--a-radius-md)] border border-a-border bg-a-surface px-3 py-2 text-[13px]"
+              className={softSelect}
               value={policy}
               onChange={(e) => {
                 setPolicy(e.target.value as AllocationPolicy);

@@ -42,6 +42,8 @@ export type FeedIconDef = {
   toneClass: string;
   softBg: string;
   label: string;
+  /** Liquid glass disc class (iOS-like). */
+  liquidClass?: string;
 };
 
 /** Notification types — semantic color + dedicated glyph. */
@@ -51,76 +53,88 @@ const NOTIFICATION_ICONS: Record<NotificationType, FeedIconDef> = {
     toneClass: "text-a-success",
     softBg: "bg-a-success-soft",
     label: "Succès",
+    liquidClass: "a-liquid-translate",
   },
   info: {
     icon: Info,
     toneClass: "text-a-info",
     softBg: "bg-a-info-soft",
     label: "Info",
+    liquidClass: "a-liquid-calendar",
   },
   warning: {
     icon: AlertTriangle,
     toneClass: "text-a-warning",
     softBg: "bg-a-warning-soft",
     label: "Alerte",
+    liquidClass: "a-liquid-notes",
   },
   danger: {
     icon: ShieldAlert,
     toneClass: "text-a-danger",
     softBg: "bg-a-danger-soft",
     label: "Critique",
+    liquidClass: "a-liquid-calc",
   },
   task: {
     icon: ClipboardList,
     toneClass: "text-a-accent",
     softBg: "bg-a-accent-muted",
     label: "Tâche",
+    liquidClass: "a-liquid-agenda",
   },
   system: {
     icon: CloudLightning,
     toneClass: "text-a-accent-2",
     softBg: "bg-a-info-soft",
     label: "Système",
+    liquidClass: "a-liquid-translate",
   },
 };
 
-/** AI recommendations — violet family only (lock), distinct icons. */
+/** AI recommendations — violet liquid family (lock), distinct chroma. */
 const AI_ICONS: Record<AiRecommendationKind, FeedIconDef> = {
   stock: {
     icon: PackagePlus,
-    toneClass: "text-[var(--a-violet)]",
+    toneClass: "text-white",
     softBg: "bg-[var(--a-violet-soft)]",
     label: "Stock",
+    liquidClass: "a-liquid-ai-stock",
   },
   forecast: {
     icon: LineChart,
-    toneClass: "text-[var(--a-violet)]",
+    toneClass: "text-white",
     softBg: "bg-[var(--a-violet-soft)]",
     label: "Prévision",
+    liquidClass: "a-liquid-ai-forecast",
   },
   pricing: {
     icon: TrendingUp,
-    toneClass: "text-[var(--a-violet)]",
+    toneClass: "text-white",
     softBg: "bg-[var(--a-violet-soft)]",
     label: "Prix",
+    liquidClass: "a-liquid-ai-pricing",
   },
   quality: {
     icon: ShieldAlert,
-    toneClass: "text-[var(--a-violet)]",
+    toneClass: "text-white",
     softBg: "bg-[var(--a-violet-soft)]",
     label: "Qualité",
+    liquidClass: "a-liquid-ai-quality",
   },
   ops: {
     icon: Wrench,
-    toneClass: "text-[var(--a-violet)]",
+    toneClass: "text-white",
     softBg: "bg-[var(--a-violet-soft)]",
     label: "Ops",
+    liquidClass: "a-liquid-ai-ops",
   },
   generic: {
     icon: Sparkles,
-    toneClass: "text-[var(--a-violet)]",
+    toneClass: "text-white",
     softBg: "bg-[var(--a-violet-soft)]",
     label: "IA",
+    liquidClass: "a-liquid-ai-generic",
   },
 };
 
@@ -130,12 +144,14 @@ const ACTIVITY_EXTRA: Record<"user" | "metric" | "idle", FeedIconDef> = {
     toneClass: "text-a-accent",
     softBg: "bg-a-accent-muted",
     label: "Utilisateur",
+    liquidClass: "a-liquid-translate",
   },
   metric: {
     icon: Gauge,
     toneClass: "text-a-accent-2",
     softBg: "bg-a-info-soft",
     label: "Métrique",
+    liquidClass: "a-liquid-calendar",
   },
   idle: {
     icon: Activity,
@@ -143,6 +159,16 @@ const ACTIVITY_EXTRA: Record<"user" | "metric" | "idle", FeedIconDef> = {
     softBg: "bg-a-surface-3",
     label: "Activité",
   },
+};
+
+/** Exact module shortcuts for AI placeholder rows. */
+export const AI_REC_HREF: Record<AiRecommendationKind, string> = {
+  stock: "/inventory",
+  forecast: "/sales",
+  pricing: "/finance",
+  quality: "/inventory/lots",
+  ops: "/settings",
+  generic: "/",
 };
 
 export function iconForNotificationType(type: NotificationType): FeedIconDef {
@@ -169,19 +195,42 @@ export function iconForActivity(kind: ActivityKind): FeedIconDef {
   return iconForNotificationType(kind);
 }
 
-/** Compact glyph — soft tinted underlay, no hard frame. */
+/** Compact glyph — soft underlay or iOS liquid disc. */
 export function FeedGlyph({
   def,
   className,
   size = 15,
   strokeWidth = 1.65,
+  liquid = false,
 }: {
   def: FeedIconDef;
   className?: string;
   size?: number;
   strokeWidth?: number;
+  liquid?: boolean;
 }) {
   const Icon = def.icon;
+  if (liquid && def.liquidClass) {
+    return (
+      <span
+        className={cn(
+          "a-liquid-icon inline-flex h-8 w-8 shrink-0 items-center justify-center text-white",
+          def.liquidClass,
+          className,
+        )}
+        title={def.label}
+        aria-hidden
+      >
+        <span className="a-liquid-shine" />
+        <Icon
+          className="a-liquid-glyph"
+          width={size}
+          height={size}
+          strokeWidth={strokeWidth}
+        />
+      </span>
+    );
+  }
   return (
     <span
       className={cn(
@@ -202,10 +251,23 @@ export function FeedGlyph({
 export const AI_REC_PLACEHOLDERS: {
   kind: AiRecommendationKind;
   title: string;
+  href: string;
 }[] = [
-  { kind: "stock", title: "Réapprovisionner (dès API)" },
-  { kind: "forecast", title: "Prévision demande (dès API)" },
-  { kind: "pricing", title: "Ajustement tarif (dès API)" },
-  { kind: "quality", title: "Alerte qualité (dès API)" },
-  { kind: "ops", title: "Optimisation ops (dès API)" },
+  { kind: "stock", title: "Réapprovisionner (dès API)", href: AI_REC_HREF.stock },
+  {
+    kind: "forecast",
+    title: "Prévision demande (dès API)",
+    href: AI_REC_HREF.forecast,
+  },
+  {
+    kind: "pricing",
+    title: "Ajustement tarif (dès API)",
+    href: AI_REC_HREF.pricing,
+  },
+  {
+    kind: "quality",
+    title: "Alerte qualité (dès API)",
+    href: AI_REC_HREF.quality,
+  },
+  { kind: "ops", title: "Optimisation ops (dès API)", href: AI_REC_HREF.ops },
 ];

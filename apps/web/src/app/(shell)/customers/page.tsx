@@ -28,9 +28,13 @@ import {
   type Customer,
   type CustomerZone,
 } from "@/lib/customers";
-
-const selectClass =
-  "flex h-9 w-full rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-3 text-[length:var(--a-text-sm)] text-a-fg";
+import {
+  softPageBody,
+  softSelect,
+  softTableWrap,
+  softThead,
+  softTr,
+} from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -284,7 +288,7 @@ export default function CustomersPage() {
           </AButton>
         }
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className={softPageBody}>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
             <label
@@ -342,40 +346,23 @@ export default function CustomersPage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle">
+          <div className={softTableWrap}>
             <table className="w-full min-w-[44rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="border-b border-a-border-subtle bg-a-surface-2 text-a-fg-muted">
+              <thead className={softThead}>
                 <tr>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Code
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Surnom
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Raison sociale
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Zone
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Crédit
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Statut
-                  </th>
-                  <th className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] font-medium">
-                    Actions
-                  </th>
+                  <th className="a-table-cell font-medium">Code</th>
+                  <th className="a-table-cell font-medium">Surnom</th>
+                  <th className="a-table-cell font-medium">Raison sociale</th>
+                  <th className="a-table-cell font-medium">Zone</th>
+                  <th className="a-table-cell font-medium">Crédit</th>
+                  <th className="a-table-cell font-medium">Statut</th>
+                  <th className="a-table-cell font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {state.items.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
-                  >
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                  <tr key={row.id} className={softTr}>
+                    <td className="a-mono a-table-cell">
                       <button
                         type="button"
                         className="text-left text-a-accent hover:underline"
@@ -384,19 +371,17 @@ export default function CustomersPage() {
                         {row.code}
                       </button>
                     </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
+                    <td className="a-table-cell text-a-fg-muted">
                       {row.nickname ?? "—"}
                     </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
-                      {row.legalName}
-                    </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)] text-a-fg-muted">
+                    <td className="a-table-cell">{row.legalName}</td>
+                    <td className="a-table-cell text-a-fg-muted">
                       {row.zoneCode ?? "—"}
                     </td>
-                    <td className="a-mono px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                    <td className="a-mono a-table-cell">
                       {row.creditLimit ?? "—"}
                     </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                    <td className="a-table-cell">
                       {row.blocked ? (
                         <ABadge tone="danger">Bloqué</ABadge>
                       ) : (
@@ -405,7 +390,7 @@ export default function CustomersPage() {
                         </ABadge>
                       )}
                     </td>
-                    <td className="px-[var(--a-table-cell-px)] py-[var(--a-table-cell-py)]">
+                    <td className="a-table-cell">
                       <div className="flex flex-wrap gap-2">
                         <AButton
                           type="button"
@@ -538,7 +523,7 @@ export default function CustomersPage() {
             </Field>
             <Field label="Zone">
               <select
-                className={selectClass}
+                className={softSelect}
                 value={form.zoneId}
                 onChange={(e) =>
                   setForm({ ...form, zoneId: e.target.value })
@@ -609,7 +594,7 @@ export default function CustomersPage() {
               </p>
             ) : null}
 
-            <div className="border-t border-a-border-subtle pt-4">
+            <div className="border-t border-white/5 pt-4">
               <p className="mb-3 text-[length:var(--a-text-sm)] text-a-fg-muted">
                 {editing
                   ? "Ajouter un contact"

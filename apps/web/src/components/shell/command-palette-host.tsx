@@ -10,6 +10,7 @@ import {
 import { resolveActions } from "@/lib/action-registry";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useShellStore } from "@/stores/shell-store";
+import { useLocaleStore } from "@/stores/locale-store";
 
 /** Global Ctrl/Cmd+K + command shortcuts + palette host (Action Registry). */
 export function CommandPaletteHost() {
@@ -17,6 +18,7 @@ export function CommandPaletteHost() {
   const setPaletteOpen = useShellStore((s) => s.setPaletteOpen);
   const router = useRouter();
   const { data: registry } = useMeRegistry();
+  const locale = useLocaleStore((s) => s.locale);
 
   const allowed = useMemo(
     () =>
@@ -24,8 +26,9 @@ export function CommandPaletteHost() {
         registry,
         grants: DEMO_PERMISSION_GRANTS,
         context: "palette",
+        locale,
       }),
-    [registry],
+    [registry, locale],
   );
 
   const enabledModules = useMemo(

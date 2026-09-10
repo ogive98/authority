@@ -24,6 +24,7 @@ import {
   type InventoryWarehouse,
   type ProductOption,
 } from "@/lib/inventory";
+import { softPageBody, softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -38,9 +39,6 @@ type FormState = {
   dlc: string;
   initialQty: string;
 };
-
-const selectClass =
-  "flex h-9 w-full rounded-[var(--a-radius-md)] bg-a-surface-3 px-3 text-[13px] text-a-fg outline-none focus:ring-2 focus:ring-a-accent/30";
 
 function statusTone(
   status: InventoryLot["status"],
@@ -209,7 +207,7 @@ export default function InventoryLotsPage() {
         }
       />
 
-      <div className="mx-auto max-w-5xl space-y-6 px-6 pb-16 pt-2 md:px-10">
+      <div className={softPageBody}>
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-[12rem] flex-1 space-y-1">
             <span className="text-[11px] text-a-fg-subtle">Recherche</span>
@@ -222,7 +220,7 @@ export default function InventoryLotsPage() {
           <label className="space-y-1">
             <span className="text-[11px] text-a-fg-subtle">Statut</span>
             <select
-              className={selectClass}
+              className={softSelect}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -378,7 +376,7 @@ export default function InventoryLotsPage() {
             <label className="block space-y-1">
               <span className="text-[12px] text-a-fg-muted">Entrepôt</span>
               <select
-                className={selectClass}
+                className={softSelect}
                 value={form.warehouseId}
                 onChange={(e) =>
                   setForm({ ...form, warehouseId: e.target.value })
@@ -394,7 +392,7 @@ export default function InventoryLotsPage() {
             <label className="block space-y-1">
               <span className="text-[12px] text-a-fg-muted">Produit</span>
               <select
-                className={selectClass}
+                className={softSelect}
                 value={form.productId}
                 onChange={(e) =>
                   setForm({ ...form, productId: e.target.value })

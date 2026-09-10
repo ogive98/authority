@@ -118,6 +118,42 @@ export class FinanceService {
     return { items: await this.enrichMany(companyId, page), nextCursor };
   }
 
+  /** Company-wide AR KPIs for Mission Control — real aggregates, TND as-recorded. */
+  async homeKpis(companyId: string): Promise<{
+    outstandingOpen: string;
+    openCount: number;
+    overdueCount: number;
+    currency: 'TND';
+  }> {
+    const today = startOfUtcDay(new Date());
+    const openWhere: Prisma.FinOpenItemWhereInput = {
+      companyId,
+      deletedAt: null,
+      side: FinOpenItemSide.AR,
+      status: {
+        in: [FinOpenItemStatus.OPEN, FinOpenItemStatus.PARTIAL],
+      },
+    };
+    const [sum, openCount, overdueCount] = await Promise.all([
+      this.prisma.finOpenItem.aggregate({
+        where: openWhere,
+        _sum: { amountOpen: true },
+      }),
+      this.prisma.finOpenItem.count({ where: openWhere }),
+      this.prisma.finOpenItem.count({
+        where: { ...openWhere, dueDate: { lt: today } },
+      }),
+    ]);
+    return {
+      outstandingOpen: (
+        sum._sum.amountOpen ?? new Prisma.Decimal(0)
+      ).toFixed(3),
+      openCount,
+      overdueCount,
+      currency: 'TND',
+    };
+  }
+
   async get(companyId: string, id: string): Promise<OpenItemDto> {
     const row = await this.findActive(companyId, id);
     return this.enrichOne(companyId, row);

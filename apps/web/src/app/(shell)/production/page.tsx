@@ -24,6 +24,13 @@ import {
   type WorkOrder,
 } from "@/lib/production";
 import { cn } from "@/lib/utils";
+import {
+  softPageBody,
+  softSelect,
+  softTableWrap,
+  softThead,
+  softTr,
+} from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -32,9 +39,6 @@ type LoadState =
   | { kind: "error"; message: string };
 
 type DrawerMode = "create" | "declare";
-
-const selectClass =
-  "flex h-9 w-full rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-3 text-[length:var(--a-text-sm)] text-a-fg";
 
 function statusTone(
   status: string,
@@ -177,7 +181,7 @@ export default function ProductionPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <>
       <AScreenHeader
         kicker="Production"
         title="Ordres de fabrication"
@@ -189,6 +193,7 @@ export default function ProductionPage() {
         }
       />
 
+      <div className={softPageBody}>
       <div className="flex flex-wrap items-center gap-2">
         <AInput
           value={q}
@@ -226,26 +231,23 @@ export default function ProductionPage() {
       ) : null}
 
       {state.kind === "ok" && state.items.length > 0 ? (
-        <div className="overflow-x-auto rounded-[var(--a-radius-lg)] border border-a-border-subtle">
+        <div className={softTableWrap}>
           <table className="w-full min-w-[720px] text-left text-[length:var(--a-text-sm)]">
-            <thead className="bg-a-surface-2 text-a-fg-muted">
+            <thead className={softThead}>
               <tr>
-                <th className="px-4 py-3 font-medium">OF</th>
-                <th className="px-4 py-3 font-medium">Produit</th>
-                <th className="px-4 py-3 font-medium">Entrepôt</th>
-                <th className="px-4 py-3 font-medium text-right">Planifié</th>
-                <th className="px-4 py-3 font-medium text-right">Réel</th>
-                <th className="px-4 py-3 font-medium">Statut</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
+                <th className="a-table-cell font-medium">OF</th>
+                <th className="a-table-cell font-medium">Produit</th>
+                <th className="a-table-cell font-medium">Entrepôt</th>
+                <th className="a-table-cell font-medium text-right">Planifié</th>
+                <th className="a-table-cell font-medium text-right">Réel</th>
+                <th className="a-table-cell font-medium">Statut</th>
+                <th className="a-table-cell font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {state.items.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-t border-a-border-subtle hover:bg-a-surface-2/60"
-                >
-                  <td className="px-4 py-3">
+                <tr key={row.id} className={softTr}>
+                  <td className="a-table-cell">
                     <span className="a-mono font-medium">{row.number}</span>
                     {row.lotOut ? (
                       <span className="mt-0.5 block text-[length:var(--a-text-xs)] text-a-fg-subtle">
@@ -253,19 +255,19 @@ export default function ProductionPage() {
                       </span>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="a-table-cell">
                     <span className="a-mono text-a-fg-muted">
                       {row.productSku ?? "—"}
                     </span>{" "}
                     {row.productName}
                   </td>
-                  <td className="px-4 py-3 a-mono">
+                  <td className="a-mono a-table-cell">
                     {row.warehouseCode ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-right a-mono a-tabular">
+                  <td className="a-mono a-tabular a-table-cell text-right">
                     {row.plannedQty}
                   </td>
-                  <td className="px-4 py-3 text-right a-mono a-tabular">
+                  <td className="a-mono a-tabular a-table-cell text-right">
                     {row.actualQty ?? "—"}
                     {row.yieldRatio ? (
                       <span
@@ -281,10 +283,10 @@ export default function ProductionPage() {
                       </span>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="a-table-cell">
                     <ABadge tone={statusTone(row.status)}>{row.status}</ABadge>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="a-table-cell">
                     <div className="flex flex-wrap gap-2">
                       {row.status === "PLANNED" ? (
                         <AButton
@@ -316,6 +318,7 @@ export default function ProductionPage() {
           </table>
         </div>
       ) : null}
+      </div>
 
       <ADrawer
         open={drawerOpen}
@@ -336,7 +339,7 @@ export default function ProductionPage() {
                   Produit fini
                 </span>
                 <select
-                  className={selectClass}
+                  className={softSelect}
                   value={productId}
                   onChange={(e) => setProductId(e.target.value)}
                 >
@@ -352,7 +355,7 @@ export default function ProductionPage() {
                   Entrepôt
                 </span>
                 <select
-                  className={selectClass}
+                  className={softSelect}
                   value={warehouseId}
                   onChange={(e) => setWarehouseId(e.target.value)}
                 >
@@ -401,7 +404,7 @@ export default function ProductionPage() {
                   Matière / composant
                 </span>
                 <select
-                  className={selectClass}
+                  className={softSelect}
                   value={mpProductId}
                   onChange={(e) => setMpProductId(e.target.value)}
                 >
@@ -453,6 +456,6 @@ export default function ProductionPage() {
           )}
         </div>
       </ADrawer>
-    </div>
+    </>
   );
 }

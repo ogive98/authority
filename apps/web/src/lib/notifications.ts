@@ -22,6 +22,24 @@ export type NotificationItem = {
 /** Default SSE endpoint (Next route — not rewritten to Nest). */
 export const NOTIFICATION_SSE_PATH = "/dev/notifications/stream";
 
+/**
+ * Resolve exact in-app source for a notification (shortcut target).
+ * Prefer explicit `href`; else infer from type / title keywords.
+ */
+export function resolveNotificationHref(item: NotificationItem): string {
+  if (item.href) return item.href;
+  const hay = `${item.title} ${item.body}`.toLowerCase();
+  if (/lot|quarant|stock|invent|ccp|emmental|brie/.test(hay)) return "/inventory";
+  if (/commande|order|so-|validation commande|sfax/.test(hay)) return "/sales";
+  if (/facture|invoice|ar |paiement|finance/.test(hay)) return "/finance";
+  if (/livraison|shipment|bl-|réception|reception/.test(hay)) return "/delivery";
+  if (/patch|spectre|heartbeat|thunder|job|registry|sse/.test(hay)) return "/settings";
+  if (item.type === "task") return "/sales";
+  if (item.type === "warning" || item.type === "danger") return "/inventory";
+  if (item.type === "system") return "/settings";
+  return "/";
+}
+
 export const SEED_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "n-seed-1",
@@ -31,7 +49,7 @@ export const SEED_NOTIFICATIONS: NotificationItem[] = [
     createdAt: new Date(Date.now() - 12 * 60_000).toISOString(),
     read: false,
     priority: "p0",
-    href: "/dev/datatable",
+    href: "/inventory/lots",
   },
   {
     id: "n-seed-2",
@@ -41,7 +59,7 @@ export const SEED_NOTIFICATIONS: NotificationItem[] = [
     createdAt: new Date(Date.now() - 45 * 60_000).toISOString(),
     read: false,
     priority: "p1",
-    href: "/dev/forms",
+    href: "/sales",
   },
   {
     id: "n-seed-3",
@@ -51,7 +69,7 @@ export const SEED_NOTIFICATIONS: NotificationItem[] = [
     createdAt: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
     read: true,
     priority: "p3",
-    href: "/dev/registry",
+    href: "/settings",
   },
   {
     id: "n-seed-4",
@@ -61,6 +79,7 @@ export const SEED_NOTIFICATIONS: NotificationItem[] = [
     createdAt: new Date(Date.now() - 3 * 60 * 60_000).toISOString(),
     read: true,
     priority: "p2",
+    href: "/settings",
   },
 ];
 
@@ -107,27 +126,28 @@ const STREAM_TEMPLATES: Omit<NotificationItem, "id" | "createdAt" | "read">[] =
       title: "Job Thunder terminé",
       body: "hello-job — statut succeeded.",
       priority: "p3",
-      href: "/",
+      href: "/settings",
     },
     {
       type: "task",
       title: "Réception fournisseur",
       body: "BL-8821 — contrôler température chambre froide.",
       priority: "p1",
-      href: "/dev/forms",
+      href: "/delivery",
     },
     {
       type: "warning",
       title: "Stock bas — Emmental 1kg",
       body: "Seuil min atteint sur site Sfax.",
       priority: "p1",
-      href: "/dev/datatable",
+      href: "/inventory",
     },
     {
       type: "system",
       title: "Heartbeat notifications",
       body: "Flux SSE actif.",
       priority: "p3",
+      href: "/settings",
     },
   ];
 

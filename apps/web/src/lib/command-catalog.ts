@@ -1,3 +1,6 @@
+import type { ShellLocale } from "@/stores/locale-store";
+import { COMMAND_GROUP_LABELS_I18N } from "@/lib/i18n/command-group-labels";
+
 export type CommandGroupId =
   | "navigation"
   | "search"
@@ -27,12 +30,8 @@ export type CommandItem = {
   shortcut?: CommandShortcut;
 };
 
-export const COMMAND_GROUP_LABELS: Record<CommandGroupId, string> = {
-  navigation: "Navigation",
-  search: "Recherche",
-  actions: "Actions",
-  settings: "Paramètres",
-};
+export const COMMAND_GROUP_LABELS: Record<CommandGroupId, string> =
+  COMMAND_GROUP_LABELS_I18N.fr;
 
 function isMacPlatform(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -303,7 +302,9 @@ export function filterCommands(
 
 export function groupCommands(
   items: CommandItem[],
+  locale: ShellLocale = "fr",
 ): { group: CommandGroupId; label: string; items: CommandItem[] }[] {
+  const labels = COMMAND_GROUP_LABELS_I18N[locale];
   const order: CommandGroupId[] = [
     "navigation",
     "search",
@@ -313,7 +314,7 @@ export function groupCommands(
   return order
     .map((group) => ({
       group,
-      label: COMMAND_GROUP_LABELS[group],
+      label: labels[group],
       items: items.filter((i) => i.group === group),
     }))
     .filter((g) => g.items.length > 0);

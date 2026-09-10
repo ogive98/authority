@@ -12,7 +12,14 @@ import {
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
-import { cn } from "@/lib/utils";
+import {
+  softChipClass,
+  softPageBody,
+  softSelect,
+  softTableWrap,
+  softThead,
+  softTr,
+} from "@/lib/soft-glass-ui";
 
 type DocRow = {
   id: string;
@@ -45,9 +52,6 @@ const VIS_FILTERS: Array<{
 ];
 
 const LINK_TYPES = ["NONE", "CLAIM", "ORDER", "SHIPMENT"] as const;
-
-const selectClass =
-  "h-9 w-full rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-1 px-3 text-[length:var(--a-text-sm)]";
 
 function visibilityTone(visibility: string) {
   return visibility === "CUSTOMER_PORTAL" ? "accent" : "neutral";
@@ -205,11 +209,11 @@ export default function DocumentsPage() {
           </AButton>
         }
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className={softPageBody}>
         <div
           role="tablist"
           aria-label="Filtre visibilité"
-          className="flex flex-wrap gap-1 border-b border-a-border-subtle"
+          className="flex flex-wrap gap-2"
         >
           {VIS_FILTERS.map((chip) => {
             const active = visFilter === chip.id;
@@ -224,12 +228,7 @@ export default function DocumentsPage() {
                     chip.id as "" | "INTERNAL" | "CUSTOMER_PORTAL",
                   )
                 }
-                className={cn(
-                  "border-b-2 px-3 py-2 text-[length:var(--a-text-sm)]",
-                  active
-                    ? "border-a-accent text-a-fg"
-                    : "border-transparent text-a-fg-muted hover:text-a-fg",
-                )}
+                className={softChipClass(active)}
               >
                 {chip.label}
               </button>
@@ -290,9 +289,9 @@ export default function DocumentsPage() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2">
+          <div className={softTableWrap}>
             <table className="w-full min-w-[48rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="border-b border-a-border-subtle bg-a-surface-3/80 text-a-fg-muted">
+              <thead className={softThead}>
                 <tr>
                   <th className="a-table-cell font-medium">N°</th>
                   <th className="a-table-cell font-medium">Titre</th>
@@ -303,10 +302,7 @@ export default function DocumentsPage() {
               </thead>
               <tbody>
                 {state.items.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
-                  >
+                  <tr key={row.id} className={softTr}>
                     <td className="a-mono a-table-cell">{row.number}</td>
                     <td className="a-table-cell">{row.title}</td>
                     <td className="a-table-cell">
@@ -386,7 +382,7 @@ export default function DocumentsPage() {
               id="doc-vis"
               value={visibility}
               onChange={(e) => setVisibility(e.target.value)}
-              className={selectClass}
+              className={softSelect}
             >
               <option value="INTERNAL">INTERNAL</option>
               <option value="CUSTOMER_PORTAL">CUSTOMER_PORTAL</option>
@@ -410,7 +406,7 @@ export default function DocumentsPage() {
                   setVisibility("CUSTOMER_PORTAL");
                 }
               }}
-              className={selectClass}
+              className={softSelect}
             >
               {LINK_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -431,7 +427,7 @@ export default function DocumentsPage() {
                 id="doc-link-id"
                 value={linkId}
                 onChange={(e) => setLinkId(e.target.value)}
-                className={selectClass}
+                className={softSelect}
                 disabled={linkLoading}
               >
                 <option value="">

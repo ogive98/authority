@@ -11,6 +11,12 @@ import {
   ASkeleton,
 } from "@/components/a";
 import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
+import {
+  softPageBody,
+  softTableWrap,
+  softThead,
+  softTr,
+} from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -54,7 +60,7 @@ export default function TaxCatalogPage() {
           </Link>
         }
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className={softPageBody}>
         {state.kind === "loading" ? <ASkeleton className="h-40" /> : null}
         {state.kind === "forbidden" ? (
           <AForbiddenState message={state.message} />
@@ -73,9 +79,9 @@ export default function TaxCatalogPage() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2">
+          <div className={softTableWrap}>
             <table className="w-full min-w-[40rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="border-b border-a-border-subtle bg-a-surface-3/80 text-a-fg-muted">
+              <thead className={softThead}>
                 <tr>
                   <th className="a-table-cell font-medium">Code</th>
                   <th className="a-table-cell font-medium">Libellé</th>
@@ -86,10 +92,7 @@ export default function TaxCatalogPage() {
               </thead>
               <tbody>
                 {state.items.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-a-border-subtle last:border-0 hover:bg-a-surface-3/60"
-                  >
+                  <tr key={row.id} className={softTr}>
                     <td className="a-mono a-table-cell">{row.code}</td>
                     <td className="a-table-cell">{row.label}</td>
                     <td className="a-mono a-table-cell tabular-nums">

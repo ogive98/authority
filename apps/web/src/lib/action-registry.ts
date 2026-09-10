@@ -2,6 +2,7 @@
  * Action Registry (D161) — single source for ⌘K, Smart Action Dock, shortcuts.
  * Catalog entries live in command-catalog; this module adds contexts + filtering
  * by active me-registry modules (never hardcode sidebar/dashboard actions).
+ * Labels localized via locale overlay (D166).
  */
 
 import {
@@ -13,6 +14,8 @@ import {
   type CommandShortcut,
 } from "./command-catalog";
 import type { MeRegistry } from "./registry";
+import type { ShellLocale } from "@/stores/locale-store";
+import { localizeCommandItems } from "@/lib/i18n/command-labels";
 
 export type ActionContext =
   | "global"
@@ -54,8 +57,17 @@ function toAction(item: CommandItem): ActionDefinition {
   };
 }
 
-/** Full action registry derived from the command catalog. */
+/** Full action registry derived from the command catalog (FR source labels). */
 export const ACTION_REGISTRY: ActionDefinition[] = COMMAND_CATALOG.map(toAction);
+
+export function getActionRegistry(
+  locale: ShellLocale = "fr",
+): ActionDefinition[] {
+  return localizeCommandItems(ACTION_REGISTRY, locale).map((item) => {
+    const base = ACTION_REGISTRY.find((a) => a.id === item.id);
+    return base ? { ...base, label: item.label } : toAction(item);
+  });
+}
 
 export function enabledModulesFromRegistry(
   registry: MeRegistry,
@@ -71,6 +83,7 @@ export type ResolveActionsOpts = {
   context?: ActionContext | ActionContext[];
   /** Cap results (dock shortcuts). */
   limit?: number;
+  locale?: ShellLocale;
 };
 
 /**
@@ -84,7 +97,8 @@ export function resolveActions(opts: ResolveActionsOpts): ActionDefinition[] {
   enabledModules.add("settings");
   enabledModules.add("platform");
 
-  const filtered = filterCommands(ACTION_REGISTRY, {
+  const catalog = getActionRegistry(opts.locale ?? "fr");
+  const filtered = filterCommands(catalog, {
     query: opts.query ?? "",
     grants,
     enabledModules,
@@ -120,12 +134,14 @@ export function resolveDockActions(
   registry: MeRegistry,
   selectedModuleId: string,
   limit = 8,
+  locale: ShellLocale = "fr",
 ): { primary: ActionDefinition | null; shortcuts: ActionDefinition[] } {
   const moduleCtx = `module:${selectedModuleId}` as ActionContext;
   const forModule = resolveActions({
     registry,
     context: [moduleCtx, "dock", "home"],
     limit: limit + 2,
+    locale,
   });
   const nav = forModule.filter((a) => a.group === "navigation");
   const primary =

@@ -22,6 +22,7 @@ import {
   type Product,
   type RefValue,
 } from "@/lib/products";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -40,9 +41,6 @@ type FormState = {
   storageClassKey: string;
   allergenFlags: string;
 };
-
-const selectClass =
-  "flex h-9 w-full rounded-[var(--a-radius-md)] bg-a-surface-3 px-3 text-[length:var(--a-text-sm)] text-a-fg outline-none focus:ring-2 focus:ring-a-accent/30";
 
 export default function ProductEditPage() {
   const params = useParams<{ id: string }>();
@@ -246,7 +244,7 @@ export default function ProductEditPage() {
             <Field label="Type" htmlFor="prd-type">
               <select
                 id="prd-type"
-                className={selectClass}
+                className={softSelect}
                 value={form.typeKey}
                 onChange={(e) => setForm({ ...form, typeKey: e.target.value })}
               >
@@ -260,7 +258,7 @@ export default function ProductEditPage() {
             <Field label="Unité" htmlFor="prd-uom">
               <select
                 id="prd-uom"
-                className={selectClass}
+                className={softSelect}
                 value={form.uom}
                 onChange={(e) => setForm({ ...form, uom: e.target.value })}
               >
@@ -274,7 +272,7 @@ export default function ProductEditPage() {
             <Field label="Classe de stockage" htmlFor="prd-storage">
               <select
                 id="prd-storage"
-                className={selectClass}
+                className={softSelect}
                 value={form.storageClassKey}
                 onChange={(e) =>
                   setForm({ ...form, storageClassKey: e.target.value })

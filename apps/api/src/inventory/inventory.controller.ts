@@ -47,6 +47,12 @@ export class InventoryController {
     return this.inventoryService.listWarehouses(tenancy.companyId);
   }
 
+  @Get('home-kpis')
+  @RequirePermission(PERMISSION_KEYS.inventoryRead)
+  homeKpis(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.inventoryService.homeKpis(tenancy.companyId);
+  }
+
   @Post('warehouses')
   @HttpCode(201)
   @RequirePermission(PERMISSION_KEYS.inventoryWrite)

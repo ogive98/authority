@@ -23,7 +23,11 @@ import {
   type ExpertiseSlot,
 } from "@/lib/settings";
 import { fetchMailStatus, type MailStatus } from "@/lib/users";
-import { cn } from "@/lib/utils";
+import {
+  softChipClass,
+  softPageBody,
+  softPanel,
+} from "@/lib/soft-glass-ui";
 import { usePrefsStore, type Density } from "@/stores/prefs-store";
 
 type Tab =
@@ -537,24 +541,19 @@ export default function SettingsPage() {
           ) : null
         }
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className={softPageBody}>
         {companyDeniedHint ? (
           <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
             Expertise légale et Envois : réservés à l’administrateur société.
           </p>
         ) : null}
-        <div className="flex flex-wrap gap-1 border-b border-a-border-subtle">
+        <div className="flex flex-wrap gap-1.5" role="tablist">
           {tabs.map(([id, label]) => (
             <button
               key={id}
               type="button"
               onClick={() => selectTab(id)}
-              className={cn(
-                "border-b-2 px-3 py-2 text-[length:var(--a-text-sm)]",
-                tab === id
-                  ? "border-a-accent text-a-fg"
-                  : "border-transparent text-a-fg-muted hover:text-a-fg",
-              )}
+              className={softChipClass(tab === id)}
             >
               {label}
             </button>
@@ -1059,7 +1058,7 @@ export default function SettingsPage() {
         ) : null}
 
         {tab === "general" ? (
-          <section className="a-card max-w-xl space-y-4 p-[var(--a-space-5)]">
+          <section className={`${softPanel} max-w-xl`}>
             <h2 className="text-[length:var(--a-text-md)] font-medium">
               Contexte
             </h2>
@@ -1080,7 +1079,7 @@ export default function SettingsPage() {
         ) : null}
 
         {tab === "apparence" ? (
-          <section className="a-card max-w-xl space-y-5 p-[var(--a-space-5)]">
+          <section className={`${softPanel} max-w-xl`}>
             <div>
               <p className="text-[length:var(--a-text-sm)] font-medium">
                 Thème
@@ -1233,7 +1232,7 @@ export default function SettingsPage() {
         ) : null}
 
         {tab === "notifications" ? (
-          <section className="a-card max-w-xl space-y-4 p-[var(--a-space-5)]">
+          <section className={`${softPanel} max-w-xl`}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-[length:var(--a-text-sm)] font-medium">

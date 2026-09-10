@@ -34,6 +34,12 @@ export class SalesController {
     return this.salesService.getIntakeSettings(tenancy.companyId);
   }
 
+  @Get('home-kpis')
+  @RequirePermission(PERMISSION_KEYS.salesRead)
+  homeKpis(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.salesService.homeKpis(tenancy.companyId);
+  }
+
   @Get('orders')
   @RequirePermission(PERMISSION_KEYS.salesRead)
   list(

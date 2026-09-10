@@ -17,6 +17,14 @@ import {
   type AccPeriod,
   type TrialBalanceRow,
 } from "@/lib/accounting";
+import {
+  softPageBody,
+  softSelect,
+  softTableWrap,
+  softThead,
+  softTr,
+} from "@/lib/soft-glass-ui";
+import { cn } from "@/lib/utils";
 
 type LoadState =
   | { kind: "loading" }
@@ -78,7 +86,7 @@ export default function AccountingPage() {
         title="Grand livre V0"
         description="Plan comptable, périodes et balance — débit = crédit ; aucun taux TVA inventé."
       />
-      <div className="space-y-[var(--a-space-5)] p-[var(--a-space-6)]">
+      <div className={softPageBody}>
         {state.kind === "loading" ? (
           <ASkeleton className="h-32 w-full" />
         ) : null}
@@ -104,9 +112,9 @@ export default function AccountingPage() {
                   description="Les comptes seed (411 / 512 / 701) apparaissent après seed."
                 />
               ) : (
-                <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2">
+                <div className={softTableWrap}>
                   <table className="w-full border-collapse text-left text-[length:var(--a-text-sm)]">
-                    <thead className="border-b border-a-border-subtle bg-a-surface-3/80 text-a-fg-muted">
+                    <thead className={softThead}>
                       <tr>
                         <th className="a-table-cell font-medium">Code</th>
                         <th className="a-table-cell font-medium">Nom</th>
@@ -115,10 +123,7 @@ export default function AccountingPage() {
                     </thead>
                     <tbody>
                       {state.accounts.map((a) => (
-                        <tr
-                          key={a.id}
-                          className="border-b border-a-border-subtle last:border-0"
-                        >
+                        <tr key={a.id} className={softTr}>
                           <td className="a-mono a-table-cell">{a.code}</td>
                           <td className="a-table-cell">{a.name}</td>
                           <td className="a-table-cell">
@@ -138,7 +143,7 @@ export default function AccountingPage() {
                   Balance de vérification
                 </h2>
                 <select
-                  className="rounded-[var(--a-radius-md)] border border-a-border bg-a-surface px-3 py-1.5 text-[13px]"
+                  className={cn(softSelect, "w-auto")}
                   value={state.periodId}
                   onChange={(e) => void load(e.target.value)}
                 >
@@ -154,9 +159,9 @@ export default function AccountingPage() {
                   Aucune écriture POSTED pour cette période.
                 </p>
               ) : (
-                <div className="overflow-x-auto rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2">
+                <div className={softTableWrap}>
                   <table className="w-full border-collapse text-left text-[length:var(--a-text-sm)]">
-                    <thead className="border-b border-a-border-subtle bg-a-surface-3/80 text-a-fg-muted">
+                    <thead className={softThead}>
                       <tr>
                         <th className="a-table-cell font-medium">Compte</th>
                         <th className="a-table-cell font-medium text-right">
@@ -169,10 +174,7 @@ export default function AccountingPage() {
                     </thead>
                     <tbody>
                       {state.trial.map((r) => (
-                        <tr
-                          key={r.accountId}
-                          className="border-b border-a-border-subtle last:border-0"
-                        >
+                        <tr key={r.accountId} className={softTr}>
                           <td className="a-table-cell">
                             <span className="a-mono">{r.accountCode}</span>{" "}
                             {r.accountName}
