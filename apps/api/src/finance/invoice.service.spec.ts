@@ -184,3 +184,119 @@ describe('InvoiceService expertise surcharges (D093)', () => {
     expect(Number(created.amountTotal)).toBe(120);
   });
 });
+
+describe('InvoiceService.cancel (D183)', () => {
+  const companyId = '11111111-1111-1111-1111-111111111111';
+  const invoiceId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  const openItemId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+
+  it('cancels ISSUED invoice, closes open AR, emits cancelled', async () => {
+    const invoice = {
+      id: invoiceId,
+      companyId,
+      number: 'INV-1',
+      customerId: '22222222-2222-2222-2222-222222222222',
+      status: 'ISSUED',
+      amountHt: { toString: () => '100' },
+      amountTax: { toString: () => '19' },
+      amountTotal: { toString: () => '119' },
+      amountFodec: 0,
+      amountTimbre: 0,
+      salesOrderId: null,
+      shipmentId: null,
+      currency: 'TND',
+      dueDate: null,
+      issuedAt: new Date(),
+      label: null,
+      notes: null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+      openItems: [{ id: openItemId }],
+      lines: [],
+    };
+    const prisma: Record<string, unknown> = {
+      finInvoice: {
+        findFirst: jest.fn().mockResolvedValue({ ...invoice, status: 'ISSUED' }),
+        update: jest.fn().mockResolvedValue(null),
+        findFirstOrThrow: jest
+          .fn()
+          .mockResolvedValue({ ...invoice, status: 'CANCELLED', openItems: [] }),
+      },
+      finOpenItem: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: openItemId,
+          status: 'OPEN',
+          amountOpen: 119,
+          amountTotal: 119,
+        }),
+        update: jest.fn().mockResolvedValue(null),
+      },
+      finPromiseToPay: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      cusCustomer: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn(prisma),
+      ),
+    };
+    const outbox = { enqueue: jest.fn().mockResolvedValue({ id: 'o1' }) };
+    const service = new InvoiceService(
+      prisma as never,
+      outbox as never,
+      {} as never,
+      {} as never,
+    );
+
+    const dto = await service.cancel(companyId, invoiceId);
+    expect(dto.status).toBe('CANCELLED');
+    expect(prisma.finOpenItem.update).toHaveBeenCalled();
+    expect(outbox.enqueue).toHaveBeenCalledWith(
+      prisma,
+      expect.objectContaining({
+        eventType: 'finance.invoice.cancelled.v1',
+        payloadJson: expect.objectContaining({ invoiceId }),
+      }),
+    );
+  });
+
+  it('rejects cancel when AR is partially allocated', async () => {
+    const prisma: Record<string, unknown> = {
+      finInvoice: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: invoiceId,
+          companyId,
+          status: 'ISSUED',
+          number: 'INV-1',
+          customerId: 'c1',
+          amountHt: 100,
+          amountTax: 19,
+          amountTotal: 119,
+        }),
+      },
+      finOpenItem: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: openItemId,
+          status: 'PARTIAL',
+          amountOpen: 50,
+          amountTotal: 119,
+        }),
+      },
+      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn(prisma),
+      ),
+    };
+    const service = new InvoiceService(
+      prisma as never,
+      { enqueue: jest.fn() } as never,
+      {} as never,
+      {} as never,
+    );
+    await expect(service.cancel(companyId, invoiceId)).rejects.toMatchObject({
+      code: 'FIN.INVALID_STATUS',
+    });
+  });
+});

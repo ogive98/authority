@@ -47,6 +47,7 @@ export class ThunderDomainRegistrar implements OnModuleInit {
       {
         consumes: [
           THUNDER_DOMAIN_EVENT_TYPES.financeInvoiceIssued,
+          THUNDER_DOMAIN_EVENT_TYPES.financeInvoiceCancelled,
           THUNDER_DOMAIN_EVENT_TYPES.financePaymentAllocated,
           THUNDER_DOMAIN_EVENT_TYPES.financeInstrumentRejected,
         ],
@@ -204,6 +205,29 @@ export class ThunderDomainRegistrar implements OnModuleInit {
       });
       this.logger.log(
         `accounting.postFromFinance invoice ${result.outcome} ${
+          'number' in result ? result.number : result.reason
+        }`,
+      );
+      return;
+    }
+
+    if (
+      envelope.eventType === THUNDER_DOMAIN_EVENT_TYPES.financeInvoiceCancelled
+    ) {
+      const invoiceId =
+        stringPayload(envelope.payload, 'invoiceId') || envelope.aggregateId;
+      if (!invoiceId) {
+        this.logger.warn(
+          'accounting.postFromFinance cancel: missing invoiceId',
+        );
+        return;
+      }
+      const result = await this.financeGl.reverseInvoiceIssued(companyId, {
+        invoiceId,
+        reverseSourceId: envelope.eventId,
+      });
+      this.logger.log(
+        `accounting.postFromFinance cancel ${result.outcome} ${
           'number' in result ? result.number : result.reason
         }`,
       );

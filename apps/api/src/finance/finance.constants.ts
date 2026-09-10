@@ -22,6 +22,7 @@ export const FINANCE_EVENT_TYPES = {
   OPEN_ITEM_CREATED: 'finance.open_item.created.v1',
   ALLOCATION_RECORDED: 'finance.allocation.recorded.v1',
   INVOICE_ISSUED: 'finance.invoice.issued.v1',
+  INVOICE_CANCELLED: 'finance.invoice.cancelled.v1',
   PAYMENT_POSTED: 'finance.payment.posted.v1',
   PAYMENT_ALLOCATED: 'finance.payment.allocated.v1',
   INSTRUMENT_STATUS: 'finance.instrument.status.v1',

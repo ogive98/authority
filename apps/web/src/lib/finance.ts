@@ -430,6 +430,22 @@ export async function issueInvoice(
   }
 }
 
+export async function cancelInvoice(
+  id: string,
+): Promise<{ ok: true; data: FinInvoice } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/invoices/${id}/cancel`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinInvoice };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function fetchPayments(opts?: {
   q?: string;
 }): Promise<

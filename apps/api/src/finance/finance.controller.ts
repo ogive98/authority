@@ -210,6 +210,16 @@ export class FinanceController {
     return this.invoiceService.issue(tenancy.companyId, id);
   }
 
+  @Post('invoices/:id/cancel')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  cancelInvoice(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.invoiceService.cancel(tenancy.companyId, id);
+  }
+
   @Get('payments')
   @RequirePermission(PERMISSION_KEYS.financeArRead)
   listPayments(

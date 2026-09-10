@@ -4,6 +4,7 @@ import {
   FinInvoiceStatus,
   FinOpenItemSide,
   FinOpenItemStatus,
+  FinPromiseStatus,
   Prisma,
   SalOrderStatus,
 } from '@prisma/client';
@@ -285,6 +286,117 @@ export class InvoiceService {
           amountTotal: issued.amountTotal.toString(),
         },
       });
+
+      return tx.finInvoice.findFirstOrThrow({
+        where: { id },
+        include: invoiceInclude,
+      });
+    });
+
+    return this.enrichOne(companyId, row);
+  }
+
+  /**
+   * Cancel invoice (D183). DRAFT/ISSUED → CANCELLED.
+   * ISSUED with fully-open AR closes the open item and emits cancelled → Thunder deaccounts.
+   * Allocated / PARTIAL AR blocks cancel.
+   */
+  async cancel(companyId: string, id: string): Promise<InvoiceDto> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.finInvoice.findFirst({
+        where: { id, companyId, deletedAt: null },
+      });
+      if (!existing) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVOICE_NOT_FOUND,
+          'Invoice not found.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      if (existing.status === FinInvoiceStatus.CANCELLED) {
+        return tx.finInvoice.findFirstOrThrow({
+          where: { id },
+          include: invoiceInclude,
+        });
+      }
+
+      if (
+        existing.status !== FinInvoiceStatus.DRAFT &&
+        existing.status !== FinInvoiceStatus.ISSUED
+      ) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_STATUS,
+          'Invoice cannot be cancelled in this status.',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      const wasIssued = existing.status === FinInvoiceStatus.ISSUED;
+
+      if (wasIssued) {
+        const openItem = await tx.finOpenItem.findFirst({
+          where: { companyId, invoiceId: id, deletedAt: null },
+        });
+        if (openItem) {
+          const openAmt = Number(openItem.amountOpen);
+          const totalAmt = Number(openItem.amountTotal);
+          if (
+            openItem.status === FinOpenItemStatus.PARTIAL ||
+            openItem.status === FinOpenItemStatus.CLOSED ||
+            openAmt + 1e-9 < totalAmt
+          ) {
+            throw new FinanceException(
+              FINANCE_ERROR_CODES.INVALID_STATUS,
+              'Cannot cancel invoice with allocations or closed AR — reverse payments first.',
+              HttpStatus.CONFLICT,
+            );
+          }
+          if (openItem.status === FinOpenItemStatus.OPEN) {
+            await tx.finOpenItem.update({
+              where: { id: openItem.id },
+              data: {
+                status: FinOpenItemStatus.CLOSED,
+                amountOpen: 0,
+                version: { increment: 1 },
+              },
+            });
+            await tx.finPromiseToPay.updateMany({
+              where: {
+                companyId,
+                openItemId: openItem.id,
+                status: FinPromiseStatus.OPEN,
+                deletedAt: null,
+              },
+              data: { status: FinPromiseStatus.CANCELLED },
+            });
+          }
+        }
+      }
+
+      await tx.finInvoice.update({
+        where: { id },
+        data: {
+          status: FinInvoiceStatus.CANCELLED,
+          version: { increment: 1 },
+        },
+      });
+
+      if (wasIssued) {
+        await this.outbox.enqueue(tx, {
+          companyId,
+          aggregateType: 'fin_invoice',
+          aggregateId: id,
+          eventType: FINANCE_EVENT_TYPES.INVOICE_CANCELLED,
+          payloadJson: {
+            invoiceId: id,
+            number: existing.number,
+            customerId: existing.customerId,
+            amountHt: existing.amountHt.toString(),
+            amountTax: existing.amountTax.toString(),
+            amountTotal: existing.amountTotal.toString(),
+          },
+        });
+      }
 
       return tx.finInvoice.findFirstOrThrow({
         where: { id },

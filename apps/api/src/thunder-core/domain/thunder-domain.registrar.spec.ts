@@ -11,6 +11,7 @@ describe('ThunderDomainRegistrar', () => {
     postInvoiceIssued: jest.fn(),
     postPaymentAllocated: jest.fn(),
     reversePaymentOnInstrumentReject: jest.fn(),
+    reverseInvoiceIssued: jest.fn(),
   };
 
   beforeEach(() => {
@@ -44,6 +45,7 @@ describe('ThunderDomainRegistrar', () => {
       {
         consumes: [
           'finance.invoice.issued.v1',
+          'finance.invoice.cancelled.v1',
           'finance.payment.allocated.v1',
           'finance.instrument.rejected.v1',
         ],
@@ -215,5 +217,38 @@ describe('ThunderDomainRegistrar', () => {
         sourceId: '77777777-7777-7777-7777-777777777777',
       }),
     );
+  });
+
+  it('deaccounts GL from finance.invoice.cancelled when accounting enabled', async () => {
+    gl.reverseInvoiceIssued.mockResolvedValue({
+      outcome: 'posted',
+      entryId: 'je-rev',
+      number: 'JE-REV',
+    });
+    const registrar = new ThunderDomainRegistrar(
+      { register: jest.fn() } as never,
+      { isEnabled: jest.fn().mockResolvedValue(true) } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      gl as never,
+    );
+    const invoiceId = '66666666-6666-6666-6666-666666666666';
+    await registrar.onFinanceToGl({
+      eventId: '88888888-8888-8888-8888-888888888888',
+      eventType: 'finance.invoice.cancelled.v1',
+      eventVersion: 1,
+      occurredAt: new Date().toISOString(),
+      source: 'finance',
+      companyId,
+      correlationId: 'c5',
+      aggregateType: 'fin_invoice',
+      aggregateId: invoiceId,
+      payload: { invoiceId },
+    });
+    expect(gl.reverseInvoiceIssued).toHaveBeenCalledWith(companyId, {
+      invoiceId,
+      reverseSourceId: '88888888-8888-8888-8888-888888888888',
+    });
   });
 });

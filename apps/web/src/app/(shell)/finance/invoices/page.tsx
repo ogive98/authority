@@ -18,6 +18,7 @@ import {
 import { fetchCustomers } from "@/lib/customers";
 import {
   INVOICE_STATUS_LABELS,
+  cancelInvoice,
   createInvoice,
   fetchInvoices,
   invoiceBadgeTone,
@@ -197,6 +198,24 @@ export default function FinanceInvoicesPage() {
     await load(q);
   }
 
+  async function onCancel(id: string) {
+    if (
+      !window.confirm(
+        "Annuler cette facture ? La créance ouverte sera clôturée et le GL décomptabilisé via Thunder.",
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const res = await cancelInvoice(id);
+    setBusy(false);
+    if (!res.ok) {
+      setState({ kind: "error", message: res.message });
+      return;
+    }
+    await load(q);
+  }
+
   return (
     <>
       <AScreenHeader
@@ -329,6 +348,17 @@ export default function FinanceInvoicesPage() {
                             onClick={() => void onIssue(inv.id)}
                           >
                             Émettre
+                          </AButton>
+                        ) : null}
+                        {inv.status === "DRAFT" || inv.status === "ISSUED" ? (
+                          <AButton
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={busy}
+                            onClick={() => void onCancel(inv.id)}
+                          >
+                            Annuler
                           </AButton>
                         ) : null}
                       </div>
