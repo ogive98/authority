@@ -1999,6 +1999,7 @@ export class InventoryService {
     const sourceId = dto.refId?.trim();
     if (!sourceType || !sourceId) return;
 
+    const qty = toDecimal(dto.qty);
     const allocated = await tx.invLotAllocation.findMany({
       where: {
         companyId,
@@ -2008,13 +2009,25 @@ export class InventoryService {
         warehouseId: dto.warehouseId,
         status: InvLotAllocStatus.ALLOCATED,
       },
+      include: { lot: true },
     });
+    // Release latest DLC first so earliest FEFO lots stay reserved when partial.
+    allocated.sort((a, b) => {
+      const da = a.lot.dlc?.getTime() ?? Number.POSITIVE_INFINITY;
+      const db = b.lot.dlc?.getTime() ?? Number.POSITIVE_INFINITY;
+      if (da !== db) return db - da;
+      return b.lot.lotCode.localeCompare(a.lot.lotCode);
+    });
+
+    let remaining = qty;
     for (const row of allocated) {
+      if (remaining.lte(0)) break;
+      const take = row.qty.lte(remaining) ? row.qty : remaining;
       const lotRow = await tx.invLot.findFirst({
         where: { id: row.lotId, companyId },
       });
       if (!lotRow) continue;
-      const nextReserved = lotRow.qtyReserved.sub(row.qty);
+      const nextReserved = lotRow.qtyReserved.sub(take);
       if (nextReserved.lt(0)) {
         throw new InventoryException(
           INVENTORY_ERROR_CODES.INSUFFICIENT,
@@ -2026,13 +2039,32 @@ export class InventoryService {
         qtyOnHand: lotRow.qtyOnHand,
         qtyReserved: nextReserved,
       });
-      await tx.invLotAllocation.update({
-        where: { id: row.id },
-        data: {
-          status: InvLotAllocStatus.RELEASED,
-          version: { increment: 1 },
-        },
-      });
+      if (take.eq(row.qty)) {
+        await tx.invLotAllocation.update({
+          where: { id: row.id },
+          data: {
+            status: InvLotAllocStatus.RELEASED,
+            version: { increment: 1 },
+          },
+        });
+      } else {
+        await tx.invLotAllocation.update({
+          where: { id: row.id },
+          data: {
+            qty: row.qty.sub(take),
+            version: { increment: 1 },
+          },
+        });
+      }
+      remaining = remaining.sub(take);
+    }
+
+    if (remaining.gt(0)) {
+      throw new InventoryException(
+        INVENTORY_ERROR_CODES.INSUFFICIENT,
+        'Cannot release more than allocated lot quantity.',
+        HttpStatus.CONFLICT,
+      );
     }
   }
 
@@ -2073,17 +2105,28 @@ export class InventoryService {
         warehouseId: dto.warehouseId,
         status: InvLotAllocStatus.ALLOCATED,
       },
+      include: { lot: true },
     });
     if (allocated.length > 0) {
       const allocatedQty = sumDecimal(allocated.map((a) => a.qty));
-      if (!allocatedQty.eq(qty)) {
+      if (allocatedQty.lt(qty)) {
         throw new InventoryException(
           INVENTORY_ERROR_CODES.INSUFFICIENT,
-          'FEFO allocation qty does not match issue qty.',
+          'FEFO allocation qty does not cover issue qty.',
           HttpStatus.CONFLICT,
         );
       }
+      allocated.sort((a, b) => {
+        const da = a.lot.dlc?.getTime() ?? Number.POSITIVE_INFINITY;
+        const db = b.lot.dlc?.getTime() ?? Number.POSITIVE_INFINITY;
+        if (da !== db) return da - db;
+        return a.lot.lotCode.localeCompare(b.lot.lotCode);
+      });
+
+      let remaining = qty;
       for (const row of allocated) {
+        if (remaining.lte(0)) break;
+        const take = row.qty.lte(remaining) ? row.qty : remaining;
         const lotRow = await tx.invLot.findFirst({
           where: { id: row.lotId, companyId },
         });
@@ -2094,8 +2137,8 @@ export class InventoryService {
             HttpStatus.NOT_FOUND,
           );
         }
-        const nextOnHand = lotRow.qtyOnHand.sub(row.qty);
-        const nextReserved = lotRow.qtyReserved.sub(row.qty);
+        const nextOnHand = lotRow.qtyOnHand.sub(take);
+        const nextReserved = lotRow.qtyReserved.sub(take);
         if (nextOnHand.lt(0) || nextReserved.lt(0)) {
           throw new InventoryException(
             INVENTORY_ERROR_CODES.INSUFFICIENT,
@@ -2107,15 +2150,42 @@ export class InventoryService {
           qtyOnHand: nextOnHand,
           qtyReserved: nextReserved,
         });
-        await tx.invLotAllocation.update({
-          where: { id: row.id },
-          data: {
-            status: InvLotAllocStatus.CONSUMED,
-            consumeRefType,
-            consumeRefId,
-            version: { increment: 1 },
-          },
-        });
+
+        if (take.eq(row.qty)) {
+          await tx.invLotAllocation.update({
+            where: { id: row.id },
+            data: {
+              status: InvLotAllocStatus.CONSUMED,
+              consumeRefType,
+              consumeRefId,
+              version: { increment: 1 },
+            },
+          });
+        } else {
+          await tx.invLotAllocation.update({
+            where: { id: row.id },
+            data: {
+              qty: row.qty.sub(take),
+              version: { increment: 1 },
+            },
+          });
+          await tx.invLotAllocation.create({
+            data: {
+              companyId,
+              lotId: row.lotId,
+              productId: dto.productId,
+              warehouseId: dto.warehouseId,
+              qty: take,
+              status: InvLotAllocStatus.CONSUMED,
+              fromReserve: row.fromReserve,
+              sourceType,
+              sourceId,
+              consumeRefType,
+              consumeRefId,
+            },
+          });
+        }
+        remaining = remaining.sub(take);
       }
       return;
     }

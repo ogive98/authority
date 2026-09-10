@@ -26,6 +26,7 @@ describe('DeliveryService', () => {
       unitPrice: new Prisma.Decimal(5),
       discountPct: new Prisma.Decimal(0),
       lineTotal: new Prisma.Decimal(50),
+      deliveredQty: null as Prisma.Decimal | null,
       version: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -64,6 +65,7 @@ describe('DeliveryService', () => {
       driverLabel: string | null;
       preferredDriver: string | null;
       failReason: string | null;
+      amountDelivered: Prisma.Decimal | null;
       version: number;
       assignedAt: Date | null;
       dispatchedAt: Date | null;
@@ -83,6 +85,7 @@ describe('DeliveryService', () => {
       driverLabel: 'Karim',
       preferredDriver: 'Karim',
       failReason: null,
+      amountDelivered: null,
       version: 0,
       assignedAt: new Date(),
       dispatchedAt: null,
@@ -152,10 +155,22 @@ describe('DeliveryService', () => {
               data.failReason !== undefined
                 ? (data.failReason as string | null)
                 : shipment.failReason,
+            amountDelivered:
+              data.amountDelivered !== undefined
+                ? (data.amountDelivered as Prisma.Decimal | null)
+                : shipment.amountDelivered,
             version: shipment.version + 1,
           };
           return Promise.resolve({ count: 1 });
         }),
+      },
+      salOrderLine: {
+        update: jest.fn().mockResolvedValue({}),
+      },
+      prdProduct: {
+        findMany: jest.fn().mockResolvedValue([
+          { id: productId, sku: 'BRIE-250', name: 'Brie 250g' },
+        ]),
       },
       dlvRound: {
         findFirst: jest.fn().mockResolvedValue(null),
@@ -255,8 +270,69 @@ describe('DeliveryService', () => {
         salesOrderId: orderId,
         customerId,
         amountTotal: 50,
+        shipmentId,
       }),
     );
+  });
+
+  it('completes partially — issues delivered qty, releases remainder, AR on delivered', async () => {
+    const { service, inventory, finance, prisma } = build({
+      shipmentStatus: DlvShipmentStatus.OUT,
+    });
+    const lineId = '66666666-6666-6666-6666-666666666666';
+    const dto = await service.complete(companyId, shipmentId, {
+      lines: [{ orderLineId: lineId, qty: 4 }],
+    });
+    expect(dto.status).toBe(DlvShipmentStatus.DELIVERED);
+    expect(inventory.issue).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({ productId, qty: 4 }),
+    );
+    expect(inventory.release).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        productId,
+        qty: 6,
+        refType: 'sales.order',
+        refId: orderId,
+      }),
+    );
+    expect(finance.ensureArForSalesOrder).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({ amountTotal: 20 }),
+    );
+    expect(prisma.salOrderLine.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: lineId },
+        data: expect.objectContaining({
+          deliveredQty: expect.any(Prisma.Decimal),
+        }),
+      }),
+    );
+  });
+
+  it('rejects over-qty and empty partial complete', async () => {
+    const { service, inventory } = build({
+      shipmentStatus: DlvShipmentStatus.OUT,
+    });
+    const lineId = '66666666-6666-6666-6666-666666666666';
+    await expect(
+      service.complete(companyId, shipmentId, {
+        lines: [{ orderLineId: lineId, qty: 99 }],
+      }),
+    ).rejects.toMatchObject({
+      status: HttpStatus.BAD_REQUEST,
+      response: { code: DELIVERY_ERROR_CODES.INVALID_QTY },
+    });
+    await expect(
+      service.complete(companyId, shipmentId, {
+        lines: [{ orderLineId: lineId, qty: 0 }],
+      }),
+    ).rejects.toMatchObject({
+      status: HttpStatus.BAD_REQUEST,
+      response: { code: DELIVERY_ERROR_CODES.EMPTY_DELIVERY },
+    });
+    expect(inventory.issue).not.toHaveBeenCalled();
   });
 
   it('skips AR when finance module is disabled', async () => {

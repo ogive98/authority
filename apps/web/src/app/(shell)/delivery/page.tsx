@@ -23,7 +23,9 @@ import {
   failShipment,
   fetchEligibleOrders,
   fetchRounds,
+  fetchShipment,
   fetchShipments,
+  type DeliveryOrderLine,
   type DeliveryRound,
   type DeliveryShipment,
   type EligibleOrder,
@@ -56,6 +58,18 @@ type RoundForm = {
 };
 
 type FailDraft = { id: string; number: string; reason: string };
+
+type CompleteDraft = {
+  id: string;
+  number: string;
+  lines: Array<{
+    orderLineId: string;
+    label: string;
+    ordered: number;
+    qty: string;
+  }>;
+  error: string | null;
+};
 
 function shipmentBadgeTone(
   status: DeliveryShipment["status"],
@@ -124,6 +138,9 @@ export default function DeliveryPage() {
   const [eligibleCache, setEligibleCache] = useState<EligibleOrder[]>([]);
   const [assignDraft, setAssignDraft] = useState<Record<string, string>>({});
   const [failDraft, setFailDraft] = useState<FailDraft | null>(null);
+  const [completeDraft, setCompleteDraft] = useState<CompleteDraft | null>(
+    null,
+  );
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async (query?: string, status?: "" | ShipmentStatus) => {
@@ -271,11 +288,65 @@ export default function DeliveryPage() {
   }
 
   async function onComplete(row: DeliveryShipment) {
-    const res = await completeShipment(row.id);
-    if (!res.ok) {
-      setState({ kind: "error", message: res.message });
+    const detail = await fetchShipment(row.id);
+    if (!detail.ok) {
+      setState({ kind: "error", message: detail.message });
       return;
     }
+    const lines = detail.data.orderLines ?? [];
+    if (lines.length === 0) {
+      setState({
+        kind: "error",
+        message: "Aucune ligne commande sur cette livraison.",
+      });
+      return;
+    }
+    setCompleteDraft({
+      id: row.id,
+      number: row.number,
+      lines: lines.map((l: DeliveryOrderLine) => ({
+        orderLineId: l.id,
+        label: `${l.productSku ?? "SKU"} · ${l.productName ?? "Produit"}`,
+        ordered: Number(l.qty),
+        qty: l.qty,
+      })),
+      error: null,
+    });
+  }
+
+  async function submitComplete() {
+    if (!completeDraft) return;
+    const lines = completeDraft.lines.map((l) => ({
+      orderLineId: l.orderLineId,
+      qty: Number(l.qty),
+    }));
+    for (const l of lines) {
+      const ordered =
+        completeDraft.lines.find((x) => x.orderLineId === l.orderLineId)
+          ?.ordered ?? 0;
+      if (!Number.isFinite(l.qty) || l.qty < 0 || l.qty > ordered + 1e-9) {
+        setCompleteDraft({
+          ...completeDraft,
+          error: "Qty livrée doit être entre 0 et la qty commandée.",
+        });
+        return;
+      }
+    }
+    if (!lines.some((l) => l.qty > 0)) {
+      setCompleteDraft({
+        ...completeDraft,
+        error: "Au moins une ligne doit avoir une qty livrée > 0.",
+      });
+      return;
+    }
+    setBusy(true);
+    const res = await completeShipment(completeDraft.id, lines);
+    setBusy(false);
+    if (!res.ok) {
+      setCompleteDraft({ ...completeDraft, error: res.message });
+      return;
+    }
+    setCompleteDraft(null);
     await load(q, statusFilter);
   }
 
@@ -696,6 +767,97 @@ export default function DeliveryPage() {
                 disabled={busy}
               >
                 Créer la tournée
+              </AButton>
+            </div>
+          </div>
+        ) : null}
+      </ADrawer>
+
+      <ADrawer
+        open={completeDraft != null}
+        onOpenChange={(open) => {
+          if (!open) setCompleteDraft(null);
+        }}
+        title="Confirmer livraison"
+        description={
+          completeDraft
+            ? `${completeDraft.number} — ajuster les quantités livrées (TND / stock).`
+            : undefined
+        }
+      >
+        {completeDraft ? (
+          <div className="space-y-[var(--a-space-4)]">
+            {completeDraft.error ? (
+              <p className="text-[length:var(--a-text-sm)] text-a-warning">
+                {completeDraft.error}
+              </p>
+            ) : null}
+            <ul className="space-y-3">
+              {completeDraft.lines.map((line) => (
+                <li key={line.orderLineId} className="space-y-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate text-[13px] text-a-fg">{line.label}</p>
+                    <span className="a-mono shrink-0 text-[12px] text-a-fg-muted">
+                      cmd {line.ordered}
+                    </span>
+                  </div>
+                  <AInput
+                    type="number"
+                    min={0}
+                    max={line.ordered}
+                    step="0.001"
+                    value={line.qty}
+                    onChange={(e) =>
+                      setCompleteDraft({
+                        ...completeDraft,
+                        error: null,
+                        lines: completeDraft.lines.map((x) =>
+                          x.orderLineId === line.orderLineId
+                            ? { ...x, qty: e.target.value }
+                            : x,
+                        ),
+                      })
+                    }
+                    aria-label={`Qty livrée ${line.label}`}
+                  />
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap justify-end gap-2 pt-2">
+              <AButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setCompleteDraft(null)}
+                disabled={busy}
+              >
+                Annuler
+              </AButton>
+              <AButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={busy}
+                onClick={() =>
+                  setCompleteDraft({
+                    ...completeDraft,
+                    error: null,
+                    lines: completeDraft.lines.map((l) => ({
+                      ...l,
+                      qty: String(l.ordered),
+                    })),
+                  })
+                }
+              >
+                Tout livrer
+              </AButton>
+              <AButton
+                type="button"
+                size="sm"
+                onClick={() => void submitComplete()}
+                disabled={busy}
+              >
+                Confirmer livré
               </AButton>
             </div>
           </div>

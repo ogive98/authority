@@ -1291,13 +1291,15 @@ model SalOrderLine {
   orderId     String   @map("order_id") @db.Uuid
   lineNo      Int      @map("line_no")
   productId   String   @map("product_id") @db.Uuid
-  qty         Decimal  @db.Decimal(18, 3)
-  unitPrice   Decimal  @map("unit_price") @db.Decimal(18, 3)
-  discountPct Decimal  @default(0) @map("discount_pct") @db.Decimal(5, 2)
-  lineTotal   Decimal  @map("line_total") @db.Decimal(18, 3)
-  version     Int      @default(0)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  qty          Decimal  @db.Decimal(18, 3)
+  unitPrice    Decimal  @map("unit_price") @db.Decimal(18, 3)
+  discountPct  Decimal  @default(0) @map("discount_pct") @db.Decimal(5, 2)
+  lineTotal    Decimal  @map("line_total") @db.Decimal(18, 3)
+  /** Qty actually delivered on terminal shipment complete (D175). */
+  deliveredQty Decimal? @map("delivered_qty") @db.Decimal(18, 3)
+  version      Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   order SalOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
@@ -1353,6 +1355,8 @@ model DlvShipment {
   driverLabel     String?           @map("driver_label")
   preferredDriver String?           @map("preferred_driver")
   failReason      String?           @map("fail_reason")
+  /** AR / invoice amount for qty actually delivered (D175). */
+  amountDelivered Decimal?          @map("amount_delivered") @db.Decimal(18, 3)
   version         Int               @default(0)
   assignedAt      DateTime?         @map("assigned_at") @db.Timestamptz(6)
   dispatchedAt    DateTime?         @map("dispatched_at") @db.Timestamptz(6)

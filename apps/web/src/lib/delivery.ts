@@ -23,12 +23,27 @@ export type DeliveryShipment = {
   driverLabel: string | null;
   preferredDriver: string | null;
   failReason: string | null;
+  amountDelivered: string | null;
   version: number;
   assignedAt: string | null;
   dispatchedAt: string | null;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  orderLines?: DeliveryOrderLine[];
+};
+
+export type DeliveryOrderLine = {
+  id: string;
+  lineNo: number;
+  productId: string;
+  productSku: string | null;
+  productName: string | null;
+  qty: string;
+  unitPrice: string;
+  discountPct: string;
+  lineTotal: string;
+  deliveredQty: string | null;
 };
 
 export type DeliveryRound = {
@@ -232,14 +247,35 @@ export async function dispatchShipment(
   }
 }
 
+export async function fetchShipment(
+  id: string,
+): Promise<{ ok: true; data: DeliveryShipment } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/delivery/shipments/${id}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as DeliveryShipment };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function completeShipment(
   id: string,
+  lines?: Array<{ orderLineId: string; qty: number }>,
 ): Promise<{ ok: true; data: DeliveryShipment } | ApiFail> {
   try {
     const res = await fetch(`/api/v1/delivery/shipments/${id}/complete`, {
       method: "POST",
       credentials: "include",
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(lines ? { lines } : {}),
     });
     if (!res.ok) return parseFail(res);
     return { ok: true, data: (await res.json()) as DeliveryShipment };

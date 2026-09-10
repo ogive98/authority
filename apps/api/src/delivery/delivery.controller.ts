@@ -21,6 +21,7 @@ import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
   AssignDriverDto,
   AttachRoundDto,
+  CompleteShipmentDto,
   CreateRoundDto,
   CreateShipmentDto,
   FailShipmentDto,
@@ -163,8 +164,9 @@ export class DeliveryController {
   complete(
     @CurrentTenancy() tenancy: TenancyContext,
     @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CompleteShipmentDto,
   ) {
-    return this.deliveryService.complete(tenancy.companyId, id);
+    return this.deliveryService.complete(tenancy.companyId, id, dto ?? {});
   }
 
   @Post('shipments/:id/fail')
