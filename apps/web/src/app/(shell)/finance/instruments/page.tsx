@@ -84,12 +84,20 @@ export default function FinanceInstrumentsPage() {
         title="Instruments"
         description="Chèques et traites — rejet = restauration des créances AR."
         actions={
-          <Link
-            href="/finance/payments"
-            className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-          >
-            Encaissements
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/finance/payments"
+              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
+            >
+              Encaissements
+            </Link>
+            <Link
+              href="/finance/banking"
+              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
+            >
+              Banque
+            </Link>
+          </div>
         }
       />
       <div className={softPageBody}>
