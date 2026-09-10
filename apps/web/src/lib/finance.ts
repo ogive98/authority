@@ -568,6 +568,25 @@ export async function confirmAllocation(
   }
 }
 
+export async function reversePayment(
+  paymentId: string,
+): Promise<{ ok: true; data: FinPayment } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/payments/${paymentId}/reverse`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinPayment };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function fetchInstruments(opts?: {
   status?: InstrumentStatus | "";
 }): Promise<{ ok: true; data: { items: FinInstrument[] } } | ApiFail> {

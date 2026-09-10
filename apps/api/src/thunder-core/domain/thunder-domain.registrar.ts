@@ -49,6 +49,7 @@ export class ThunderDomainRegistrar implements OnModuleInit {
           THUNDER_DOMAIN_EVENT_TYPES.financeInvoiceIssued,
           THUNDER_DOMAIN_EVENT_TYPES.financeInvoiceCancelled,
           THUNDER_DOMAIN_EVENT_TYPES.financePaymentAllocated,
+          THUNDER_DOMAIN_EVENT_TYPES.financePaymentReversed,
           THUNDER_DOMAIN_EVENT_TYPES.financeInstrumentRejected,
         ],
       },
@@ -261,24 +262,31 @@ export class ThunderDomainRegistrar implements OnModuleInit {
     }
 
     if (
+      envelope.eventType === THUNDER_DOMAIN_EVENT_TYPES.financePaymentReversed ||
       envelope.eventType === THUNDER_DOMAIN_EVENT_TYPES.financeInstrumentRejected
     ) {
       const paymentId = stringPayload(envelope.payload, 'paymentId');
       if (!paymentId) {
         this.logger.warn(
-          'accounting.postFromFinance reject: missing paymentId',
+          'accounting.postFromFinance payment reverse: missing paymentId',
         );
         return;
       }
+      const sourceType =
+        envelope.eventType ===
+        THUNDER_DOMAIN_EVENT_TYPES.financePaymentReversed
+          ? 'fin_payment_reverse'
+          : 'fin_instrument_reject';
       const result = await this.financeGl.reversePaymentOnInstrumentReject(
         companyId,
         {
           paymentId,
           rejectSourceId: envelope.eventId,
+          sourceType,
         },
       );
       this.logger.log(
-        `accounting.postFromFinance reject ${result.outcome} ${
+        `accounting.postFromFinance ${sourceType} ${result.outcome} ${
           'number' in result ? result.number : result.reason
         }`,
       );

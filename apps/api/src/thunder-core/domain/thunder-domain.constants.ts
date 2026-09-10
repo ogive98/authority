@@ -10,5 +10,6 @@ export const THUNDER_DOMAIN_EVENT_TYPES = {
   financeInvoiceIssued: 'finance.invoice.issued.v1',
   financeInvoiceCancelled: 'finance.invoice.cancelled.v1',
   financePaymentAllocated: 'finance.payment.allocated.v1',
+  financePaymentReversed: 'finance.payment.reversed.v1',
   financeInstrumentRejected: 'finance.instrument.rejected.v1',
 } as const;

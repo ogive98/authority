@@ -21,6 +21,7 @@ import {
   confirmAllocation,
   createPayment,
   fetchPayments,
+  reversePayment,
   simulateAllocation,
   type AllocationPlan,
   type AllocationPolicy,
@@ -90,6 +91,24 @@ export default function FinancePaymentsPage() {
     }
     setState({ kind: "ok", items: res.data.items });
   }, []);
+
+  async function onReverse(id: string) {
+    if (
+      !window.confirm(
+        "Contrepasser cet encaissement ? Les affectations seront annulées et le GL décomptabilisé via Thunder.",
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    const res = await reversePayment(id);
+    setBusy(false);
+    if (!res.ok) {
+      setState({ kind: "error", message: res.message });
+      return;
+    }
+    await load(q);
+  }
 
   useEffect(() => {
     void load(q);
@@ -311,25 +330,40 @@ export default function FinancePaymentsPage() {
                       </ABadge>
                     </td>
                     <td className="a-table-cell">
-                      {p.status === "POSTED" &&
-                      Number(p.amountUnallocated) > 0 ? (
-                        <AButton
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            setAllocTarget(p);
-                            setPolicy("OLDEST_FIRST");
-                            setPlan(null);
-                            setFormError(null);
-                            setAllocOpen(true);
-                          }}
-                        >
-                          Affecter
-                        </AButton>
-                      ) : (
-                        <span className="text-a-fg-subtle">—</span>
-                      )}
+                      <div className="flex flex-wrap gap-1.5">
+                        {p.status === "POSTED" &&
+                        Number(p.amountUnallocated) > 0 ? (
+                          <AButton
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            disabled={busy}
+                            onClick={() => {
+                              setAllocTarget(p);
+                              setPolicy("OLDEST_FIRST");
+                              setPlan(null);
+                              setFormError(null);
+                              setAllocOpen(true);
+                            }}
+                          >
+                            Affecter
+                          </AButton>
+                        ) : null}
+                        {p.status === "POSTED" ? (
+                          <AButton
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={busy}
+                            onClick={() => void onReverse(p.id)}
+                          >
+                            Contrepasser
+                          </AButton>
+                        ) : null}
+                        {p.status !== "POSTED" ? (
+                          <span className="text-a-fg-subtle">—</span>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}

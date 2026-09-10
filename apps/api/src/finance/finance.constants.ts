@@ -25,6 +25,7 @@ export const FINANCE_EVENT_TYPES = {
   INVOICE_CANCELLED: 'finance.invoice.cancelled.v1',
   PAYMENT_POSTED: 'finance.payment.posted.v1',
   PAYMENT_ALLOCATED: 'finance.payment.allocated.v1',
+  PAYMENT_REVERSED: 'finance.payment.reversed.v1',
   INSTRUMENT_STATUS: 'finance.instrument.status.v1',
   INSTRUMENT_REJECTED: 'finance.instrument.rejected.v1',
   PROMISE_CREATED: 'finance.promise.created.v1',

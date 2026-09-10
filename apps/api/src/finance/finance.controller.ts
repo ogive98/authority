@@ -281,6 +281,16 @@ export class FinanceController {
     return this.paymentService.confirm(tenancy.companyId, id, dto);
   }
 
+  @Post('payments/:id/reverse')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeAllocate)
+  reversePayment(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.paymentService.reverse(tenancy.companyId, id);
+  }
+
   @Get('instruments')
   @RequirePermission(PERMISSION_KEYS.financeArRead)
   listInstruments(

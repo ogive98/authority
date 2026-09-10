@@ -47,6 +47,7 @@ describe('ThunderDomainRegistrar', () => {
           'finance.invoice.issued.v1',
           'finance.invoice.cancelled.v1',
           'finance.payment.allocated.v1',
+          'finance.payment.reversed.v1',
           'finance.instrument.rejected.v1',
         ],
       },
@@ -250,5 +251,42 @@ describe('ThunderDomainRegistrar', () => {
       invoiceId,
       reverseSourceId: '88888888-8888-8888-8888-888888888888',
     });
+  });
+
+  it('reverses payment GL from finance.payment.reversed', async () => {
+    gl.reversePaymentOnInstrumentReject.mockResolvedValue({
+      outcome: 'posted',
+      entryId: 'je-pay',
+      number: 'JE-PAY',
+    });
+    const registrar = new ThunderDomainRegistrar(
+      { register: jest.fn() } as never,
+      { isEnabled: jest.fn().mockResolvedValue(true) } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      gl as never,
+    );
+    const paymentId = '99999999-9999-9999-9999-999999999999';
+    await registrar.onFinanceToGl({
+      eventId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      eventType: 'finance.payment.reversed.v1',
+      eventVersion: 1,
+      occurredAt: new Date().toISOString(),
+      source: 'finance',
+      companyId,
+      correlationId: 'c6',
+      aggregateType: 'fin_payment',
+      aggregateId: paymentId,
+      payload: { paymentId },
+    });
+    expect(gl.reversePaymentOnInstrumentReject).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        paymentId,
+        rejectSourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        sourceType: 'fin_payment_reverse',
+      }),
+    );
   });
 });

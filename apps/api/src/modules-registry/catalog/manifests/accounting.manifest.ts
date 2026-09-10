@@ -66,6 +66,7 @@ export const accountingManifest: ModuleManifest = {
     'finance.invoice.issued.v1',
     'finance.invoice.cancelled.v1',
     'finance.payment.allocated.v1',
+    'finance.payment.reversed.v1',
     'finance.instrument.rejected.v1',
   ],
   navigationEntries: [

@@ -43,6 +43,7 @@ export const financeManifest: ModuleManifest = {
     'finance.invoice.cancel',
     'finance.payment.create',
     'finance.payment.allocate',
+    'finance.payment.reverse',
     'finance.instrument.transition',
   ],
   queries: [
@@ -71,6 +72,7 @@ export const financeManifest: ModuleManifest = {
     'finance.invoice.cancelled.v1',
     'finance.payment.posted.v1',
     'finance.payment.allocated.v1',
+    'finance.payment.reversed.v1',
     'finance.instrument.status.v1',
     'finance.instrument.rejected.v1',
     'finance.promise.created.v1',

@@ -484,6 +484,79 @@ export class PaymentService {
     return { items: rows.map(serializeInstrument) };
   }
 
+  /**
+   * Public reverse (D187) — POSTED → REVERSED, restore AR allocations,
+   * cancel non-terminal instruments, emit payment.reversed for Thunder GL.
+   */
+  async reverse(companyId: string, paymentId: string): Promise<PaymentDto> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      const payment = await tx.finPayment.findFirst({
+        where: { id: paymentId, companyId, deletedAt: null },
+      });
+      if (!payment) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.PAYMENT_NOT_FOUND,
+          'Payment not found.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      if (payment.status === FinPaymentStatus.REVERSED) {
+        return tx.finPayment.findFirstOrThrow({
+          where: { id: paymentId },
+          include: {
+            instruments: { where: { deletedAt: null } },
+            allocations: { orderBy: { paidAt: 'desc' } },
+          },
+        });
+      }
+      if (payment.status !== FinPaymentStatus.POSTED) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_STATUS,
+          'Only POSTED payments can be reversed.',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      await this.restoreArOnReject(tx, companyId, paymentId);
+      await tx.finPaymentInstrument.updateMany({
+        where: {
+          companyId,
+          paymentId,
+          deletedAt: null,
+          status: {
+            notIn: [
+              FinInstrumentStatus.REJECTED,
+              FinInstrumentStatus.CANCELLED,
+            ],
+          },
+        },
+        data: { status: FinInstrumentStatus.CANCELLED },
+      });
+
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'fin_payment',
+        aggregateId: paymentId,
+        eventType: FINANCE_EVENT_TYPES.PAYMENT_REVERSED,
+        payloadJson: {
+          paymentId,
+          customerId: payment.customerId,
+          amount: payment.amount.toString(),
+        },
+      });
+
+      return tx.finPayment.findFirstOrThrow({
+        where: { id: paymentId },
+        include: {
+          instruments: { where: { deletedAt: null } },
+          allocations: { orderBy: { paidAt: 'desc' } },
+        },
+      });
+    });
+
+    return this.enrichOne(companyId, row);
+  }
+
   async transitionInstrument(
     companyId: string,
     instrumentId: string,

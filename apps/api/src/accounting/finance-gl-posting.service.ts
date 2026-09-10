@@ -289,14 +289,20 @@ export class FinanceGlPostingService {
     });
   }
 
-  /** Instrument reject → reverse posted payment allocation entries for that payment. */
+  /** Reverse posted payment allocation GL (instrument reject or payment.reverse). */
   async reversePaymentOnInstrumentReject(
     companyId: string,
-    input: { paymentId: string; rejectSourceId: string },
+    input: {
+      paymentId: string;
+      rejectSourceId: string;
+      /** Idempotency sourceType — default instrument reject. */
+      sourceType?: 'fin_instrument_reject' | 'fin_payment_reverse';
+    },
   ): Promise<FinanceGlPostResult> {
+    const sourceType = input.sourceType ?? 'fin_instrument_reject';
     const already = await this.findBySource(
       companyId,
-      'fin_instrument_reject',
+      sourceType,
       input.rejectSourceId,
     );
     if (already) {
@@ -347,7 +353,7 @@ export class FinanceGlPostingService {
     await this.prisma.accJournalEntry.update({
       where: { id: last.id },
       data: {
-        sourceType: 'fin_instrument_reject',
+        sourceType,
         sourceId: input.rejectSourceId,
       },
     });
