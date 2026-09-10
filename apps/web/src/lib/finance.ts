@@ -159,6 +159,32 @@ export type CreditSnapshot = {
   currency: string;
 };
 
+export type ArAgingBucket = {
+  key: "current" | "d1_30" | "d31_60" | "d61_90" | "d90_plus";
+  label: string;
+  amountOpen: string;
+  count: number;
+};
+
+export type ArAging = {
+  customerId: string;
+  asOf: string;
+  currency: string;
+  totalOpen: string;
+  overdueTotal: string;
+  buckets: ArAgingBucket[];
+};
+
+export type CustomerFinancialOverview = {
+  customerId: string;
+  credit: CreditSnapshot;
+  aging: ArAging;
+  openCount: number;
+  overdueCount: number;
+  availableCredit: string | null;
+  currency: string;
+};
+
 export const OPEN_ITEM_STATUS_LABELS: Record<OpenItemStatus, string> = {
   OPEN: "Ouvert",
   PARTIAL: "Partiel",
@@ -233,6 +259,47 @@ export async function fetchOpenItems(opts?: {
         items: FinOpenItem[];
         nextCursor: string | null;
       },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchCreditSnapshot(
+  customerId: string,
+): Promise<{ ok: true; data: CreditSnapshot } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/credit/${encodeURIComponent(customerId)}`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as CreditSnapshot };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchCustomerFinancialOverview(
+  customerId: string,
+): Promise<{ ok: true; data: CustomerFinancialOverview } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/customers/${encodeURIComponent(customerId)}/overview`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as CustomerFinancialOverview,
     };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };

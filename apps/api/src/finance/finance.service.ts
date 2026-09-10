@@ -52,6 +52,33 @@ export type CreditSnapshotDto = {
   currency: string;
 };
 
+/** AR aging buckets — amounts as-recorded TND (D181). */
+export type ArAgingBucketDto = {
+  key: 'current' | 'd1_30' | 'd31_60' | 'd61_90' | 'd90_plus';
+  label: string;
+  amountOpen: string;
+  count: number;
+};
+
+export type ArAgingDto = {
+  customerId: string;
+  asOf: string;
+  currency: 'TND';
+  totalOpen: string;
+  overdueTotal: string;
+  buckets: ArAgingBucketDto[];
+};
+
+export type CustomerFinancialOverviewDto = {
+  customerId: string;
+  credit: CreditSnapshotDto;
+  aging: ArAgingDto;
+  openCount: number;
+  overdueCount: number;
+  availableCredit: string | null;
+  currency: 'TND';
+};
+
 @Injectable()
 export class FinanceService {
   constructor(
@@ -424,6 +451,129 @@ export class FinanceService {
     };
   }
 
+  /**
+   * AR aging from open items (dueDate vs today UTC).
+   * No dueDate → treated as current (not overdue).
+   */
+  async arAging(
+    companyId: string,
+    customerId: string,
+  ): Promise<ArAgingDto> {
+    await this.assertCustomer(companyId, customerId);
+    const today = startOfUtcDay(new Date());
+    const rows = await this.prisma.finOpenItem.findMany({
+      where: {
+        companyId,
+        customerId,
+        deletedAt: null,
+        side: FinOpenItemSide.AR,
+        status: { in: [FinOpenItemStatus.OPEN, FinOpenItemStatus.PARTIAL] },
+      },
+      select: { amountOpen: true, dueDate: true },
+    });
+
+    const buckets: Record<
+      ArAgingBucketDto['key'],
+      { amount: number; count: number }
+    > = {
+      current: { amount: 0, count: 0 },
+      d1_30: { amount: 0, count: 0 },
+      d31_60: { amount: 0, count: 0 },
+      d61_90: { amount: 0, count: 0 },
+      d90_plus: { amount: 0, count: 0 },
+    };
+
+    let totalOpen = 0;
+    let overdueTotal = 0;
+
+    for (const row of rows) {
+      const amt = Number(row.amountOpen);
+      if (!(amt > 0)) continue;
+      totalOpen = round3(totalOpen + amt);
+      const key = agingBucketKey(row.dueDate, today);
+      buckets[key].amount = round3(buckets[key].amount + amt);
+      buckets[key].count += 1;
+      if (key !== 'current') {
+        overdueTotal = round3(overdueTotal + amt);
+      }
+    }
+
+    const labels: Record<ArAgingBucketDto['key'], string> = {
+      current: 'Non échu',
+      d1_30: '1–30 j',
+      d31_60: '31–60 j',
+      d61_90: '61–90 j',
+      d90_plus: '90+ j',
+    };
+
+    return {
+      customerId,
+      asOf: today.toISOString().slice(0, 10),
+      currency: 'TND',
+      totalOpen: totalOpen.toFixed(3),
+      overdueTotal: overdueTotal.toFixed(3),
+      buckets: (
+        ['current', 'd1_30', 'd31_60', 'd61_90', 'd90_plus'] as const
+      ).map((key) => ({
+        key,
+        label: labels[key],
+        amountOpen: buckets[key].amount.toFixed(3),
+        count: buckets[key].count,
+      })),
+    };
+  }
+
+  /** Hub shell: credit + aging + counts (D181). */
+  async customerFinancialOverview(
+    companyId: string,
+    customerId: string,
+  ): Promise<CustomerFinancialOverviewDto> {
+    const [credit, aging, openCount, overdueCount] = await Promise.all([
+      this.creditSnapshot(companyId, customerId),
+      this.arAging(companyId, customerId),
+      this.prisma.finOpenItem.count({
+        where: {
+          companyId,
+          customerId,
+          deletedAt: null,
+          side: FinOpenItemSide.AR,
+          status: {
+            in: [FinOpenItemStatus.OPEN, FinOpenItemStatus.PARTIAL],
+          },
+        },
+      }),
+      this.prisma.finOpenItem.count({
+        where: {
+          companyId,
+          customerId,
+          deletedAt: null,
+          side: FinOpenItemSide.AR,
+          status: {
+            in: [FinOpenItemStatus.OPEN, FinOpenItemStatus.PARTIAL],
+          },
+          dueDate: { lt: startOfUtcDay(new Date()) },
+        },
+      }),
+    ]);
+
+    let availableCredit: string | null = null;
+    if (credit.creditLimit != null) {
+      availableCredit = round3(
+        Number(credit.creditLimit) - Number(credit.outstandingBalance),
+      ).toFixed(3);
+    }
+
+    return {
+      customerId,
+      credit,
+      aging,
+      openCount,
+      overdueCount,
+      availableCredit,
+      currency: 'TND',
+    };
+  }
+
   async sumOutstanding(companyId: string, customerId: string): Promise<number> {
     const agg = await this.prisma.finOpenItem.aggregate({
       where: {
@@ -548,6 +698,22 @@ export class FinanceService {
 
 function round3(n: number): number {
   return Math.round(n * 1000) / 1000;
+}
+
+function agingBucketKey(
+  dueDate: Date | null,
+  today: Date,
+): ArAgingBucketDto['key'] {
+  if (!dueDate) return 'current';
+  const due = startOfUtcDay(dueDate);
+  if (due.getTime() >= today.getTime()) return 'current';
+  const days = Math.floor(
+    (today.getTime() - due.getTime()) / (24 * 60 * 60 * 1000),
+  );
+  if (days <= 30) return 'd1_30';
+  if (days <= 60) return 'd31_60';
+  if (days <= 90) return 'd61_90';
+  return 'd90_plus';
 }
 
 function serialize(

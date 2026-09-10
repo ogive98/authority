@@ -117,6 +117,29 @@ export class FinanceController {
     return this.financeService.creditSnapshot(tenancy.companyId, customerId);
   }
 
+  /** D181 — AR aging buckets for customer hub. */
+  @Get('aging/:customerId')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  aging(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('customerId', ParseUUIDPipe) customerId: string,
+  ) {
+    return this.financeService.arAging(tenancy.companyId, customerId);
+  }
+
+  /** D181 — credit + aging + counts for Soft Glass customer hub. */
+  @Get('customers/:customerId/overview')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  customerOverview(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('customerId', ParseUUIDPipe) customerId: string,
+  ) {
+    return this.financeService.customerFinancialOverview(
+      tenancy.companyId,
+      customerId,
+    );
+  }
+
   @Post('open-items')
   @HttpCode(201)
   @RequirePermission(PERMISSION_KEYS.financeArWrite)

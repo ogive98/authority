@@ -31,7 +31,12 @@ import {
   type CustomerPrice,
   type CustomerZone,
 } from "@/lib/customers";
+import {
+  fetchCustomerFinancialOverview,
+  type CustomerFinancialOverview,
+} from "@/lib/finance";
 import { softPageBody, softSelect, softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import Link from "next/link";
 
 type LoadState =
   | { kind: "loading" }
@@ -72,6 +77,13 @@ export default function CustomersPage() {
   const [priceProducts, setPriceProducts] = useState<
     Array<{ id: string; sku: string; name: string }>
   >([]);
+  const [financeHub, setFinanceHub] = useState<
+    | { kind: "idle" }
+    | { kind: "loading" }
+    | { kind: "ok"; data: CustomerFinancialOverview }
+    | { kind: "forbidden" }
+    | { kind: "error"; message: string }
+  >({ kind: "idle" });
 
   const emptyForm = useCallback(
     (): FormState => ({
@@ -139,6 +151,7 @@ export default function CustomersPage() {
     setEditing(null);
     setForm(emptyForm());
     setFormError(null);
+    setFinanceHub({ kind: "idle" });
     setDrawerOpen(true);
   }
 
@@ -146,6 +159,7 @@ export default function CustomersPage() {
     setFormError(null);
     setPriceProductId("");
     setPriceHt("");
+    setFinanceHub({ kind: "loading" });
     void loadPriceProducts();
     const detail = await fetchCustomer(row.id);
     if (!detail.ok) {
@@ -171,6 +185,10 @@ export default function CustomersPage() {
       contactEmail: "",
     });
     setDrawerOpen(true);
+    const hub = await fetchCustomerFinancialOverview(row.id);
+    if (hub.ok) setFinanceHub({ kind: "ok", data: hub.data });
+    else if (hub.status === 403) setFinanceHub({ kind: "forbidden" });
+    else setFinanceHub({ kind: "error", message: hub.message });
   }
 
   async function onSave() {
@@ -582,6 +600,89 @@ export default function CustomersPage() {
                 inputMode="decimal"
               />
             </Field>
+
+            {editing ? (
+              <div className="a-underlay space-y-3 rounded-md p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                    Hub financier
+                  </p>
+                  <Link
+                    href="/finance"
+                    className="text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
+                  >
+                    Ouvrir Finance →
+                  </Link>
+                </div>
+                {financeHub.kind === "loading" ? (
+                  <ASkeleton className="h-16 w-full" />
+                ) : null}
+                {financeHub.kind === "forbidden" ? (
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Finance non accessible (`finance.ar.read`).
+                  </p>
+                ) : null}
+                {financeHub.kind === "error" ? (
+                  <p className="text-[length:var(--a-text-xs)] text-a-danger">
+                    {financeHub.message}
+                  </p>
+                ) : null}
+                {financeHub.kind === "ok" ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div>
+                        <p className="text-[10px] text-a-fg-muted">Encours</p>
+                        <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                          {financeHub.data.credit.outstandingBalance}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-a-fg-muted">Échu</p>
+                        <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                          {financeHub.data.aging.overdueTotal}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-a-fg-muted">Disponible</p>
+                        <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                          {financeHub.data.availableCredit ?? "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-a-fg-muted">Ouverts</p>
+                        <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                          {financeHub.data.openCount}
+                          {financeHub.data.overdueCount > 0
+                            ? ` · ${financeHub.data.overdueCount} éch.`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+                      {financeHub.data.aging.buckets.map((b) => (
+                        <div
+                          key={b.key}
+                          className="rounded-md bg-a-surface-3 px-2 py-1.5"
+                        >
+                          <p className="text-[10px] text-a-fg-muted">{b.label}</p>
+                          <p className="a-mono text-[11px] tabular-nums text-a-fg">
+                            {b.amountOpen}
+                          </p>
+                          <p className="text-[10px] text-a-fg-subtle">
+                            {b.count} créance{b.count === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-a-fg-subtle">
+                      Aging au {financeHub.data.aging.asOf} · TND as-recorded ·
+                      source Finance (pas de doublon customers)
+                    </p>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+
             <Field label="Zone">
               <select
                 className={softSelect}

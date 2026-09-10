@@ -252,6 +252,55 @@ describe('FinanceService', () => {
     expect(snap.currency).toBe('TND');
   });
 
+  it('buckets AR aging by overdue days (D181)', async () => {
+    const { service, prisma } = build({ amountOpen: 50 });
+    const today = new Date();
+    const utc = (daysAgo: number) =>
+      new Date(
+        Date.UTC(
+          today.getUTCFullYear(),
+          today.getUTCMonth(),
+          today.getUTCDate() - daysAgo,
+        ),
+      );
+    prisma.finOpenItem.findMany = jest.fn().mockResolvedValue([
+      { amountOpen: new Prisma.Decimal(100), dueDate: null },
+      { amountOpen: new Prisma.Decimal(40), dueDate: utc(10) },
+      { amountOpen: new Prisma.Decimal(25), dueDate: utc(45) },
+      { amountOpen: new Prisma.Decimal(15), dueDate: utc(120) },
+    ]);
+    const aging = await service.arAging(companyId, customerId);
+    expect(aging.totalOpen).toBe('180.000');
+    expect(aging.overdueTotal).toBe('80.000');
+    const byKey = Object.fromEntries(
+      aging.buckets.map((b) => [b.key, b.amountOpen]),
+    );
+    expect(byKey.current).toBe('100.000');
+    expect(byKey.d1_30).toBe('40.000');
+    expect(byKey.d31_60).toBe('25.000');
+    expect(byKey.d90_plus).toBe('15.000');
+  });
+
+  it('customer financial overview composes credit + aging', async () => {
+    const { service, prisma } = build({ amountOpen: 50 });
+    prisma.finOpenItem.findMany = jest.fn().mockResolvedValue([
+      { amountOpen: new Prisma.Decimal(50), dueDate: null },
+    ]);
+    prisma.finOpenItem.count = jest
+      .fn()
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0);
+    const overview = await service.customerFinancialOverview(
+      companyId,
+      customerId,
+    );
+    expect(overview.credit.outstandingBalance).toBe('50.000');
+    expect(overview.openCount).toBe(1);
+    expect(overview.overdueCount).toBe(0);
+    expect(overview.availableCredit).toBe('950.000');
+    expect(overview.aging.totalOpen).toBe('50.000');
+  });
+
   it('get returns NOT_FOUND for missing id (IDOR-safe shape)', async () => {
     const { service } = build();
     await expect(
