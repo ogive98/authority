@@ -27,6 +27,7 @@ import {
   fetchSalesOrders,
   searchCustomers,
   searchProducts,
+  type SalesFulfillmentStatus,
   type SalesIntakeSettings,
   type SalesOrder,
   type SalesOrderStatus,
@@ -41,6 +42,20 @@ function orderBadgeTone(
   if (status === "CONFIRMED") return "success";
   if (status === "CANCELLED") return "warning";
   return "neutral";
+}
+
+function fulfillmentBadgeTone(
+  status: SalesFulfillmentStatus,
+): "success" | "accent" | "neutral" {
+  if (status === "FULL") return "success";
+  if (status === "PARTIAL") return "accent";
+  return "neutral";
+}
+
+function fulfillmentLabel(status: SalesFulfillmentStatus): string {
+  if (status === "FULL") return "Livré";
+  if (status === "PARTIAL") return "Partiel";
+  return "Non livré";
 }
 
 type LoadState =
@@ -386,11 +401,27 @@ function SalesPageInner() {
                     <ABadge tone={orderBadgeTone(row.status)}>
                       {st(row.status)}
                     </ABadge>
+                    {row.status === "CONFIRMED" && row.fulfillmentStatus ? (
+                      <ABadge
+                        tone={fulfillmentBadgeTone(row.fulfillmentStatus)}
+                      >
+                        {fulfillmentLabel(row.fulfillmentStatus)}
+                      </ABadge>
+                    ) : null}
                   </div>
                   <p className="mt-0.5 truncate text-[12px] text-a-fg-muted">
                     {row.customerName ?? row.customerCode ?? "—"}
                     {" · "}
                     {row.lines.length} ligne(s)
+                    {row.status === "CONFIRMED" &&
+                    row.fulfillmentStatus &&
+                    row.fulfillmentStatus !== "NONE"
+                      ? ` · livré ${row.lines
+                          .map((l) => Number(l.deliveredQty ?? 0))
+                          .reduce((a, b) => a + b, 0)} / ${row.lines
+                          .map((l) => Number(l.qty))
+                          .reduce((a, b) => a + b, 0)}`
+                      : ""}
                   </p>
                 </div>
                 <div className="a-mono text-right text-[13px] tabular-nums text-a-fg">

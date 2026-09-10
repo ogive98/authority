@@ -25,6 +25,7 @@ describe('SalesService', () => {
       unitPrice: new Prisma.Decimal(5),
       discountPct: new Prisma.Decimal(0),
       lineTotal: new Prisma.Decimal(50),
+      deliveredQty: null as Prisma.Decimal | null,
       version: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -249,5 +250,53 @@ describe('SalesService', () => {
         }),
       }),
     );
+  });
+
+  it('list exposes fulfillmentStatus from deliveredQty', async () => {
+    const { service, prisma } = build({
+      status: SalOrderStatus.CONFIRMED,
+    });
+    const line = {
+      id: '66666666-6666-6666-6666-666666666666',
+      companyId,
+      orderId,
+      lineNo: 1,
+      productId,
+      qty: new Prisma.Decimal(10),
+      unitPrice: new Prisma.Decimal(5),
+      discountPct: new Prisma.Decimal(0),
+      lineTotal: new Prisma.Decimal(50),
+      deliveredQty: new Prisma.Decimal(4),
+      version: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    prisma.salOrder.findMany.mockResolvedValue([
+      {
+        id: orderId,
+        companyId,
+        number: 'SO-2026-0001',
+        customerId,
+        warehouseId,
+        status: SalOrderStatus.CONFIRMED,
+        requestedDate: null,
+        currency: 'TND',
+        notes: null,
+        preferredDriver: null,
+        amountTotal: new Prisma.Decimal(50),
+        version: 0,
+        confirmedAt: new Date(),
+        cancelledAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        lines: [line],
+      },
+    ]);
+
+    const res = await service.list(companyId, {});
+    expect(res.items[0]?.fulfillmentStatus).toBe('PARTIAL');
+    expect(res.items[0]?.lines[0]?.deliveredQty).toBe('4');
+    expect(res.items[0]?.lines[0]?.remainingQty).toBe('6');
   });
 });

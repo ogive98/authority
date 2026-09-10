@@ -40,7 +40,12 @@ export type SalesOrderLineDto = {
   unitPrice: string;
   discountPct: string;
   lineTotal: string;
+  deliveredQty: string;
+  remainingQty: string;
 };
+
+/** Delivery progress derived from line deliveredQty (D177) — not a DB status. */
+export type SalesFulfillmentStatus = 'NONE' | 'PARTIAL' | 'FULL';
 
 export type SalesOrderDto = {
   id: string;
@@ -52,6 +57,7 @@ export type SalesOrderDto = {
   warehouseId: string;
   warehouseCode: string | null;
   status: SalOrderStatus;
+  fulfillmentStatus: SalesFulfillmentStatus;
   requestedDate: string | null;
   currency: string;
   notes: string | null;
@@ -828,6 +834,27 @@ function serializeOrder(
   warehouse?: { code: string } | null,
   products?: Map<string, { sku: string; name: string }>,
 ): SalesOrderDto {
+  const lines = row.lines.map((l) => {
+    const p = products?.get(l.productId);
+    const qty = Number(l.qty.toString());
+    const delivered =
+      l.deliveredQty != null ? Number(l.deliveredQty.toString()) : 0;
+    const remaining = Math.max(0, round3(qty - delivered));
+    return {
+      id: l.id,
+      lineNo: l.lineNo,
+      productId: l.productId,
+      productSku: p?.sku ?? null,
+      productName: p?.name ?? null,
+      qty: l.qty.toString(),
+      unitPrice: l.unitPrice.toString(),
+      discountPct: l.discountPct.toString(),
+      lineTotal: l.lineTotal.toString(),
+      deliveredQty: round3(delivered).toString(),
+      remainingQty: remaining.toString(),
+    };
+  });
+
   return {
     id: row.id,
     companyId: row.companyId,
@@ -838,6 +865,7 @@ function serializeOrder(
     warehouseId: row.warehouseId,
     warehouseCode: warehouse?.code ?? null,
     status: row.status,
+    fulfillmentStatus: fulfillmentOf(lines),
     requestedDate: row.requestedDate
       ? row.requestedDate.toISOString().slice(0, 10)
       : null,
@@ -850,21 +878,25 @@ function serializeOrder(
     cancelledAt: row.cancelledAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
-    lines: row.lines.map((l) => {
-      const p = products?.get(l.productId);
-      return {
-        id: l.id,
-        lineNo: l.lineNo,
-        productId: l.productId,
-        productSku: p?.sku ?? null,
-        productName: p?.name ?? null,
-        qty: l.qty.toString(),
-        unitPrice: l.unitPrice.toString(),
-        discountPct: l.discountPct.toString(),
-        lineTotal: l.lineTotal.toString(),
-      };
-    }),
+    lines,
   };
+}
+
+function fulfillmentOf(
+  lines: Array<{ qty: string; deliveredQty: string }>,
+): SalesFulfillmentStatus {
+  if (lines.length === 0) return 'NONE';
+  let anyDelivered = false;
+  let anyRemaining = false;
+  for (const l of lines) {
+    const delivered = Number(l.deliveredQty);
+    const qty = Number(l.qty);
+    if (delivered > 1e-9) anyDelivered = true;
+    if (delivered + 1e-9 < qty) anyRemaining = true;
+  }
+  if (!anyDelivered) return 'NONE';
+  if (anyRemaining) return 'PARTIAL';
+  return 'FULL';
 }
 
 function round3(n: number): number {

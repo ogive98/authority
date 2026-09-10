@@ -1,5 +1,7 @@
 export type SalesOrderStatus = "DRAFT" | "CONFIRMED" | "CANCELLED";
 
+export type SalesFulfillmentStatus = "NONE" | "PARTIAL" | "FULL";
+
 export type SalesOrderLine = {
   id: string;
   lineNo: number;
@@ -10,6 +12,8 @@ export type SalesOrderLine = {
   unitPrice: string;
   discountPct: string;
   lineTotal: string;
+  deliveredQty?: string;
+  remainingQty?: string;
 };
 
 export type SalesOrder = {
@@ -22,6 +26,7 @@ export type SalesOrder = {
   warehouseId: string;
   warehouseCode: string | null;
   status: SalesOrderStatus;
+  fulfillmentStatus?: SalesFulfillmentStatus;
   requestedDate: string | null;
   currency: string;
   notes: string | null;
