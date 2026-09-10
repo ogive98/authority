@@ -10,6 +10,7 @@ import { AllocationEngineService } from './allocation-engine.service';
 import { BankingService } from './banking.service';
 import { CollectionScheduleResolver } from './collection-schedule.resolver';
 import { CreditPressureResolver } from './credit-pressure.resolver';
+import { DunningService } from './dunning.service';
 import { FinanceController } from './finance.controller';
 import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
@@ -34,6 +35,7 @@ import { PromiseService } from './promise.service';
     AllocationEngineService,
     PromiseService,
     BankingService,
+    DunningService,
     CollectionScheduleResolver,
     CreditPressureResolver,
   ],
@@ -43,6 +45,7 @@ import { PromiseService } from './promise.service';
     PaymentService,
     PromiseService,
     BankingService,
+    DunningService,
     CollectionScheduleResolver,
     CreditPressureResolver,
   ],

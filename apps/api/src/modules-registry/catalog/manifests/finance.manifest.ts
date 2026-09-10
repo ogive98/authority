@@ -52,6 +52,8 @@ export const financeManifest: ModuleManifest = {
     'finance.bank.line.create',
     'finance.bank.match',
     'finance.bank.unmatch',
+    'finance.dunning.prepare',
+    'finance.dunning.confirm',
   ],
   queries: [
     'finance.open_items.list',
@@ -62,6 +64,8 @@ export const financeManifest: ModuleManifest = {
     'finance.credit.snapshot',
     'finance.bank.accounts.list',
     'finance.bank.lines.list',
+    'finance.dunning.preview',
+    'finance.dunning.list',
   ],
   permissions: [
     'finance.ar.read',
@@ -88,6 +92,8 @@ export const financeManifest: ModuleManifest = {
     'finance.promise.status.v1',
     'finance.bank.matched.v1',
     'finance.bank.unmatched.v1',
+    'finance.dunning.prepared.v1',
+    'finance.dunning.confirmed.v1',
   ],
   consumedEvents: ['delivery.shipment.delivered.v1'],
   navigationEntries: [

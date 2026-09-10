@@ -1522,6 +1522,7 @@ model FinOpenItem {
   invoice     FinInvoice?        @relation(fields: [invoiceId], references: [id])
   allocations FinAllocation[]
   promises    FinPromiseToPay[]
+  dunningDrafts FinDunningDraft[]
 
   @@unique([companyId, number])
   @@index([companyId, createdAt(sort: Desc)])
@@ -1723,6 +1724,51 @@ model FinPromiseToPay {
   @@index([companyId, openItemId])
   @@index([companyId, createdAt(sort: Desc)])
   @@map("fin_promise_to_pay")
+}
+
+/** Human-gated dunning draft — mailto / wa.me only (D190). No auto-send. */
+enum FinDunningStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+enum FinDunningChannel {
+  EMAIL
+  WHATSAPP
+}
+
+model FinDunningDraft {
+  id            String            @id @default(uuid()) @db.Uuid
+  companyId     String            @map("company_id") @db.Uuid
+  number        String
+  openItemId    String            @map("open_item_id") @db.Uuid
+  customerId    String            @map("customer_id") @db.Uuid
+  contactId     String            @map("contact_id") @db.Uuid
+  channel       FinDunningChannel
+  /** Days past due milestone from finance.collection.remind_days. */
+  milestoneDay  Int               @map("milestone_day")
+  daysPastDue   Int               @map("days_past_due")
+  amountOpen    Decimal           @map("amount_open") @db.Decimal(18, 3)
+  currency      String            @default("TND")
+  subject       String
+  body          String
+  recipient     String
+  status        FinDunningStatus  @default(DRAFT)
+  confirmedAt   DateTime?         @map("confirmed_at") @db.Timestamptz(6)
+  version       Int               @default(0)
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  openItem FinOpenItem @relation(fields: [openItemId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, number])
+  @@unique([companyId, openItemId, milestoneDay, channel])
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@index([companyId, openItemId])
+  @@index([companyId, customerId])
+  @@map("fin_dunning_draft")
 }
 
 // --- tax_* Tax Engine V0 (D088) — Tunisia VAT catalog; CNSS/IRPP reserved for HR ---

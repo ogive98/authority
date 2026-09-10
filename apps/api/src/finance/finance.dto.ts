@@ -402,3 +402,15 @@ export class MatchBankLineDto {
   @MaxLength(240)
   note?: string;
 }
+
+/** D190 — human-gated dunning draft. */
+export class PrepareDunningDto {
+  @IsUUID()
+  openItemId!: string;
+
+  @IsUUID()
+  contactId!: string;
+
+  @IsEnum(['EMAIL', 'WHATSAPP'])
+  channel!: 'EMAIL' | 'WHATSAPP';
+}

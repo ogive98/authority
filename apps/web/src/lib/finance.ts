@@ -1006,3 +1006,106 @@ export function bankLineBadgeTone(
   if (status === "UNMATCHED") return "warning";
   return "neutral";
 }
+
+/** D190 dunning — human-gated mailto / wa.me */
+export type DunningChannel = "EMAIL" | "WHATSAPP";
+export type DunningStatus = "DRAFT" | "CONFIRMED" | "CANCELLED";
+
+export type DunningPreview = {
+  openItemId: string;
+  number: string;
+  customerId: string;
+  customerName: string | null;
+  amountOpen: string;
+  currency: string;
+  dueDate: string | null;
+  daysPastDue: number;
+  milestoneDay: number | null;
+  matchedMilestones: number[];
+  eligible: boolean;
+  blockReason: string | null;
+  hasOpenPromise: boolean;
+  subject: string;
+  body: string;
+  contacts: {
+    id: string;
+    name: string;
+    email: string | null;
+    whatsapp: string | null;
+    role: string | null;
+  }[];
+};
+
+export type FinDunningDraft = {
+  id: string;
+  number: string;
+  openItemId: string;
+  channel: DunningChannel;
+  milestoneDay: number;
+  daysPastDue: number;
+  amountOpen: string;
+  currency: string;
+  subject: string;
+  body: string;
+  recipient: string;
+  status: DunningStatus;
+  mailtoHref: string | null;
+  waMeHref: string | null;
+  confirmedAt: string | null;
+};
+
+export async function fetchDunningPreview(
+  openItemId: string,
+): Promise<{ ok: true; data: DunningPreview } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/open-items/${openItemId}/dunning/preview`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as DunningPreview };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function prepareDunning(body: {
+  openItemId: string;
+  contactId: string;
+  channel: DunningChannel;
+}): Promise<{ ok: true; data: FinDunningDraft } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/finance/dunning/prepare", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinDunningDraft };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function confirmDunning(
+  id: string,
+): Promise<{ ok: true; data: FinDunningDraft } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/dunning/${id}/confirm`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinDunningDraft };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}

@@ -29,11 +29,13 @@ import {
   CreatePaymentDto,
   CreatePromiseDto,
   MatchBankLineDto,
+  PrepareDunningDto,
   SimulateAllocationDto,
   TransitionInstrumentDto,
   UpdateBankAccountDto,
 } from './finance.dto';
 import { BankingService } from './banking.service';
+import { DunningService } from './dunning.service';
 import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentService } from './payment.service';
@@ -50,6 +52,7 @@ export class FinanceController {
     private readonly paymentService: PaymentService,
     private readonly promiseService: PromiseService,
     private readonly bankingService: BankingService,
+    private readonly dunningService: DunningService,
     private readonly expertise: ExpertiseResolverService,
   ) {}
 
@@ -465,5 +468,51 @@ export class FinanceController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.bankingService.unmatchLine(tenancy.companyId, id);
+  }
+
+  /** D190 — human-gated dunning (mailto / wa.me). */
+  @Get('open-items/:id/dunning/preview')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  dunningPreview(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.dunningService.preview(tenancy.companyId, id);
+  }
+
+  @Get('dunning')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  listDunning(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('status') status?: string,
+    @Query('openItemId') openItemId?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.dunningService.list(tenancy.companyId, {
+      status,
+      openItemId,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Post('dunning/prepare')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  prepareDunning(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: PrepareDunningDto,
+  ) {
+    return this.dunningService.prepare(tenancy.companyId, dto);
+  }
+
+  @Post('dunning/:id/confirm')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  confirmDunning(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.dunningService.confirm(tenancy.companyId, id);
   }
 }

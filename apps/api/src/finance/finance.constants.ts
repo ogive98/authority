@@ -18,6 +18,11 @@ export const FINANCE_ERROR_CODES = {
   BANK_ALREADY_MATCHED: 'FIN.BANK_ALREADY_MATCHED',
   BANK_MATCH_TARGET: 'FIN.BANK_MATCH_TARGET',
   BANK_AMOUNT_MISMATCH: 'FIN.BANK_AMOUNT_MISMATCH',
+  DUNNING_NOT_ELIGIBLE: 'FIN.DUNNING_NOT_ELIGIBLE',
+  DUNNING_PROMISE_OPEN: 'FIN.DUNNING_PROMISE_OPEN',
+  DUNNING_NOT_FOUND: 'FIN.DUNNING_NOT_FOUND',
+  DUNNING_CONTACT: 'FIN.DUNNING_CONTACT',
+  DUNNING_EXISTS: 'FIN.DUNNING_EXISTS',
 } as const;
 
 export type FinanceErrorCode =
@@ -37,6 +42,8 @@ export const FINANCE_EVENT_TYPES = {
   PROMISE_STATUS: 'finance.promise.status.v1',
   BANK_MATCHED: 'finance.bank.matched.v1',
   BANK_UNMATCHED: 'finance.bank.unmatched.v1',
+  DUNNING_PREPARED: 'finance.dunning.prepared.v1',
+  DUNNING_CONFIRMED: 'finance.dunning.confirmed.v1',
 } as const;
 
 /** Company settings — credit exposure check on sales confirm (default off). */
