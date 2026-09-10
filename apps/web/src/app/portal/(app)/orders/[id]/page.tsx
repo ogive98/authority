@@ -88,7 +88,7 @@ export default async function PortalOrderDetailPage({
             </p>
           </div>
         ) : (
-          <div className="a-card border-dashed p-[var(--a-space-4)]">
+          <div className="a-underlay rounded-md border-dashed p-[var(--a-space-4)]">
             <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
               Parcours colis
             </p>
@@ -102,7 +102,7 @@ export default async function PortalOrderDetailPage({
           </div>
         )}
 
-        <div className="a-card grid gap-4 p-[var(--a-space-5)] sm:grid-cols-2 lg:grid-cols-4">
+        <div className="a-underlay rounded-md grid gap-4 p-[var(--a-space-5)] sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Statut
@@ -139,7 +139,7 @@ export default async function PortalOrderDetailPage({
           </div>
         </div>
 
-        <div className="a-card overflow-hidden">
+        <div className="a-underlay overflow-hidden rounded-md">
           <div className="border-b border-a-border-subtle px-4 py-3">
             <h2 className="text-[length:var(--a-text-sm)] font-medium">
               Lignes

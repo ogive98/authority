@@ -52,7 +52,7 @@ export function PortalClaimDocumentUpload({ claimId }: { claimId: string }) {
   }
 
   return (
-    <div className="space-y-3 rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 p-4">
+    <div className="space-y-3 rounded-[var(--a-radius-md)]  bg-a-surface-2 p-4">
       <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
         Ajouter une pièce
       </p>

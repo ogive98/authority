@@ -81,7 +81,7 @@ export default async function PortalClaimDetailPage({
           </span>
         </div>
 
-        <div className="a-card space-y-3 p-4">
+        <div className="a-underlay space-y-3 rounded-md p-4">
           <p className="whitespace-pre-wrap text-[length:var(--a-text-sm)]">
             {data.description}
           </p>
@@ -133,7 +133,7 @@ export default async function PortalClaimDetailPage({
               canAct={false}
             />
           ) : (
-            <div className="a-card overflow-hidden">
+            <div className="a-underlay overflow-hidden rounded-md">
               <table className="w-full border-collapse text-left text-[length:var(--a-text-sm)]">
                 <thead className="bg-a-surface-3/80 text-a-fg-muted">
                   <tr>

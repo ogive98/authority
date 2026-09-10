@@ -612,18 +612,19 @@
     -webkit-backdrop-filter: saturate(180%) blur(calc(var(--a-glass-blur) + 8px));
   }
 
+  /* Soft Glass panel — same material as .a-underlay (D172); no framed cards. */
   .a-card {
-    background: rgb(255 255 255 / 0.55);
+    background: var(--a-surface-2);
     border: 0 !important;
     outline: none;
     border-radius: var(--a-radius-md);
-    box-shadow: none;
-    backdrop-filter: saturate(180%) blur(16px);
-    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    box-shadow: var(--a-shadow-glass);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
   }
 
   [data-theme="dark"] .a-card {
-    background: rgb(44 44 46 / 0.55);
+    background: var(--a-surface-2);
   }
 
   .a-gradient-accent {

@@ -834,7 +834,7 @@ export default function SettingsPage() {
               />
             ) : null}
 
-            <div className="space-y-4 rounded-[14px] bg-a-surface-2 p-4">
+            <div className="space-y-4 a-underlay rounded-md p-4">
               <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
                 Salubrité
               </h2>
@@ -870,7 +870,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-4 rounded-[14px] bg-a-surface-2 p-4">
+            <div className="space-y-4 a-underlay rounded-md p-4">
               <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
                 Invitations
               </h2>
@@ -983,7 +983,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-4 rounded-[14px] bg-a-surface-2 p-4">
+            <div className="space-y-4 a-underlay rounded-md p-4">
               <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
                 SMTP société
               </h2>

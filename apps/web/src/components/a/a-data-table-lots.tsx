@@ -199,7 +199,7 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
       </div>
 
       {pickerOpen ? (
-        <div className="a-card flex flex-wrap gap-3 p-3">
+        <div className="a-underlay rounded-md flex flex-wrap gap-3 p-3">
           {LOT_COLUMNS.map((c) => (
             <label
               key={c.id}
@@ -247,7 +247,7 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
           description="Aucun résultat pour ce filtre."
         />
       ) : (
-        <div className="a-card overflow-hidden">
+        <div className="a-underlay rounded-md overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-left text-[length:var(--a-text-sm)]">
             <thead className="bg-a-surface-3/80 text-a-fg-muted">

@@ -67,7 +67,7 @@ export default async function PortalDeliveriesPage() {
             </p>
           </div>
         ) : (
-          <div className="a-card overflow-hidden">
+          <div className="a-underlay rounded-md overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] border-collapse text-left text-[length:var(--a-text-sm)]">
                 <thead className="bg-a-surface-3/80 text-a-fg-muted">

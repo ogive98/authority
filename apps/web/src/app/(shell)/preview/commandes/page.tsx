@@ -59,7 +59,7 @@ export default function PreviewCommandesPage() {
           />
         </section>
 
-        <div className="a-card overflow-hidden">
+        <div className="a-underlay overflow-hidden rounded-md">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse text-left text-[length:var(--a-text-sm)]">
               <thead className="bg-a-surface-3/80 text-a-fg-muted">
@@ -75,7 +75,7 @@ export default function PreviewCommandesPage() {
                 {MOCK_ORDERS.map((row) => (
                   <tr
                     key={row.id}
-                    className="cursor-pointer border-t border-a-border-subtle transition-colors hover:bg-a-surface-3/50"
+                    className="cursor-pointer hover:bg-a-surface-3/50 transition-colors hover:bg-a-surface-3/50"
                     onClick={() => setOrder(row)}
                   >
                     <td className="a-mono a-table-cell text-a-fg">{row.id}</td>

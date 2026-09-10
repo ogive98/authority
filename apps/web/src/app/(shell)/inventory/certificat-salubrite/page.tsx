@@ -305,7 +305,7 @@ export default function CertificatSalubritePage() {
         </section>
 
         <section
-          className="flex flex-wrap gap-2 rounded-[14px] bg-a-surface-2 p-2 print:hidden"
+          className="flex flex-wrap gap-2 a-underlay rounded-md p-2 print:hidden"
           aria-label="Actions certificat"
         >
           <button

@@ -31,7 +31,7 @@ export function AErrorState({
   return (
     <div
       className={cn(
-        "a-card flex flex-col gap-3 p-[var(--a-space-6)]",
+        "a-underlay rounded-md flex flex-col gap-3 p-[var(--a-space-6)]",
         className,
       )}
       role="alert"

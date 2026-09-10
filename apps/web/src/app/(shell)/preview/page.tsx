@@ -48,7 +48,7 @@ export default function PreviewHubPage() {
           <Link
             key={s.href}
             href={s.href}
-            className="a-card block p-[var(--a-space-5)] transition-colors hover:bg-a-accent-muted/40"
+            className="a-underlay block rounded-md p-[var(--a-space-5)] transition-colors hover:bg-a-accent-muted/40"
           >
             <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
               {s.title}

@@ -153,7 +153,7 @@ export function PortalNewOrderForm({
       >
         {blocked ? (
           <p
-            className="rounded-[var(--a-radius-md)] border border-a-warning/40 bg-a-warning-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-warning-fg"
+            className="rounded-[var(--a-radius-md)]  bg-a-warning-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-warning-fg"
             role="status"
           >
             Compte bloqué : vous pouvez créer un brouillon, la confirmation ADV
@@ -162,7 +162,7 @@ export function PortalNewOrderForm({
         ) : null}
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="a-card space-y-3 p-[var(--a-space-4)]">
+          <div className="a-underlay rounded-md space-y-3 p-[var(--a-space-4)]">
             <p className="text-[length:var(--a-text-sm)] font-medium">
               Catalogue
             </p>
@@ -225,7 +225,7 @@ export function PortalNewOrderForm({
             </div>
           </div>
 
-          <div className="a-card space-y-3 p-[var(--a-space-4)]">
+          <div className="a-underlay rounded-md space-y-3 p-[var(--a-space-4)]">
             <p className="text-[length:var(--a-text-sm)] font-medium">Panier</p>
             {cart.length === 0 ? (
               <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">

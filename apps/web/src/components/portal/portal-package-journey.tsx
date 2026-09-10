@@ -119,7 +119,7 @@ export function PortalPackageJourney({
   return (
     <section
       className={cn(
-        "a-card overflow-hidden p-[var(--a-space-5)]",
+        "a-underlay rounded-md overflow-hidden p-[var(--a-space-5)]",
         className,
       )}
       aria-label="Parcours du colis"

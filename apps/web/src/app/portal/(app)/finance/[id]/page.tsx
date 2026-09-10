@@ -67,7 +67,7 @@ export default async function PortalFinanceDetailPage({
           ) : null}
         </div>
 
-        <div className="a-card overflow-hidden">
+        <div className="a-underlay overflow-hidden rounded-md">
           <div className="border-b border-a-border-subtle px-4 py-2 text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
             Encaissements
           </div>

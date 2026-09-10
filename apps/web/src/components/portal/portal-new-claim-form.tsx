@@ -112,7 +112,7 @@ export function PortalNewClaimForm({
             id="clm-type"
             value={type}
             onChange={(e) => setType(e.target.value as PortalClaimType)}
-            className="w-full rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)]"
+            className="w-full rounded-[var(--a-radius-sm)]  bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)]"
           >
             {TYPES.map((t) => (
               <option key={t} value={t}>
@@ -149,7 +149,7 @@ export function PortalNewClaimForm({
             onChange={(e) => setDescription(e.target.value)}
             rows={5}
             maxLength={2000}
-            className="w-full rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)]"
+            className="w-full rounded-[var(--a-radius-sm)]  bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)]"
             placeholder="Décrivez le problème…"
           />
         </div>
@@ -164,7 +164,7 @@ export function PortalNewClaimForm({
             id="clm-order"
             value={orderId}
             onChange={(e) => setOrderId(e.target.value)}
-            className="w-full rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)]"
+            className="w-full rounded-[var(--a-radius-sm)]  bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)]"
           >
             <option value="">— Aucune —</option>
             {orders.map((o) => (
@@ -185,7 +185,7 @@ export function PortalNewClaimForm({
             id="clm-ship"
             value={shipmentId}
             onChange={(e) => setShipmentId(e.target.value)}
-            className="w-full rounded-[var(--a-radius-sm)] border border-a-border-subtle bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)]"
+            className="w-full rounded-[var(--a-radius-sm)]  bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)]"
           >
             <option value="">— Aucune —</option>
             {deliveries.map((d) => (

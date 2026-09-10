@@ -30,7 +30,7 @@ export function AStatusBanner({
   return (
     <div
       className={cn(
-        "a-card flex items-start gap-3 px-3 py-2.5",
+        "a-underlay rounded-md flex items-start gap-3 px-3 py-2.5",
         toneClass[tone],
         className,
       )}

@@ -44,7 +44,7 @@ export default async function PortalDocumentsPage() {
             canAct={false}
           />
         ) : (
-          <div className="a-card overflow-hidden">
+          <div className="a-underlay rounded-md overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[480px] border-collapse text-left text-[length:var(--a-text-sm)]">
                 <thead className="bg-a-surface-3/80 text-a-fg-muted">

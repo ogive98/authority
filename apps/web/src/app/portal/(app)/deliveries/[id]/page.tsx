@@ -63,7 +63,7 @@ export default async function PortalDeliveryDetailPage({
       <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
         <PortalPackageJourney delivery={delivery} />
 
-        <div className="a-card grid gap-4 p-[var(--a-space-5)] sm:grid-cols-2 lg:grid-cols-3">
+        <div className="a-underlay rounded-md grid gap-4 p-[var(--a-space-5)] sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Statut
@@ -126,7 +126,7 @@ export default async function PortalDeliveryDetailPage({
         </div>
 
         {delivery.status === "FAILED" && delivery.failReason ? (
-          <div className="a-card border-a-warning/30 bg-a-warning-soft/40 p-[var(--a-space-4)]">
+          <div className="a-underlay rounded-md bg-a-warning-soft/40 p-[var(--a-space-4)]">
             <p className="text-[length:var(--a-text-xs)] text-a-warning-fg">
               Motif d’échec
             </p>

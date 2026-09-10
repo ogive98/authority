@@ -366,7 +366,7 @@ export function RepairControlWorkspace() {
           <button
             type="button"
             onClick={() => void refreshDashboard()}
-            className="inline-flex items-center gap-2 rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-2 px-3.5 py-2 text-[length:var(--a-text-sm)] text-a-fg-muted hover:bg-a-surface-3"
+            className="inline-flex items-center gap-2 rounded-[var(--a-radius-md)] a-underlay bg-a-surface-2 px-3.5 py-2 text-[length:var(--a-text-sm)] text-a-fg-muted hover:bg-a-surface-3"
           >
             <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.75} />
             Refresh
@@ -375,7 +375,7 @@ export function RepairControlWorkspace() {
       </div>
 
       {error ? (
-        <p className="rounded-[var(--a-radius-md)] border border-a-danger/30 bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg" role="alert">
+        <p className="rounded-md bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg" role="alert">
           {error}
         </p>
       ) : null}
@@ -405,7 +405,7 @@ export function RepairControlWorkspace() {
         ].map((k) => (
           <div
             key={k.label}
-            className="rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2/80 px-4 py-3 backdrop-blur-[var(--a-glass-blur)]"
+            className="rounded-[var(--a-radius-lg)] a-underlay bg-a-surface-2/80 px-4 py-3 backdrop-blur-[var(--a-glass-blur)]"
           >
             <div className="flex items-center gap-2 text-[length:var(--a-text-xs)] text-a-fg-subtle">
               <k.icon className="h-3.5 w-3.5" strokeWidth={1.75} />
@@ -439,7 +439,7 @@ export function RepairControlWorkspace() {
       {tab === "pipeline" ? (
         <div className="space-y-4">
           <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr]">
-            <section className="rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2/80 p-4">
+            <section className="rounded-[var(--a-radius-lg)] a-underlay bg-a-surface-2/80 p-4">
               <p className="mb-3 text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
                 Profondeur scan
               </p>
@@ -450,10 +450,10 @@ export function RepairControlWorkspace() {
                     type="button"
                     onClick={() => setDepth(d.id)}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-[length:var(--a-text-sm)]",
+                      "rounded-full px-3 py-1.5 text-[length:var(--a-text-sm)] transition-colors",
                       depth === d.id
-                        ? "border-a-accent bg-a-accent-muted text-a-accent-hover"
-                        : "border-a-border-subtle bg-a-surface-1 text-a-fg-muted",
+                        ? "bg-a-accent text-white"
+                        : "bg-a-surface-3 text-a-fg-muted hover:bg-a-surface-4 hover:text-a-fg",
                     )}
                   >
                     <span className="a-mono font-medium">{d.id}</span> {d.label}
@@ -461,7 +461,7 @@ export function RepairControlWorkspace() {
                 ))}
               </div>
             </section>
-            <section className="rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2/80 p-4">
+            <section className="rounded-[var(--a-radius-lg)] a-underlay bg-a-surface-2/80 p-4">
               <p className="mb-3 text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
                 Domaines
               </p>
@@ -472,10 +472,10 @@ export function RepairControlWorkspace() {
                     type="button"
                     onClick={() => toggleDomain(d.id)}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-[length:var(--a-text-sm)]",
+                      "rounded-full px-3 py-1.5 text-[length:var(--a-text-sm)] transition-colors",
                       domains.includes(d.id)
-                        ? "border-[color:var(--a-violet)] bg-a-violet-soft text-[color:var(--a-violet)]"
-                        : "border-a-border-subtle bg-a-surface-1 text-a-fg-muted",
+                        ? "bg-[var(--a-violet-soft)] text-[color:var(--a-violet)]"
+                        : "bg-a-surface-3 text-a-fg-muted hover:bg-a-surface-4 hover:text-a-fg",
                     )}
                   >
                     <span className="a-mono font-medium">{d.id}</span> {d.label}
@@ -492,7 +492,7 @@ export function RepairControlWorkspace() {
             onSelect={setActiveId}
           />
 
-          <section className="repair-panel rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2 p-5">
+          <section className="repair-panel rounded-[var(--a-radius-lg)] a-underlay bg-a-surface-2 p-5">
             <div className="flex flex-wrap items-center gap-3">
               <ABadge tone={repairRiskTone(active.risk)}>
                 {repairRiskLabel(active.risk)}
@@ -513,7 +513,7 @@ export function RepairControlWorkspace() {
 
       {tab === "diagnostics" ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          <section className="a-card p-4">
+          <section className="a-underlay rounded-md p-4">
             <h2 className="mb-3 font-medium">Findings</h2>
             <ul className="space-y-2">
               {findings.length === 0 ? (
@@ -524,7 +524,7 @@ export function RepairControlWorkspace() {
                 findings.map((f) => (
                   <li
                     key={f.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--a-radius-md)] border border-a-border-subtle px-3 py-2"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--a-radius-md)] a-underlay px-3 py-2"
                   >
                     <div>
                       <p className="text-[length:var(--a-text-sm)] font-medium">
@@ -555,7 +555,7 @@ export function RepairControlWorkspace() {
               )}
             </ul>
           </section>
-          <section className="a-card p-4">
+          <section className="a-underlay rounded-md p-4">
             <h2 className="mb-3 font-medium">Incidents</h2>
             <ul className="space-y-2">
               {incidents.length === 0 ? (
@@ -566,7 +566,7 @@ export function RepairControlWorkspace() {
                 incidents.map((i) => (
                   <li
                     key={i.id}
-                    className="rounded-[var(--a-radius-md)] border border-a-border-subtle px-3 py-2"
+                    className="rounded-[var(--a-radius-md)] a-underlay px-3 py-2"
                   >
                     <p className="text-[length:var(--a-text-sm)] font-medium">
                       {i.title}
@@ -583,7 +583,7 @@ export function RepairControlWorkspace() {
       ) : null}
 
       {tab === "repair" ? (
-        <section className="a-card space-y-3 p-4">
+        <section className="a-underlay rounded-md space-y-3 p-4">
           <div className="flex items-center gap-2">
             <Wrench className="h-4 w-4 text-a-accent" strokeWidth={1.75} />
             <h2 className="font-medium">Repair Engine</h2>
@@ -599,7 +599,7 @@ export function RepairControlWorkspace() {
               type="button"
               disabled={!lastPlanId || busy}
               onClick={() => void onDryRun()}
-              className="inline-flex items-center gap-2 rounded-[var(--a-radius-md)] border border-a-border-subtle bg-a-surface-1 px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg-muted disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-[var(--a-radius-md)] a-underlay bg-a-surface-1 px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg-muted disabled:opacity-50"
             >
               Dry-run
             </button>
@@ -616,7 +616,7 @@ export function RepairControlWorkspace() {
               type="button"
               disabled={!lastPlanId || busy}
               onClick={() => void onVerify()}
-              className="inline-flex items-center gap-2 rounded-[var(--a-radius-md)] border border-a-border-subtle px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg-muted disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-[var(--a-radius-md)] a-underlay px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg-muted disabled:opacity-50"
             >
               Verify
             </button>
@@ -624,7 +624,7 @@ export function RepairControlWorkspace() {
               type="button"
               disabled={!lastPlanId || busy}
               onClick={() => void onRollback()}
-              className="inline-flex items-center gap-2 rounded-[var(--a-radius-md)] border border-a-danger/30 px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg disabled:opacity-50"
             >
               Rollback
             </button>
@@ -633,7 +633,7 @@ export function RepairControlWorkspace() {
       ) : null}
 
       {tab === "reset" ? (
-        <section className="a-card space-y-3 p-4">
+        <section className="a-underlay rounded-md space-y-3 p-4">
           <h2 className="font-medium">Reset Engine</h2>
           <ul className="space-y-2">
             {resetScopes.map((s) => (
@@ -668,7 +668,7 @@ export function RepairControlWorkspace() {
       ) : null}
 
       {tab === "snapshot" ? (
-        <section className="a-card space-y-3 p-4">
+        <section className="a-underlay rounded-md space-y-3 p-4">
           <div className="flex items-center justify-between">
             <h2 className="font-medium">Snapshot / Backup</h2>
             <button
@@ -694,7 +694,7 @@ export function RepairControlWorkspace() {
       ) : null}
 
       {tab === "reporting" ? (
-        <section className="a-card space-y-3 p-4">
+        <section className="a-underlay rounded-md space-y-3 p-4">
           <h2 className="font-medium">Central Reporting</h2>
           <dl className="a-mono grid gap-1 text-[length:var(--a-text-sm)]">
             <div className="flex justify-between">
@@ -726,7 +726,7 @@ export function RepairControlWorkspace() {
       ) : null}
 
       {tab === "maintenance" ? (
-        <section className="a-card space-y-2 p-4">
+        <section className="a-underlay rounded-md space-y-2 p-4">
           <h2 className="font-medium">Maintenance</h2>
           <p className="a-mono text-[length:var(--a-text-sm)]">
             status: {maintenance?.status ?? "—"}
@@ -740,7 +740,7 @@ export function RepairControlWorkspace() {
       ) : null}
 
       {tab === "audit" ? (
-        <section className="a-card space-y-2 p-4">
+        <section className="a-underlay rounded-md space-y-2 p-4">
           <h2 className="font-medium">Audit / exécutions récentes</h2>
           <pre className="a-mono max-h-80 overflow-auto rounded-[var(--a-radius-md)] bg-a-surface-1 p-3 text-[length:var(--a-text-xs)]">
             {JSON.stringify(audit, null, 2)}
@@ -748,7 +748,7 @@ export function RepairControlWorkspace() {
         </section>
       ) : null}
 
-      <section className="rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-1 p-3">
+      <section className="rounded-[var(--a-radius-lg)] a-underlay bg-a-surface-1 p-3">
         <div className="mb-2 flex items-center gap-2 text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
           <Square className="h-3 w-3" strokeWidth={1.75} />
           Journal session

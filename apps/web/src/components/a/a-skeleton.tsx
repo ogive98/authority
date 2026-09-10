@@ -41,7 +41,7 @@ export function ASkeletonCard({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "a-card p-4",
+        "a-underlay rounded-md p-4",
         className,
       )}
       aria-busy="true"

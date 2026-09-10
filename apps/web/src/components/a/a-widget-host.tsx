@@ -137,7 +137,7 @@ function WidgetSlot({
   return (
     <article
       ref={ref}
-      className="a-card flex min-h-48 flex-col p-[var(--a-space-4)]"
+      className="a-underlay rounded-md flex min-h-48 flex-col p-[var(--a-space-4)]"
     >
       <header className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
