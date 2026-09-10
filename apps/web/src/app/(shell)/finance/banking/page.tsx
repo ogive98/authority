@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ABadge,
   AButton,
@@ -20,9 +20,16 @@ import {
   fetchBankAccounts,
   fetchBankLines,
   fetchBankMatchCandidates,
+  fetchBankTreasury,
+  ignoreBankLine,
+  importBankCsv,
   matchBankLine,
+  previewBankCsv,
+  unignoreBankLine,
   unmatchBankLine,
+  type BankCsvPreview,
   type BankMatchCandidates,
+  type BankTreasury,
   type FinBankAccount,
   type FinBankStatementLine,
 } from "@/lib/finance";
@@ -40,10 +47,11 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-type LineFilter = "" | "UNMATCHED" | "MATCHED";
+type LineFilter = "" | "UNMATCHED" | "MATCHED" | "IGNORED";
 
 export default function FinanceBankingPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const [treasury, setTreasury] = useState<BankTreasury | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [lines, setLines] = useState<FinBankStatementLine[]>([]);
   const [linesLoading, setLinesLoading] = useState(false);
@@ -74,9 +82,16 @@ export default function FinanceBankingPage() {
     null,
   );
 
+  const [csvOpen, setCsvOpen] = useState(false);
+  const [csvText, setCsvText] = useState("");
+  const [csvPreview, setCsvPreview] = useState<BankCsvPreview | null>(null);
+
   const loadAccounts = useCallback(async () => {
     setState({ kind: "loading" });
-    const res = await fetchBankAccounts();
+    const [res, tre] = await Promise.all([
+      fetchBankAccounts(),
+      fetchBankTreasury(),
+    ]);
     if (!res.ok) {
       if (res.status === 403) {
         setState({ kind: "forbidden", message: res.message });
@@ -86,6 +101,7 @@ export default function FinanceBankingPage() {
       return;
     }
     setState({ kind: "ok", accounts: res.data.items });
+    if (tre.ok) setTreasury(tre.data);
     setSelectedId((prev) => {
       if (prev && res.data.items.some((a) => a.id === prev)) return prev;
       return res.data.items[0]?.id ?? null;
@@ -117,6 +133,11 @@ export default function FinanceBankingPage() {
     if (selectedId) void loadLines(selectedId, lineFilter);
     else setLines([]);
   }, [selectedId, lineFilter, loadLines]);
+
+  const refresh = useCallback(async () => {
+    await loadAccounts();
+    if (selectedId) await loadLines(selectedId, lineFilter);
+  }, [loadAccounts, loadLines, selectedId, lineFilter]);
 
   async function onCreateAccount() {
     if (!accountForm) return;
@@ -166,8 +187,7 @@ export default function FinanceBankingPage() {
     }
     setLineOpen(false);
     setLineForm(null);
-    await loadAccounts();
-    await loadLines(selectedId, lineFilter);
+    await refresh();
   }
 
   async function openMatch(lineId: string) {
@@ -197,10 +217,7 @@ export default function FinanceBankingPage() {
     }
     setMatchOpen(false);
     setCandidates(null);
-    if (selectedId) {
-      await loadAccounts();
-      await loadLines(selectedId, lineFilter);
-    }
+    await refresh();
   }
 
   async function onUnmatch(lineId: string) {
@@ -212,10 +229,65 @@ export default function FinanceBankingPage() {
       setFormError(res.message);
       return;
     }
-    if (selectedId) {
-      await loadAccounts();
-      await loadLines(selectedId, lineFilter);
+    await refresh();
+  }
+
+  async function onIgnore(lineId: string) {
+    const memo =
+      window.prompt(
+        "Mémo (frais / orphelin — pas de GL)",
+        "Frais bancaires",
+      ) ?? undefined;
+    if (memo === undefined) return;
+    setBusy(true);
+    const res = await ignoreBankLine(lineId, memo || undefined);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
     }
+    await refresh();
+  }
+
+  async function onUnignore(lineId: string) {
+    setBusy(true);
+    const res = await unignoreBankLine(lineId);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    await refresh();
+  }
+
+  async function onCsvPreview() {
+    if (!selectedId || !csvText.trim()) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await previewBankCsv(selectedId, csvText);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      setCsvPreview(null);
+      return;
+    }
+    setCsvPreview(res.data);
+  }
+
+  async function onCsvImport() {
+    if (!selectedId || !csvText.trim()) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await importBankCsv(selectedId, csvText);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setCsvOpen(false);
+    setCsvText("");
+    setCsvPreview(null);
+    await refresh();
   }
 
   const selected =
@@ -223,12 +295,22 @@ export default function FinanceBankingPage() {
       ? (state.accounts.find((a) => a.id === selectedId) ?? null)
       : null;
 
+  const csvSample = useMemo(
+    () =>
+      [
+        "date,amount,reference,counterparty,memo",
+        "2026-09-01,150.000,VIR-1,Client A,",
+        "2026-09-02,-5.250,FRAIS,,Frais bancaires",
+      ].join("\n"),
+    [],
+  );
+
   return (
     <>
       <AScreenHeader
         kicker="Finance"
         title="Banque"
-        description="Comptes multi-banque et rapprochement soft AR — GL banque reste à l’affectation. TND tel quel."
+        description="Rapprochement soft + CSV (+/−) + ignore frais — GL banque reste à l’affectation. Pas d’OFX."
         actions={
           <div className="flex items-center gap-2">
             <Link
@@ -271,6 +353,18 @@ export default function FinanceBankingPage() {
         ) : null}
         {state.kind === "error" ? (
           <AErrorState message={state.message} onRetry={() => void loadAccounts()} />
+        ) : null}
+
+        {treasury && state.kind === "ok" ? (
+          <div className="a-underlay grid gap-3 rounded-md p-[var(--a-space-4)] sm:grid-cols-4">
+            <Kpi label="Comptes" value={String(treasury.accountCount)} />
+            <Kpi
+              label="Non rapprochées"
+              value={String(treasury.unmatchedCount)}
+            />
+            <Kpi label="Rapprochées" value={String(treasury.matchedCount)} />
+            <Kpi label="Ignorées" value={String(treasury.ignoredCount)} />
+          </div>
         ) : null}
 
         {state.kind === "ok" && state.accounts.length === 0 ? (
@@ -329,6 +423,7 @@ export default function FinanceBankingPage() {
                   {selected.glAccountCode
                     ? ` · GL ${selected.glAccountCode}`
                     : " · GL via accounting.gl.bank"}
+                  {` · M${selected.matchedCount}/I${selected.ignoredCount}`}
                 </p>
               </div>
             ) : null}
@@ -339,6 +434,7 @@ export default function FinanceBankingPage() {
                   { id: "" as LineFilter, label: "Toutes" },
                   { id: "UNMATCHED" as LineFilter, label: "Non rapprochées" },
                   { id: "MATCHED" as LineFilter, label: "Rapprochées" },
+                  { id: "IGNORED" as LineFilter, label: "Ignorées" },
                 ] as const
               ).map((chip) => (
                 <button
@@ -351,6 +447,20 @@ export default function FinanceBankingPage() {
                 </button>
               ))}
               <div className="flex-1" />
+              <AButton
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={!selectedId}
+                onClick={() => {
+                  setCsvText(csvSample);
+                  setCsvPreview(null);
+                  setFormError(null);
+                  setCsvOpen(true);
+                }}
+              >
+                Import CSV
+              </AButton>
               <AButton
                 type="button"
                 size="sm"
@@ -382,7 +492,7 @@ export default function FinanceBankingPage() {
             {!linesLoading && lines.length === 0 ? (
               <AEmptyState
                 title="Aucune ligne"
-                description="Saisissez manuellement les mouvements relevé (pas d’import OFX/CSV en V0)."
+                description="Saisie manuelle ou import CSV (date,amount,…). + crédit / − débit."
               />
             ) : null}
 
@@ -407,7 +517,7 @@ export default function FinanceBankingPage() {
                           {line.amount} {line.currency}
                         </td>
                         <td className="px-3 py-2">
-                          {line.reference || line.counterparty || "—"}
+                          {line.reference || line.counterparty || line.memo || "—"}
                         </td>
                         <td className="px-3 py-2">
                           <ABadge tone={bankLineBadgeTone(line.status)}>
@@ -424,28 +534,52 @@ export default function FinanceBankingPage() {
                             "—"}
                         </td>
                         <td className="px-3 py-2">
-                          {line.status === "UNMATCHED" ? (
-                            <AButton
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              disabled={busy}
-                              onClick={() => void openMatch(line.id)}
-                            >
-                              Rapprocher
-                            </AButton>
-                          ) : null}
-                          {line.status === "MATCHED" ? (
-                            <AButton
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              disabled={busy}
-                              onClick={() => void onUnmatch(line.id)}
-                            >
-                              Délier
-                            </AButton>
-                          ) : null}
+                          <div className="flex flex-wrap gap-1">
+                            {line.status === "UNMATCHED" ? (
+                              <>
+                                <AButton
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={busy}
+                                  onClick={() => void openMatch(line.id)}
+                                >
+                                  Rapprocher
+                                </AButton>
+                                <AButton
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={busy}
+                                  onClick={() => void onIgnore(line.id)}
+                                >
+                                  Ignorer
+                                </AButton>
+                              </>
+                            ) : null}
+                            {line.status === "MATCHED" ? (
+                              <AButton
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() => void onUnmatch(line.id)}
+                              >
+                                Délier
+                              </AButton>
+                            ) : null}
+                            {line.status === "IGNORED" ? (
+                              <AButton
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() => void onUnignore(line.id)}
+                              >
+                                Réouvrir
+                              </AButton>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -557,6 +691,64 @@ export default function FinanceBankingPage() {
       </ADrawer>
 
       <ADrawer
+        open={csvOpen}
+        onOpenChange={setCsvOpen}
+        title="Import CSV"
+        description="Colonnes date,amount,reference,counterparty,memo — + crédit / − débit. Pas d’OFX."
+      >
+        <div className="space-y-3">
+          <textarea
+            className="a-underlay a-mono min-h-[12rem] w-full rounded-md p-3 text-[length:var(--a-text-xs)] text-a-fg"
+            value={csvText}
+            onChange={(e) => {
+              setCsvText(e.target.value);
+              setCsvPreview(null);
+            }}
+            spellCheck={false}
+          />
+          {csvPreview ? (
+            <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+              {csvPreview.lineCount} ligne(s) · délimiteur «{" "}
+              {csvPreview.delimiter} » · {csvPreview.errorCount} erreur(s)
+            </p>
+          ) : null}
+          {csvPreview && csvPreview.errors.length > 0 ? (
+            <ul className="text-[length:var(--a-text-xs)] text-a-warning space-y-1">
+              {csvPreview.errors.slice(0, 5).map((e) => (
+                <li key={`${e.row}-${e.message}`}>
+                  L{e.row}: {e.message}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {formError ? (
+            <p className="text-[length:var(--a-text-sm)] text-a-danger">
+              {formError}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={busy || !csvText.trim()}
+              onClick={() => void onCsvPreview()}
+            >
+              Prévisualiser
+            </AButton>
+            <AButton
+              type="button"
+              size="sm"
+              disabled={busy || !csvText.trim()}
+              onClick={() => void onCsvImport()}
+            >
+              Importer
+            </AButton>
+          </div>
+        </div>
+      </ADrawer>
+
+      <ADrawer
         open={matchOpen}
         onOpenChange={setMatchOpen}
         title="Rapprocher"
@@ -651,6 +843,17 @@ export default function FinanceBankingPage() {
         ) : null}
       </ADrawer>
     </>
+  );
+}
+
+function Kpi({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">{label}</p>
+      <p className="a-mono text-[length:var(--a-text-lg)] tabular-nums text-a-fg">
+        {value}
+      </p>
+    </div>
   );
 }
 

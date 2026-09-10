@@ -403,6 +403,21 @@ export class MatchBankLineDto {
   note?: string;
 }
 
+/** D191 — mark fee/orphan as IGNORED (no GL). */
+export class IgnoreBankLineDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  memo?: string;
+}
+
+/** D191 — CSV body for preview/import. */
+export class ImportBankCsvDto {
+  @IsString()
+  @MaxLength(2_000_000)
+  csv!: string;
+}
+
 /** D190 — human-gated dunning draft. */
 export class PrepareDunningDto {
   @IsUUID()

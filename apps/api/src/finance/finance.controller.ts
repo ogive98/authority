@@ -28,6 +28,8 @@ import {
   CreateOpenItemDto,
   CreatePaymentDto,
   CreatePromiseDto,
+  IgnoreBankLineDto,
+  ImportBankCsvDto,
   MatchBankLineDto,
   PrepareDunningDto,
   SimulateAllocationDto,
@@ -438,6 +440,55 @@ export class FinanceController {
     @Body() dto: CreateBankStatementLinesDto,
   ) {
     return this.bankingService.addLines(tenancy.companyId, id, dto);
+  }
+
+  @Get('bank-treasury')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  bankTreasury(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.bankingService.treasury(tenancy.companyId);
+  }
+
+  @Post('bank-accounts/:id/lines/csv/preview')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  previewBankCsv(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ImportBankCsvDto,
+  ) {
+    return this.bankingService.previewCsv(tenancy.companyId, id, dto);
+  }
+
+  @Post('bank-accounts/:id/lines/csv')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  importBankCsv(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ImportBankCsvDto,
+  ) {
+    return this.bankingService.importCsv(tenancy.companyId, id, dto);
+  }
+
+  @Post('bank-lines/:id/ignore')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeAllocate)
+  ignoreBankLine(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: IgnoreBankLineDto,
+  ) {
+    return this.bankingService.ignoreLine(tenancy.companyId, id, dto);
+  }
+
+  @Post('bank-lines/:id/unignore')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeAllocate)
+  unignoreBankLine(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.bankingService.unignoreLine(tenancy.companyId, id);
   }
 
   @Get('bank-lines/:id/candidates')

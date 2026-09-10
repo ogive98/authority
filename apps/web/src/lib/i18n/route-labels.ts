@@ -191,12 +191,20 @@ export const UI_STRINGS_IT: Record<string, string> = {
   "Impact financier (TND) — vérifiez le montant avant confirmation.":
     "Impatto finanziario (TND) — verificare l’importo prima di confermare.",
   Tapez: "Digita",
+  "pour confirmer": "per confermare",
   Relancer: "Sollecito",
   "Préparer relance": "Prepara sollecito",
   "Confirmer et ouvrir": "Conferma e apri",
   "Email (mailto)": "Email (mailto)",
   WhatsApp: "WhatsApp",
   Contact: "Contatto",
+  Ignorer: "Ignora",
+  Réouvrir: "Riapri",
+  Ignoré: "Ignorato",
+  Ignorées: "Ignorate",
+  "Import CSV": "Import CSV",
+  Prévisualiser: "Anteprima",
+  Importer: "Importa",
 };
 export function routeLabel(
   part: string,

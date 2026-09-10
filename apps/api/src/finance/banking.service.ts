@@ -15,10 +15,13 @@ import type {
   CreateBankAccountDto,
   CreateBankStatementLineDto,
   CreateBankStatementLinesDto,
+  IgnoreBankLineDto,
+  ImportBankCsvDto,
   MatchBankLineDto,
   UpdateBankAccountDto,
 } from './finance.dto';
 import { FinanceException } from './finance.exception';
+import { parseBankStatementCsv } from './bank-csv';
 
 /** Pure guard — payment XOR instrument. */
 export function assertXorMatchTarget(input: {
@@ -53,6 +56,41 @@ export type BankAccountDto = {
   createdAt: string;
   updatedAt: string;
   unmatchedCount: number;
+  matchedCount: number;
+  ignoredCount: number;
+};
+
+export type BankTreasuryDto = {
+  currency: 'TND';
+  accountCount: number;
+  activeAccountCount: number;
+  unmatchedCount: number;
+  matchedCount: number;
+  ignoredCount: number;
+  accounts: {
+    id: string;
+    code: string;
+    label: string;
+    active: boolean;
+    unmatchedCount: number;
+    matchedCount: number;
+    ignoredCount: number;
+  }[];
+};
+
+export type BankCsvPreviewDto = {
+  delimiter: ',' | ';';
+  lineCount: number;
+  errorCount: number;
+  lines: {
+    row: number;
+    lineDate: string;
+    amount: number;
+    reference?: string;
+    counterparty?: string;
+    memo?: string;
+  }[];
+  errors: { row: number; message: string }[];
 };
 
 export type BankMatchDto = {
@@ -94,20 +132,41 @@ export class BankingService {
       where: { companyId, deletedAt: null },
       orderBy: [{ isDefault: 'desc' }, { code: 'asc' }],
     });
-    const unmatched = await this.prisma.finBankStatementLine.groupBy({
-      by: ['bankAccountId'],
-      where: {
-        companyId,
-        deletedAt: null,
-        status: FinBankLineStatus.UNMATCHED,
-      },
-      _count: { _all: true },
-    });
-    const countMap = new Map(
-      unmatched.map((u) => [u.bankAccountId, u._count._all]),
-    );
+    const counts = await this.lineCountsByAccount(companyId);
     return {
-      items: rows.map((r) => serializeAccount(r, countMap.get(r.id) ?? 0)),
+      items: rows.map((r) =>
+        serializeAccount(r, counts.get(r.id) ?? EMPTY_COUNTS),
+      ),
+    };
+  }
+
+  /** Soft treasury strip — line status counts only, no invented balances (D191). */
+  async treasury(companyId: string): Promise<BankTreasuryDto> {
+    const accounts = await this.listAccounts(companyId);
+    let unmatchedCount = 0;
+    let matchedCount = 0;
+    let ignoredCount = 0;
+    for (const a of accounts.items) {
+      unmatchedCount += a.unmatchedCount;
+      matchedCount += a.matchedCount;
+      ignoredCount += a.ignoredCount;
+    }
+    return {
+      currency: 'TND',
+      accountCount: accounts.items.length,
+      activeAccountCount: accounts.items.filter((a) => a.active).length,
+      unmatchedCount,
+      matchedCount,
+      ignoredCount,
+      accounts: accounts.items.map((a) => ({
+        id: a.id,
+        code: a.code,
+        label: a.label,
+        active: a.active,
+        unmatchedCount: a.unmatchedCount,
+        matchedCount: a.matchedCount,
+        ignoredCount: a.ignoredCount,
+      })),
     };
   }
 
@@ -158,7 +217,7 @@ export class BankingService {
         },
       });
     });
-    return serializeAccount(row, 0);
+    return serializeAccount(row, EMPTY_COUNTS);
   }
 
   async updateAccount(
@@ -201,15 +260,8 @@ export class BankingService {
         },
       });
     });
-    const unmatched = await this.prisma.finBankStatementLine.count({
-      where: {
-        companyId,
-        bankAccountId: id,
-        deletedAt: null,
-        status: FinBankLineStatus.UNMATCHED,
-      },
-    });
-    return serializeAccount(row, unmatched);
+    const counts = await this.lineCountsByAccount(companyId, id);
+    return serializeAccount(row, counts.get(id) ?? EMPTY_COUNTS);
   }
 
   async listLines(
@@ -271,6 +323,192 @@ export class BankingService {
         serializeLine({ ...r, match: null }),
       ),
     };
+  }
+
+  async previewCsv(
+    companyId: string,
+    bankAccountId: string,
+    dto: ImportBankCsvDto,
+  ): Promise<BankCsvPreviewDto> {
+    await this.requireAccount(companyId, bankAccountId);
+    const parsed = parseBankStatementCsv(dto.csv ?? '');
+    if (parsed.lines.length === 0 && parsed.errors.length > 0) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_CSV_INVALID,
+        parsed.errors[0]!.message,
+        HttpStatus.BAD_REQUEST,
+        { errors: parsed.errors },
+      );
+    }
+    return {
+      delimiter: parsed.delimiter,
+      lineCount: parsed.lines.length,
+      errorCount: parsed.errors.length,
+      lines: parsed.lines,
+      errors: parsed.errors,
+    };
+  }
+
+  async importCsv(
+    companyId: string,
+    bankAccountId: string,
+    dto: ImportBankCsvDto,
+  ): Promise<{ items: BankStatementLineDto[]; skippedErrors: number }> {
+    await this.requireAccount(companyId, bankAccountId);
+    const parsed = parseBankStatementCsv(dto.csv ?? '');
+    if (parsed.lines.length === 0) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_CSV_INVALID,
+        parsed.errors[0]?.message ?? 'No valid CSV lines to import.',
+        HttpStatus.BAD_REQUEST,
+        { errors: parsed.errors },
+      );
+    }
+    const created = await this.prisma.$transaction(async (tx) => {
+      const out = [];
+      for (const line of parsed.lines) {
+        out.push(
+          await this.createLineTx(tx, companyId, bankAccountId, {
+            lineDate: line.lineDate,
+            amount: line.amount,
+            reference: line.reference,
+            counterparty: line.counterparty,
+            memo: line.memo,
+          }),
+        );
+      }
+      return out;
+    });
+    return {
+      items: created.map((r) => serializeLine({ ...r, match: null })),
+      skippedErrors: parsed.errors.length,
+    };
+  }
+
+  async ignoreLine(
+    companyId: string,
+    lineId: string,
+    dto: IgnoreBankLineDto,
+  ): Promise<BankStatementLineDto> {
+    const line = await this.prisma.finBankStatementLine.findFirst({
+      where: { id: lineId, companyId, deletedAt: null },
+      include: { match: true },
+    });
+    if (!line) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_LINE_NOT_FOUND,
+        'Statement line not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (line.status === FinBankLineStatus.MATCHED || line.match) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_ALREADY_MATCHED,
+        'Unmatch before ignoring.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (line.status === FinBankLineStatus.IGNORED) {
+      return serializeLine({
+        ...line,
+        match: null,
+      });
+    }
+    const memo =
+      dto.memo?.trim() ||
+      line.memo ||
+      'Ignoré (frais / orphelin) — pas de GL';
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.finBankStatementLine.update({
+        where: { id: line.id },
+        data: {
+          status: FinBankLineStatus.IGNORED,
+          memo,
+          version: { increment: 1 },
+        },
+        include: {
+          match: {
+            include: {
+              payment: { select: { number: true } },
+              instrument: { select: { number: true } },
+            },
+          },
+        },
+      });
+      await this.outbox.enqueue(tx, {
+        companyId,
+        eventType: FINANCE_EVENT_TYPES.BANK_IGNORED,
+        aggregateType: 'fin_bank_statement_line',
+        aggregateId: line.id,
+        payloadJson: {
+          statementLineId: line.id,
+          bankAccountId: line.bankAccountId,
+          memo,
+        },
+      });
+      return row;
+    });
+    return serializeLine(updated);
+  }
+
+  async unignoreLine(
+    companyId: string,
+    lineId: string,
+  ): Promise<BankStatementLineDto> {
+    const line = await this.prisma.finBankStatementLine.findFirst({
+      where: { id: lineId, companyId, deletedAt: null },
+      include: {
+        match: {
+          include: {
+            payment: { select: { number: true } },
+            instrument: { select: { number: true } },
+          },
+        },
+      },
+    });
+    if (!line) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_LINE_NOT_FOUND,
+        'Statement line not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (line.status !== FinBankLineStatus.IGNORED) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.INVALID_STATUS,
+        'Line is not ignored.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.finBankStatementLine.update({
+        where: { id: line.id },
+        data: {
+          status: FinBankLineStatus.UNMATCHED,
+          version: { increment: 1 },
+        },
+        include: {
+          match: {
+            include: {
+              payment: { select: { number: true } },
+              instrument: { select: { number: true } },
+            },
+          },
+        },
+      });
+      await this.outbox.enqueue(tx, {
+        companyId,
+        eventType: FINANCE_EVENT_TYPES.BANK_UNIGNORED,
+        aggregateType: 'fin_bank_statement_line',
+        aggregateId: line.id,
+        payloadJson: {
+          statementLineId: line.id,
+          bankAccountId: line.bankAccountId,
+        },
+      });
+      return row;
+    });
+    return serializeLine(updated);
   }
 
   async matchLine(
@@ -647,6 +885,42 @@ export class BankingService {
     });
   }
 
+  private async lineCountsByAccount(
+    companyId: string,
+    bankAccountId?: string,
+  ): Promise<
+    Map<
+      string,
+      { unmatchedCount: number; matchedCount: number; ignoredCount: number }
+    >
+  > {
+    const grouped = await this.prisma.finBankStatementLine.groupBy({
+      by: ['bankAccountId', 'status'],
+      where: {
+        companyId,
+        deletedAt: null,
+        ...(bankAccountId ? { bankAccountId } : {}),
+      },
+      _count: { _all: true },
+    });
+    const map = new Map<
+      string,
+      { unmatchedCount: number; matchedCount: number; ignoredCount: number }
+    >();
+    for (const g of grouped) {
+      const cur = map.get(g.bankAccountId) ?? { ...EMPTY_COUNTS };
+      if (g.status === FinBankLineStatus.UNMATCHED) {
+        cur.unmatchedCount = g._count._all;
+      } else if (g.status === FinBankLineStatus.MATCHED) {
+        cur.matchedCount = g._count._all;
+      } else if (g.status === FinBankLineStatus.IGNORED) {
+        cur.ignoredCount = g._count._all;
+      }
+      map.set(g.bankAccountId, cur);
+    }
+    return map;
+  }
+
   private async requireAccount(companyId: string, id: string) {
     const row = await this.prisma.finBankAccount.findFirst({
       where: { id, companyId, deletedAt: null },
@@ -661,6 +935,12 @@ export class BankingService {
     return row;
   }
 }
+
+const EMPTY_COUNTS = {
+  unmatchedCount: 0,
+  matchedCount: 0,
+  ignoredCount: 0,
+};
 
 function serializeAccount(
   row: {
@@ -680,7 +960,11 @@ function serializeAccount(
     createdAt: Date;
     updatedAt: Date;
   },
-  unmatchedCount: number,
+  counts: {
+    unmatchedCount: number;
+    matchedCount: number;
+    ignoredCount: number;
+  },
 ): BankAccountDto {
   return {
     id: row.id,
@@ -698,7 +982,9 @@ function serializeAccount(
     version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
-    unmatchedCount,
+    unmatchedCount: counts.unmatchedCount,
+    matchedCount: counts.matchedCount,
+    ignoredCount: counts.ignoredCount,
   };
 }
 

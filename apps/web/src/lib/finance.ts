@@ -789,6 +789,41 @@ export type FinBankAccount = {
   createdAt: string;
   updatedAt: string;
   unmatchedCount: number;
+  matchedCount: number;
+  ignoredCount: number;
+};
+
+export type BankTreasury = {
+  currency: "TND";
+  accountCount: number;
+  activeAccountCount: number;
+  unmatchedCount: number;
+  matchedCount: number;
+  ignoredCount: number;
+  accounts: {
+    id: string;
+    code: string;
+    label: string;
+    active: boolean;
+    unmatchedCount: number;
+    matchedCount: number;
+    ignoredCount: number;
+  }[];
+};
+
+export type BankCsvPreview = {
+  delimiter: "," | ";";
+  lineCount: number;
+  errorCount: number;
+  lines: {
+    row: number;
+    lineDate: string;
+    amount: number;
+    reference?: string;
+    counterparty?: string;
+    memo?: string;
+  }[];
+  errors: { row: number; message: string }[];
 };
 
 export type FinBankMatch = {
@@ -988,6 +1023,115 @@ export async function unmatchBankLine(
 ): Promise<{ ok: true; data: FinBankStatementLine } | ApiFail> {
   try {
     const res = await fetch(`/api/v1/finance/bank-lines/${lineId}/unmatch`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinBankStatementLine };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchBankTreasury(): Promise<
+  { ok: true; data: BankTreasury } | ApiFail
+> {
+  try {
+    const res = await fetch("/api/v1/finance/bank-treasury", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as BankTreasury };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function previewBankCsv(
+  accountId: string,
+  csv: string,
+): Promise<{ ok: true; data: BankCsvPreview } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/bank-accounts/${accountId}/lines/csv/preview`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ csv }),
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as BankCsvPreview };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function importBankCsv(
+  accountId: string,
+  csv: string,
+): Promise<
+  | { ok: true; data: { items: FinBankStatementLine[]; skippedErrors: number } }
+  | ApiFail
+> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/bank-accounts/${accountId}/lines/csv`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ csv }),
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as {
+        items: FinBankStatementLine[];
+        skippedErrors: number;
+      },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function ignoreBankLine(
+  lineId: string,
+  memo?: string,
+): Promise<{ ok: true; data: FinBankStatementLine } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/bank-lines/${lineId}/ignore`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ memo }),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinBankStatementLine };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function unignoreBankLine(
+  lineId: string,
+): Promise<{ ok: true; data: FinBankStatementLine } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/bank-lines/${lineId}/unignore`, {
       method: "POST",
       credentials: "include",
       headers: { Accept: "application/json" },

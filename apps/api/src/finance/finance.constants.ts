@@ -18,6 +18,7 @@ export const FINANCE_ERROR_CODES = {
   BANK_ALREADY_MATCHED: 'FIN.BANK_ALREADY_MATCHED',
   BANK_MATCH_TARGET: 'FIN.BANK_MATCH_TARGET',
   BANK_AMOUNT_MISMATCH: 'FIN.BANK_AMOUNT_MISMATCH',
+  BANK_CSV_INVALID: 'FIN.BANK_CSV_INVALID',
   DUNNING_NOT_ELIGIBLE: 'FIN.DUNNING_NOT_ELIGIBLE',
   DUNNING_PROMISE_OPEN: 'FIN.DUNNING_PROMISE_OPEN',
   DUNNING_NOT_FOUND: 'FIN.DUNNING_NOT_FOUND',
@@ -42,6 +43,8 @@ export const FINANCE_EVENT_TYPES = {
   PROMISE_STATUS: 'finance.promise.status.v1',
   BANK_MATCHED: 'finance.bank.matched.v1',
   BANK_UNMATCHED: 'finance.bank.unmatched.v1',
+  BANK_IGNORED: 'finance.bank.ignored.v1',
+  BANK_UNIGNORED: 'finance.bank.unignored.v1',
   DUNNING_PREPARED: 'finance.dunning.prepared.v1',
   DUNNING_CONFIRMED: 'finance.dunning.confirmed.v1',
 } as const;

@@ -92,6 +92,8 @@ export const financeManifest: ModuleManifest = {
     'finance.promise.status.v1',
     'finance.bank.matched.v1',
     'finance.bank.unmatched.v1',
+    'finance.bank.ignored.v1',
+    'finance.bank.unignored.v1',
     'finance.dunning.prepared.v1',
     'finance.dunning.confirmed.v1',
   ],
