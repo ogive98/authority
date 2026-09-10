@@ -5,6 +5,8 @@ export const THUNDER_SIGNAL_TYPES = {
   SalesOrderConfirmed: 'SalesOrderConfirmed',
   FinanceAllocationRecorded: 'FinanceAllocationRecorded',
   FinanceOverdueOpenItems: 'FinanceOverdueOpenItems',
+  /** D182 — overdue past a company collection milestone (J+n). */
+  FinanceCollectionMilestone: 'FinanceCollectionMilestone',
   FinanceBrokenPromises: 'FinanceBrokenPromises',
 } as const;
 

@@ -7,6 +7,7 @@ import { ModulesRegistryModule } from '../modules-registry/modules-registry.modu
 import { TaxModule } from '../tax/tax.module';
 import { SettingsModule } from '../settings/settings.module';
 import { AllocationEngineService } from './allocation-engine.service';
+import { CollectionScheduleResolver } from './collection-schedule.resolver';
 import { FinanceController } from './finance.controller';
 import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
@@ -30,7 +31,14 @@ import { PromiseService } from './promise.service';
     PaymentService,
     AllocationEngineService,
     PromiseService,
+    CollectionScheduleResolver,
   ],
-  exports: [FinanceService, InvoiceService, PaymentService, PromiseService],
+  exports: [
+    FinanceService,
+    InvoiceService,
+    PaymentService,
+    PromiseService,
+    CollectionScheduleResolver,
+  ],
 })
 export class FinanceModule {}

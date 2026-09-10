@@ -92,6 +92,7 @@ export class SettingsService {
   ): Promise<EffectiveSettingsResponse> {
     await this.ensureOpsUnlockDefinition();
     await this.opsVisibility.ensureDefinitions();
+    await this.ensureCollectionRemindDefinition();
 
     const definitions = await this.prisma.setDef.findMany({
       orderBy: { key: 'asc' },
@@ -660,6 +661,27 @@ export class SettingsService {
     });
   }
 
+  private async ensureCollectionRemindDefinition(): Promise<SetDef> {
+    return this.prisma.setDef.upsert({
+      where: { key: 'finance.collection.remind_days' },
+      update: {
+        valueType: 'json',
+        defaultJson: [1, 7, 15, 30],
+        description:
+          'Collection milestones as days past due (JSON array). Empty = any overdue.',
+        isPrefOnly: true,
+      },
+      create: {
+        key: 'finance.collection.remind_days',
+        valueType: 'json',
+        defaultJson: [1, 7, 15, 30],
+        description:
+          'Collection milestones as days past due (JSON array). Empty = any overdue.',
+        isPrefOnly: true,
+      },
+    });
+  }
+
   private async loadWritableDefinition(key: string): Promise<SetDef> {
     if (isCataloguedPermission(key)) {
       throw new SettingsException(
@@ -671,6 +693,9 @@ export class SettingsService {
 
     if (key === OPS_UNLOCK_CODE_KEY) {
       return this.ensureOpsUnlockDefinition();
+    }
+    if (key === 'finance.collection.remind_days') {
+      return this.ensureCollectionRemindDefinition();
     }
 
     const definition = await this.prisma.setDef.findUnique({ where: { key } });
@@ -705,6 +730,12 @@ export class SettingsService {
         return;
       case 'boolean':
         if (typeof value !== 'boolean') {
+          throw invalidValue(definition.key);
+        }
+        return;
+      case 'json':
+        // Arrays/objects allowed (e.g. finance.collection.remind_days).
+        if (value === null || typeof value !== 'object') {
           throw invalidValue(definition.key);
         }
         return;

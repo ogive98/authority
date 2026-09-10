@@ -14,6 +14,10 @@ import {
 } from './intel.constants';
 import { RecommendationService } from './recommendation.service';
 import { SignalService } from './signal.service';
+import { CollectionScheduleResolver } from '../../finance/collection-schedule.resolver';
+import {
+  matchedMilestones,
+} from '../../finance/collection-schedule.resolver';
 
 @Injectable()
 export class ThunderIntelRegistrar implements OnModuleInit {
@@ -24,6 +28,7 @@ export class ThunderIntelRegistrar implements OnModuleInit {
     private readonly signals: SignalService,
     private readonly recommendations: RecommendationService,
     private readonly prisma: PrismaService,
+    private readonly collectionSchedule: CollectionScheduleResolver,
   ) {}
 
   onModuleInit(): void {
@@ -160,7 +165,7 @@ export class ThunderIntelRegistrar implements OnModuleInit {
     });
   }
 
-  /** Collections V0: if customer still has overdue AR, emit WARN + reco. */
+  /** Collections: overdue AR + company remind_days milestones (D182). */
   private async maybeEmitOverdue(
     envelope: AuthorityEventEnvelope,
   ): Promise<void> {
@@ -175,7 +180,7 @@ export class ThunderIntelRegistrar implements OnModuleInit {
     const start = new Date(
       Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
     );
-    const overdueCount = await this.prisma.finOpenItem.count({
+    const overdueItems = await this.prisma.finOpenItem.findMany({
       where: {
         companyId,
         customerId,
@@ -184,13 +189,45 @@ export class ThunderIntelRegistrar implements OnModuleInit {
         status: { in: [FinOpenItemStatus.OPEN, FinOpenItemStatus.PARTIAL] },
         dueDate: { lt: start },
       },
+      select: { dueDate: true, amountOpen: true },
     });
+    const overdueCount = overdueItems.length;
     if (overdueCount <= 0) return;
+
+    let maxDaysPastDue = 0;
+    for (const row of overdueItems) {
+      if (!row.dueDate) continue;
+      const due = new Date(
+        Date.UTC(
+          row.dueDate.getUTCFullYear(),
+          row.dueDate.getUTCMonth(),
+          row.dueDate.getUTCDate(),
+        ),
+      );
+      const days = Math.floor(
+        (start.getTime() - due.getTime()) / (24 * 60 * 60 * 1000),
+      );
+      if (days > maxDaysPastDue) maxDaysPastDue = days;
+    }
+
+    const remindDays =
+      await this.collectionSchedule.resolveRemindDays(companyId);
+    const milestones = matchedMilestones(remindDays, maxDaysPastDue);
+    // Empty schedule → binary overdue (any past due). Non-empty → only if milestone hit.
+    if (remindDays.length > 0 && milestones.length === 0) return;
+
+    const signalType =
+      milestones.length > 0
+        ? THUNDER_SIGNAL_TYPES.FinanceCollectionMilestone
+        : THUNDER_SIGNAL_TYPES.FinanceOverdueOpenItems;
+    const highest = milestones.length
+      ? milestones[milestones.length - 1]!
+      : null;
 
     const signal = await this.signals.create({
       companyId,
       siteId: envelope.siteId,
-      type: THUNDER_SIGNAL_TYPES.FinanceOverdueOpenItems,
+      type: signalType,
       severity: 'WARN',
       source: THUNDER_INTEL_CONSUMER_ID,
       sourceEventId: envelope.eventId,
@@ -199,23 +236,36 @@ export class ThunderIntelRegistrar implements OnModuleInit {
       evidence: {
         customerId,
         overdueCount,
+        maxDaysPastDue,
+        remindDays,
+        milestonesMatched: milestones,
+        highestMilestone: highest,
         aggregateType: envelope.aggregateType,
         aggregateId: envelope.aggregateId,
       },
       occurredAt: new Date(envelope.occurredAt),
     });
 
+    const problem =
+      highest != null
+        ? `Customer AR overdue J+${highest} (max ${maxDaysPastDue}d, ${overdueCount} item(s)) — review collections`
+        : `Customer has ${overdueCount} overdue AR open item(s) — review collections`;
+
     await this.recommendations.create({
       companyId,
       signalId: signal.id,
-      problem: `Customer has ${overdueCount} overdue AR open item(s) — review collections`,
+      problem,
       evidence: {
         signalId: signal.id,
         customerId,
         overdueCount,
+        maxDaysPastDue,
+        milestonesMatched: milestones,
+        highestMilestone: highest,
       },
       options: [
         { id: 'review_finance', label: 'Open Créances (Échues)' },
+        { id: 'review_customer', label: 'Open customer hub' },
         { id: 'ack', label: 'Acknowledge without action' },
       ],
       autonomyLevel: 2,
@@ -228,7 +278,7 @@ export class ThunderIntelRegistrar implements OnModuleInit {
     });
 
     this.logger.log(
-      `signal FinanceOverdueOpenItems customer=${customerId} count=${overdueCount}`,
+      `signal ${signalType} customer=${customerId} count=${overdueCount} maxDays=${maxDaysPastDue} milestones=${milestones.join(',')}`,
     );
   }
 

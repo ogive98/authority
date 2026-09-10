@@ -1298,6 +1298,18 @@ export default function SettingsPage() {
                 </div>
               </div>
             ) : null}
+            {canCompanyWrite ? (
+              <div>
+                <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                  Recouvrement — jalons J+n (D182)
+                </p>
+                <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Jours après échéance pour signal FIN-INTEL (ex. 1,7,15,30).
+                  Vide = tout retard. Pas de taux fiscaux.
+                </p>
+                <CollectionRemindDaysEditor canWrite={canCompanyWrite} />
+              </div>
+            ) : null}
             <div>
               <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
                 Sidebar — auto-réduction
@@ -1373,5 +1385,79 @@ export default function SettingsPage() {
         ) : null}
       </div>
     </>
+  );
+}
+
+function CollectionRemindDaysEditor({ canWrite }: { canWrite: boolean }) {
+  const [draft, setDraft] = useState("1,7,15,30");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!canWrite) return;
+    void (async () => {
+      const res = await fetchEffectiveSettings();
+      if (!res.ok) return;
+      const row = res.data.settings.find(
+        (s) => s.key === "finance.collection.remind_days",
+      );
+      if (Array.isArray(row?.value)) {
+        setDraft(row.value.map(String).join(","));
+      }
+    })();
+  }, [canWrite]);
+
+  async function onSave() {
+    if (!canWrite || busy) return;
+    const days = draft
+      .split(/[,;\s]+/)
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isFinite(n) && n >= 0)
+      .map((n) => Math.trunc(n));
+    const unique = [...new Set(days)].sort((a, b) => a - b);
+    setBusy(true);
+    setMsg(null);
+    setErr(null);
+    const r = await putCompanySetting(
+      "finance.collection.remind_days",
+      unique,
+    );
+    setBusy(false);
+    if (!r.ok) {
+      setErr(r.message);
+      return;
+    }
+    setDraft(unique.join(","));
+    setMsg("Jalons enregistrés.");
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          className="a-mono h-9 w-56 rounded-xl bg-a-surface-3 px-3 text-[length:var(--a-text-sm)] text-a-fg outline-none focus:ring-2 focus:ring-a-accent"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="1,7,15,30"
+          aria-label="Jalons jours de retard"
+        />
+        <AButton
+          type="button"
+          size="sm"
+          variant="primary"
+          disabled={busy}
+          onClick={() => void onSave()}
+        >
+          {busy ? "…" : "Enregistrer"}
+        </AButton>
+      </div>
+      {msg ? (
+        <p className="text-[length:var(--a-text-xs)] text-a-success">{msg}</p>
+      ) : null}
+      {err ? (
+        <p className="text-[length:var(--a-text-xs)] text-a-danger">{err}</p>
+      ) : null}
+    </div>
   );
 }

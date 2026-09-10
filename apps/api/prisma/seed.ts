@@ -1500,6 +1500,14 @@ async function seedSettingsDefinitions(
       isPrefOnly: false,
     },
     {
+      key: 'finance.collection.remind_days',
+      valueType: 'json',
+      defaultJson: [1, 7, 15, 30],
+      description:
+        'Collection milestones as days past due (JSON array). Empty = any overdue. Not tax rates.',
+      isPrefOnly: true,
+    },
+    {
       key: 'accounting.gl.ar',
       valueType: 'string',
       defaultJson: '411',

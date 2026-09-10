@@ -33,8 +33,12 @@ export const FINANCE_EVENT_TYPES = {
 /** Company settings — credit exposure check on sales confirm (default off). */
 export const FINANCE_SETTING_KEYS = {
   CREDIT_ENFORCE: 'finance.credit.enforce',
+  /** Days past due milestones for FIN-INTEL collections (D182). */
+  COLLECTION_REMIND_DAYS: 'finance.collection.remind_days',
 } as const;
 
 export const FINANCE_SETTING_DEFAULTS = {
   [FINANCE_SETTING_KEYS.CREDIT_ENFORCE]: false,
+  /** Empty = binary overdue; product default milestones when seeded. */
+  [FINANCE_SETTING_KEYS.COLLECTION_REMIND_DAYS]: [1, 7, 15, 30],
 } as const;
