@@ -235,18 +235,25 @@ export class FinanceService {
       orderNumber?: string | null;
       currency?: string | null;
       shipmentId?: string | null;
+      shipmentNumber?: string | null;
     },
   ): Promise<{ outcome: 'created' | 'existing'; item: OpenItemDto }> {
     const { outcome, invoice } =
       await this.invoices.ensureIssuedForSalesOrder(companyId, input);
 
-    const or: Prisma.FinOpenItemWhereInput[] = [
-      { salesOrderId: input.salesOrderId },
-    ];
-    if (invoice.openItemId) {
-      or.push({ id: invoice.openItemId });
-    } else if (invoice.id) {
+    const or: Prisma.FinOpenItemWhereInput[] = [];
+    if (input.shipmentId) {
       or.push({ invoiceId: invoice.id });
+      if (invoice.openItemId) {
+        or.push({ id: invoice.openItemId });
+      }
+    } else {
+      or.push({ salesOrderId: input.salesOrderId });
+      if (invoice.openItemId) {
+        or.push({ id: invoice.openItemId });
+      } else if (invoice.id) {
+        or.push({ invoiceId: invoice.id });
+      }
     }
 
     const existing = await this.prisma.finOpenItem.findFirst({

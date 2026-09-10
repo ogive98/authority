@@ -82,12 +82,18 @@ function shipmentBadgeTone(
 }
 
 function orderToOption(o: EligibleOrder): AComboboxOption {
+  const reste =
+    o.remainingLineCount != null
+      ? `${o.remainingLineCount} ligne(s) restante(s)`
+      : `${o.lineCount} ligne(s)`;
   return {
     id: o.id,
-    label: `${o.number} — ${o.customerName ?? o.customerCode ?? "Client"}`,
+    label: `${o.number} — ${o.customerName ?? o.customerCode ?? "Client"}${
+      o.followUp ? " · suite" : ""
+    }`,
     hint: o.preferredDriver
       ? `Livreur hint: ${o.preferredDriver}`
-      : `${o.lineCount} ligne(s)`,
+      : reste,
   };
 }
 
@@ -293,23 +299,29 @@ export default function DeliveryPage() {
       setState({ kind: "error", message: detail.message });
       return;
     }
-    const lines = detail.data.orderLines ?? [];
+    const lines = (detail.data.orderLines ?? []).filter((l) => {
+      const rem = Number(l.remainingQty ?? l.qty);
+      return Number.isFinite(rem) && rem > 0;
+    });
     if (lines.length === 0) {
       setState({
         kind: "error",
-        message: "Aucune ligne commande sur cette livraison.",
+        message: "Aucune quantité restante à livrer sur cette livraison.",
       });
       return;
     }
     setCompleteDraft({
       id: row.id,
       number: row.number,
-      lines: lines.map((l: DeliveryOrderLine) => ({
-        orderLineId: l.id,
-        label: `${l.productSku ?? "SKU"} · ${l.productName ?? "Produit"}`,
-        ordered: Number(l.qty),
-        qty: l.qty,
-      })),
+      lines: lines.map((l: DeliveryOrderLine) => {
+        const remaining = Number(l.remainingQty ?? l.qty);
+        return {
+          orderLineId: l.id,
+          label: `${l.productSku ?? "SKU"} · ${l.productName ?? "Produit"}`,
+          ordered: remaining,
+          qty: String(remaining),
+        };
+      }),
       error: null,
     });
   }
@@ -798,7 +810,7 @@ export default function DeliveryPage() {
                   <div className="flex items-baseline justify-between gap-2">
                     <p className="truncate text-[13px] text-a-fg">{line.label}</p>
                     <span className="a-mono shrink-0 text-[12px] text-a-fg-muted">
-                      cmd {line.ordered}
+                      reste {line.ordered}
                     </span>
                   </div>
                   <AInput

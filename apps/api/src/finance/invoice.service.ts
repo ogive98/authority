@@ -297,7 +297,8 @@ export class InvoiceService {
 
   /**
    * Ensures an ISSUED invoice + AR open item for a delivered sales order.
-   * Idempotent on salesOrderId (reuses existing open item / invoice).
+   * With `shipmentId`: idempotent per shipment (multi-BL / D176).
+   * Without: idempotent per salesOrderId (legacy).
    */
   async ensureIssuedForSalesOrder(
     companyId: string,
@@ -308,8 +309,51 @@ export class InvoiceService {
       orderNumber?: string | null;
       currency?: string | null;
       shipmentId?: string | null;
+      shipmentNumber?: string | null;
     },
   ): Promise<{ outcome: 'created' | 'existing'; invoice: InvoiceDto }> {
+    if (input.shipmentId) {
+      const byShipment = await this.prisma.finInvoice.findFirst({
+        where: {
+          companyId,
+          shipmentId: input.shipmentId,
+          deletedAt: null,
+          status: { not: FinInvoiceStatus.CANCELLED },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (byShipment) {
+        if (byShipment.status === FinInvoiceStatus.DRAFT) {
+          return {
+            outcome: 'existing',
+            invoice: await this.issue(companyId, byShipment.id),
+          };
+        }
+        return {
+          outcome: 'existing',
+          invoice: await this.get(companyId, byShipment.id),
+        };
+      }
+
+      const label =
+        input.orderNumber && input.shipmentNumber
+          ? `Facture ${input.orderNumber} · ${input.shipmentNumber}`
+          : input.orderNumber
+            ? `Facture ${input.orderNumber}`
+            : 'Facture livraison';
+      const invoice = await this.create(companyId, {
+        customerId: input.customerId,
+        salesOrderId: input.salesOrderId,
+        shipmentId: input.shipmentId,
+        amountTotal: input.amountTotal,
+        currency: input.currency ?? 'TND',
+        label,
+        notes: 'Auto-issued on delivery complete (amount as recorded).',
+        issue: true,
+      });
+      return { outcome: 'created', invoice };
+    }
+
     const existingOpen = await this.prisma.finOpenItem.findFirst({
       where: {
         companyId,
@@ -373,7 +417,8 @@ export class InvoiceService {
     companyId: string,
     invoice: FinInvoice,
   ): Promise<void> {
-    if (invoice.salesOrderId) {
+    // Shipment-scoped invoices (D176) each get their own AR — do not reuse by salesOrderId.
+    if (invoice.salesOrderId && !invoice.shipmentId) {
       const existing = await tx.finOpenItem.findFirst({
         where: {
           companyId,

@@ -55,6 +55,7 @@ export type ShipmentOrderLineDto = {
   discountPct: string;
   lineTotal: string;
   deliveredQty: string | null;
+  remainingQty: string;
 };
 
 export type ShipmentDto = {
@@ -98,6 +99,10 @@ export type EligibleOrderDto = {
   amountTotal: string;
   confirmedAt: string | null;
   lineCount: number;
+  /** Lines still having remaining qty to deliver. */
+  remainingLineCount: number;
+  /** True when a prior DELIVERED/FAILED shipment exists. */
+  followUp: boolean;
 };
 
 type OrderWithLines = SalOrder & { lines: SalOrderLine[] };
@@ -264,6 +269,7 @@ export class DeliveryService {
         discountPct: l.discountPct.toString(),
         lineTotal: l.lineTotal.toString(),
         deliveredQty: l.deliveredQty?.toString() ?? null,
+        remainingQty: remainingQty(l).toString(),
       };
     });
     return dto;
@@ -276,18 +282,28 @@ export class DeliveryService {
     const limit = Math.min(Math.max(opts?.limit ?? 30, 1), 50);
     const q = opts?.q?.trim();
 
-    const shipped = await this.prisma.dlvShipment.findMany({
-      where: { companyId, deletedAt: null },
+    const openShipments = await this.prisma.dlvShipment.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: {
+          in: [
+            DlvShipmentStatus.READY,
+            DlvShipmentStatus.ASSIGNED,
+            DlvShipmentStatus.OUT,
+          ],
+        },
+      },
       select: { orderId: true },
     });
-    const shippedIds = shipped.map((s) => s.orderId);
+    const blockedOrderIds = [...new Set(openShipments.map((s) => s.orderId))];
 
     const orders = await this.prisma.salOrder.findMany({
       where: {
         companyId,
         deletedAt: null,
         status: SalOrderStatus.CONFIRMED,
-        id: shippedIds.length ? { notIn: shippedIds } : undefined,
+        id: blockedOrderIds.length ? { notIn: blockedOrderIds } : undefined,
         ...(q
           ? {
               OR: [
@@ -300,10 +316,32 @@ export class DeliveryService {
       },
       include: { lines: true },
       orderBy: [{ confirmedAt: 'desc' }, { createdAt: 'desc' }],
-      take: limit,
+      take: Math.min(limit * 4, 120),
     });
 
-    return { items: await this.enrichEligible(companyId, orders) };
+    const withRemaining = orders.filter((o) =>
+      o.lines.some((l) => remainingQty(l) > 0),
+    );
+    const page = withRemaining.slice(0, limit);
+
+    const prior = page.length
+      ? await this.prisma.dlvShipment.findMany({
+          where: {
+            companyId,
+            orderId: { in: page.map((o) => o.id) },
+            deletedAt: null,
+            status: {
+              in: [DlvShipmentStatus.DELIVERED, DlvShipmentStatus.FAILED],
+            },
+          },
+          select: { orderId: true },
+        })
+      : [];
+    const followUpIds = new Set(prior.map((s) => s.orderId));
+
+    return {
+      items: await this.enrichEligible(companyId, page, followUpIds),
+    };
   }
 
   async create(
@@ -329,15 +367,84 @@ export class DeliveryService {
       );
     }
 
-    const existing = await this.prisma.dlvShipment.findFirst({
-      where: { companyId, orderId: order.id, deletedAt: null },
-    });
-    if (existing) {
+    const remainingByProduct = new Map<string, number>();
+    let hasRemaining = false;
+    for (const line of order.lines) {
+      const rem = remainingQty(line);
+      if (rem > 0) {
+        hasRemaining = true;
+        remainingByProduct.set(
+          line.productId,
+          round3((remainingByProduct.get(line.productId) ?? 0) + rem),
+        );
+      }
+    }
+    if (!hasRemaining) {
       throw new DeliveryException(
-        DELIVERY_ERROR_CODES.ORDER_ALREADY_SHIPPED,
-        'A shipment already exists for this order.',
+        DELIVERY_ERROR_CODES.ORDER_FULLY_DELIVERED,
+        'Order has no remaining qty to deliver.',
         HttpStatus.CONFLICT,
       );
+    }
+
+    const openExisting = await this.prisma.dlvShipment.findFirst({
+      where: {
+        companyId,
+        orderId: order.id,
+        deletedAt: null,
+        status: {
+          in: [
+            DlvShipmentStatus.READY,
+            DlvShipmentStatus.ASSIGNED,
+            DlvShipmentStatus.OUT,
+          ],
+        },
+      },
+    });
+    if (openExisting) {
+      throw new DeliveryException(
+        DELIVERY_ERROR_CODES.ORDER_ALREADY_SHIPPED,
+        'An open shipment already exists for this order.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const priorTerminal = await this.prisma.dlvShipment.findFirst({
+      where: {
+        companyId,
+        orderId: order.id,
+        deletedAt: null,
+        status: {
+          in: [DlvShipmentStatus.DELIVERED, DlvShipmentStatus.FAILED],
+        },
+      },
+      select: { id: true },
+    });
+
+    const reserveOnConfirm = await this.isReserveOnConfirm(companyId);
+    /** Follow-up BL: stock was released on prior complete/fail — re-reserve remaining. */
+    const needsReReserve = reserveOnConfirm && priorTerminal != null;
+    if (needsReReserve) {
+      try {
+        for (const [productId, qty] of remainingByProduct) {
+          if (qty <= 0) continue;
+          await this.inventory.reserve(companyId, {
+            productId,
+            warehouseId: order.warehouseId,
+            qty,
+            refType: SALES_RESERVE_REF_TYPE,
+            refId: order.id,
+          });
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Stock reserve failed.';
+        throw new DeliveryException(
+          DELIVERY_ERROR_CODES.STOCK_RESERVE_FAILED,
+          message,
+          HttpStatus.CONFLICT,
+        );
+      }
     }
 
     let round: DlvRound | null = null;
@@ -355,20 +462,40 @@ export class DeliveryService {
       : DlvShipmentStatus.READY;
     const number = await this.nextShipmentNumber(companyId);
 
-    const row = await this.prisma.dlvShipment.create({
-      data: {
-        companyId,
-        number,
-        orderId: order.id,
-        customerId: order.customerId,
-        warehouseId: order.warehouseId,
-        roundId: round?.id ?? null,
-        status,
-        driverLabel: driver,
-        preferredDriver: order.preferredDriver,
-        assignedAt: driver ? new Date() : null,
-      },
-    });
+    let row: DlvShipment;
+    try {
+      row = await this.prisma.dlvShipment.create({
+        data: {
+          companyId,
+          number,
+          orderId: order.id,
+          customerId: order.customerId,
+          warehouseId: order.warehouseId,
+          roundId: round?.id ?? null,
+          status,
+          driverLabel: driver,
+          preferredDriver: order.preferredDriver,
+          assignedAt: driver ? new Date() : null,
+        },
+      });
+    } catch (err) {
+      if (needsReReserve) {
+        for (const [productId, qty] of remainingByProduct) {
+          try {
+            await this.inventory.release(companyId, {
+              productId,
+              warehouseId: order.warehouseId,
+              qty,
+              refType: SALES_RESERVE_REF_TYPE,
+              refId: order.id,
+            });
+          } catch {
+            // best-effort
+          }
+        }
+      }
+      throw err;
+    }
 
     if (round && round.status === DlvRoundStatus.PLANNED) {
       await this.prisma.dlvRound.update({
@@ -506,31 +633,34 @@ export class DeliveryService {
     }
 
     const order = await this.loadOrder(companyId, row.orderId);
-    const deliveredByLine = this.resolveDeliveredQtys(order, dto);
+    const thisShipmentByLine = this.resolveDeliveredQtys(order, dto);
     const reserveOnConfirm = await this.isReserveOnConfirm(companyId);
 
     const issueByProduct = new Map<string, number>();
     const releaseByProduct = new Map<string, number>();
+    const cumulativeByLine = new Map<string, number>();
     let amountDelivered = new Prisma.Decimal(0);
 
     for (const line of order.lines) {
-      const ordered = Number(line.qty.toString());
-      const delivered = deliveredByLine.get(line.id) ?? 0;
-      const undelivered = round3(ordered - delivered);
-      if (delivered > 0) {
+      const already = alreadyDeliveredQty(line);
+      const rem = remainingQty(line);
+      const thisQty = thisShipmentByLine.get(line.id) ?? 0;
+      const stillOpen = round3(rem - thisQty);
+      cumulativeByLine.set(line.id, round3(already + thisQty));
+      if (thisQty > 0) {
         issueByProduct.set(
           line.productId,
-          round3((issueByProduct.get(line.productId) ?? 0) + delivered),
+          round3((issueByProduct.get(line.productId) ?? 0) + thisQty),
         );
-        const lineAmount = new Prisma.Decimal(delivered)
+        const lineAmount = new Prisma.Decimal(thisQty)
           .mul(line.unitPrice)
           .mul(new Prisma.Decimal(1).sub(line.discountPct.div(100)));
         amountDelivered = amountDelivered.add(lineAmount);
       }
-      if (undelivered > 0) {
+      if (stillOpen > 0) {
         releaseByProduct.set(
           line.productId,
-          round3((releaseByProduct.get(line.productId) ?? 0) + undelivered),
+          round3((releaseByProduct.get(line.productId) ?? 0) + stillOpen),
         );
       }
     }
@@ -618,11 +748,11 @@ export class DeliveryService {
 
     const updated = await this.prisma.$transaction(async (tx) => {
       for (const line of order.lines) {
-        const delivered = deliveredByLine.get(line.id) ?? 0;
+        const cumulative = cumulativeByLine.get(line.id) ?? 0;
         await tx.salOrderLine.update({
           where: { id: line.id },
           data: {
-            deliveredQty: new Prisma.Decimal(delivered),
+            deliveredQty: new Prisma.Decimal(cumulative),
             version: { increment: 1 },
           },
         });
@@ -668,14 +798,20 @@ export class DeliveryService {
           lines: order.lines.map((l) => ({
             orderLineId: l.id,
             productId: l.productId,
-            qty: deliveredByLine.get(l.id) ?? 0,
+            qty: thisShipmentByLine.get(l.id) ?? 0,
           })),
         },
       });
       return fresh;
     });
 
-    await this.maybeCreateArForDelivered(companyId, order, amountRounded, updated.id);
+    await this.maybeCreateArForDelivered(
+      companyId,
+      order,
+      amountRounded,
+      updated.id,
+      updated.number,
+    );
     await this.maybeCloseRound(companyId, updated.roundId);
 
     return this.enrichOne(companyId, updated);
@@ -704,11 +840,20 @@ export class DeliveryService {
 
     if (reserveOnConfirm) {
       try {
+        const releaseByProduct = new Map<string, number>();
         for (const line of order.lines) {
+          const rem = remainingQty(line);
+          if (rem <= 0) continue;
+          releaseByProduct.set(
+            line.productId,
+            round3((releaseByProduct.get(line.productId) ?? 0) + rem),
+          );
+        }
+        for (const [productId, qty] of releaseByProduct) {
           await this.inventory.release(companyId, {
-            productId: line.productId,
+            productId,
             warehouseId: order.warehouseId,
-            qty: Number(line.qty.toString()),
+            qty,
             refType: SALES_RESERVE_REF_TYPE,
             refId: order.id,
           });
@@ -774,6 +919,7 @@ export class DeliveryService {
     order: OrderWithLines,
     amountTotal: number,
     shipmentId: string,
+    shipmentNumber: string,
   ): Promise<void> {
     const financeOn = await this.modules.isEnabled(companyId, 'finance');
     if (!financeOn) {
@@ -790,10 +936,11 @@ export class DeliveryService {
         orderNumber: order.number,
         currency: order.currency,
         shipmentId,
+        shipmentNumber,
       });
       if (result.outcome === 'created') {
         this.logger.log(
-          `AR open item ${result.item.number} created for order ${order.number}`,
+          `AR open item ${result.item.number} created for order ${order.number} / ${shipmentNumber}`,
         );
       }
     } catch (err) {
@@ -814,7 +961,7 @@ export class DeliveryService {
 
     if (!dto.lines) {
       for (const line of order.lines) {
-        byLine.set(line.id, round3(Number(line.qty.toString())));
+        byLine.set(line.id, remainingQty(line));
       }
       return byLine;
     }
@@ -836,14 +983,13 @@ export class DeliveryService {
         );
       }
       seen.add(entry.orderLineId);
-      const ordered = Number(
-        order.lines.find((l) => l.id === entry.orderLineId)!.qty.toString(),
-      );
+      const line = order.lines.find((l) => l.id === entry.orderLineId)!;
+      const rem = remainingQty(line);
       const qty = round3(entry.qty);
-      if (!Number.isFinite(qty) || qty < 0 || qty > ordered + 1e-9) {
+      if (!Number.isFinite(qty) || qty < 0 || qty > rem + 1e-9) {
         throw new DeliveryException(
           DELIVERY_ERROR_CODES.INVALID_QTY,
-          `Delivered qty must be between 0 and ordered qty for line ${entry.orderLineId}.`,
+          `Delivered qty must be between 0 and remaining qty (${rem}) for line ${entry.orderLineId}.`,
           HttpStatus.BAD_REQUEST,
         );
       }
@@ -1046,6 +1192,7 @@ export class DeliveryService {
   private async enrichEligible(
     companyId: string,
     orders: OrderWithLines[],
+    followUpIds: Set<string>,
   ): Promise<EligibleOrderDto[]> {
     if (orders.length === 0) return [];
     const customerIds = [...new Set(orders.map((o) => o.customerId))];
@@ -1065,6 +1212,8 @@ export class DeliveryService {
     return orders.map((o) => {
       const customer = customerMap.get(o.customerId);
       const warehouse = warehouseMap.get(o.warehouseId);
+      const remainingLineCount = o.lines.filter((l) => remainingQty(l) > 0)
+        .length;
       return {
         id: o.id,
         number: o.number,
@@ -1077,6 +1226,8 @@ export class DeliveryService {
         amountTotal: o.amountTotal.toString(),
         confirmedAt: o.confirmedAt?.toISOString() ?? null,
         lineCount: o.lines.length,
+        remainingLineCount,
+        followUp: followUpIds.has(o.id),
       };
     });
   }
@@ -1095,6 +1246,16 @@ function serializeRound(row: DlvRound, shipmentCount: number): RoundDto {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+function alreadyDeliveredQty(line: SalOrderLine): number {
+  if (line.deliveredQty == null) return 0;
+  return round3(Number(line.deliveredQty.toString()));
+}
+
+function remainingQty(line: SalOrderLine): number {
+  const ordered = round3(Number(line.qty.toString()));
+  return round3(Math.max(0, ordered - alreadyDeliveredQty(line)));
 }
 
 function round3(n: number): number {

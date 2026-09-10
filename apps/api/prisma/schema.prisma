@@ -1368,7 +1368,7 @@ model DlvShipment {
   round DlvRound? @relation(fields: [roundId], references: [id])
 
   @@unique([companyId, number])
-  @@unique([companyId, orderId])
+  @@index([companyId, orderId])
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, status])
   @@map("dlv_shipment")

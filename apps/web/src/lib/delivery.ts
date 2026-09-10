@@ -44,19 +44,7 @@ export type DeliveryOrderLine = {
   discountPct: string;
   lineTotal: string;
   deliveredQty: string | null;
-};
-
-export type DeliveryRound = {
-  id: string;
-  companyId: string;
-  date: string;
-  driverLabel: string;
-  status: "PLANNED" | "IN_PROGRESS" | "DONE";
-  notes: string | null;
-  version: number;
-  shipmentCount: number;
-  createdAt: string;
-  updatedAt: string;
+  remainingQty?: string;
 };
 
 export type EligibleOrder = {
@@ -71,6 +59,21 @@ export type EligibleOrder = {
   amountTotal: string;
   confirmedAt: string | null;
   lineCount: number;
+  remainingLineCount?: number;
+  followUp?: boolean;
+};
+
+export type DeliveryRound = {
+  id: string;
+  companyId: string;
+  date: string;
+  driverLabel: string;
+  status: "PLANNED" | "IN_PROGRESS" | "DONE";
+  notes: string | null;
+  version: number;
+  shipmentCount: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {

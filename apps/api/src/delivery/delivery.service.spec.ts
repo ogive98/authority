@@ -271,6 +271,79 @@ describe('DeliveryService', () => {
         customerId,
         amountTotal: 50,
         shipmentId,
+        shipmentNumber: 'SH-2026-0001',
+      }),
+    );
+  });
+
+  it('creates follow-up shipment after prior delivery and re-reserves remaining', async () => {
+    const { service, inventory, prisma, order } = build({
+      preferredDriver: 'Sami',
+      shipmentStatus: DlvShipmentStatus.DELIVERED,
+    });
+    order.lines[0].deliveredQty = new Prisma.Decimal(4);
+    prisma.dlvShipment.findFirst = jest
+      .fn()
+      .mockResolvedValueOnce(null) // no open shipment
+      .mockResolvedValueOnce({ id: shipmentId }); // prior terminal
+    const dto = await service.create(companyId, { orderId });
+    expect(dto.driverLabel).toBe('Sami');
+    expect(inventory.reserve).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        productId,
+        qty: 6,
+        refType: 'sales.order',
+        refId: orderId,
+      }),
+    );
+  });
+
+  it('rejects create when order fully delivered or open shipment exists', async () => {
+    const full = build({ preferredDriver: 'Sami' });
+    full.order.lines[0].deliveredQty = new Prisma.Decimal(10);
+    full.prisma.dlvShipment.findFirst = jest.fn().mockResolvedValue(null);
+    await expect(
+      full.service.create(companyId, { orderId }),
+    ).rejects.toMatchObject({
+      status: HttpStatus.CONFLICT,
+      response: { code: DELIVERY_ERROR_CODES.ORDER_FULLY_DELIVERED },
+    });
+
+    const open = build({
+      preferredDriver: 'Sami',
+      shipmentStatus: DlvShipmentStatus.OUT,
+    });
+    open.prisma.dlvShipment.findFirst = jest
+      .fn()
+      .mockResolvedValue(open.getShipment());
+    await expect(
+      open.service.create(companyId, { orderId }),
+    ).rejects.toMatchObject({
+      status: HttpStatus.CONFLICT,
+      response: { code: DELIVERY_ERROR_CODES.ORDER_ALREADY_SHIPPED },
+    });
+  });
+
+  it('complete increments deliveredQty from prior partial', async () => {
+    const { service, inventory, prisma, order } = build({
+      shipmentStatus: DlvShipmentStatus.OUT,
+    });
+    const lineId = '66666666-6666-6666-6666-666666666666';
+    order.lines[0].deliveredQty = new Prisma.Decimal(4);
+    await service.complete(companyId, shipmentId, {
+      lines: [{ orderLineId: lineId, qty: 6 }],
+    });
+    expect(inventory.issue).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({ qty: 6 }),
+    );
+    expect(inventory.release).not.toHaveBeenCalled();
+    expect(prisma.salOrderLine.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          deliveredQty: new Prisma.Decimal(10),
+        }),
       }),
     );
   });
