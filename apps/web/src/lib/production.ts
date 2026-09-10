@@ -39,6 +39,7 @@ export type ProductOption = {
   id: string;
   sku: string;
   name: string;
+  trackLot?: boolean;
 };
 
 export type WarehouseOption = {
@@ -144,7 +145,13 @@ export async function fetchActiveProducts(): Promise<
     return { ok: false, status: res.status, message: await parseError(res) };
   }
   const data = (await res.json()) as {
-    items: Array<{ id: string; sku: string; name: string; status?: string }>;
+    items: Array<{
+      id: string;
+      sku: string;
+      name: string;
+      status?: string;
+      trackLot?: boolean;
+    }>;
   };
   return {
     ok: true,
@@ -155,6 +162,7 @@ export async function fetchActiveProducts(): Promise<
           id: p.id,
           sku: p.sku,
           name: p.name,
+          trackLot: Boolean(p.trackLot),
         })),
     },
   };

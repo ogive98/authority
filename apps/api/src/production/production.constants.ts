@@ -7,6 +7,8 @@ export const PRODUCTION_ERROR_CODES = {
   INVALID_QTY: 'PRD.INVALID_QTY',
   PRODUCT_NOT_FOUND: 'PRD.PRODUCT_NOT_FOUND',
   WAREHOUSE_NOT_FOUND: 'PRD.WAREHOUSE_NOT_FOUND',
+  /** Product trackLot requires lotIn / lotOut on declare (D173). */
+  LOT_REQUIRED: 'PRD.LOT_REQUIRED',
 } as const;
 
 export type ProductionErrorCode =

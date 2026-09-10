@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
 import { InventoryException } from '../inventory/inventory.exception';
+import { INVENTORY_ERROR_CODES } from '../inventory/inventory.constants';
 import { InventoryService } from '../inventory/inventory.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -271,6 +272,46 @@ export class ProductionService {
       await this.assertProduct(companyId, scrapProductId);
     }
 
+    const outputProduct = await this.assertProduct(
+      companyId,
+      current.productId,
+    );
+    const lotOut = dto.lotOut?.trim() || current.lotOut?.trim() || null;
+    if (outputProduct.trackLot && !lotOut) {
+      throw new ProductionException(
+        PRODUCTION_ERROR_CODES.LOT_REQUIRED,
+        'lotOut required when finished product has trackLot enabled.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const consumptionLots: Array<{
+      productId: string;
+      qty: number;
+      lotCode?: string;
+    }> = [];
+    for (const line of dto.consumptions) {
+      const mp = await this.assertProduct(companyId, line.productId);
+      const lotIn = line.lotIn?.trim() || undefined;
+      if (mp.trackLot && !lotIn) {
+        throw new ProductionException(
+          PRODUCTION_ERROR_CODES.LOT_REQUIRED,
+          `lotIn required for trackLot consumption (${mp.sku}).`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      consumptionLots.push({
+        productId: line.productId,
+        qty: Number(line.qty),
+        lotCode: lotIn,
+      });
+    }
+
+    const outputDlc =
+      outputProduct.trackLot && outputProduct.shelfLifeDays != null
+        ? addDaysIso(new Date(), outputProduct.shelfLifeDays)
+        : undefined;
+
     // Mark in progress then post stock via inventory public API.
     await this.prisma.prodWorkOrder.update({
       where: { id: current.id },
@@ -278,18 +319,21 @@ export class ProductionService {
     });
 
     try {
-      for (const line of dto.consumptions) {
+      for (const line of consumptionLots) {
         try {
           await this.inventory.adjust(companyId, {
             productId: line.productId,
             warehouseId: current.warehouseId,
-            qtyDelta: -Number(line.qty),
+            qtyDelta: -line.qty,
             reason: `WO ${current.number} consumption`,
+            ...(line.lotCode ? { lotCode: line.lotCode } : {}),
           });
         } catch (err) {
           if (err instanceof InventoryException) {
             throw new ProductionException(
-              PRODUCTION_ERROR_CODES.INSUFFICIENT_MP,
+              err.code === INVENTORY_ERROR_CODES.LOT_REQUIRED
+                ? PRODUCTION_ERROR_CODES.LOT_REQUIRED
+                : PRODUCTION_ERROR_CODES.INSUFFICIENT_MP,
               err.message,
               HttpStatus.CONFLICT,
             );
@@ -303,13 +347,21 @@ export class ProductionService {
         warehouseId: current.warehouseId,
         qtyDelta: Number(dto.outputQty),
         reason: `WO ${current.number} output`,
+        ...(lotOut ? { lotCode: lotOut, dlc: outputDlc } : {}),
       });
     } catch (err) {
       // Best-effort: leave IN_PROGRESS so operator can retry / investigate.
+      if (err instanceof InventoryException) {
+        throw new ProductionException(
+          err.code === INVENTORY_ERROR_CODES.LOT_REQUIRED
+            ? PRODUCTION_ERROR_CODES.LOT_REQUIRED
+            : PRODUCTION_ERROR_CODES.INSUFFICIENT_MP,
+          err.message,
+          HttpStatus.CONFLICT,
+        );
+      }
       throw err;
     }
-
-    const lotOut = dto.lotOut?.trim() || current.lotOut;
 
     const row = await this.prisma.$transaction(async (tx) => {
       for (const line of dto.consumptions) {
@@ -440,13 +492,27 @@ export class ProductionService {
     return row;
   }
 
-  private async assertProduct(companyId: string, productId: string) {
+  private async assertProduct(
+    companyId: string,
+    productId: string,
+  ): Promise<{
+    id: string;
+    sku: string;
+    trackLot: boolean;
+    shelfLifeDays: number | null;
+  }> {
     const product = await this.prisma.prdProduct.findFirst({
       where: {
         id: productId,
         companyId,
         deletedAt: null,
         status: { in: [PrdProductStatus.ACTIVE, PrdProductStatus.DRAFT] },
+      },
+      select: {
+        id: true,
+        sku: true,
+        trackLot: true,
+        shelfLifeDays: true,
       },
     });
     if (!product) {
@@ -456,6 +522,7 @@ export class ProductionService {
         HttpStatus.NOT_FOUND,
       );
     }
+    return product;
   }
 
   private async assertWarehouse(companyId: string, warehouseId: string) {
@@ -567,4 +634,15 @@ export class ProductionService {
 
 function toDecimal(value: number | string): Prisma.Decimal {
   return new Prisma.Decimal(value);
+}
+
+/** YYYY-MM-DD in local calendar (DLC for new FG lot). */
+function addDaysIso(from: Date, days: number): string {
+  const d = new Date(from);
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + days);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }

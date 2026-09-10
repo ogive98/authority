@@ -99,6 +99,8 @@ describe('ProductionService', () => {
           name: 'Brie',
           status: 'ACTIVE',
           deletedAt: null,
+          trackLot: false,
+          shelfLifeDays: null,
         }),
       },
       invWarehouse: {
@@ -171,9 +173,68 @@ describe('ProductionService', () => {
     );
     expect(inventory.adjust).toHaveBeenCalledWith(
       companyId,
-      expect.objectContaining({ productId, qtyDelta: 95 }),
+      expect.objectContaining({ productId, qtyDelta: 95, lotCode: 'LOT-1' }),
     );
     expect(dto.status).toBe(ProdWoStatus.DONE);
     expect(dto.actualQty).toBe('95');
+  });
+
+  it('rejects declare when FG trackLot and lotOut missing', async () => {
+    const { service, prisma, wo } = build();
+    wo.status = ProdWoStatus.RELEASED;
+    (prisma.prdProduct as { findFirst: jest.Mock }).findFirst.mockResolvedValue({
+      id: productId,
+      sku: 'BRIE-250',
+      trackLot: true,
+      shelfLifeDays: 30,
+      status: 'ACTIVE',
+      deletedAt: null,
+    });
+    await expect(
+      service.declare(companyId, woId, {
+        consumptions: [{ productId: mpId, qty: 50 }],
+        outputQty: 95,
+      }),
+    ).rejects.toMatchObject({
+      status: HttpStatus.BAD_REQUEST,
+      response: { code: PRODUCTION_ERROR_CODES.LOT_REQUIRED },
+    });
+  });
+
+  it('passes lotIn/lotOut to inventory when trackLot', async () => {
+    const { service, inventory, prisma, wo } = build();
+    wo.status = ProdWoStatus.RELEASED;
+    (prisma.prdProduct as { findFirst: jest.Mock }).findFirst.mockImplementation(
+      async ({ where }: { where: { id: string } }) => ({
+        id: where.id,
+        sku: where.id === mpId ? 'LAIT' : 'BRIE-250',
+        trackLot: true,
+        shelfLifeDays: where.id === productId ? 30 : null,
+        status: 'ACTIVE',
+        deletedAt: null,
+      }),
+    );
+    await service.declare(companyId, woId, {
+      consumptions: [{ productId: mpId, qty: 50, lotIn: 'LOT-MP-1' }],
+      outputQty: 95,
+      lotOut: 'LOT-FG-1',
+    });
+    expect(inventory.adjust).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        productId: mpId,
+        qtyDelta: -50,
+        lotCode: 'LOT-MP-1',
+      }),
+    );
+    expect(inventory.adjust).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        productId,
+        qtyDelta: 95,
+        lotCode: 'LOT-FG-1',
+        dlc: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      }),
+    );
   });
 });

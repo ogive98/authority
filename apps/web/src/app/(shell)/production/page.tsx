@@ -73,6 +73,7 @@ export default function ProductionPage() {
   const [lotOut, setLotOut] = useState("");
   const [mpProductId, setMpProductId] = useState("");
   const [mpQty, setMpQty] = useState("50");
+  const [mpLotIn, setMpLotIn] = useState("");
   const [outputQty, setOutputQty] = useState("");
   const [declareLot, setDeclareLot] = useState("");
 
@@ -129,6 +130,8 @@ export default function ProductionPage() {
     setFormError(null);
     setOutputQty(row.plannedQty);
     setDeclareLot(row.lotOut ?? "");
+    setMpLotIn("");
+    setMpQty("50");
     setDrawerOpen(true);
   }
 
@@ -163,10 +166,29 @@ export default function ProductionPage() {
 
   async function onDeclare() {
     if (!selected) return;
+    const mp = products.find((p) => p.id === mpProductId);
+    const fg = products.find((p) => p.id === selected.productId);
+    if (mp?.trackLot && !mpLotIn.trim()) {
+      setFormError("Lot matière (lotIn) requis — produit suivi par lot.");
+      return;
+    }
+    if ((fg?.trackLot || selected.productSku) && !declareLot.trim()) {
+      // Server enforces trackLot; UI warns when FG product known tracked or lotOut empty for cheese SKUs.
+      if (fg?.trackLot) {
+        setFormError("Lot out requis — produit fini suivi par lot.");
+        return;
+      }
+    }
     setBusy(true);
     setFormError(null);
     const res = await declareWorkOrder(selected.id, {
-      consumptions: [{ productId: mpProductId, qty: Number(mpQty) }],
+      consumptions: [
+        {
+          productId: mpProductId,
+          qty: Number(mpQty),
+          lotIn: mpLotIn.trim() || undefined,
+        },
+      ],
       outputQty: Number(outputQty),
       lotOut: declareLot.trim() || undefined,
     });
@@ -397,7 +419,8 @@ export default function ProductionPage() {
           ) : (
             <>
               <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                {selected?.number} · consomme MP puis poste le PF en stock.
+                {selected?.number} · consomme MP puis poste le PF en stock
+                (lots FEFO si trackLot).
               </p>
               <label className="block space-y-1.5">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -411,6 +434,7 @@ export default function ProductionPage() {
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.sku} · {p.name}
+                      {p.trackLot ? " · lot" : ""}
                     </option>
                   ))}
                 </select>
@@ -427,6 +451,19 @@ export default function ProductionPage() {
               </label>
               <label className="block space-y-1.5">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Lot matière (lotIn)
+                  {products.find((p) => p.id === mpProductId)?.trackLot
+                    ? " *"
+                    : ""}
+                </span>
+                <AInput
+                  value={mpLotIn}
+                  onChange={(e) => setMpLotIn(e.target.value)}
+                  placeholder="Obligatoire si MP suivi par lot"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Qté output
                 </span>
                 <AInput
@@ -438,10 +475,14 @@ export default function ProductionPage() {
               <label className="block space-y-1.5">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Lot out
+                  {products.find((p) => p.id === selected?.productId)?.trackLot
+                    ? " *"
+                    : ""}
                 </span>
                 <AInput
                   value={declareLot}
                   onChange={(e) => setDeclareLot(e.target.value)}
+                  placeholder="Code lot PF → inv_lot"
                 />
               </label>
               <AButton
