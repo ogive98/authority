@@ -7,6 +7,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { AButton } from "@/components/a/a-button";
 import { AInput } from "@/components/a/a-input";
 import { ASkipLink } from "@/components/a/a-skip-link";
+import { CompanyBrandPlate } from "@/components/shell/company-brand-plate";
 import { PORTAL_API, PORTAL_HOME_PATH } from "@/lib/customer-portal";
 
 const DEMO_HINT =
@@ -66,20 +67,21 @@ export default function PortalLoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-a-surface-1 px-[var(--a-space-6)] text-a-fg">
       <ASkipLink href="#login" />
-      <main id="login" className="w-full max-w-sm space-y-[var(--a-space-5)]">
-        <p className="text-center text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
+      <main
+        id="login"
+        className="flex w-full max-w-sm flex-col items-center space-y-[var(--a-space-5)]"
+      >
+        <CompanyBrandPlate variant="hero" href="/portal/login" />
+        <p className="text-center text-[11px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
           Customer Portal
         </p>
-        <h1 className="text-center text-[length:var(--a-text-xl)] font-medium tracking-tight">
-          AUTHORITY <span className="text-a-accent">Portal</span>
-        </h1>
         <p className="text-center text-[length:var(--a-text-sm)] text-a-fg-muted">
           Espace client B2B · session séparée du login métier
         </p>
 
         <form
           onSubmit={submit}
-          className="space-y-4 rounded-[var(--a-radius-lg)] border border-a-border-subtle bg-a-surface-2 p-[var(--a-space-5)]"
+          className="w-full space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]"
         >
           <div className="space-y-1.5">
             <label
@@ -153,7 +155,7 @@ export default function PortalLoginPage() {
 
           {error ? (
             <p
-              className="text-[length:var(--a-text-sm)] text-a-danger"
+              className="rounded-[10px] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg"
               role="alert"
             >
               {error}
@@ -166,7 +168,7 @@ export default function PortalLoginPage() {
         </form>
 
         {DEMO_HINT ? (
-          <div className="rounded-[var(--a-radius-md)] border border-dashed border-a-border-subtle bg-a-surface-2/60 px-3 py-2.5 text-center text-[length:var(--a-text-xs)] text-a-fg-muted">
+          <div className="w-full rounded-[10px] bg-a-surface-2/60 px-3 py-2.5 text-center text-[length:var(--a-text-xs)] text-a-fg-muted">
             <p className="font-medium text-a-fg">Démo locale</p>
             <p className="mt-1 a-mono">
               {DEMO_HINT.email} · {DEMO_HINT.password}

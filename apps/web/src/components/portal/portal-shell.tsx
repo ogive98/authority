@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
@@ -55,22 +56,32 @@ export function PortalShell({
   return (
     <div className="flex min-h-screen flex-col bg-a-surface-1 text-a-fg">
       <ASkipLink />
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-a-border-subtle px-[var(--a-space-5)]">
-        <div className="flex min-w-0 items-center gap-4">
+      <header className="flex h-14 shrink-0 items-center justify-between bg-a-surface-2/80 px-[var(--a-space-5)] backdrop-blur-[20px] backdrop-saturate-[180%]">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link
             href={PORTAL_HOME_PATH}
-            className="text-[length:var(--a-text-sm)] font-medium tracking-tight text-a-fg"
+            className="inline-flex min-w-0 shrink-0 items-center gap-2"
+            aria-label="Fattorie Covelli Portal — Powered by AUTHORITY"
           >
-            AUTHORITY{" "}
-            <span className="font-normal text-a-accent">Portal</span>
+            <Image
+              src="/brand/company-logo.png"
+              alt="Fattorie Covelli"
+              width={160}
+              height={44}
+              className="a-brand-logo h-8 w-auto object-contain object-left"
+              priority
+            />
+            <span className="hidden text-[10px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle sm:inline">
+              Portal
+            </span>
           </Link>
           {customerLabel ? (
-            <span className="hidden truncate text-[length:var(--a-text-xs)] text-a-fg-muted sm:inline">
+            <span className="hidden max-w-[10rem] truncate text-[length:var(--a-text-xs)] text-a-fg-muted lg:inline xl:max-w-[14rem]">
               {customerLabel}
             </span>
           ) : null}
           <nav
-            className="flex items-center gap-1"
+            className="flex min-w-0 items-center gap-0.5 overflow-x-auto"
             aria-label="Navigation portail"
           >
             {NAV.map((item) => {
@@ -84,7 +95,7 @@ export function PortalShell({
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "rounded-[var(--a-radius-sm)] px-2.5 py-1 text-[length:var(--a-text-sm)] font-normal transition-colors",
+                    "shrink-0 rounded-[8px] px-2.5 py-1 text-[length:var(--a-text-sm)] font-normal transition-colors",
                     active
                       ? "bg-a-accent-muted text-a-accent"
                       : "text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",

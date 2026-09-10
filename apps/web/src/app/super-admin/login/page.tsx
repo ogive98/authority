@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AButton } from "@/components/a/a-button";
 import { AInput } from "@/components/a/a-input";
 import { ASkipLink } from "@/components/a/a-skip-link";
+import { CompanyBrandPlate } from "@/components/shell/company-brand-plate";
 import { SA_REPAIR_PATH, safeSuperAdminNext } from "@/lib/super-admin-portal";
 
 type Step = "password" | "mfa";
@@ -105,7 +106,7 @@ function SuperAdminLoginForm() {
     <>
       <form
         onSubmit={step === "password" ? submitPassword : submitMfa}
-        className="a-card space-y-4 p-[var(--a-space-5)]"
+        className="w-full space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]"
       >
         {step === "password" ? (
           <>
@@ -161,7 +162,7 @@ function SuperAdminLoginForm() {
         )}
         {error ? (
           <p
-            className="text-[length:var(--a-text-sm)] text-a-danger"
+            className="rounded-[10px] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg"
             role="alert"
           >
             {error}
@@ -186,21 +187,22 @@ function SuperAdminLoginForm() {
 
 export default function SuperAdminLoginPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-[var(--a-space-6)]">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-a-surface-1 px-[var(--a-space-6)] text-a-fg">
       <ASkipLink href="#login" />
-      <main id="login" className="w-full max-w-sm space-y-[var(--a-space-5)]">
-        <p className="a-mono text-center text-[length:var(--a-text-xs)] tracking-[0.2em] text-a-spectre">
+      <main
+        id="login"
+        className="flex w-full max-w-sm flex-col items-center space-y-[var(--a-space-5)]"
+      >
+        <CompanyBrandPlate variant="hero" href="/super-admin/login" />
+        <p className="a-mono text-center text-[11px] tracking-[0.2em] text-a-spectre">
           CONTROL CENTER
         </p>
-        <h1 className="text-center text-[length:var(--a-text-xl)] font-semibold">
-          Super Admin
-        </h1>
         <p className="text-center text-[length:var(--a-text-sm)] text-a-fg-muted">
-          Portail séparé · cookie distinct · pas le login métier
+          Super Admin · cookie distinct · pas le login métier
         </p>
         <Suspense
           fallback={
-            <div className="a-card p-[var(--a-space-5)] text-center text-a-fg-muted">
+            <div className="w-full rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)] text-center text-a-fg-muted">
               Chargement…
             </div>
           }

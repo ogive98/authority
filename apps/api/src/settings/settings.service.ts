@@ -633,7 +633,18 @@ export class SettingsService {
   private validateValue(definition: SetDef, value: unknown): void {
     switch (definition.valueType) {
       case 'string':
-        if (typeof value !== 'string' || value.trim().length === 0) {
+        // Empty string allowed — Préférences Envois (SMTP host, templates override).
+        if (typeof value !== 'string') {
+          throw invalidValue(definition.key);
+        }
+        return;
+      case 'number':
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          throw invalidValue(definition.key);
+        }
+        return;
+      case 'boolean':
+        if (typeof value !== 'boolean') {
           throw invalidValue(definition.key);
         }
         return;

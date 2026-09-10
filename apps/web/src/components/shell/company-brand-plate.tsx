@@ -42,6 +42,9 @@ export function CompanyBrandPlate({
           <span className="text-[15px] font-semibold tracking-[-0.02em] text-a-fg">
             AUTHORITY
           </span>
+          <span className="mt-1 text-[10px] font-normal tracking-[0.02em] text-a-fg-subtle">
+            Haithem Hammami
+          </span>
         </span>
       ) : (
         <>
@@ -52,6 +55,9 @@ export function CompanyBrandPlate({
             </span>
             <span className="text-[13px] font-semibold tracking-[-0.02em] text-a-fg">
               AUTHORITY
+            </span>
+            <span className="mt-0.5 text-[9px] font-normal tracking-[0.02em] text-a-fg-subtle">
+              Haithem Hammami
             </span>
           </span>
         </>
@@ -69,7 +75,7 @@ export function CompanyBrandPlate({
           : "inline-flex min-w-0 items-center gap-1.5",
         className,
       )}
-      aria-label="Fattorie Covelli — Powered by AUTHORITY"
+      aria-label="Fattorie Covelli — Powered by AUTHORITY — Haithem Hammami"
     >
       {inner}
     </Link>

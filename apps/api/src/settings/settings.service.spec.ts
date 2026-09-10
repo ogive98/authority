@@ -4,7 +4,12 @@ import { SettingsService } from './settings.service';
 describe('SettingsService hierarchy', () => {
   let prisma: {
     setDef: { findMany: jest.Mock; findUnique: jest.Mock };
-    setValue: { findMany: jest.Mock; findUnique: jest.Mock };
+    setValue: {
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+    };
     setExpertise: {
       findMany: jest.Mock;
       findUnique: jest.Mock;
@@ -21,7 +26,12 @@ describe('SettingsService hierarchy', () => {
   beforeEach(() => {
     prisma = {
       setDef: { findMany: jest.fn(), findUnique: jest.fn() },
-      setValue: { findMany: jest.fn(), findUnique: jest.fn() },
+      setValue: {
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
       setExpertise: {
         findMany: jest.fn().mockResolvedValue([]),
         findUnique: jest.fn().mockResolvedValue(null),
@@ -213,5 +223,184 @@ describe('SettingsService hierarchy', () => {
         'user-demo',
       ),
     ).rejects.toMatchObject({ code: 'SET.EXPERTISE_READONLY' });
+  });
+
+  describe('Envois value types (D146/D147)', () => {
+    function mockWritableDef(key: string, valueType: string) {
+      prisma.setDef.findUnique.mockResolvedValue({
+        key,
+        valueType,
+        defaultJson: valueType === 'boolean' ? false : valueType === 'number' ? 0 : '',
+        description: key,
+        isPrefOnly: true,
+      });
+      prisma.setValue.findUnique.mockResolvedValue(null);
+      prisma.setValue.create.mockResolvedValue({
+        id: 'sv-1',
+        defKey: key,
+        scopeKey: 'company:company-demo',
+        valueJson: null,
+      });
+      prisma.setDef.findMany.mockResolvedValue([
+        {
+          key,
+          valueType,
+          defaultJson: valueType === 'boolean' ? false : valueType === 'number' ? 0 : '',
+          description: key,
+          isPrefOnly: true,
+        },
+      ]);
+      prisma.setValue.findMany.mockResolvedValue([]);
+    }
+
+    it('accepts number for identity.invite.ttl_days', async () => {
+      mockWritableDef('identity.invite.ttl_days', 'number');
+      prisma.setValue.findMany.mockResolvedValue([
+        {
+          defKey: 'identity.invite.ttl_days',
+          scopeKey: 'company:company-demo',
+          valueJson: 10,
+          level: SetLevel.COMPANY,
+        },
+      ]);
+      const row = await service.upsertValue({
+        context: { userId: 'admin-1', companyId: 'company-demo' },
+        key: 'identity.invite.ttl_days',
+        value: 10,
+        level: 'COMPANY',
+        actorUserId: 'admin-1',
+      });
+      expect(row.value).toBe(10);
+      expect(prisma.setValue.create).toHaveBeenCalled();
+    });
+
+    it('accepts boolean for identity.invite.auto_send', async () => {
+      mockWritableDef('identity.invite.auto_send', 'boolean');
+      prisma.setValue.findMany.mockResolvedValue([
+        {
+          defKey: 'identity.invite.auto_send',
+          scopeKey: 'company:company-demo',
+          valueJson: true,
+          level: SetLevel.COMPANY,
+        },
+      ]);
+      const row = await service.upsertValue({
+        context: { userId: 'admin-1', companyId: 'company-demo' },
+        key: 'identity.invite.auto_send',
+        value: true,
+        level: 'COMPANY',
+        actorUserId: 'admin-1',
+      });
+      expect(row.value).toBe(true);
+    });
+
+    it('accepts empty string for identity.smtp.host', async () => {
+      mockWritableDef('identity.smtp.host', 'string');
+      prisma.setValue.findMany.mockResolvedValue([
+        {
+          defKey: 'identity.smtp.host',
+          scopeKey: 'company:company-demo',
+          valueJson: '',
+          level: SetLevel.COMPANY,
+        },
+      ]);
+      const row = await service.upsertValue({
+        context: { userId: 'admin-1', companyId: 'company-demo' },
+        key: 'identity.smtp.host',
+        value: '',
+        level: 'COMPANY',
+        actorUserId: 'admin-1',
+      });
+      expect(row.value).toBe('');
+    });
+
+    it('rejects non-number for number settings', async () => {
+      mockWritableDef('identity.invite.ttl_days', 'number');
+      await expect(
+        service.upsertValue({
+          context: { userId: 'admin-1', companyId: 'company-demo' },
+          key: 'identity.invite.ttl_days',
+          value: '10',
+          level: 'COMPANY',
+          actorUserId: 'admin-1',
+        }),
+      ).rejects.toMatchObject({ code: 'SET.INVALID' });
+    });
+  });
+
+  describe('SMTP pass write-only (D137/D148)', () => {
+    it('redacts identity.smtp.pass in getEffective and sets secretSet', async () => {
+      prisma.setDef.findMany.mockResolvedValue([
+        {
+          key: 'identity.smtp.pass',
+          valueType: 'string',
+          defaultJson: '',
+          description: 'SMTP pass',
+          isPrefOnly: true,
+        },
+      ]);
+      prisma.setValue.findMany.mockResolvedValue([
+        {
+          defKey: 'identity.smtp.pass',
+          scopeKey: 'company:company-demo',
+          valueJson: 'super-secret',
+          level: SetLevel.COMPANY,
+        },
+      ]);
+
+      const result = await service.getEffective({
+        userId: 'admin-1',
+        companyId: 'company-demo',
+      });
+      const row = result.settings.find((s) => s.key === 'identity.smtp.pass');
+      expect(row?.value).toBe('');
+      expect(row?.secretSet).toBe(true);
+      expect(JSON.stringify(result)).not.toContain('super-secret');
+    });
+
+    it('empty PUT keeps previous smtp.pass', async () => {
+      prisma.setDef.findUnique.mockResolvedValue({
+        key: 'identity.smtp.pass',
+        valueType: 'string',
+        defaultJson: '',
+        description: 'SMTP pass',
+        isPrefOnly: true,
+      });
+      prisma.setValue.findUnique.mockResolvedValue({
+        id: 'sv-pass',
+        defKey: 'identity.smtp.pass',
+        scopeKey: 'company:company-demo',
+        valueJson: 'kept-secret',
+      });
+      prisma.setDef.findMany.mockResolvedValue([
+        {
+          key: 'identity.smtp.pass',
+          valueType: 'string',
+          defaultJson: '',
+          description: 'SMTP pass',
+          isPrefOnly: true,
+        },
+      ]);
+      prisma.setValue.findMany.mockResolvedValue([
+        {
+          defKey: 'identity.smtp.pass',
+          scopeKey: 'company:company-demo',
+          valueJson: 'kept-secret',
+          level: SetLevel.COMPANY,
+        },
+      ]);
+
+      const row = await service.upsertValue({
+        context: { userId: 'admin-1', companyId: 'company-demo' },
+        key: 'identity.smtp.pass',
+        value: '',
+        level: 'COMPANY',
+        actorUserId: 'admin-1',
+      });
+      expect(row.value).toBe('');
+      expect(row.secretSet).toBe(true);
+      expect(prisma.setValue.create).not.toHaveBeenCalled();
+      expect(prisma.setValue.update).not.toHaveBeenCalled();
+    });
   });
 });

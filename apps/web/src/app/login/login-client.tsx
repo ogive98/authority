@@ -6,6 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { AButton } from "@/components/a/a-button";
 import { AInput } from "@/components/a/a-input";
 import { ASkipLink } from "@/components/a/a-skip-link";
+import { CompanyBrandPlate } from "@/components/shell/company-brand-plate";
 import {
   initialsFromName,
   listAssignedCompanies,
@@ -103,13 +104,14 @@ export default function BusinessLoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-a-surface-1 px-[var(--a-space-6)] text-a-fg">
       <ASkipLink href="#login" />
-      <main id="login" className="w-full max-w-sm space-y-[var(--a-space-5)]">
-        <p className="text-center text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
+      <main
+        id="login"
+        className="flex w-full max-w-sm flex-col items-center space-y-[var(--a-space-5)]"
+      >
+        <CompanyBrandPlate variant="hero" href="/login" />
+        <p className="text-center text-[11px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
           Espace métier
         </p>
-        <h1 className="text-center text-[length:var(--a-text-xl)] font-medium tracking-tight">
-          AUTHORITY
-        </h1>
         <p className="text-center text-[length:var(--a-text-sm)] text-a-fg-muted">
           {step === "credentials"
             ? "Connexion session métier · modules selon société"
@@ -118,7 +120,7 @@ export default function BusinessLoginPage() {
 
         {invitedOk && step === "credentials" ? (
           <p
-            className="rounded-[10px] bg-a-success-soft px-3 py-2 text-center text-[length:var(--a-text-sm)] text-a-success-fg"
+            className="w-full rounded-[10px] bg-a-success-soft px-3 py-2 text-center text-[length:var(--a-text-sm)] text-a-success-fg"
             role="status"
           >
             Compte activé. Connectez-vous avec le mot de passe choisi.
@@ -128,7 +130,7 @@ export default function BusinessLoginPage() {
         {step === "credentials" ? (
           <form
             onSubmit={(e) => void submitCredentials(e)}
-            className="space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]"
+            className="w-full space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]"
           >
             <div className="space-y-1.5">
               <label
@@ -187,7 +189,7 @@ export default function BusinessLoginPage() {
 
             {error ? (
               <p
-                className="text-[length:var(--a-text-sm)] text-a-danger"
+                className="rounded-[10px] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg"
                 role="alert"
               >
                 {error}
@@ -199,7 +201,7 @@ export default function BusinessLoginPage() {
             </AButton>
           </form>
         ) : (
-          <div className="space-y-3 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]">
+          <div className="w-full space-y-3 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]">
             {userLabel ? (
               <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                 Connecté · {userLabel}
@@ -226,7 +228,7 @@ export default function BusinessLoginPage() {
             </ul>
             {error ? (
               <p
-                className="text-[length:var(--a-text-sm)] text-a-danger"
+                className="rounded-[10px] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg"
                 role="alert"
               >
                 {error}
@@ -236,7 +238,7 @@ export default function BusinessLoginPage() {
         )}
 
         {DEMO_HINT && step === "credentials" && !invitedOk ? (
-          <div className="rounded-[10px] bg-a-surface-2/60 px-3 py-2.5 text-center text-[length:var(--a-text-xs)] text-a-fg-muted">
+          <div className="w-full rounded-[10px] bg-a-surface-2/60 px-3 py-2.5 text-center text-[length:var(--a-text-xs)] text-a-fg-muted">
             <p className="font-medium text-a-fg">Démo locale</p>
             <p className="mt-1 a-mono">
               {DEMO_HINT.email} · {DEMO_HINT.password}
