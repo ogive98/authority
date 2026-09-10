@@ -325,11 +325,11 @@ function ActionTile({
         href={action.href}
         title={action.label}
         className={cn(
-          "inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors",
+          "inline-flex h-11 w-11 items-center justify-center rounded-md",
           tone.collapsed,
         )}
       >
-        <Icon className="h-4 w-4" strokeWidth={1.75} />
+        <Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden />
       </Link>
     );
   }

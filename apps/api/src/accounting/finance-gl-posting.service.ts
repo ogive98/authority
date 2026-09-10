@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AccEntryStatus, AccPeriodStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccountingService } from './accounting.service';
-import { DEFAULT_GL_CODES } from './accounting.constants';
+import { AccountingGlMappingResolver } from './accounting-gl-mapping.resolver';
 
 export type FinanceGlPostResult =
   | { outcome: 'posted'; entryId: string; number: string }
@@ -11,7 +11,7 @@ export type FinanceGlPostResult =
 
 /**
  * Deterministic Finance → GL posting (amounts as-recorded, no tax invention).
- * Idempotent on sourceType + sourceId.
+ * Idempotent on sourceType + sourceId. CoA codes from company prefs (D179).
  */
 @Injectable()
 export class FinanceGlPostingService {
@@ -20,9 +20,10 @@ export class FinanceGlPostingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly accounting: AccountingService,
+    private readonly glMapping: AccountingGlMappingResolver,
   ) {}
 
-  /** Invoice issued → Dr Clients (411) / Cr Ventes (701). */
+  /** Invoice issued → Dr Clients / Cr Ventes (mapped codes). */
   async postInvoiceIssued(
     companyId: string,
     input: {
@@ -51,12 +52,16 @@ export class FinanceGlPostingService {
       };
     }
 
+    const map = await this.glMapping.resolve(companyId);
     const accounts = await this.resolveAccounts(companyId, [
-      DEFAULT_GL_CODES.ar,
-      DEFAULT_GL_CODES.revenue,
+      map.ar,
+      map.revenue,
     ]);
     if (!accounts) {
-      return { outcome: 'skipped', reason: 'missing CoA 411/701' };
+      return {
+        outcome: 'skipped',
+        reason: `missing CoA ${map.ar}/${map.revenue}`,
+      };
     }
 
     return this.createAndPost(companyId, {
@@ -65,17 +70,17 @@ export class FinanceGlPostingService {
       entryDate: input.entryDate,
       description:
         input.description ?? `invoice:${input.invoiceId}`,
-      journalCode: DEFAULT_GL_CODES.salesJournal,
+      journalCode: map.salesJournal,
       lines: [
         {
-          accountId: accounts[DEFAULT_GL_CODES.ar]!,
+          accountId: accounts[map.ar]!,
           debit: amount,
           credit: 0,
           lineNo: 1,
           memo: 'AR',
         },
         {
-          accountId: accounts[DEFAULT_GL_CODES.revenue]!,
+          accountId: accounts[map.revenue]!,
           debit: 0,
           credit: amount,
           lineNo: 2,
@@ -85,7 +90,7 @@ export class FinanceGlPostingService {
     });
   }
 
-  /** Payment allocated → Dr Banque (512) / Cr Clients (411). */
+  /** Payment allocated → Dr Banque / Cr Clients (mapped codes). */
   async postPaymentAllocated(
     companyId: string,
     input: {
@@ -113,12 +118,16 @@ export class FinanceGlPostingService {
       };
     }
 
+    const map = await this.glMapping.resolve(companyId);
     const accounts = await this.resolveAccounts(companyId, [
-      DEFAULT_GL_CODES.bank,
-      DEFAULT_GL_CODES.ar,
+      map.bank,
+      map.ar,
     ]);
     if (!accounts) {
-      return { outcome: 'skipped', reason: 'missing CoA 512/411' };
+      return {
+        outcome: 'skipped',
+        reason: `missing CoA ${map.bank}/${map.ar}`,
+      };
     }
 
     return this.createAndPost(companyId, {
@@ -126,17 +135,17 @@ export class FinanceGlPostingService {
       sourceId: input.sourceId,
       entryDate: input.entryDate,
       description: `payment:${input.paymentId}`,
-      journalCode: DEFAULT_GL_CODES.bankJournal,
+      journalCode: map.bankJournal,
       lines: [
         {
-          accountId: accounts[DEFAULT_GL_CODES.bank]!,
+          accountId: accounts[map.bank]!,
           debit: amount,
           credit: 0,
           lineNo: 1,
           memo: 'Bank',
         },
         {
-          accountId: accounts[DEFAULT_GL_CODES.ar]!,
+          accountId: accounts[map.ar]!,
           debit: 0,
           credit: amount,
           lineNo: 2,

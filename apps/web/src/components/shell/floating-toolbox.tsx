@@ -30,8 +30,6 @@ type ToolDef = {
     | "toolTranslate"
     | "toolNotes";
   icon: LucideIcon;
-  /** Liquid glass accent token. */
-  liquid: string;
   url?: string;
   sheet?: "calculator" | "notes";
 };
@@ -41,35 +39,30 @@ const TOOLS: ToolDef[] = [
     id: "calc",
     labelKey: "toolCalc",
     icon: Calculator,
-    liquid: "calc",
     sheet: "calculator",
   },
   {
     id: "calendar",
     labelKey: "toolCalendar",
     icon: CalendarDays,
-    liquid: "calendar",
     url: "https://calendar.google.com/calendar/u/0/r",
   },
   {
     id: "agenda",
     labelKey: "toolAgenda",
     icon: NotebookPen,
-    liquid: "agenda",
     url: "https://calendar.google.com/calendar/u/0/r/agenda",
   },
   {
     id: "translate",
     labelKey: "toolTranslate",
     icon: Languages,
-    liquid: "translate",
     url: "https://translate.google.com/?sl=auto&tl=fr",
   },
   {
     id: "notes",
     labelKey: "toolNotes",
     icon: StickyNote,
-    liquid: "notes",
     sheet: "notes",
   },
 ];
@@ -249,16 +242,11 @@ export function FloatingToolbox() {
                 onMouseEnter={openMenu}
                 onClick={() => runTool(tool)}
               >
-                <span
-                  className={cn(
-                    "a-toolbox-glyph a-liquid-icon",
-                    `a-liquid-${tool.liquid}`,
-                  )}
-                >
-                  <span className="a-liquid-shine" aria-hidden />
+                <span className="a-toolbox-glyph">
                   <Icon
-                    className="a-liquid-glyph h-[1.15rem] w-[1.15rem]"
-                    strokeWidth={1.75}
+                    className="h-7 w-7 text-a-orange"
+                    strokeWidth={1.35}
+                    aria-hidden
                   />
                 </span>
                 <span className="a-toolbox-tip">{label}</span>

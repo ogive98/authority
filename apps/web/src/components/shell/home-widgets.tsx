@@ -12,6 +12,10 @@ import { useNotificationsStore } from "@/stores/notifications-store";
 import { useShellStore } from "@/stores/shell-store";
 import { ASkeleton } from "@/components/a/a-skeleton";
 import {
+  personalityForFeature,
+  resolveFeatureIcon,
+} from "./icon-personality";
+import {
   AI_REC_PLACEHOLDERS,
   FeedGlyph,
   iconForAiRecommendation,
@@ -156,15 +160,29 @@ export function ModuleShortcutsWidget({ className }: { className?: string }) {
         <ul className="grid gap-1 sm:grid-cols-2">
           {features.map((f) => (
             <li key={f.id}>
-              <Link
-                href={f.href}
-                className="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-[length:var(--a-text-sm)] text-a-fg transition-colors hover:bg-a-surface-3"
-              >
-                <span className="truncate font-medium">{f.label}</span>
-                <span className="a-mono shrink-0 text-[10px] text-a-fg-subtle">
-                  →
-                </span>
-              </Link>
+                <Link
+                  href={f.href}
+                  className="group flex items-center gap-2.5 rounded-xl px-2 py-2 text-[length:var(--a-text-sm)] text-a-fg transition-colors hover:bg-a-surface-3"
+                >
+                  <span
+                    className={cn(
+                      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] bg-a-accent-muted",
+                      personalityForFeature(f.id, f.label).colorClass,
+                    )}
+                    aria-hidden
+                  >
+                    {(() => {
+                      const Icon = resolveFeatureIcon(f.id, f.label);
+                      return <Icon className="h-4 w-4" strokeWidth={1.75} />;
+                    })()}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {f.label}
+                  </span>
+                  <span className="a-mono shrink-0 text-[10px] text-a-fg-subtle">
+                    →
+                  </span>
+                </Link>
             </li>
           ))}
         </ul>
@@ -220,7 +238,7 @@ export function ActivityWidget() {
                 onClick={() => markItemRead(n.id)}
                 className="flex min-w-0 items-start gap-2.5 rounded-xl px-0.5 py-0.5 transition-opacity hover:opacity-90"
               >
-                <FeedGlyph def={feed} size={14} liquid />
+                <FeedGlyph def={feed} size={14} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[length:var(--a-text-sm)] font-medium text-a-fg">
                     {n.title}
@@ -246,7 +264,7 @@ export function AiPanelWidget() {
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-3">
-        <FeedGlyph def={iconForAiRecommendation("generic")} size={15} liquid />
+        <FeedGlyph def={iconForAiRecommendation("generic")} size={15} />
         <div className="min-w-0">
           <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
             {t("aiAssistant")}
@@ -266,7 +284,7 @@ export function AiPanelWidget() {
                 href={row.href}
                 className="flex items-center gap-2.5 rounded-xl bg-a-surface-3/50 px-2 py-1.5 transition-opacity hover:opacity-95"
               >
-                <FeedGlyph def={feed} size={13} liquid className="!h-7 !w-7" />
+                <FeedGlyph def={feed} size={13} />
                 <span className="min-w-0 truncate text-[length:var(--a-text-xs)] text-a-fg-muted">
                   {row.title}
                 </span>

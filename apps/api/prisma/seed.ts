@@ -1499,6 +1499,41 @@ async function seedSettingsDefinitions(
         'When true, deny sales confirm if outstanding + order exceeds customer creditLimit',
       isPrefOnly: false,
     },
+    {
+      key: 'accounting.gl.ar',
+      valueType: 'string',
+      defaultJson: '411',
+      description: 'GL account code for Accounts Receivable (Finance→GL)',
+      isPrefOnly: true,
+    },
+    {
+      key: 'accounting.gl.bank',
+      valueType: 'string',
+      defaultJson: '512',
+      description: 'GL account code for Bank (Finance→GL payment)',
+      isPrefOnly: true,
+    },
+    {
+      key: 'accounting.gl.revenue',
+      valueType: 'string',
+      defaultJson: '701',
+      description: 'GL account code for Revenue (Finance→GL invoice)',
+      isPrefOnly: true,
+    },
+    {
+      key: 'accounting.gl.sales_journal',
+      valueType: 'string',
+      defaultJson: 'VEN',
+      description: 'Sales journal code for invoice GL posting',
+      isPrefOnly: true,
+    },
+    {
+      key: 'accounting.gl.bank_journal',
+      valueType: 'string',
+      defaultJson: 'BQ',
+      description: 'Bank journal code for payment GL posting',
+      isPrefOnly: true,
+    },
   ] as const;
 
   for (const definition of definitions) {

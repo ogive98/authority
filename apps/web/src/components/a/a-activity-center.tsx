@@ -174,7 +174,7 @@ function NotificationRow({
       )}
     >
       <div className="flex items-start gap-2.5">
-        <FeedGlyph def={feed} size={15} liquid />
+        <FeedGlyph def={feed} size={15} />
         <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
           <button
             type="button"

@@ -28,12 +28,24 @@ import {
   UpdatePeriodStatusDto,
 } from './accounting.dto';
 import { AccountingService } from './accounting.service';
+import { AccountingGlMappingResolver } from './accounting-gl-mapping.resolver';
 
 @Controller('api/v1/accounting')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
 @RequireModule('accounting')
 export class AccountingController {
-  constructor(private readonly accounting: AccountingService) {}
+  constructor(
+    private readonly accounting: AccountingService,
+    private readonly glMapping: AccountingGlMappingResolver,
+  ) {}
+
+  /** D179 — ensure prefs defs + return effective Finance→GL codes. */
+  @Get('gl-mapping')
+  @RequirePermission(PERMISSION_KEYS.accountingRead)
+  async getGlMapping(@CurrentTenancy() tenancy: TenancyContext) {
+    const codes = await this.glMapping.resolve(tenancy.companyId);
+    return { codes };
+  }
 
   // ─── CoA ─────────────────────────────────────────────────────────────────
 

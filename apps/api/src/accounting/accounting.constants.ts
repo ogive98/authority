@@ -30,3 +30,31 @@ export const DEFAULT_GL_CODES = {
   salesJournal: 'VEN',
   bankJournal: 'BQ',
 } as const;
+
+/** Company prefs — CoA / journal codes for Finance→GL (D179). */
+export const ACCOUNTING_SETTING_KEYS = {
+  AR: 'accounting.gl.ar',
+  BANK: 'accounting.gl.bank',
+  REVENUE: 'accounting.gl.revenue',
+  SALES_JOURNAL: 'accounting.gl.sales_journal',
+  BANK_JOURNAL: 'accounting.gl.bank_journal',
+} as const;
+
+export const ACCOUNTING_SETTING_DEFAULTS: Record<
+  (typeof ACCOUNTING_SETTING_KEYS)[keyof typeof ACCOUNTING_SETTING_KEYS],
+  string
+> = {
+  [ACCOUNTING_SETTING_KEYS.AR]: DEFAULT_GL_CODES.ar,
+  [ACCOUNTING_SETTING_KEYS.BANK]: DEFAULT_GL_CODES.bank,
+  [ACCOUNTING_SETTING_KEYS.REVENUE]: DEFAULT_GL_CODES.revenue,
+  [ACCOUNTING_SETTING_KEYS.SALES_JOURNAL]: DEFAULT_GL_CODES.salesJournal,
+  [ACCOUNTING_SETTING_KEYS.BANK_JOURNAL]: DEFAULT_GL_CODES.bankJournal,
+};
+
+export type GlMappingCodes = {
+  ar: string;
+  bank: string;
+  revenue: string;
+  salesJournal: string;
+  bankJournal: string;
+};

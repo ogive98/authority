@@ -195,42 +195,19 @@ export function iconForActivity(kind: ActivityKind): FeedIconDef {
   return iconForNotificationType(kind);
 }
 
-/** Compact glyph — soft underlay or iOS liquid disc. */
+/** Compact glyph — soft underlay disc. */
 export function FeedGlyph({
   def,
   className,
   size = 15,
   strokeWidth = 1.65,
-  liquid = false,
 }: {
   def: FeedIconDef;
   className?: string;
   size?: number;
   strokeWidth?: number;
-  liquid?: boolean;
 }) {
   const Icon = def.icon;
-  if (liquid && def.liquidClass) {
-    return (
-      <span
-        className={cn(
-          "a-liquid-icon inline-flex h-8 w-8 shrink-0 items-center justify-center text-white",
-          def.liquidClass,
-          className,
-        )}
-        title={def.label}
-        aria-hidden
-      >
-        <span className="a-liquid-shine" />
-        <Icon
-          className="a-liquid-glyph"
-          width={size}
-          height={size}
-          strokeWidth={strokeWidth}
-        />
-      </span>
-    );
-  }
   return (
     <span
       className={cn(
