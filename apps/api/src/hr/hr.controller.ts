@@ -9,8 +9,11 @@ import {
   Post,
   Put,
   Query,
+  Res,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import type { IamUser } from '@prisma/client';
 import { SessionGuard } from '../identity/session.guard';
 import { CurrentUser } from '../identity/identity.decorators';
@@ -38,6 +41,7 @@ import { HrService } from './hr.service';
 import { CnssService } from './cnss.service';
 import { IrppService } from './irpp.service';
 import { BulletinService } from './bulletin.service';
+import { BulletinPdfService } from './bulletin-pdf.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
 
 @Controller('api/v1/hr')
@@ -49,8 +53,9 @@ export class HrController {
     private readonly cnss: CnssService,
     private readonly irpp: IrppService,
     private readonly bulletin: BulletinService,
-    private readonly permissions: PermissionService,
+    private readonly bulletinPdf: BulletinPdfService,
     private readonly expertise: ExpertiseResolverService,
+    private readonly permissions: PermissionService,
   ) {}
 
   /**
@@ -208,6 +213,29 @@ export class HrController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.bulletin.getById(tenancy.companyId, id);
+  }
+
+  /** D202 — HTML→PDF stream + persist Documents (link HR_BULLETIN). */
+  @Get('bulletins/:id/pdf')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  async getBulletinPdf(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const result = await this.bulletinPdf.generateAndPersist(
+      tenancy.companyId,
+      user.id,
+      id,
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.filename}"`,
+    );
+    res.setHeader('X-Authority-Document-Id', result.documentId);
+    return new StreamableFile(result.buffer);
   }
 
   @Get('employees')

@@ -13,6 +13,7 @@ import {
   AInput,
   AScreenHeader,
   ASkeleton,
+  ASwitch,
 } from "@/components/a";
 import {
   createBulletin,
@@ -20,12 +21,14 @@ import {
   createContract,
   createEmployee,
   createIrppSnapshot,
+  downloadBulletinPdf,
   endContract,
   fetchBulletinPreview,
   fetchBulletins,
   fetchCnssPreview,
   fetchEmployees,
   fetchIrppPreview,
+  patchEmployee,
   type Bulletin,
   type BulletinPreview,
   type CnssPreview,
@@ -48,7 +51,13 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-type DrawerMode = "employee" | "contract" | "cnss" | "irpp" | "bulletin";
+type DrawerMode =
+  | "employee"
+  | "contract"
+  | "cnss"
+  | "irpp"
+  | "bulletin"
+  | "fiscal";
 
 function statusTone(
   status: string,
@@ -96,6 +105,9 @@ export default function HrEmployeesPage() {
   const [periodYm, setPeriodYm] = useState(
     new Date().toISOString().slice(0, 7),
   );
+  const [taxChef, setTaxChef] = useState(false);
+  const [taxEnfantCount, setTaxEnfantCount] = useState("0");
+  const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
 
   const load = useCallback(async (query?: string) => {
     setState({ kind: "loading" });
@@ -141,6 +153,45 @@ export default function HrEmployeesPage() {
     setWageRef("");
     setWageBase("");
     setDrawerOpen(true);
+  }
+
+  function openFiscal(row: HrEmployee) {
+    setSelected(row);
+    setDrawerMode("fiscal");
+    setFormError(null);
+    setTaxChef(row.taxChefDeFamille === true);
+    setTaxEnfantCount(
+      row.taxEnfantCount != null ? String(row.taxEnfantCount) : "0",
+    );
+    setDrawerOpen(true);
+  }
+
+  async function onSaveFiscal() {
+    if (!selected) return;
+    setBusy(true);
+    setFormError(null);
+    const enfants = Math.max(0, Math.min(20, Number(taxEnfantCount) || 0));
+    const res = await patchEmployee(selected.id, {
+      taxChefDeFamille: taxChef,
+      taxEnfantCount: enfants,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setDrawerOpen(false);
+    await load(q);
+  }
+
+  async function onDownloadPdf(id: string) {
+    setPdfBusyId(id);
+    setFormError(null);
+    const res = await downloadBulletinPdf(id);
+    setPdfBusyId(null);
+    if (!res.ok) {
+      setFormError(res.message);
+    }
   }
 
   async function openCnss(contract: HrContract) {
@@ -352,7 +403,7 @@ export default function HrEmployeesPage() {
       <AScreenHeader
         kicker="Ressources humaines"
         title="Employés"
-        description="RH — wageBase, CNSS, IRPP, bulletin + impression Soft Glass. Aucun taux inventé."
+        description="RH — wageBase, CNSS, IRPP + abattements Prefs, bulletin + PDF serveur. Aucun taux inventé."
         actions={
           <AButton type="button" onClick={openCreateEmployee}>
             Nouvel employé
@@ -484,13 +535,26 @@ export default function HrEmployeesPage() {
                     </td>
                     <td className="a-table-cell">
                       {row.status === "ACTIVE" ? (
-                        <AButton
-                          type="button"
-                          variant="ghost"
-                          onClick={() => openCreateContract(row)}
-                        >
-                          Contrat
-                        </AButton>
+                        <div className="flex flex-col gap-1">
+                          <AButton
+                            type="button"
+                            variant="ghost"
+                            onClick={() => openCreateContract(row)}
+                          >
+                            Contrat
+                          </AButton>
+                          <AButton
+                            type="button"
+                            variant="ghost"
+                            onClick={() => openFiscal(row)}
+                          >
+                            Fiscal
+                            {row.taxChefDeFamille == null &&
+                            row.taxEnfantCount == null
+                              ? " · —"
+                              : ""}
+                          </AButton>
+                        </div>
                       ) : null}
                     </td>
                   </tr>
@@ -533,12 +597,22 @@ export default function HrEmployeesPage() {
                       {b.netPay} {b.currency}
                     </td>
                     <td className="a-table-cell">
-                      <Link
-                        href={`/hr/bulletins/${b.id}`}
-                        className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline"
-                      >
-                        Imprimer
-                      </Link>
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/hr/bulletins/${b.id}`}
+                          className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline"
+                        >
+                          Imprimer
+                        </Link>
+                        <button
+                          type="button"
+                          className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline disabled:opacity-50"
+                          disabled={pdfBusyId === b.id}
+                          onClick={() => void onDownloadPdf(b.id)}
+                        >
+                          PDF
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -557,11 +631,13 @@ export default function HrEmployeesPage() {
             ? "Nouvel employé"
             : drawerMode === "contract"
               ? "Nouveau contrat"
-              : drawerMode === "irpp"
-                ? "IRPP — preview"
-                : drawerMode === "bulletin"
-                  ? "Bulletin — preview"
-                  : "CNSS — preview"
+              : drawerMode === "fiscal"
+                ? "Situation fiscale"
+                : drawerMode === "irpp"
+                  ? "IRPP — preview"
+                  : drawerMode === "bulletin"
+                    ? "Bulletin — preview"
+                    : "CNSS — preview"
         }
       >
         <div className="space-y-4 p-1">
@@ -636,6 +712,48 @@ export default function HrEmployeesPage() {
                 onClick={() => void onCreateEmployee()}
               >
                 Créer
+              </AButton>
+            </>
+          ) : null}
+
+          {drawerMode === "fiscal" ? (
+            <>
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Défauts employé — figés dans le snapshot IRPP. Obligatoires si
+                Prefs abattements VALIDATED.
+              </p>
+              <p className="text-[length:var(--a-text-sm)]">
+                {selected?.displayName} · {selected?.matricule}
+              </p>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[length:var(--a-text-sm)]">
+                  Chef de famille
+                </span>
+                <ASwitch
+                  checked={taxChef}
+                  onCheckedChange={setTaxChef}
+                  label="Chef de famille"
+                />
+              </div>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Nombre d’enfants à charge
+                </span>
+                <AInput
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={taxEnfantCount}
+                  onChange={(e) => setTaxEnfantCount(e.target.value)}
+                  className="a-mono"
+                />
+              </label>
+              <AButton
+                type="button"
+                disabled={busy}
+                onClick={() => void onSaveFiscal()}
+              >
+                Enregistrer
               </AButton>
             </>
           ) : null}
@@ -785,8 +903,8 @@ export default function HrEmployeesPage() {
           {drawerMode === "irpp" ? (
             <>
               <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Assiette = wageBase − CNSS salarié · barème annuel / 12. Aucun
-                seuil inventé.
+                Assiette = wageBase − CNSS − abattements annuels Prefs (si
+                VALIDATED) · barème / 12. Aucun seuil inventé.
               </p>
               <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                 Contrat {cnssContract?.number} · base{" "}
@@ -833,7 +951,21 @@ export default function HrEmployeesPage() {
                     </span>
                   </p>
                   <p>
-                    Imposable annuel{" "}
+                    Imposable annuel (avant abat.){" "}
+                    <span className="a-mono tabular-nums">
+                      {irppPreview.annualTaxableBeforeAbat != null
+                        ? irppPreview.annualTaxableBeforeAbat.toFixed(3)
+                        : "—"}
+                    </span>
+                  </p>
+                  <p>
+                    Abattements annuels{" "}
+                    <span className="a-mono tabular-nums">
+                      {irppPreview.abatTotalAnnual.toFixed(3)}
+                    </span>
+                  </p>
+                  <p>
+                    Imposable annuel (après abat.){" "}
                     <span className="a-mono tabular-nums">
                       {irppPreview.annualTaxable != null
                         ? irppPreview.annualTaxable.toFixed(3)
@@ -877,7 +1009,7 @@ export default function HrEmployeesPage() {
             <>
               <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                 Compose CNSS + IRPP snapshots pour la période. Net = wageBase −
-                CNSS salarié − IRPP mensuel. Pas de PDF V0.
+                CNSS salarié − IRPP mensuel. PDF serveur via fiche bulletin.
               </p>
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">

@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -101,6 +102,19 @@ export class PatchEmployeeDto {
   @IsString()
   @MaxLength(500)
   notes?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsBoolean()
+  taxChefDeFamille?: boolean | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  taxEnfantCount?: number | null;
 }
 
 export class CreateContractDto {

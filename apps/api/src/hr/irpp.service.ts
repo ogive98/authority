@@ -7,7 +7,9 @@ import { computeCnssAmounts } from './cnss-calc';
 import { currentPeriodYm, normalizePeriodYm } from './cnss-calc';
 import {
   computeIrppAmounts,
+  EMPTY_IRPP_ABATEMENT,
   validateIrppBrackets,
+  type IrppAbatementInput,
   type IrppBracketInput,
   type IrppCalcResult,
 } from './irpp-calc';
@@ -39,9 +41,17 @@ export type IrppSnapshotDto = {
   wageBase: string;
   cnssEmployeeAmount: string;
   taxableMonthly: string;
+  annualTaxableBeforeAbat: string;
   annualTaxable: string;
   annualIrpp: string;
   monthlyIrpp: string;
+  taxChefDeFamille: boolean | null;
+  taxEnfantCount: number | null;
+  abatChefAnnual: string;
+  abatEnfantAnnual: string;
+  abatTotalAnnual: string;
+  abatChefLawRef: string | null;
+  abatEnfantLawRef: string | null;
   bracketsJson: IrppBracketInput[];
   irppLawRef: string | null;
   methodNote: string;
@@ -174,11 +184,12 @@ export class IrppService {
       calc.cnssEmployeeAmount == null ||
       calc.taxableMonthly == null ||
       calc.annualTaxable == null ||
+      calc.annualTaxableBeforeAbat == null ||
       calc.annualIrpp == null
     ) {
       throw new HrException(
         HR_ERROR_CODES.IRPP_RATES_PENDING,
-        'IRPP snapshot requires VALIDATED hr.irpp, annual brackets, wageBase, and CNSS salarié. Configure Préférences.',
+        'IRPP snapshot requires VALIDATED hr.irpp, brackets, wageBase, CNSS salarié, and family tax fields when abatement Prefs are VALIDATED.',
         HttpStatus.CONFLICT,
         { pending: calc.pending },
       );
@@ -211,9 +222,19 @@ export class IrppService {
           wageBase: new Prisma.Decimal(calc.wageBase),
           cnssEmployeeAmount: new Prisma.Decimal(calc.cnssEmployeeAmount!),
           taxableMonthly: new Prisma.Decimal(calc.taxableMonthly!),
+          annualTaxableBeforeAbat: new Prisma.Decimal(
+            calc.annualTaxableBeforeAbat!,
+          ),
           annualTaxable: new Prisma.Decimal(calc.annualTaxable!),
           annualIrpp: new Prisma.Decimal(calc.annualIrpp!),
           monthlyIrpp: new Prisma.Decimal(calc.monthlyIrpp!),
+          taxChefDeFamille: calc.taxChefDeFamille,
+          taxEnfantCount: calc.taxEnfantCount,
+          abatChefAnnual: new Prisma.Decimal(calc.abatChefAnnual),
+          abatEnfantAnnual: new Prisma.Decimal(calc.abatEnfantAnnual),
+          abatTotalAnnual: new Prisma.Decimal(calc.abatTotalAnnual),
+          abatChefLawRef: calc.abatChefLawRef,
+          abatEnfantLawRef: calc.abatEnfantLawRef,
           bracketsJson: calc.brackets as unknown as Prisma.InputJsonValue,
           irppLawRef: calc.irppLawRef,
           methodNote: calc.methodNote,
@@ -230,6 +251,7 @@ export class IrppService {
           contractId: contract.id,
           employeeId: contract.employeeId,
           monthlyIrpp: calc.monthlyIrpp,
+          abatTotalAnnual: calc.abatTotalAnnual,
         },
       });
       return created;
@@ -268,23 +290,41 @@ export class IrppService {
 
   private async calcForContract(
     companyId: string,
-    contract: { wageBase: Prisma.Decimal | null },
+    contract: {
+      id: string;
+      employeeId: string;
+      wageBase: Prisma.Decimal | null;
+    },
   ): Promise<IrppCalcResult> {
     const wageBase = contract.wageBase
       ? Number(contract.wageBase.toFixed(3))
       : 0;
 
-    const [employee, employer, ceiling, irppSlot, bracketRows] =
-      await Promise.all([
-        this.expertise.getValidated(companyId, 'hr.cnss.employee'),
-        this.expertise.getValidated(companyId, 'hr.cnss.employer'),
-        this.expertise.getValidated(companyId, 'hr.cnss.ceiling'),
-        this.expertise.getValidated(companyId, 'hr.irpp'),
-        this.prisma.hrIrppBracket.findMany({
-          where: { companyId, deletedAt: null },
-          orderBy: { sortOrder: 'asc' },
-        }),
-      ]);
+    const [
+      employee,
+      employer,
+      ceiling,
+      irppSlot,
+      chefAbat,
+      enfantAbat,
+      bracketRows,
+      hrEmployee,
+    ] = await Promise.all([
+      this.expertise.getValidated(companyId, 'hr.cnss.employee'),
+      this.expertise.getValidated(companyId, 'hr.cnss.employer'),
+      this.expertise.getValidated(companyId, 'hr.cnss.ceiling'),
+      this.expertise.getValidated(companyId, 'hr.irpp'),
+      this.expertise.getValidated(companyId, 'hr.irpp.abat.chef'),
+      this.expertise.getValidated(companyId, 'hr.irpp.abat.enfant'),
+      this.prisma.hrIrppBracket.findMany({
+        where: { companyId, deletedAt: null },
+        orderBy: { sortOrder: 'asc' },
+      }),
+      this.prisma.hrEmployee.findFirst({
+        where: { id: contract.employeeId, companyId, deletedAt: null },
+        select: { taxChefDeFamille: true, taxEnfantCount: true },
+      }),
+    ]);
 
     const cnss = computeCnssAmounts({
       wageBase,
@@ -311,6 +351,20 @@ export class IrppService {
       lawRef: b.lawRef,
     }));
 
+    const abatement: IrppAbatementInput = {
+      ...EMPTY_IRPP_ABATEMENT,
+      chefSeatValidated: chefAbat != null,
+      chefAmountAnnualTnd:
+        chefAbat?.amountMilli != null ? chefAbat.amountMilli / 1000 : null,
+      chefLawRef: chefAbat?.lawRef ?? null,
+      enfantSeatValidated: enfantAbat != null,
+      enfantAmountAnnualTnd:
+        enfantAbat?.amountMilli != null ? enfantAbat.amountMilli / 1000 : null,
+      enfantLawRef: enfantAbat?.lawRef ?? null,
+      taxChefDeFamille: hrEmployee?.taxChefDeFamille ?? null,
+      taxEnfantCount: hrEmployee?.taxEnfantCount ?? null,
+    };
+
     return computeIrppAmounts({
       wageBase,
       cnssEmployeeAmount: cnss.employeeAmount,
@@ -318,6 +372,7 @@ export class IrppService {
       irppSlotValidated: irppSlot != null,
       brackets,
       irppLawRef: irppSlot?.lawRef ?? null,
+      abatement,
     });
   }
 
@@ -345,9 +400,17 @@ function serializeSnapshot(row: {
   wageBase: Prisma.Decimal;
   cnssEmployeeAmount: Prisma.Decimal;
   taxableMonthly: Prisma.Decimal;
+  annualTaxableBeforeAbat: Prisma.Decimal;
   annualTaxable: Prisma.Decimal;
   annualIrpp: Prisma.Decimal;
   monthlyIrpp: Prisma.Decimal;
+  taxChefDeFamille: boolean | null;
+  taxEnfantCount: number | null;
+  abatChefAnnual: Prisma.Decimal;
+  abatEnfantAnnual: Prisma.Decimal;
+  abatTotalAnnual: Prisma.Decimal;
+  abatChefLawRef: string | null;
+  abatEnfantLawRef: string | null;
   bracketsJson: Prisma.JsonValue;
   irppLawRef: string | null;
   methodNote: string;
@@ -365,9 +428,17 @@ function serializeSnapshot(row: {
     wageBase: row.wageBase.toFixed(3),
     cnssEmployeeAmount: row.cnssEmployeeAmount.toFixed(3),
     taxableMonthly: row.taxableMonthly.toFixed(3),
+    annualTaxableBeforeAbat: row.annualTaxableBeforeAbat.toFixed(3),
     annualTaxable: row.annualTaxable.toFixed(3),
     annualIrpp: row.annualIrpp.toFixed(3),
     monthlyIrpp: row.monthlyIrpp.toFixed(3),
+    taxChefDeFamille: row.taxChefDeFamille,
+    taxEnfantCount: row.taxEnfantCount,
+    abatChefAnnual: row.abatChefAnnual.toFixed(3),
+    abatEnfantAnnual: row.abatEnfantAnnual.toFixed(3),
+    abatTotalAnnual: row.abatTotalAnnual.toFixed(3),
+    abatChefLawRef: row.abatChefLawRef,
+    abatEnfantLawRef: row.abatEnfantLawRef,
     bracketsJson: row.bracketsJson as IrppBracketInput[],
     irppLawRef: row.irppLawRef,
     methodNote: row.methodNote,

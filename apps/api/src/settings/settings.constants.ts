@@ -146,6 +146,8 @@ export const EXPERTISE_SLOT_KEYS = [
   'hr.cnss.employer',
   'hr.cnss.ceiling',
   'hr.irpp',
+  'hr.irpp.abat.chef',
+  'hr.irpp.abat.enfant',
   'hr.tfp',
 ] as const;
 
@@ -240,6 +242,26 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     manageHref: '/hr',
   },
   {
+    key: 'hr.irpp.abat.chef',
+    domain: 'hr',
+    label: 'IRPP abattement chef de famille',
+    description:
+      'Montant annuel (amountMilli) abattement chef de famille — vide jusqu’à expert. Jamais seedé.',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: '/hr',
+  },
+  {
+    key: 'hr.irpp.abat.enfant',
+    domain: 'hr',
+    label: 'IRPP abattement par enfant',
+    description:
+      'Montant annuel (amountMilli) par enfant à charge — vide jusqu’à expert. Jamais seedé.',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: '/hr',
+  },
+  {
     key: 'hr.tfp',
     domain: 'hr',
     label: 'TFP',
@@ -258,6 +280,8 @@ export const EXPERTISE_WRITABLE_KEYS = [
   'hr.cnss.employer',
   'hr.cnss.ceiling',
   'hr.irpp',
+  'hr.irpp.abat.chef',
+  'hr.irpp.abat.enfant',
   'hr.tfp',
 ] as const;
 

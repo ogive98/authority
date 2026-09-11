@@ -926,12 +926,15 @@ export default function SettingsPage() {
                             }
                             placeholder="Vide"
                             className="a-mono"
-                            disabled={row.key === "hr.irpp"}
+                            disabled={
+                              row.key === "hr.irpp" ||
+                              row.key.startsWith("hr.irpp.abat.")
+                            }
                           />
                         </label>
                         <label className="block space-y-1">
                           <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                            Millimes (optionnel — timbre)
+                            Millimes (plafond / abattement annuel)
                           </span>
                           <AInput
                             value={draft.amountMilli}

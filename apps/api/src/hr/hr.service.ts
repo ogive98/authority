@@ -52,6 +52,8 @@ export type HrEmployeeDto = {
   hiredAt: string | null;
   leftAt: string | null;
   notes: string | null;
+  taxChefDeFamille: boolean | null;
+  taxEnfantCount: number | null;
   version: number;
   contracts: HrContractDto[];
   createdAt: string;
@@ -212,6 +214,12 @@ export class HrService {
       data.leftAt = dto.leftAt
         ? startOfUtcDay(new Date(dto.leftAt))
         : null;
+    }
+    if (dto.taxChefDeFamille !== undefined) {
+      data.taxChefDeFamille = dto.taxChefDeFamille;
+    }
+    if (dto.taxEnfantCount !== undefined) {
+      data.taxEnfantCount = dto.taxEnfantCount;
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -450,6 +458,8 @@ export class HrService {
       hiredAt: row.hiredAt ? toDateOnly(row.hiredAt) : null,
       leftAt: row.leftAt ? toDateOnly(row.leftAt) : null,
       notes: row.notes,
+      taxChefDeFamille: row.taxChefDeFamille,
+      taxEnfantCount: row.taxEnfantCount,
       version: row.version,
       contracts: row.contracts.map((c) => this.toContractDto(c, includeWage)),
       createdAt: row.createdAt.toISOString(),

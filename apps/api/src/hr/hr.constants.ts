@@ -16,6 +16,7 @@ export const HR_ERROR_CODES = {
   BULLETIN_SNAPSHOTS_PENDING: 'HR.BULLETIN_SNAPSHOTS_PENDING',
   BULLETIN_EXISTS: 'HR.BULLETIN_EXISTS',
   BULLETIN_NOT_FOUND: 'HR.BULLETIN_NOT_FOUND',
+  BULLETIN_PDF_UNAVAILABLE: 'HR.BULLETIN_PDF_UNAVAILABLE',
 } as const;
 
 export type HrErrorCode = (typeof HR_ERROR_CODES)[keyof typeof HR_ERROR_CODES];
@@ -29,4 +30,5 @@ export const HR_EVENT_TYPES = {
   IRPP_BRACKETS_REPLACED: 'hr.irpp_brackets.replaced.v1',
   IRPP_SNAPSHOT_CREATED: 'hr.irpp_snapshot.created.v1',
   BULLETIN_CREATED: 'hr.bulletin.created.v1',
+  BULLETIN_PDF_GENERATED: 'hr.bulletin.pdf_generated.v1',
 } as const;

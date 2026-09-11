@@ -1,4 +1,4 @@
-/** Shared Soft Glass bulletin print sheet (D200) — CSS print only, no server PDF. */
+/** Shared Soft Glass bulletin print sheet (D200/D202) — CSS print + abatement lines. */
 
 export type BulletinPrintModel = {
   number?: string | null;
@@ -12,9 +12,18 @@ export type BulletinPrintModel = {
   irppMonthly: string;
   netPay: string;
   currency: string;
+  annualTaxableBeforeAbat?: string | null;
+  abatChefAnnual?: string | null;
+  abatEnfantAnnual?: string | null;
+  abatTotalAnnual?: string | null;
+  taxChefDeFamille?: boolean | null;
+  taxEnfantCount?: number | null;
 };
 
 export function BulletinPrintSheet({ data }: { data: BulletinPrintModel }) {
+  const showAbat =
+    data.abatTotalAnnual != null && Number(data.abatTotalAnnual) > 0;
+
   return (
     <div className="hr-bulletin-sheet rounded-[16px] bg-white px-6 py-5 text-black print:rounded-none print:px-0 print:py-0">
       <header className="mb-6 border-b border-black/10 pb-4">
@@ -81,6 +90,39 @@ export function BulletinPrintSheet({ data }: { data: BulletinPrintModel }) {
             <td className="py-2">CNSS employeur (info)</td>
             <td className="py-2 text-right">{data.cnssEmployerAmount}</td>
           </tr>
+          {showAbat ? (
+            <>
+              {data.annualTaxableBeforeAbat ? (
+                <tr className="border-b border-black/8">
+                  <td className="py-2">Assiette annuelle avant abattements</td>
+                  <td className="py-2 text-right">
+                    {data.annualTaxableBeforeAbat}
+                  </td>
+                </tr>
+              ) : null}
+              {data.abatChefAnnual && Number(data.abatChefAnnual) > 0 ? (
+                <tr className="border-b border-black/8">
+                  <td className="py-2">Abattement chef de famille (annuel)</td>
+                  <td className="py-2 text-right">− {data.abatChefAnnual}</td>
+                </tr>
+              ) : null}
+              {data.abatEnfantAnnual && Number(data.abatEnfantAnnual) > 0 ? (
+                <tr className="border-b border-black/8">
+                  <td className="py-2">
+                    Abattement enfants (annuel)
+                    {data.taxEnfantCount != null
+                      ? ` · ${data.taxEnfantCount}`
+                      : ""}
+                  </td>
+                  <td className="py-2 text-right">− {data.abatEnfantAnnual}</td>
+                </tr>
+              ) : null}
+              <tr className="border-b border-black/8">
+                <td className="py-2">Total abattements annuels</td>
+                <td className="py-2 text-right">− {data.abatTotalAnnual}</td>
+              </tr>
+            </>
+          ) : null}
           <tr className="border-b border-black/8">
             <td className="py-2">IRPP mensuel</td>
             <td className="py-2 text-right">− {data.irppMonthly}</td>
@@ -96,8 +138,8 @@ export function BulletinPrintSheet({ data }: { data: BulletinPrintModel }) {
 
       <p className="mt-8 text-[11px] leading-relaxed text-black/45">
         Montants issus des snapshots CNSS / IRPP VALIDATED — aucun barème inventé.
-        Net = base − CNSS salarié − IRPP mensuel. Document informatif Soft Glass
-        V0 (impression navigateur).
+        Abattements Prefs (si VALIDATED) réduisent l’assiette annuelle avant barème.
+        Net = base − CNSS salarié − IRPP mensuel.
       </p>
     </div>
   );

@@ -25,6 +25,8 @@ export type HrEmployee = {
   hiredAt: string | null;
   leftAt: string | null;
   notes: string | null;
+  taxChefDeFamille: boolean | null;
+  taxEnfantCount: number | null;
   contracts: HrContract[];
   createdAt: string;
 };
@@ -206,9 +208,15 @@ export type IrppPreview = {
   wageBase: number;
   cnssEmployeeAmount: number | null;
   taxableMonthly: number | null;
+  annualTaxableBeforeAbat: number | null;
   annualTaxable: number | null;
   annualIrpp: number | null;
   monthlyIrpp: number | null;
+  abatChefAnnual: number;
+  abatEnfantAnnual: number;
+  abatTotalAnnual: number;
+  taxChefDeFamille: boolean | null;
+  taxEnfantCount: number | null;
   ready: boolean;
   pending: string[];
   prefsHref: string;
@@ -324,9 +332,16 @@ export type Bulletin = {
   irppMonthly: string;
   netPay: string;
   currency: string;
+  pdfDocumentId: string | null;
   employeeName: string | null;
   matricule: string | null;
   contractNumber: string | null;
+  annualTaxableBeforeAbat: string | null;
+  abatChefAnnual: string | null;
+  abatEnfantAnnual: string | null;
+  abatTotalAnnual: string | null;
+  taxChefDeFamille: boolean | null;
+  taxEnfantCount: number | null;
   createdAt: string;
 };
 
@@ -389,4 +404,50 @@ export async function createBulletin(input: {
     return { ok: false, status: res.status, message: await parseError(res) };
   }
   return { ok: true, data: (await res.json()) as Bulletin };
+}
+
+export async function patchEmployee(
+  id: string,
+  input: {
+    taxChefDeFamille?: boolean | null;
+    taxEnfantCount?: number | null;
+  },
+): Promise<ApiOk<HrEmployee> | ApiFail> {
+  const res = await fetch(`/api/v1/hr/employees/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrEmployee };
+}
+
+/** Download server PDF (stream + Documents persist). */
+export async function downloadBulletinPdf(
+  id: string,
+): Promise<{ ok: true } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/hr/bulletins/${encodeURIComponent(id)}/pdf`,
+      { credentials: "include" },
+    );
+    if (!res.ok) {
+      return { ok: false, status: res.status, message: await parseError(res) };
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download =
+      res.headers.get("Content-Disposition")?.match(/filename="?([^"]+)"?/)?.[1] ??
+      `bulletin-${id}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
 }

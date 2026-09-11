@@ -1,16 +1,31 @@
-import { round3 } from '../tax/tax.service';
-
 /**
- * Pure IRPP V0 math (D196).
- * Annual progressive brackets from human Prefs table — never invent.
- * Monthly withholding = annualTax(taxableMonthly * 12) / 12.
+ * Pure IRPP math (D196/D202).
+ * Annual progressive brackets from human Prefs — never invent.
+ * Abatements (Prefs VALIDATED amounts) reduce annualTaxable before brackets (lock 2A).
+ * Monthly withholding = annualTax(annualTaxable) / 12.
  */
+
+import { round3 } from '../tax/tax.service';
 
 export type IrppBracketInput = {
   /** Annual upper bound in millimes; null = open-ended. */
   upToMilli: number | null;
   rateBps: number;
   lawRef?: string | null;
+};
+
+export type IrppAbatementInput = {
+  chefSeatValidated: boolean;
+  /** Annual chef abatement TND from Prefs amountMilli/1000 — null if unset. */
+  chefAmountAnnualTnd: number | null;
+  chefLawRef: string | null;
+  enfantSeatValidated: boolean;
+  /** Annual per-child abatement TND from Prefs — null if unset. */
+  enfantAmountAnnualTnd: number | null;
+  enfantLawRef: string | null;
+  /** Employee defaults — null = not set (gate 5B when seat VALIDATED). */
+  taxChefDeFamille: boolean | null;
+  taxEnfantCount: number | null;
 };
 
 export type IrppCalcInput = {
@@ -21,15 +36,24 @@ export type IrppCalcInput = {
   irppSlotValidated: boolean;
   brackets: IrppBracketInput[];
   irppLawRef: string | null;
+  abatement: IrppAbatementInput;
 };
 
 export type IrppCalcResult = {
   wageBase: number;
   cnssEmployeeAmount: number | null;
   taxableMonthly: number | null;
+  annualTaxableBeforeAbat: number | null;
   annualTaxable: number | null;
   annualIrpp: number | null;
   monthlyIrpp: number | null;
+  taxChefDeFamille: boolean | null;
+  taxEnfantCount: number | null;
+  abatChefAnnual: number;
+  abatEnfantAnnual: number;
+  abatTotalAnnual: number;
+  abatChefLawRef: string | null;
+  abatEnfantLawRef: string | null;
   brackets: IrppBracketInput[];
   irppLawRef: string | null;
   methodNote: 'annual_brackets_div_12';
@@ -68,25 +92,41 @@ export function applyAnnualProgressive(
   return round3(taxMilli / 1000);
 }
 
+function emptyPending(
+  input: IrppCalcInput,
+  pending: string[],
+  wageBase: number,
+): IrppCalcResult {
+  return {
+    wageBase,
+    cnssEmployeeAmount: input.cnssEmployeeAmount,
+    taxableMonthly: null,
+    annualTaxableBeforeAbat: null,
+    annualTaxable: null,
+    annualIrpp: null,
+    monthlyIrpp: null,
+    taxChefDeFamille: input.abatement.taxChefDeFamille,
+    taxEnfantCount: input.abatement.taxEnfantCount,
+    abatChefAnnual: 0,
+    abatEnfantAnnual: 0,
+    abatTotalAnnual: 0,
+    abatChefLawRef: input.abatement.chefLawRef,
+    abatEnfantLawRef: input.abatement.enfantLawRef,
+    brackets: input.brackets,
+    irppLawRef: input.irppLawRef,
+    methodNote: 'annual_brackets_div_12',
+    ready: false,
+    pending,
+  };
+}
+
 export function computeIrppAmounts(input: IrppCalcInput): IrppCalcResult {
   const pending: string[] = [];
   const wageBase = round3(input.wageBase);
-  const methodNote = 'annual_brackets_div_12' as const;
+  const ab = input.abatement;
 
   if (!(wageBase > 0) || !Number.isFinite(wageBase)) {
-    return {
-      wageBase,
-      cnssEmployeeAmount: null,
-      taxableMonthly: null,
-      annualTaxable: null,
-      annualIrpp: null,
-      monthlyIrpp: null,
-      brackets: [],
-      irppLawRef: input.irppLawRef,
-      methodNote,
-      ready: false,
-      pending: ['wageBase'],
-    };
+    return emptyPending(input, ['wageBase'], wageBase);
   }
 
   if (!input.cnssReady || input.cnssEmployeeAmount == null) {
@@ -99,25 +139,52 @@ export function computeIrppAmounts(input: IrppCalcInput): IrppCalcResult {
     pending.push('hr.irpp.brackets');
   }
 
+  // Gate 5B — when Prefs abatement seat VALIDATED, family fields must be set.
+  if (ab.chefSeatValidated && ab.taxChefDeFamille == null) {
+    pending.push('employee.tax_chef_de_famille');
+  }
+  if (ab.enfantSeatValidated && ab.taxEnfantCount == null) {
+    pending.push('employee.tax_enfant_count');
+  }
+  if (
+    ab.chefSeatValidated &&
+    (ab.chefAmountAnnualTnd == null || !(ab.chefAmountAnnualTnd >= 0))
+  ) {
+    pending.push('hr.irpp.abat.chef');
+  }
+  if (
+    ab.enfantSeatValidated &&
+    (ab.enfantAmountAnnualTnd == null || !(ab.enfantAmountAnnualTnd >= 0))
+  ) {
+    pending.push('hr.irpp.abat.enfant');
+  }
+
   if (pending.length > 0) {
-    return {
-      wageBase,
-      cnssEmployeeAmount: input.cnssEmployeeAmount,
-      taxableMonthly: null,
-      annualTaxable: null,
-      annualIrpp: null,
-      monthlyIrpp: null,
-      brackets: input.brackets,
-      irppLawRef: input.irppLawRef,
-      methodNote,
-      ready: false,
-      pending,
-    };
+    return emptyPending(input, pending, wageBase);
   }
 
   const cnssEmployeeAmount = round3(input.cnssEmployeeAmount!);
   const taxableMonthly = round3(Math.max(0, wageBase - cnssEmployeeAmount));
-  const annualTaxable = round3(taxableMonthly * 12);
+  const annualTaxableBeforeAbat = round3(taxableMonthly * 12);
+
+  let abatChefAnnual = 0;
+  let abatEnfantAnnual = 0;
+  if (ab.chefSeatValidated && ab.taxChefDeFamille === true) {
+    abatChefAnnual = round3(ab.chefAmountAnnualTnd ?? 0);
+  }
+  if (
+    ab.enfantSeatValidated &&
+    ab.taxEnfantCount != null &&
+    ab.taxEnfantCount > 0
+  ) {
+    abatEnfantAnnual = round3(
+      (ab.enfantAmountAnnualTnd ?? 0) * ab.taxEnfantCount,
+    );
+  }
+  const abatTotalAnnual = round3(abatChefAnnual + abatEnfantAnnual);
+  const annualTaxable = round3(
+    Math.max(0, annualTaxableBeforeAbat - abatTotalAnnual),
+  );
   const annualIrpp = applyAnnualProgressive(annualTaxable, input.brackets);
   const monthlyIrpp = round3(annualIrpp / 12);
 
@@ -125,12 +192,20 @@ export function computeIrppAmounts(input: IrppCalcInput): IrppCalcResult {
     wageBase,
     cnssEmployeeAmount,
     taxableMonthly,
+    annualTaxableBeforeAbat,
     annualTaxable,
     annualIrpp,
     monthlyIrpp,
+    taxChefDeFamille: ab.taxChefDeFamille,
+    taxEnfantCount: ab.taxEnfantCount,
+    abatChefAnnual,
+    abatEnfantAnnual,
+    abatTotalAnnual,
+    abatChefLawRef: ab.chefLawRef,
+    abatEnfantLawRef: ab.enfantLawRef,
     brackets: input.brackets,
     irppLawRef: input.irppLawRef,
-    methodNote,
+    methodNote: 'annual_brackets_div_12',
     ready: true,
     pending: [],
   };
@@ -165,3 +240,14 @@ export function validateIrppBrackets(
   }
   return null;
 }
+
+export const EMPTY_IRPP_ABATEMENT: IrppAbatementInput = {
+  chefSeatValidated: false,
+  chefAmountAnnualTnd: null,
+  chefLawRef: null,
+  enfantSeatValidated: false,
+  enfantAmountAnnualTnd: null,
+  enfantLawRef: null,
+  taxChefDeFamille: null,
+  taxEnfantCount: null,
+};

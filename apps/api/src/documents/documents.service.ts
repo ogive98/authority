@@ -266,7 +266,7 @@ export class DocumentsService {
     ) {
       throw new DocumentsException(
         DOCUMENTS_ERROR_CODES.INVALID_META,
-        'linkType must be CLAIM, ORDER, or SHIPMENT.',
+        'linkType must be CLAIM, ORDER, SHIPMENT, or HR_BULLETIN.',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -536,6 +536,21 @@ export class DocumentsService {
         );
       }
       return shipment.customerId;
+    }
+
+    if (linkType === DocLinkType.HR_BULLETIN) {
+      const bulletin = await this.prisma.hrBulletin.findFirst({
+        where: { id: linkId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!bulletin) {
+        throw new DocumentsException(
+          DOCUMENTS_ERROR_CODES.LINK_NOT_FOUND,
+          'Bulletin not found for link.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      return null;
     }
 
     throw new DocumentsException(

@@ -1,6 +1,7 @@
 import {
   applyAnnualProgressive,
   computeIrppAmounts,
+  EMPTY_IRPP_ABATEMENT,
   validateIrppBrackets,
 } from './irpp-calc';
 
@@ -13,6 +14,7 @@ describe('irpp-calc', () => {
       irppSlotValidated: false,
       brackets: [],
       irppLawRef: null,
+      abatement: EMPTY_IRPP_ABATEMENT,
     });
     expect(r.ready).toBe(false);
     expect(r.pending).toContain('wageBase');
@@ -40,13 +42,75 @@ describe('irpp-calc', () => {
       irppSlotValidated: true,
       brackets,
       irppLawRef: 'expert-fixture',
+      abatement: EMPTY_IRPP_ABATEMENT,
     });
     expect(r.ready).toBe(true);
     expect(r.taxableMonthly).toBe(2000);
+    expect(r.annualTaxableBeforeAbat).toBe(24_000);
     expect(r.annualTaxable).toBe(24_000);
     expect(r.annualIrpp).toBe(2300);
     expect(r.monthlyIrpp).toBe(191.667);
     expect(r.methodNote).toBe('annual_brackets_div_12');
+  });
+
+  it('reduces annualTaxable by Prefs abatements before brackets (D202)', () => {
+    const brackets = [
+      { upToMilli: 5_000_000, rateBps: 0 },
+      { upToMilli: 20_000_000, rateBps: 1000 },
+      { upToMilli: null, rateBps: 2000 },
+    ];
+    // annual before abat 24000 − chef 1000 − 2×500 = 21500
+    const r = computeIrppAmounts({
+      wageBase: 2200,
+      cnssEmployeeAmount: 200,
+      cnssReady: true,
+      irppSlotValidated: true,
+      brackets,
+      irppLawRef: 'expert-fixture',
+      abatement: {
+        chefSeatValidated: true,
+        chefAmountAnnualTnd: 1000,
+        chefLawRef: 'chef-fixture',
+        enfantSeatValidated: true,
+        enfantAmountAnnualTnd: 500,
+        enfantLawRef: 'enfant-fixture',
+        taxChefDeFamille: true,
+        taxEnfantCount: 2,
+      },
+    });
+    expect(r.ready).toBe(true);
+    expect(r.annualTaxableBeforeAbat).toBe(24_000);
+    expect(r.abatChefAnnual).toBe(1000);
+    expect(r.abatEnfantAnnual).toBe(1000);
+    expect(r.abatTotalAnnual).toBe(2000);
+    expect(r.annualTaxable).toBe(22_000);
+    expect(r.annualIrpp).toBe(applyAnnualProgressive(22_000, brackets));
+  });
+
+  it('blocks when abatement Prefs VALIDATED but family fields unset (5B)', () => {
+    const r = computeIrppAmounts({
+      wageBase: 2200,
+      cnssEmployeeAmount: 200,
+      cnssReady: true,
+      irppSlotValidated: true,
+      brackets: [
+        { upToMilli: 5_000_000, rateBps: 0 },
+        { upToMilli: null, rateBps: 1000 },
+      ],
+      irppLawRef: 'x',
+      abatement: {
+        chefSeatValidated: true,
+        chefAmountAnnualTnd: 100,
+        chefLawRef: null,
+        enfantSeatValidated: false,
+        enfantAmountAnnualTnd: null,
+        enfantLawRef: null,
+        taxChefDeFamille: null,
+        taxEnfantCount: null,
+      },
+    });
+    expect(r.ready).toBe(false);
+    expect(r.pending).toContain('employee.tax_chef_de_famille');
   });
 
   it('rejects malformed brackets', () => {

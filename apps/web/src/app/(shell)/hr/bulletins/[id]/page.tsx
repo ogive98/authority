@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Printer } from "lucide-react";
+import { FileDown, Printer } from "lucide-react";
 import {
   AButton,
   AErrorState,
@@ -12,7 +12,11 @@ import {
   ASkeleton,
 } from "@/components/a";
 import { BulletinPrintSheet } from "@/components/hr/bulletin-print-sheet";
-import { fetchBulletin, type Bulletin } from "@/lib/hr";
+import {
+  downloadBulletinPdf,
+  fetchBulletin,
+  type Bulletin,
+} from "@/lib/hr";
 import { softPageBody } from "@/lib/soft-glass-ui";
 
 type Load =
@@ -25,6 +29,8 @@ export default function HrBulletinPrintPage() {
   const params = useParams();
   const id = typeof params.id === "string" ? params.id : "";
   const [state, setState] = useState<Load>({ kind: "loading" });
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -48,13 +54,22 @@ export default function HrBulletinPrintPage() {
     void load();
   }, [load]);
 
+  async function onPdf() {
+    if (!id) return;
+    setPdfBusy(true);
+    setPdfError(null);
+    const res = await downloadBulletinPdf(id);
+    setPdfBusy(false);
+    if (!res.ok) setPdfError(res.message);
+  }
+
   return (
     <>
       <div className="print:hidden">
         <AScreenHeader
           kicker="Ressources humaines"
           title="Bulletin"
-          description="Impression Soft Glass (CSS) — pas de PDF serveur inventé."
+          description="Impression Soft Glass + PDF serveur (layout légal minimal)."
           actions={
             <div className="flex flex-wrap gap-2">
               <Link
@@ -64,14 +79,30 @@ export default function HrBulletinPrintPage() {
                 Retour RH
               </Link>
               {state.kind === "ok" ? (
-                <AButton type="button" onClick={() => window.print()}>
-                  <Printer className="mr-1.5 h-4 w-4" strokeWidth={1.75} />
-                  Imprimer
-                </AButton>
+                <>
+                  <AButton type="button" onClick={() => window.print()}>
+                    <Printer className="mr-1.5 h-4 w-4" strokeWidth={1.75} />
+                    Imprimer
+                  </AButton>
+                  <AButton
+                    type="button"
+                    variant="secondary"
+                    disabled={pdfBusy}
+                    onClick={() => void onPdf()}
+                  >
+                    <FileDown className="mr-1.5 h-4 w-4" strokeWidth={1.75} />
+                    PDF
+                  </AButton>
+                </>
               ) : null}
             </div>
           }
         />
+        {pdfError ? (
+          <p className="mb-3 text-[length:var(--a-text-sm)] text-a-danger-fg">
+            {pdfError}
+          </p>
+        ) : null}
       </div>
 
       <div
@@ -108,6 +139,12 @@ export default function HrBulletinPrintPage() {
               irppMonthly: state.data.irppMonthly,
               netPay: state.data.netPay,
               currency: state.data.currency,
+              annualTaxableBeforeAbat: state.data.annualTaxableBeforeAbat,
+              abatChefAnnual: state.data.abatChefAnnual,
+              abatEnfantAnnual: state.data.abatEnfantAnnual,
+              abatTotalAnnual: state.data.abatTotalAnnual,
+              taxChefDeFamille: state.data.taxChefDeFamille,
+              taxEnfantCount: state.data.taxEnfantCount,
             }}
           />
         ) : null}

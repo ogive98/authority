@@ -5,11 +5,13 @@ import { ModulesRegistryModule } from '../modules-registry/modules-registry.modu
 import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { SettingsModule } from '../settings/settings.module';
+import { DocumentsModule } from '../documents/documents.module';
 import { HrController } from './hr.controller';
 import { HrService } from './hr.service';
 import { CnssService } from './cnss.service';
 import { IrppService } from './irpp.service';
 import { BulletinService } from './bulletin.service';
+import { BulletinPdfService } from './bulletin-pdf.service';
 
 @Module({
   imports: [
@@ -19,9 +21,16 @@ import { BulletinService } from './bulletin.service';
     ModulesRegistryModule,
     AuditModule,
     SettingsModule,
+    DocumentsModule,
   ],
   controllers: [HrController],
-  providers: [HrService, CnssService, IrppService, BulletinService],
+  providers: [
+    HrService,
+    CnssService,
+    IrppService,
+    BulletinService,
+    BulletinPdfService,
+  ],
   exports: [HrService, CnssService, IrppService, BulletinService],
 })
 export class HrModule {}

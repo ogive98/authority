@@ -989,6 +989,8 @@ enum DocLinkType {
   CLAIM
   ORDER
   SHIPMENT
+  /** HR bulletin PDF (D202). */
+  HR_BULLETIN
 }
 
 model DocDocument {
@@ -2369,6 +2371,10 @@ model HrEmployee {
   hiredAt     DateTime?        @map("hired_at") @db.Date
   leftAt      DateTime?        @map("left_at") @db.Date
   notes       String?
+  /** Tax family status — null until human sets (D202 gate 5B). */
+  taxChefDeFamille Boolean?    @map("tax_chef_de_famille")
+  /** Dependent children count — null until human sets. */
+  taxEnfantCount   Int?        @map("tax_enfant_count")
   version     Int              @default(0)
   createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -2474,8 +2480,8 @@ model HrCnssSnapshot {
 }
 
 /**
- * Period IRPP snapshot (D196) — progressive annual brackets / 12.
- * Assiette = wageBase − CNSS salarié; never invents brackets.
+ * Period IRPP snapshot (D196/D202) — progressive annual brackets / 12.
+ * Assiette = wageBase − CNSS salarié − abattements annuels (Prefs VALIDATED); never invents.
  */
 model HrIrppSnapshot {
   id                 String    @id @default(uuid()) @db.Uuid
@@ -2487,9 +2493,20 @@ model HrIrppSnapshot {
   wageBase           Decimal   @map("wage_base") @db.Decimal(18, 3)
   cnssEmployeeAmount Decimal   @map("cnss_employee_amount") @db.Decimal(18, 3)
   taxableMonthly     Decimal   @map("taxable_monthly") @db.Decimal(18, 3)
+  /** Annual taxable before family abatements (D202). */
+  annualTaxableBeforeAbat Decimal @map("annual_taxable_before_abat") @db.Decimal(18, 3)
+  /** Annual taxable after abatements — input to progressive brackets. */
   annualTaxable      Decimal   @map("annual_taxable") @db.Decimal(18, 3)
   annualIrpp         Decimal   @map("annual_irpp") @db.Decimal(18, 3)
   monthlyIrpp        Decimal   @map("monthly_irpp") @db.Decimal(18, 3)
+  /** Frozen employee tax status at snapshot (D202). */
+  taxChefDeFamille   Boolean?  @map("tax_chef_de_famille")
+  taxEnfantCount     Int?      @map("tax_enfant_count")
+  abatChefAnnual     Decimal   @default(0) @map("abat_chef_annual") @db.Decimal(18, 3)
+  abatEnfantAnnual   Decimal   @default(0) @map("abat_enfant_annual") @db.Decimal(18, 3)
+  abatTotalAnnual    Decimal   @default(0) @map("abat_total_annual") @db.Decimal(18, 3)
+  abatChefLawRef     String?   @map("abat_chef_law_ref")
+  abatEnfantLawRef   String?   @map("abat_enfant_law_ref")
   /** Frozen annual brackets used at snapshot time. */
   bracketsJson       Json      @map("brackets_json")
   irppLawRef         String?   @map("irpp_law_ref")
@@ -2529,6 +2546,8 @@ model HrBulletin {
   netPay               Decimal   @map("net_pay") @db.Decimal(18, 3)
   cnssSnapshotId       String?   @map("cnss_snapshot_id") @db.Uuid
   irppSnapshotId       String?   @map("irpp_snapshot_id") @db.Uuid
+  /** Latest persisted PDF document (D202 Documents link HR_BULLETIN). */
+  pdfDocumentId        String?   @map("pdf_document_id") @db.Uuid
   currency             String    @default("TND")
   version              Int       @default(0)
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)

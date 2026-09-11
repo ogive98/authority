@@ -43,6 +43,7 @@ export type BulletinDto = {
   netPay: string;
   cnssSnapshotId: string | null;
   irppSnapshotId: string | null;
+  pdfDocumentId: string | null;
   currency: string;
   version: number;
   createdAt: string;
@@ -50,6 +51,13 @@ export type BulletinDto = {
   employeeName: string | null;
   matricule: string | null;
   contractNumber: string | null;
+  /** Frozen IRPP abatement lines (D202) when snapshot linked. */
+  annualTaxableBeforeAbat: string | null;
+  abatChefAnnual: string | null;
+  abatEnfantAnnual: string | null;
+  abatTotalAnnual: string | null;
+  taxChefDeFamille: boolean | null;
+  taxEnfantCount: number | null;
 };
 
 @Injectable()
@@ -201,7 +209,7 @@ export class BulletinService {
       orderBy: [{ periodYm: 'desc' }, { createdAt: 'desc' }],
       take: limit,
     });
-    return { items: rows.map(serializeBulletin) };
+    return { items: rows.map((r) => serializeBulletin(r)) };
   }
 
   async getById(companyId: string, id: string): Promise<BulletinDto> {
@@ -219,7 +227,12 @@ export class BulletinService {
         HttpStatus.NOT_FOUND,
       );
     }
-    return serializeBulletin(row);
+    const irpp = row.irppSnapshotId
+      ? await this.prisma.hrIrppSnapshot.findFirst({
+          where: { id: row.irppSnapshotId, companyId, deletedAt: null },
+        })
+      : null;
+    return serializeBulletin(row, irpp);
   }
 
   private async compose(
@@ -307,27 +320,38 @@ export class BulletinService {
   }
 }
 
-function serializeBulletin(row: {
-  id: string;
-  companyId: string;
-  periodYm: string;
-  employeeId: string;
-  contractId: string;
-  number: string;
-  wageBase: Prisma.Decimal;
-  cnssEmployeeAmount: Prisma.Decimal;
-  cnssEmployerAmount: Prisma.Decimal;
-  irppMonthly: Prisma.Decimal;
-  netPay: Prisma.Decimal;
-  cnssSnapshotId: string | null;
-  irppSnapshotId: string | null;
-  currency: string;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-  employee?: { displayName: string; matricule: string } | null;
-  contract?: { number: string } | null;
-}): BulletinDto {
+function serializeBulletin(
+  row: {
+    id: string;
+    companyId: string;
+    periodYm: string;
+    employeeId: string;
+    contractId: string;
+    number: string;
+    wageBase: Prisma.Decimal;
+    cnssEmployeeAmount: Prisma.Decimal;
+    cnssEmployerAmount: Prisma.Decimal;
+    irppMonthly: Prisma.Decimal;
+    netPay: Prisma.Decimal;
+    cnssSnapshotId: string | null;
+    irppSnapshotId: string | null;
+    pdfDocumentId: string | null;
+    currency: string;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+    employee?: { displayName: string; matricule: string } | null;
+    contract?: { number: string } | null;
+  },
+  irpp?: {
+    annualTaxableBeforeAbat: Prisma.Decimal;
+    abatChefAnnual: Prisma.Decimal;
+    abatEnfantAnnual: Prisma.Decimal;
+    abatTotalAnnual: Prisma.Decimal;
+    taxChefDeFamille: boolean | null;
+    taxEnfantCount: number | null;
+  } | null,
+): BulletinDto {
   return {
     id: row.id,
     companyId: row.companyId,
@@ -342,6 +366,7 @@ function serializeBulletin(row: {
     netPay: row.netPay.toFixed(3),
     cnssSnapshotId: row.cnssSnapshotId,
     irppSnapshotId: row.irppSnapshotId,
+    pdfDocumentId: row.pdfDocumentId,
     currency: row.currency,
     version: row.version,
     createdAt: row.createdAt.toISOString(),
@@ -349,5 +374,13 @@ function serializeBulletin(row: {
     employeeName: row.employee?.displayName ?? null,
     matricule: row.employee?.matricule ?? null,
     contractNumber: row.contract?.number ?? null,
+    annualTaxableBeforeAbat: irpp
+      ? irpp.annualTaxableBeforeAbat.toFixed(3)
+      : null,
+    abatChefAnnual: irpp ? irpp.abatChefAnnual.toFixed(3) : null,
+    abatEnfantAnnual: irpp ? irpp.abatEnfantAnnual.toFixed(3) : null,
+    abatTotalAnnual: irpp ? irpp.abatTotalAnnual.toFixed(3) : null,
+    taxChefDeFamille: irpp?.taxChefDeFamille ?? null,
+    taxEnfantCount: irpp?.taxEnfantCount ?? null,
   };
 }
