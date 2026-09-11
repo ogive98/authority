@@ -61,7 +61,7 @@ export class SettingsController {
     });
   }
 
-  /** D203 — Super Admin can write ROLE overrides. */
+  /** D204 — Admin société (settings.company.write) peut écrire ROLE overrides. */
   @Get('capabilities')
   @UseGuards(TenancyGuard)
   async capabilities(
@@ -73,7 +73,11 @@ export class SettingsController {
       PERMISSION_KEYS.settingsSelf,
       tenancy.companyId,
     );
-    const canWriteRole = await this.settingsService.isSuperAdminMember(user.id);
+    const canWriteRole = await this.permissionService.evaluate(
+      user.id,
+      PERMISSION_KEYS.settingsCompanyWrite,
+      { companyId: tenancy.companyId },
+    );
     return {
       canWriteRole,
       roles: ['admin', 'accountant', 'operator'],
@@ -167,16 +171,6 @@ export class SettingsController {
 
     await this.assertPermission(user.id, permissionKey, tenancy.companyId);
 
-    const actorIsSuperAdmin =
-      await this.settingsService.isSuperAdminMember(user.id);
-
-    if (level === 'ROLE' && !actorIsSuperAdmin) {
-      throw new ForbiddenException({
-        code: PERMISSION_ERROR_CODES.FORBIDDEN,
-        message: 'ROLE settings require Super Admin membership.',
-      });
-    }
-
     const roleCode = await this.settingsService.resolveRoleCode(
       user.id,
       tenancy.companyId,
@@ -197,7 +191,6 @@ export class SettingsController {
       level,
       roleCode: dto.roleCode,
       actorUserId: user.id,
-      actorIsSuperAdmin,
       ip: req.ip,
       userAgent: req.headers['user-agent'],
       correlationId: typeof correlation === 'string' ? correlation : undefined,

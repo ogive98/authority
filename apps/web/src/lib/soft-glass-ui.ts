@@ -46,7 +46,7 @@ export const softPanel = "a-underlay space-y-4 rounded-md p-4 md:p-5";
 
 /** KPI / nav tile — Soft Glass underlay (portal + shell). */
 export const softTile =
-  "a-underlay rounded-md px-4 py-3 transition-colors hover:bg-a-accent-muted/40";
+  "a-underlay rounded-md px-4 py-3 transition-colors hover:bg-a-surface-3/55";
 
 /** Secondary text button without border chrome. */
 export const softGhostBtn =

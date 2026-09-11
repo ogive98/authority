@@ -66,5 +66,6 @@ export const salesManifest: ModuleManifest = {
   consumedEvents: [],
   navigationEntries: [
     { id: 'orders', label: 'Commandes', href: '/sales' },
+    { id: 'sales-form', label: 'Prise de commande', href: '/sales' },
   ],
 };

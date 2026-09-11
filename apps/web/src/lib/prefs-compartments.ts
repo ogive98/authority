@@ -20,8 +20,6 @@ export type PrefsCompartmentDef = {
   subtitle: string;
   /** Requires settings.company.write */
   adminOnly?: boolean;
-  /** Super Admin membership required to write (Rôles). */
-  superAdminWrite?: boolean;
 };
 
 export const PREFS_COMPARTMENTS: readonly PrefsCompartmentDef[] = [
@@ -74,8 +72,7 @@ export const PREFS_COMPARTMENTS: readonly PrefsCompartmentDef[] = [
   {
     id: "roles",
     label: "Rôles",
-    subtitle: "Overrides ops / features par rôle (Super Admin)",
+    subtitle: "Overrides ops / features par rôle (Admin société)",
     adminOnly: true,
-    superAdminWrite: true,
   },
 ] as const;

@@ -73,5 +73,15 @@ export const accountingManifest: ModuleManifest = {
   ],
   navigationEntries: [
     { id: 'gl', label: 'Grand livre', href: '/accounting' },
+    { id: 'coa', label: 'Plan comptable', href: '/accounting' },
+    { id: 'entries', label: 'Écritures', href: '/accounting?tab=entries' },
+    { id: 'journals', label: 'Journaux', href: '/accounting?tab=entries' },
+    {
+      id: 'trial-balance',
+      label: 'Balance',
+      href: '/accounting?tab=trial',
+    },
+    { id: 'periods', label: 'Périodes', href: '/accounting?tab=periods' },
+    { id: 'mapping', label: 'Mapping GL', href: '/accounting?tab=mapping' },
   ],
 };

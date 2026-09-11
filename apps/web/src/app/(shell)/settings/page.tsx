@@ -11,9 +11,9 @@ import {
   AInput,
   AScreenHeader,
   ASkeleton,
-  ASwitch,
 } from "@/components/a";
 import { PrefsModesOpsPanel } from "@/components/settings/prefs-modes-ops-panel";
+import { PrefsToggleRow } from "@/components/settings/prefs-toggle-row";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import {
   fetchGlMapping,
@@ -232,9 +232,25 @@ export default function SettingsPage() {
   const [rolePatchIntensity, setRolePatchIntensity] = useState(
     OPS_VISIBILITY_DEFAULTS.patchAccountingIntensity,
   );
+  const [roleGhostAccountingPartial, setRoleGhostAccountingPartial] = useState(
+    OPS_VISIBILITY_DEFAULTS.ghostAccountingPartial,
+  );
   const [roleBusy, setRoleBusy] = useState(false);
   const [roleMsg, setRoleMsg] = useState<string | null>(null);
   const [roleError, setRoleError] = useState<string | null>(null);
+
+  const [salesReserve, setSalesReserve] = useState(true);
+  const [salesAutoConfirm, setSalesAutoConfirm] = useState(false);
+  const [salesRequireDate, setSalesRequireDate] = useState(false);
+  const [salesAllowManualPrice, setSalesAllowManualPrice] = useState(true);
+  const [salesDefaultCurrency, setSalesDefaultCurrency] = useState("TND");
+  const [invLotHour, setInvLotHour] = useState("0");
+  const [invLotTz, setInvLotTz] = useState("Africa/Tunis");
+  const [ventesBusy, setVentesBusy] = useState(false);
+  const [ventesMsg, setVentesMsg] = useState<string | null>(null);
+  const [ventesError, setVentesError] = useState<string | null>(null);
+
+  const [creditEnforce, setCreditEnforce] = useState(false);
 
   const density = usePrefsStore((s) => s.density);
   const setDensity = usePrefsStore((s) => s.setDensity);
@@ -542,6 +558,86 @@ export default function SettingsPage() {
     })();
   }, [compartment, canCompanyWrite]);
 
+  useEffect(() => {
+    if (compartment !== "ventes" || !canCompanyWrite) return;
+    void (async () => {
+      setVentesError(null);
+      const res = await fetchEffectiveSettings();
+      if (!res.ok) {
+        setVentesError(res.message);
+        return;
+      }
+      const bool = (key: string, fallback: boolean) => {
+        const row = res.data.settings.find((s) => s.key === key);
+        return typeof row?.value === "boolean" ? row.value : fallback;
+      };
+      const str = (key: string, fallback: string) => {
+        const row = res.data.settings.find((s) => s.key === key);
+        return typeof row?.value === "string" && row.value
+          ? row.value
+          : fallback;
+      };
+      const num = (key: string, fallback: string) => {
+        const row = res.data.settings.find((s) => s.key === key);
+        return typeof row?.value === "number" ? String(row.value) : fallback;
+      };
+      setSalesReserve(bool("sales.reserve_on_confirm", true));
+      setSalesAutoConfirm(bool("sales.auto_confirm_on_create", false));
+      setSalesRequireDate(bool("sales.require_requested_date", false));
+      setSalesAllowManualPrice(bool("sales.allow_manual_price", true));
+      setSalesDefaultCurrency(str("sales.default_currency", "TND"));
+      setInvLotHour(num("inventory.daily_lot_gen.hour_tunis", "0"));
+      setInvLotTz(str("inventory.daily_lot_gen.tz", "Africa/Tunis"));
+    })();
+  }, [compartment, canCompanyWrite]);
+
+  useEffect(() => {
+    if (compartment !== "finance" || !canCompanyWrite) return;
+    void (async () => {
+      const res = await fetchEffectiveSettings();
+      if (!res.ok) return;
+      const row = res.data.settings.find(
+        (s) => s.key === "finance.credit.enforce",
+      );
+      setCreditEnforce(typeof row?.value === "boolean" ? row.value : false);
+    })();
+  }, [compartment, canCompanyWrite]);
+
+  async function onSaveVentes() {
+    if (!canCompanyWrite || ventesBusy) return;
+    setVentesBusy(true);
+    setVentesMsg(null);
+    setVentesError(null);
+    const hour = Math.max(0, Math.min(23, Number(invLotHour) || 0));
+    const puts: Array<{ key: string; value: unknown }> = [
+      { key: "sales.reserve_on_confirm", value: salesReserve },
+      { key: "sales.auto_confirm_on_create", value: salesAutoConfirm },
+      { key: "sales.require_requested_date", value: salesRequireDate },
+      { key: "sales.allow_manual_price", value: salesAllowManualPrice },
+      {
+        key: "sales.default_currency",
+        value: salesDefaultCurrency.trim() || "TND",
+      },
+      { key: "inventory.daily_lot_gen.hour_tunis", value: hour },
+      {
+        key: "inventory.daily_lot_gen.tz",
+        value: invLotTz.trim() || "Africa/Tunis",
+      },
+    ];
+    for (const { key, value } of puts) {
+      const r = await putCompanySetting(key, value);
+      if (!r.ok) {
+        setVentesError(`${key}: ${r.message}`);
+        setVentesBusy(false);
+        return;
+      }
+    }
+    setVentesBusy(false);
+    setVentesMsg("Ventes & stock enregistrés.");
+    setSavedFlash(true);
+    window.setTimeout(() => setSavedFlash(false), 1600);
+  }
+
   async function onSaveEnvois() {
     if (!canCompanyWrite) return;
     setEnvoisBusy(true);
@@ -622,6 +718,20 @@ export default function SettingsPage() {
     setSavedFlash(true);
     window.setTimeout(() => setSavedFlash(false), 1600);
     void loadEnvois();
+  }
+
+  async function persistRoleSetting(key: string, value: unknown) {
+    if (!roleCaps?.canWriteRole || !selectedRole || roleBusy) return;
+    setRoleBusy(true);
+    setRoleMsg(null);
+    setRoleError(null);
+    const r = await putRoleSetting(key, value, selectedRole);
+    setRoleBusy(false);
+    if (!r.ok) {
+      setRoleError(r.message);
+      return;
+    }
+    setRoleMsg("Override rôle enregistré.");
   }
 
   async function onMailTest() {
@@ -912,11 +1022,11 @@ export default function SettingsPage() {
                   onClick={() => selectCompartment(c.id)}
                   className={`w-full rounded-md px-3 py-2 text-left transition-colors ${
                     active
-                      ? "bg-a-accent-muted text-a-fg"
+                      ? "bg-a-orange-soft text-a-fg"
                       : "text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
                   }`}
                 >
-                  <span className="block text-[length:var(--a-text-sm)] font-medium">
+                  <span className="block text-[length:var(--a-text-sm)] font-medium text-a-orange">
                     {c.label}
                   </span>
                   <span className="mt-0.5 block text-[length:var(--a-text-xs)] text-a-fg-subtle">
@@ -931,7 +1041,7 @@ export default function SettingsPage() {
             {compartment === "poste" ? (
               <section className={`${softPanel} max-w-xl`}>
                 <div>
-                  <p className="text-[length:var(--a-text-sm)] font-medium">
+                  <p className="text-[length:var(--a-text-sm)] font-medium text-a-orange">
                     Thème
                   </p>
                   <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -940,7 +1050,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium text-a-orange">
                     Densité
                   </p>
                   <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -978,7 +1088,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium text-a-orange">
                     Surface Soft Glass
                   </p>
                   <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -1006,78 +1116,58 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium text-a-orange">
                     Sidebar — auto-réduction
                   </p>
                   <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
                     Réduit le menu latéral après N secondes sans survol. 0 =
                     désactivé (bouton panneau uniquement). Défaut : 10 s.
                   </p>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <ASwitch
-                      label="Auto-réduction"
-                      checked={sidebarAutoCollapseSec > 0}
-                      onCheckedChange={(on) =>
-                        setSidebarAutoCollapseSec(on ? 10 : 0)
-                      }
-                    />
-                    {sidebarAutoCollapseSec > 0 ? (
-                      <label className="flex items-center gap-2 text-[length:var(--a-text-sm)] text-a-fg-muted">
-                        <span>Délai</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={120}
-                          value={sidebarAutoCollapseSec}
-                          onChange={(e) =>
-                            setSidebarAutoCollapseSec(
-                              Number.parseInt(e.target.value || "10", 10),
-                            )
-                          }
-                          className="a-mono w-16 rounded-lg bg-a-surface-3 px-2 py-1.5 text-[13px] text-a-fg outline-none focus:ring-2 focus:ring-a-accent/30"
-                        />
-                        <span>s</span>
-                      </label>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[length:var(--a-text-sm)] font-medium">
-                      Alertes jobs
-                    </p>
-                    <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                      Afficher shed P4 / files Thunder dans le centre d’activité.
-                    </p>
-                  </div>
-                  <ASwitch
-                    label="Alertes jobs"
-                    checked={jobAlerts}
-                    onCheckedChange={setJobAlerts}
+                  <PrefsToggleRow
+                    title="Auto-réduction"
+                    description="Active le repli automatique de la sidebar."
+                    checked={sidebarAutoCollapseSec > 0}
+                    onCheckedChange={(on) =>
+                      setSidebarAutoCollapseSec(on ? 10 : 0)
+                    }
                   />
+                  {sidebarAutoCollapseSec > 0 ? (
+                    <label className="mt-2 flex items-center gap-2 text-[length:var(--a-text-sm)] text-a-fg-muted">
+                      <span>Délai</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={120}
+                        value={sidebarAutoCollapseSec}
+                        onChange={(e) =>
+                          setSidebarAutoCollapseSec(
+                            Number.parseInt(e.target.value || "10", 10),
+                          )
+                        }
+                        className="a-mono w-16 rounded-lg bg-a-surface-3 px-2 py-1.5 text-[13px] text-a-fg outline-none focus:ring-2 focus:ring-a-accent/30"
+                      />
+                      <span>s</span>
+                    </label>
+                  ) : null}
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[length:var(--a-text-sm)] font-medium">
-                      Bannière SSE
-                    </p>
-                    <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                      Afficher « flux temps réel coupé » quand le stream est
-                      coupé.
-                    </p>
-                  </div>
-                  <ASwitch
-                    label="Bannière SSE"
-                    checked={showSseBanner}
-                    onCheckedChange={onSseBannerChange}
-                  />
-                </div>
+                <PrefsToggleRow
+                  title="Alertes jobs"
+                  description="Afficher shed P4 / files Thunder dans le centre d’activité."
+                  checked={jobAlerts}
+                  onCheckedChange={setJobAlerts}
+                />
+                <PrefsToggleRow
+                  title="Bannière SSE"
+                  description="Afficher « flux temps réel coupé » quand le stream est coupé."
+                  checked={showSseBanner}
+                  onCheckedChange={onSseBannerChange}
+                />
               </section>
             ) : null}
 
             {compartment === "societe" ? (
               <section className={`${softPanel} max-w-xl`}>
-                <h2 className="text-[length:var(--a-text-md)] font-medium">
+                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
                   Contexte
                 </h2>
                 <dl className="grid grid-cols-[8rem_1fr] gap-y-3 text-[length:var(--a-text-sm)]">
@@ -1110,31 +1200,46 @@ export default function SettingsPage() {
             {compartment === "finance" && canCompanyWrite ? (
               <section className={`${softPanel} max-w-xl space-y-6`}>
                 <div>
-                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
-                    Recouvrement — jalons J+n (D182)
-                  </p>
+                  <h2 className="mb-2 text-[length:var(--a-text-md)] font-medium text-a-orange">
+                    Recouvrement — jalons J+n
+                  </h2>
                   <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
                     Jours après échéance pour signal FIN-INTEL (ex. 1,7,15,30).
-                    Vide = tout retard. Pas de taux fiscaux.
+                    Vide = tout retard. Pas de taux fiscaux. Relances SMTP/WA =
+                    compartiment Envois.
                   </p>
                   <CollectionRemindDaysEditor canWrite={canCompanyWrite} />
                 </div>
                 <div>
-                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
-                    Crédit — seuil pression (D185)
-                  </p>
+                  <h2 className="mb-2 text-[length:var(--a-text-md)] font-medium text-a-orange">
+                    Crédit — seuil pression
+                  </h2>
                   <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
                     Ratio encours / plafond pour signal Thunder (défaut 0,80).
                     Dépassement = 100 %. Pas un barème fiscal.
                   </p>
                   <CreditWarnRatioEditor canWrite={canCompanyWrite} />
                 </div>
+                <div>
+                  <h2 className="mb-1 text-[length:var(--a-text-md)] font-medium text-a-orange">
+                    Crédit — blocage commandes
+                  </h2>
+                  <PrefsToggleRow
+                    title="Appliquer la limite de crédit"
+                    description="Si actif, refuse la confirmation de commande quand encours + commande dépasse le plafond client (finance.credit.enforce)."
+                    checked={creditEnforce}
+                    onCheckedChange={(on) => {
+                      setCreditEnforce(on);
+                      void putCompanySetting("finance.credit.enforce", on);
+                    }}
+                  />
+                </div>
               </section>
             ) : null}
 
             {compartment === "comptabilite" && canCompanyWrite ? (
               <section className={`${softPanel} max-w-xl`}>
-                <h2 className="text-[length:var(--a-text-md)] font-medium">
+                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
                   Mapping Finance→GL
                 </h2>
                 <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -1209,33 +1314,126 @@ export default function SettingsPage() {
             ) : null}
 
             {compartment === "ventes" && canCompanyWrite ? (
-              <section className={`${softPanel} max-w-xl`}>
-                <h2 className="text-[length:var(--a-text-md)] font-medium">
-                  Ventes & stock
-                </h2>
-                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                  Les préférences modules ventes / inventaire s’ouvrent au
-                  prochain lot Soft Glass. Aucun taux ni barème inventé ici.
-                </p>
+              <section className={`${softPanel} max-w-xl space-y-6`}>
+                <div>
+                  <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+                    Ventes
+                  </h2>
+                  <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Paramètres opérationnels déjà consommés par le module
+                    Ventes. Aucun taux fiscal inventé ici.
+                  </p>
+                  <PrefsToggleRow
+                    title="Réserver le stock à la confirmation"
+                    description="À la confirmation commande, réserve automatiquement le stock (sales.reserve_on_confirm)."
+                    checked={salesReserve}
+                    onCheckedChange={setSalesReserve}
+                  />
+                  <PrefsToggleRow
+                    title="Auto-confirmer à la création"
+                    description="Après création d’un brouillon, enchaîne confirm+réserve (sales.auto_confirm_on_create)."
+                    checked={salesAutoConfirm}
+                    onCheckedChange={setSalesAutoConfirm}
+                  />
+                  <PrefsToggleRow
+                    title="Date de livraison demandée obligatoire"
+                    description="Refuse la prise de commande sans date demandée (sales.require_requested_date)."
+                    checked={salesRequireDate}
+                    onCheckedChange={setSalesRequireDate}
+                  />
+                  <PrefsToggleRow
+                    title="Prix unitaire manuel autorisé"
+                    description="Autorise la saisie manuelle du prix ligne (V0 sans moteur tarifaire)."
+                    checked={salesAllowManualPrice}
+                    onCheckedChange={setSalesAllowManualPrice}
+                  />
+                  <label className="mt-3 block space-y-1">
+                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Devise par défaut{" "}
+                      <span className="a-mono">sales.default_currency</span>
+                    </span>
+                    <AInput
+                      value={salesDefaultCurrency}
+                      onChange={(e) => setSalesDefaultCurrency(e.target.value)}
+                      className="a-mono max-w-[8rem]"
+                      placeholder="TND"
+                    />
+                  </label>
+                </div>
+                <div>
+                  <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+                    Stock — lots journaliers
+                  </h2>
+                  <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Heure de génération des lots fromage (scheduler D100). Fuseau
+                    = Africa/Tunis par défaut.
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label className="block space-y-1">
+                      <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                        Heure (0–23)
+                      </span>
+                      <AInput
+                        type="number"
+                        min={0}
+                        max={23}
+                        value={invLotHour}
+                        onChange={(e) => setInvLotHour(e.target.value)}
+                        className="a-mono"
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                        Fuseau
+                      </span>
+                      <AInput
+                        value={invLotTz}
+                        onChange={(e) => setInvLotTz(e.target.value)}
+                        className="a-mono"
+                      />
+                    </label>
+                  </div>
+                </div>
                 <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                  Clés connues aujourd’hui : aucune{" "}
-                  <span className="a-mono">sales.*</span> /{" "}
-                  <span className="a-mono">inventory.*</span> enregistrée dans le
-                  catalogue Préférences. Mapping GL ventes = compartiment
-                  Comptabilité (
+                  Mapping GL ventes = compartiment Comptabilité (
                   <span className="a-mono">accounting.gl.sales_journal</span>
                   ).
                 </p>
+                {ventesError ? (
+                  <AErrorState message={ventesError} />
+                ) : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  <AButton
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    disabled={ventesBusy}
+                    onClick={() => void onSaveVentes()}
+                  >
+                    {ventesBusy
+                      ? "…"
+                      : savedFlash
+                        ? "Enregistré"
+                        : "Enregistrer"}
+                  </AButton>
+                  {ventesMsg ? (
+                    <p className="text-[length:var(--a-text-xs)] text-a-success">
+                      {ventesMsg}
+                    </p>
+                  ) : null}
+                </div>
               </section>
             ) : null}
 
             {compartment === "roles" && canCompanyWrite ? (
               <section className={`${softPanel} max-w-xl`}>
-                <h2 className="text-[length:var(--a-text-md)] font-medium">
+                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
                   Overrides par rôle
                 </h2>
                 <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Visible Admin — écriture Super Admin uniquement (D203).
+                  Admin société peut écrire (settings.company.write). Priorité
+                  effective : USER &gt; ROLE &gt; COMPANY. Ne remplace jamais une
+                  permission IAM.
                 </p>
                 {roleCapsError ? (
                   <AErrorState message={roleCapsError} />
@@ -1244,10 +1442,10 @@ export default function SettingsPage() {
                   <ASkeleton className="h-24 w-full" />
                 ) : !roleCaps.canWriteRole ? (
                   <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                    Écriture réservée Super Admin uniquement.
+                    Écriture réservée aux Admins (permission société).
                   </p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     <label className="block space-y-1">
                       <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Rôle
@@ -1264,9 +1462,11 @@ export default function SettingsPage() {
                         ))}
                       </select>
                     </label>
-                    <ASwitch
-                      label="GHOST masque livraison (BL)"
+                    <PrefsToggleRow
+                      title="GHOST — masquer livraison (BL)"
+                      description="Override rôle pour ops.ghost.hide_delivery."
                       checked={roleGhostHideDelivery}
+                      disabled={!selectedRole || roleBusy}
                       onCheckedChange={(on) => {
                         setRoleGhostHideDelivery(on);
                         void persistRoleSetting(
@@ -1275,9 +1475,11 @@ export default function SettingsPage() {
                         );
                       }}
                     />
-                    <ASwitch
-                      label="PATCH masque livraison (BL)"
+                    <PrefsToggleRow
+                      title="PATCH — masquer livraison (BL)"
+                      description="Override rôle pour ops.patch.hide_delivery."
                       checked={rolePatchHideDelivery}
+                      disabled={!selectedRole || roleBusy}
                       onCheckedChange={(on) => {
                         setRolePatchHideDelivery(on);
                         void persistRoleSetting(
@@ -1286,7 +1488,20 @@ export default function SettingsPage() {
                         );
                       }}
                     />
-                    <label className="block space-y-2">
+                    <PrefsToggleRow
+                      title="GHOST — compta partielle"
+                      description="Override rôle : plan comptable seul (écritures / balance masqués)."
+                      checked={roleGhostAccountingPartial}
+                      disabled={!selectedRole || roleBusy}
+                      onCheckedChange={(on) => {
+                        setRoleGhostAccountingPartial(on);
+                        void persistRoleSetting(
+                          OPS_VISIBILITY_KEYS.ghostAccountingPartial,
+                          on,
+                        );
+                      }}
+                    />
+                    <label className="block space-y-2 pt-2">
                       <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Intensité PATCH comptable —{" "}
                         <span className="a-mono">{rolePatchIntensity}%</span>
@@ -1704,7 +1919,7 @@ export default function SettingsPage() {
                 ) : null}
 
                 <div className="space-y-4 a-underlay rounded-md p-4">
-                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-orange">
                     Salubrité
                   </h2>
                   <div className="space-y-1">
@@ -1740,7 +1955,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-4 a-underlay rounded-md p-4">
-                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-orange">
                     Invitations
                   </h2>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -1777,21 +1992,12 @@ export default function SettingsPage() {
                       />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[length:var(--a-text-sm)] text-a-fg">
-                        Envoi SMTP automatique
-                      </p>
-                      <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                        Si SMTP configuré — sinon Copier / Outlook.
-                      </p>
-                    </div>
-                    <ASwitch
-                      checked={inviteAutoSend}
-                      onCheckedChange={setInviteAutoSend}
-                      label="Envoi SMTP automatique"
-                    />
-                  </div>
+                  <PrefsToggleRow
+                    title="Envoi SMTP automatique"
+                    description="Si SMTP configuré — sinon Copier / Outlook."
+                    checked={inviteAutoSend}
+                    onCheckedChange={setInviteAutoSend}
+                  />
                   <div className="space-y-1">
                     <label
                       htmlFor="invite-web-origin"
@@ -1853,7 +2059,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-4 a-underlay rounded-md p-4">
-                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-orange">
                     SMTP société
                   </h2>
                   <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
@@ -1891,18 +2097,12 @@ export default function SettingsPage() {
                         className="a-mono"
                       />
                     </div>
-                    <div className="flex items-end justify-between gap-3 pb-1">
-                      <div>
-                        <p className="text-[length:var(--a-text-sm)] text-a-fg">
-                          Secure (465)
-                        </p>
-                      </div>
-                      <ASwitch
-                        checked={smtpSecure}
-                        onCheckedChange={setSmtpSecure}
-                        label="SMTP secure"
-                      />
-                    </div>
+                    <PrefsToggleRow
+                      title="Secure (port 465)"
+                      description="Active TLS implicite SMTP (identity.smtp.secure)."
+                      checked={smtpSecure}
+                      onCheckedChange={setSmtpSecure}
+                    />
                     <div className="space-y-1">
                       <label
                         htmlFor="smtp-user"
@@ -1960,7 +2160,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-4 a-underlay rounded-md p-4">
-                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-orange">
                     Relances finance (SMTP dédié + WA Cloud)
                   </h2>
                   <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
@@ -1998,16 +2198,12 @@ export default function SettingsPage() {
                         className="a-mono"
                       />
                     </div>
-                    <div className="flex items-end justify-between gap-3 pb-1">
-                      <p className="text-[length:var(--a-text-sm)] text-a-fg">
-                        Secure (465)
-                      </p>
-                      <ASwitch
-                        checked={dunSmtpSecure}
-                        onCheckedChange={setDunSmtpSecure}
-                        label="Dunning SMTP secure"
-                      />
-                    </div>
+                    <PrefsToggleRow
+                      title="Secure (port 465)"
+                      description="TLS implicite pour le SMTP de relances finance."
+                      checked={dunSmtpSecure}
+                      onCheckedChange={setDunSmtpSecure}
+                    />
                     <div className="space-y-1">
                       <label
                         htmlFor="dun-smtp-user"

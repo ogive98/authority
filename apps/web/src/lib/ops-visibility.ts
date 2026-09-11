@@ -14,17 +14,20 @@ export const PATCH_DISPLAY_RULE_OPTIONS: {
   {
     id: "random",
     label: "Aléatoire",
-    hint: "Échantillon pseudo-aléatoire des mouvements",
+    hint:
+      "Parmi les écritures du journal, en tire un sous-ensemble pseudo-aléatoire jusqu’à atteindre le % d’intensité. Utile pour une démo « bruyante » sans tri métier.",
   },
   {
     id: "large_moves",
     label: "Gros mouvements",
-    hint: "Priorise les montants les plus élevés",
+    hint:
+      "Trie par montant décroissant puis garde le top % — les petites écritures disparaissent en premier. Utile pour montrer les gros flux clients / banque.",
   },
   {
     id: "by_date",
     label: "Par date",
-    hint: "Priorise les écritures les plus récentes",
+    hint:
+      "Priorise les écritures les plus récentes (défaut). Les anciennes sortent de l’échantillon en premier quand l’intensité baisse.",
   },
 ];
 

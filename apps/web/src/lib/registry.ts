@@ -51,7 +51,7 @@ export const FALLBACK_REGISTRY: MeRegistry = {
           href: "/inventory/certificat-salubrite",
         },
         { id: "lots", label: "Lots", href: "/inventory/lots" },
-        { id: "inventory", label: "Inventaire", href: "/inventory" },
+        { id: "stock", label: "Inventaire", href: "/inventory" },
       ],
     },
     {
@@ -92,6 +92,43 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       name: "Comptabilité",
       features: [
         { id: "gl", label: "Grand livre", href: "/accounting" },
+        { id: "coa", label: "Plan comptable", href: "/accounting" },
+        {
+          id: "entries",
+          label: "Écritures",
+          href: "/accounting?tab=entries",
+        },
+        {
+          id: "journals",
+          label: "Journaux",
+          href: "/accounting?tab=entries",
+        },
+        {
+          id: "trial-balance",
+          label: "Balance",
+          href: "/accounting?tab=trial",
+        },
+        {
+          id: "periods",
+          label: "Périodes",
+          href: "/accounting?tab=periods",
+        },
+        {
+          id: "mapping",
+          label: "Mapping GL",
+          href: "/accounting?tab=mapping",
+        },
+      ],
+    },
+    {
+      key: "production",
+      name: "Production",
+      features: [
+        {
+          id: "of",
+          label: "Ordres de fabrication",
+          href: "/production",
+        },
       ],
     },
     {

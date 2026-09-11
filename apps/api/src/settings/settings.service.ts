@@ -405,20 +405,11 @@ export class SettingsService {
     level: 'USER' | 'COMPANY' | 'ROLE';
     roleCode?: string;
     actorUserId: string;
-    /** Super Admin membership required for ROLE writes (D203 lock 8B). */
-    actorIsSuperAdmin: boolean;
     correlationId?: string;
     ip?: string;
     userAgent?: string;
   }): Promise<EffectiveSetting> {
     if (params.level === 'ROLE') {
-      if (!params.actorIsSuperAdmin) {
-        throw new SettingsException(
-          SETTINGS_ERROR_CODES.FORBIDDEN_LEVEL,
-          'ROLE settings can only be written by Super Admin.',
-          HttpStatus.FORBIDDEN,
-        );
-      }
       const roleCode = params.roleCode?.trim();
       if (!roleCode) {
         throw new SettingsException(
@@ -588,7 +579,7 @@ export class SettingsService {
     return assignment?.roleCode ?? undefined;
   }
 
-  /** D203 lock 8B — ROLE prefs write gated on Super Admin membership. */
+  /** Super Admin membership (platform console) — not required for ROLE prefs (D204). */
   async isSuperAdminMember(userId: string): Promise<boolean> {
     const row = await this.prisma.iamSuperAdminMembership.findUnique({
       where: { userId },

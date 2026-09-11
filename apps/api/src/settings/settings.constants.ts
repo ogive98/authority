@@ -45,6 +45,7 @@ export const COMPANY_ONLY_SETTING_KEYS = [
   'ops.ghost.hidden_features',
   'finance.collection.remind_days',
   'finance.credit.warn_ratio',
+  'finance.credit.enforce',
   'finance.dunning.smtp.host',
   'finance.dunning.smtp.port',
   'finance.dunning.smtp.secure',
@@ -64,6 +65,13 @@ export const COMPANY_ONLY_SETTING_KEYS = [
   'accounting.gl.bank_fee',
   'accounting.gl.sales_journal',
   'accounting.gl.bank_journal',
+  'sales.reserve_on_confirm',
+  'sales.auto_confirm_on_create',
+  'sales.require_requested_date',
+  'sales.allow_manual_price',
+  'sales.default_currency',
+  'inventory.daily_lot_gen.hour_tunis',
+  'inventory.daily_lot_gen.tz',
 ] as const;
 
 export function isCompanyOnlySettingKey(key: string): boolean {
