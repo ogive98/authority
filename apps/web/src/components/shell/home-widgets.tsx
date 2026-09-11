@@ -25,6 +25,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useHomeKpis } from "@/hooks/use-home-kpis";
 import { useShellT } from "@/stores/locale-store";
+import { fetchBankTreasury, type BankTreasury } from "@/lib/finance";
 
 function greetingForHour(
   h: number,
@@ -293,6 +294,88 @@ export function AiPanelWidget() {
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+/** Bank treasury — counts always; GL balance only if Prefs accounting.gl.bank set (D197). */
+export function TreasuryWidget() {
+  const { t } = useShellT();
+  const [data, setData] = useState<BankTreasury | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const res = await fetchBankTreasury();
+      if (cancelled) return;
+      if (!res.ok) {
+        setError(res.message);
+        setData(null);
+      } else {
+        setData(res.data);
+        setError(null);
+      }
+      setPending(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (pending) return <ASkeleton lines={4} />;
+  if (error || !data) {
+    return (
+      <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+        {error ?? t("kpiUnavailable")}
+      </p>
+    );
+  }
+
+  const cells: Array<{ label: string; value: string }> = [
+    { label: t("treasuryAccounts"), value: String(data.accountCount) },
+    { label: t("treasuryUnmatched"), value: String(data.unmatchedCount) },
+    { label: t("treasuryMatched"), value: String(data.matchedCount) },
+    { label: t("treasuryIgnored"), value: String(data.ignoredCount) },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <dl className="grid grid-cols-2 gap-3">
+        {cells.map((c) => (
+          <div key={c.label}>
+            <dt className="text-[10px] font-semibold uppercase tracking-wider text-a-fg-subtle">
+              {c.label}
+            </dt>
+            <dd className="a-mono mt-0.5 text-[length:var(--a-text-lg)] tabular-nums text-a-fg">
+              {c.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {data.balancesVisible && data.glBankBalance != null ? (
+        <p className="text-[length:var(--a-text-sm)] text-a-fg">
+          {t("treasuryGlBalance")}
+          {data.glBankCode ? (
+            <span className="a-mono text-a-fg-muted"> · {data.glBankCode}</span>
+          ) : null}
+          <span className="a-mono ml-2 tabular-nums font-medium">
+            {data.glBankBalance} {data.currency}
+          </span>
+        </p>
+      ) : (
+        <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+          {t("treasuryGlHidden")}
+          {data.balanceHideReason ? ` — ${data.balanceHideReason}` : null}
+        </p>
+      )}
+      <Link
+        href="/finance/banking"
+        className="inline-flex text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
+      >
+        {t("treasuryOpenBanking")}
+      </Link>
     </div>
   );
 }

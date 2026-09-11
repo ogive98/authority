@@ -451,6 +451,12 @@ export default function FinanceBankingPage() {
             />
             <Kpi label="Rapprochées" value={String(treasury.matchedCount)} />
             <Kpi label="Ignorées" value={String(treasury.ignoredCount)} />
+            {treasury.balancesVisible && treasury.glBankBalance != null ? (
+              <Kpi
+                label={`Solde GL${treasury.glBankCode ? ` ${treasury.glBankCode}` : ""}`}
+                value={`${treasury.glBankBalance} ${treasury.currency}`}
+              />
+            ) : null}
           </div>
         ) : null}
 

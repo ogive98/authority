@@ -95,4 +95,27 @@ export class AccountingGlMappingResolver {
       bankJournal: read(ACCOUNTING_SETTING_KEYS.BANK_JOURNAL),
     };
   }
+
+  /**
+   * Human company Prefs override for `accounting.gl.bank` (D197).
+   * Seed/default alone is NOT enough to reveal treasury balances.
+   */
+  async companyBankGlOverride(
+    companyId: string,
+  ): Promise<{ configured: boolean; code: string | null }> {
+    await this.ensureDefinitions();
+    const scopeKey = buildScopeKey(SetLevel.COMPANY, { companyId });
+    const row = await this.prisma.setValue.findFirst({
+      where: {
+        defKey: ACCOUNTING_SETTING_KEYS.BANK,
+        scopeKey,
+        deletedAt: null,
+      },
+    });
+    if (!row) return { configured: false, code: null };
+    const code =
+      typeof row.valueJson === 'string' ? row.valueJson.trim() : '';
+    if (!code) return { configured: false, code: null };
+    return { configured: true, code };
+  }
 }

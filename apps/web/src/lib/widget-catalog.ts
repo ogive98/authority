@@ -124,6 +124,15 @@ export const HOME_WIDGETS: WidgetDef[] = [
     contexts: ["home"],
     size: "sm",
   },
+  {
+    id: "treasury",
+    title: "Trésorerie bancaire",
+    description:
+      "Comptes / rapprochement + solde GL si accounting.gl.bank Prefs (D197)",
+    loadStrategy: "immediate",
+    contexts: ["home", "module:finance"],
+    size: "md",
+  },
 ];
 
 export function widgetsForContext(

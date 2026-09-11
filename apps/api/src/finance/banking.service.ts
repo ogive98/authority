@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  AccEntryStatus,
   FinBankLineStatus,
   FinInstrumentStatus,
   FinPaymentStatus,
@@ -70,6 +71,12 @@ export type BankTreasuryDto = {
   unmatchedCount: number;
   matchedCount: number;
   ignoredCount: number;
+  /** True only when company Prefs set accounting.gl.bank (D197 2B). */
+  balancesVisible: boolean;
+  glBankCode: string | null;
+  /** Posted GL debit−credit for mapped bank account — null when hidden. */
+  glBankBalance: string | null;
+  balanceHideReason: string | null;
   accounts: {
     id: string;
     code: string;
@@ -164,7 +171,7 @@ export class BankingService {
     };
   }
 
-  /** Soft treasury strip — line status counts only, no invented balances (D191). */
+  /** Soft treasury strip — line status counts; GL balance only if Prefs bank mapping set (D191/D197). */
   async treasury(companyId: string): Promise<BankTreasuryDto> {
     const accounts = await this.listAccounts(companyId);
     let unmatchedCount = 0;
@@ -175,6 +182,52 @@ export class BankingService {
       matchedCount += a.matchedCount;
       ignoredCount += a.ignoredCount;
     }
+
+    const bankOverride =
+      await this.glMapping.companyBankGlOverride(companyId);
+    let balancesVisible = false;
+    let glBankCode: string | null = null;
+    let glBankBalance: string | null = null;
+    let balanceHideReason: string | null =
+      'Set accounting.gl.bank in Préférences Comptabilité to reveal GL balance.';
+
+    if (bankOverride.configured && bankOverride.code) {
+      glBankCode = bankOverride.code;
+      const acc = await this.prisma.accAccount.findFirst({
+        where: {
+          companyId,
+          code: bankOverride.code,
+          deletedAt: null,
+        },
+      });
+      if (!acc) {
+        balanceHideReason = `GL account ${bankOverride.code} not found in CoA.`;
+      } else {
+        const lines = await this.prisma.accJournalLine.findMany({
+          where: {
+            companyId,
+            accountId: acc.id,
+            entry: {
+              companyId,
+              deletedAt: null,
+              status: AccEntryStatus.POSTED,
+            },
+          },
+          select: { debit: true, credit: true },
+        });
+        let debit = 0;
+        let credit = 0;
+        for (const line of lines) {
+          debit += Number(line.debit);
+          credit += Number(line.credit);
+        }
+        const bal = Math.round((debit - credit) * 1000) / 1000;
+        balancesVisible = true;
+        glBankBalance = bal.toFixed(3);
+        balanceHideReason = null;
+      }
+    }
+
     return {
       currency: 'TND',
       accountCount: accounts.items.length,
@@ -182,6 +235,10 @@ export class BankingService {
       unmatchedCount,
       matchedCount,
       ignoredCount,
+      balancesVisible,
+      glBankCode,
+      glBankBalance,
+      balanceHideReason,
       accounts: accounts.items.map((a) => ({
         id: a.id,
         code: a.code,

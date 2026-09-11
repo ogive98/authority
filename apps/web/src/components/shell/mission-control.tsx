@@ -14,6 +14,7 @@ import {
   ModuleShortcutsWidget,
   ShellStatusWidget,
   TasksWidget,
+  TreasuryWidget,
 } from "./home-widgets";
 import { ModuleFeatureList } from "./module-feature-list";
 
@@ -48,7 +49,7 @@ function WidgetChrome({
 }
 
 /**
- * Mission Control (D168) — KPIs scoped to selected module + i18n chrome.
+ * Mission Control (D168/D197) — KPIs scoped to selected module + i18n chrome.
  */
 export function MissionControl({ className }: { className?: string }) {
   const { t } = useShellT();
@@ -58,6 +59,8 @@ export function MissionControl({ className }: { className?: string }) {
   const mod =
     registry.modules.find((m) => m.key === selectedModuleId) ??
     registry.modules[0];
+  const financeOn = registry.modules.some((m) => m.key === "finance");
+  const showTreasury = financeOn && selectedModuleId === "finance";
 
   return (
     <div
@@ -84,6 +87,12 @@ export function MissionControl({ className }: { className?: string }) {
 
       <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
         <div className="flex flex-col gap-4 lg:col-span-7 lg:gap-5">
+          {showTreasury ? (
+            <WidgetChrome title={t("widgetTreasury")}>
+              <TreasuryWidget />
+            </WidgetChrome>
+          ) : null}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <WidgetChrome title={t("widgetShellStatus")}>
               <ShellStatusWidget />

@@ -952,6 +952,10 @@ export type BankTreasury = {
   unmatchedCount: number;
   matchedCount: number;
   ignoredCount: number;
+  balancesVisible: boolean;
+  glBankCode: string | null;
+  glBankBalance: string | null;
+  balanceHideReason: string | null;
   accounts: {
     id: string;
     code: string;
