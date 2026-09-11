@@ -47,6 +47,9 @@ export type BulletinDto = {
   version: number;
   createdAt: string;
   updatedAt: string;
+  employeeName: string | null;
+  matricule: string | null;
+  contractNumber: string | null;
 };
 
 @Injectable()
@@ -144,6 +147,10 @@ export class BulletinService {
           cnssSnapshotId: composed.cnssSnapshotId,
           irppSnapshotId: composed.irppSnapshotId,
         },
+        include: {
+          employee: { select: { displayName: true, matricule: true } },
+          contract: { select: { number: true } },
+        },
       });
       await this.outbox.enqueue(tx, {
         companyId,
@@ -187,10 +194,32 @@ export class BulletinService {
         ...(periodYm ? { periodYm } : {}),
         ...(opts?.employeeId ? { employeeId: opts.employeeId } : {}),
       },
+      include: {
+        employee: { select: { displayName: true, matricule: true } },
+        contract: { select: { number: true } },
+      },
       orderBy: [{ periodYm: 'desc' }, { createdAt: 'desc' }],
       take: limit,
     });
     return { items: rows.map(serializeBulletin) };
+  }
+
+  async getById(companyId: string, id: string): Promise<BulletinDto> {
+    const row = await this.prisma.hrBulletin.findFirst({
+      where: { id, companyId, deletedAt: null },
+      include: {
+        employee: { select: { displayName: true, matricule: true } },
+        contract: { select: { number: true } },
+      },
+    });
+    if (!row) {
+      throw new HrException(
+        HR_ERROR_CODES.BULLETIN_NOT_FOUND,
+        'Bulletin not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return serializeBulletin(row);
   }
 
   private async compose(
@@ -296,6 +325,8 @@ function serializeBulletin(row: {
   version: number;
   createdAt: Date;
   updatedAt: Date;
+  employee?: { displayName: string; matricule: string } | null;
+  contract?: { number: string } | null;
 }): BulletinDto {
   return {
     id: row.id,
@@ -315,5 +346,8 @@ function serializeBulletin(row: {
     version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    employeeName: row.employee?.displayName ?? null,
+    matricule: row.employee?.matricule ?? null,
+    contractNumber: row.contract?.number ?? null,
   };
 }

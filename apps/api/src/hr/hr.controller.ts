@@ -201,6 +201,15 @@ export class HrController {
     return this.bulletin.create(tenancy.companyId, dto);
   }
 
+  @Get('bulletins/:id')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  getBulletin(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.bulletin.getById(tenancy.companyId, id);
+  }
+
   @Get('employees')
   @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
   async listEmployees(

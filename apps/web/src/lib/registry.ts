@@ -82,7 +82,10 @@ export const FALLBACK_REGISTRY: MeRegistry = {
     {
       key: "hr",
       name: "Ressources humaines",
-      features: [{ id: "hr-employees", label: "Employés", href: "/hr" }],
+      features: [
+        { id: "hr-employees", label: "Employés", href: "/hr" },
+        { id: "hr-bulletins", label: "Bulletins", href: "/hr#bulletins" },
+      ],
     },
     {
       key: "accounting",

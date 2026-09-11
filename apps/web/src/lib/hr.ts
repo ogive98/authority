@@ -316,8 +316,18 @@ export type Bulletin = {
   id: string;
   number: string;
   periodYm: string;
-  netPay: string;
+  employeeId: string;
+  contractId: string;
   wageBase: string;
+  cnssEmployeeAmount: string;
+  cnssEmployerAmount: string;
+  irppMonthly: string;
+  netPay: string;
+  currency: string;
+  employeeName: string | null;
+  matricule: string | null;
+  contractNumber: string | null;
+  createdAt: string;
 };
 
 export async function fetchBulletinPreview(
@@ -333,6 +343,36 @@ export async function fetchBulletinPreview(
     return { ok: false, status: res.status, message: await parseError(res) };
   }
   return { ok: true, data: (await res.json()) as BulletinPreview };
+}
+
+export async function fetchBulletins(opts?: {
+  periodYm?: string;
+  limit?: number;
+}): Promise<ApiOk<{ items: Bulletin[] }> | ApiFail> {
+  const params = new URLSearchParams();
+  if (opts?.periodYm) params.set("periodYm", opts.periodYm);
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const res = await fetch(
+    qs ? `/api/v1/hr/bulletins?${qs}` : "/api/v1/hr/bulletins",
+    { credentials: "include" },
+  );
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as { items: Bulletin[] } };
+}
+
+export async function fetchBulletin(
+  id: string,
+): Promise<ApiOk<Bulletin> | ApiFail> {
+  const res = await fetch(`/api/v1/hr/bulletins/${encodeURIComponent(id)}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as Bulletin };
 }
 
 export async function createBulletin(input: {

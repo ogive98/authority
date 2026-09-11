@@ -59,6 +59,7 @@ export const hrManifest: ModuleManifest = {
     'hr.irpp.snapshots.list',
     'hr.bulletin.preview',
     'hr.bulletins.list',
+    'hr.bulletin.get',
   ],
   permissions: ['hr.employee.read', 'hr.employee.write', 'hr.wage.read'],
   dependencies: ['platform', 'organization', 'identity'],
@@ -74,5 +75,6 @@ export const hrManifest: ModuleManifest = {
   ],
   navigationEntries: [
     { id: 'hr-employees', label: 'Employés', href: '/hr' },
+    { id: 'hr-bulletins', label: 'Bulletins', href: '/hr#bulletins' },
   ],
 };

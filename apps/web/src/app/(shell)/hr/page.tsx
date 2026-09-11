@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   ABadge,
@@ -20,9 +22,11 @@ import {
   createIrppSnapshot,
   endContract,
   fetchBulletinPreview,
+  fetchBulletins,
   fetchCnssPreview,
   fetchEmployees,
   fetchIrppPreview,
+  type Bulletin,
   type BulletinPreview,
   type CnssPreview,
   type HrContract,
@@ -61,7 +65,9 @@ function statusTone(
 }
 
 export default function HrEmployeesPage() {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const [bulletins, setBulletins] = useState<Bulletin[]>([]);
   const [q, setQ] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<DrawerMode>("employee");
@@ -93,7 +99,11 @@ export default function HrEmployeesPage() {
 
   const load = useCallback(async (query?: string) => {
     setState({ kind: "loading" });
-    const res = await fetchEmployees(query);
+    const [res, bul] = await Promise.all([
+      fetchEmployees(query),
+      fetchBulletins({ limit: 30 }),
+    ]);
+    if (bul.ok) setBulletins(bul.data.items);
     if (!res.ok) {
       if (res.status === 403) {
         setState({ kind: "forbidden", message: res.message });
@@ -281,6 +291,7 @@ export default function HrEmployeesPage() {
     }
     setDrawerOpen(false);
     await load(q);
+    router.push(`/hr/bulletins/${res.data.id}`);
   }
 
   async function onCreateEmployee() {
@@ -341,7 +352,7 @@ export default function HrEmployeesPage() {
       <AScreenHeader
         kicker="Ressources humaines"
         title="Employés"
-        description="RH — wageBase, CNSS, IRPP, bulletin (compose snapshots). Aucun taux inventé."
+        description="RH — wageBase, CNSS, IRPP, bulletin + impression Soft Glass. Aucun taux inventé."
         actions={
           <AButton type="button" onClick={openCreateEmployee}>
             Nouvel employé
@@ -488,6 +499,53 @@ export default function HrEmployeesPage() {
             </tbody>
           </table>
         </div>
+      ) : null}
+
+      {bulletins.length > 0 ? (
+        <section className="mt-8 space-y-3">
+          <h2
+            id="bulletins"
+            className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#f97316]"
+          >
+            Bulletins récents
+          </h2>
+          <div className={softTableWrap}>
+            <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
+              <thead className={softThead}>
+                <tr>
+                  <th className="a-table-cell font-medium">N°</th>
+                  <th className="a-table-cell font-medium">Période</th>
+                  <th className="a-table-cell font-medium">Employé</th>
+                  <th className="a-table-cell font-medium">Net</th>
+                  <th className="a-table-cell font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bulletins.map((b) => (
+                  <tr key={b.id} className={softTr}>
+                    <td className="a-mono a-table-cell">{b.number}</td>
+                    <td className="a-mono a-table-cell">{b.periodYm}</td>
+                    <td className="a-table-cell">
+                      {b.matricule ? `${b.matricule} · ` : ""}
+                      {b.employeeName ?? "—"}
+                    </td>
+                    <td className="a-mono a-table-cell tabular-nums">
+                      {b.netPay} {b.currency}
+                    </td>
+                    <td className="a-table-cell">
+                      <Link
+                        href={`/hr/bulletins/${b.id}`}
+                        className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline"
+                      >
+                        Imprimer
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       ) : null}
       </div>
 
@@ -888,7 +946,7 @@ export default function HrEmployeesPage() {
                 disabled={busy || !bulletinPreview?.ready}
                 onClick={() => void onCreateBulletin()}
               >
-                Enregistrer bulletin
+                Enregistrer & imprimer
               </AButton>
             </>
           ) : null}
