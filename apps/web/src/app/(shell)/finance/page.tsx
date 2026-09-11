@@ -19,6 +19,7 @@ import { fetchCustomers } from "@/lib/customers";
 import {
   allocateOpenItem,
   confirmDunning,
+  sendDunning,
   createOpenItem,
   createPromise,
   fetchDunningPreview,
@@ -26,6 +27,7 @@ import {
   isOpenItemOverdue,
   openItemBadgeTone,
   prepareDunning,
+  type FinDunningDraft,
   type DunningChannel,
   type DunningPreview,
   type FinOpenItem,
@@ -97,6 +99,9 @@ export default function FinancePage() {
   );
   const [promiseDraft, setPromiseDraft] = useState<PromiseDraft | null>(null);
   const [dunningPreview, setDunningPreview] = useState<DunningPreview | null>(
+    null,
+  );
+  const [dunningDraft, setDunningDraft] = useState<FinDunningDraft | null>(
     null,
   );
   const [dunningContactId, setDunningContactId] = useState<string | null>(null);
@@ -254,6 +259,7 @@ export default function FinancePage() {
       return;
     }
     setDunningPreview(res.data);
+    setDunningDraft(null);
     const first =
       res.data.contacts.find((c) => c.email) ??
       res.data.contacts.find((c) => c.whatsapp) ??
@@ -265,7 +271,7 @@ export default function FinancePage() {
     );
   }
 
-  async function submitDunning() {
+  async function submitDunningConfirm() {
     if (!dunningPreview || !dunningContactId) return;
     setBusy(true);
     setFormError(null);
@@ -285,12 +291,31 @@ export default function FinancePage() {
       setFormError(confirmed.message);
       return;
     }
-    if (confirmed.data.channel === "EMAIL" && confirmed.data.mailtoHref) {
-      window.location.href = confirmed.data.mailtoHref;
-    } else if (confirmed.data.channel === "WHATSAPP" && confirmed.data.waMeHref) {
-      window.open(confirmed.data.waMeHref, "_blank", "noopener,noreferrer");
+    setDunningDraft(confirmed.data);
+  }
+
+  async function submitDunningSend() {
+    if (!dunningDraft) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await sendDunning(dunningDraft.id);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
     }
-    setDunningPreview(null);
+    setDunningDraft(res.data);
+    if (res.data.sendStatus === "FAILED" && res.data.sendError) {
+      setFormError(res.data.sendError);
+    }
+  }
+
+  function openDunningFallback(draft: FinDunningDraft) {
+    if (draft.channel === "EMAIL" && draft.mailtoHref) {
+      window.location.href = draft.mailtoHref;
+    } else if (draft.channel === "WHATSAPP" && draft.waMeHref) {
+      window.open(draft.waMeHref, "_blank", "noopener,noreferrer");
+    }
   }
 
   return (
@@ -805,10 +830,13 @@ export default function FinancePage() {
       <ADrawer
         open={Boolean(dunningPreview)}
         onOpenChange={(open) => {
-          if (!open) setDunningPreview(null);
+          if (!open) {
+            setDunningPreview(null);
+            setDunningDraft(null);
+          }
         }}
         title="Préparer relance"
-        description="Mailto / WhatsApp — confirmation humaine. Thunder n’envoie pas automatiquement."
+        description="Confirmer, puis Envoyer (SMTP / WA Cloud) ou ouvrir mailto / wa.me."
       >
         {dunningPreview ? (
           <div className="space-y-4">
@@ -836,54 +864,82 @@ export default function FinancePage() {
               </p>
             ) : null}
 
-            <div className="space-y-1">
-              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Contact
-              </label>
-              <select
-                className={softSelect}
-                value={dunningContactId ?? ""}
-                onChange={(e) => setDunningContactId(e.target.value || null)}
-                disabled={!dunningPreview.eligible}
-              >
-                <option value="">— choisir —</option>
-                {dunningPreview.contacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                    {c.email ? ` · ${c.email}` : ""}
-                    {c.whatsapp ? ` · WA ${c.whatsapp}` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!dunningDraft ? (
+              <>
+                <div className="space-y-1">
+                  <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                    Contact
+                  </label>
+                  <select
+                    className={softSelect}
+                    value={dunningContactId ?? ""}
+                    onChange={(e) =>
+                      setDunningContactId(e.target.value || null)
+                    }
+                    disabled={!dunningPreview.eligible}
+                  >
+                    <option value="">— choisir —</option>
+                    {dunningPreview.contacts.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                        {c.email ? ` · ${c.email}` : ""}
+                        {c.whatsapp ? ` · WA ${c.whatsapp}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={softChipClass(dunningChannel === "EMAIL")}
-                onClick={() => setDunningChannel("EMAIL")}
-                disabled={!dunningPreview.eligible}
-              >
-                Email (mailto)
-              </button>
-              <button
-                type="button"
-                className={softChipClass(dunningChannel === "WHATSAPP")}
-                onClick={() => setDunningChannel("WHATSAPP")}
-                disabled={!dunningPreview.eligible}
-              >
-                WhatsApp
-              </button>
-            </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={softChipClass(dunningChannel === "EMAIL")}
+                    onClick={() => setDunningChannel("EMAIL")}
+                    disabled={!dunningPreview.eligible}
+                  >
+                    Email
+                  </button>
+                  <button
+                    type="button"
+                    className={softChipClass(dunningChannel === "WHATSAPP")}
+                    onClick={() => setDunningChannel("WHATSAPP")}
+                    disabled={!dunningPreview.eligible}
+                  >
+                    WhatsApp
+                  </button>
+                </div>
 
-            <div className="space-y-1">
-              <p className="text-[length:var(--a-text-sm)] font-medium">
-                {dunningPreview.subject}
-              </p>
-              <pre className="a-underlay max-h-48 overflow-auto whitespace-pre-wrap rounded-md p-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                {dunningPreview.body}
-              </pre>
-            </div>
+                <div className="space-y-1">
+                  <p className="text-[length:var(--a-text-sm)] font-medium">
+                    {dunningPreview.subject}
+                  </p>
+                  <pre className="a-underlay max-h-48 overflow-auto whitespace-pre-wrap rounded-md p-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    {dunningPreview.body}
+                  </pre>
+                </div>
+              </>
+            ) : (
+              <div className="a-underlay rounded-md p-3 space-y-2">
+                <p className="text-[length:var(--a-text-sm)] text-a-fg">
+                  Confirmé · {dunningDraft.number} → {dunningDraft.recipient}
+                </p>
+                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  Envoi :{" "}
+                  {dunningDraft.sendStatus === "SENT"
+                    ? "envoyé"
+                    : dunningDraft.sendStatus === "FAILED"
+                      ? "échec"
+                      : "non envoyé"}
+                  {dunningDraft.channelConfigured
+                    ? " · canal Prefs prêt"
+                    : " · canal Prefs non configuré"}
+                </p>
+                {dunningDraft.sendError ? (
+                  <p className="text-[length:var(--a-text-xs)] text-a-danger">
+                    {dunningDraft.sendError}
+                  </p>
+                ) : null}
+              </div>
+            )}
 
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
@@ -891,27 +947,59 @@ export default function FinancePage() {
               </p>
             ) : null}
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex flex-wrap justify-end gap-2 pt-2">
               <AButton
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => setDunningPreview(null)}
+                onClick={() => {
+                  setDunningPreview(null);
+                  setDunningDraft(null);
+                }}
               >
-                Annuler
+                Fermer
               </AButton>
-              <AButton
-                type="button"
-                size="sm"
-                disabled={
-                  busy ||
-                  !dunningPreview.eligible ||
-                  !dunningContactId
-                }
-                onClick={() => void submitDunning()}
-              >
-                Confirmer et ouvrir
-              </AButton>
+              {!dunningDraft ? (
+                <AButton
+                  type="button"
+                  size="sm"
+                  disabled={
+                    busy ||
+                    !dunningPreview.eligible ||
+                    !dunningContactId
+                  }
+                  onClick={() => void submitDunningConfirm()}
+                >
+                  Confirmer
+                </AButton>
+              ) : (
+                <>
+                  {dunningDraft.sendStatus !== "SENT" &&
+                  dunningDraft.channelConfigured ? (
+                    <AButton
+                      type="button"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void submitDunningSend()}
+                    >
+                      {dunningDraft.channel === "EMAIL"
+                        ? "Envoyer SMTP"
+                        : "Envoyer WA Cloud"}
+                    </AButton>
+                  ) : null}
+                  <AButton
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => openDunningFallback(dunningDraft)}
+                  >
+                    {dunningDraft.channel === "EMAIL"
+                      ? "Ouvrir mailto"
+                      : "Ouvrir wa.me"}
+                  </AButton>
+                </>
+              )}
             </div>
           </div>
         ) : null}

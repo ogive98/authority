@@ -149,6 +149,17 @@ export default function SettingsPage() {
   const [smtpFrom, setSmtpFrom] = useState("");
   const [envoisBusy, setEnvoisBusy] = useState(false);
   const [mailTestBusy, setMailTestBusy] = useState(false);
+  const [dunSmtpHost, setDunSmtpHost] = useState("");
+  const [dunSmtpPort, setDunSmtpPort] = useState("587");
+  const [dunSmtpSecure, setDunSmtpSecure] = useState(false);
+  const [dunSmtpUser, setDunSmtpUser] = useState("");
+  const [dunSmtpPass, setDunSmtpPass] = useState("");
+  const [dunSmtpPassSet, setDunSmtpPassSet] = useState(false);
+  const [dunSmtpFrom, setDunSmtpFrom] = useState("");
+  const [dunWaPhoneId, setDunWaPhoneId] = useState("");
+  const [dunWaToken, setDunWaToken] = useState("");
+  const [dunWaTokenSet, setDunWaTokenSet] = useState(false);
+  const [dunWaApiVersion, setDunWaApiVersion] = useState("v21.0");
   const [envoisMsg, setEnvoisMsg] = useState<string | null>(null);
   const [envoisError, setEnvoisError] = useState<string | null>(null);
   const [mailStatus, setMailStatus] = useState<MailStatus | null>(null);
@@ -335,6 +346,23 @@ export default function SettingsPage() {
     setSmtpPass("");
     setSmtpPassSet(Boolean(passRow?.secretSet));
     setSmtpFrom(str("identity.smtp.from"));
+    setDunSmtpHost(str("finance.dunning.smtp.host"));
+    setDunSmtpPort(num("finance.dunning.smtp.port", "587"));
+    setDunSmtpSecure(bool("finance.dunning.smtp.secure", false));
+    setDunSmtpUser(str("finance.dunning.smtp.user"));
+    const dunPassRow = res.data.settings.find(
+      (s) => s.key === "finance.dunning.smtp.pass",
+    );
+    setDunSmtpPass("");
+    setDunSmtpPassSet(Boolean(dunPassRow?.secretSet));
+    setDunSmtpFrom(str("finance.dunning.smtp.from"));
+    setDunWaPhoneId(str("finance.dunning.wa.phone_number_id"));
+    const dunTokRow = res.data.settings.find(
+      (s) => s.key === "finance.dunning.wa.access_token",
+    );
+    setDunWaToken("");
+    setDunWaTokenSet(Boolean(dunTokRow?.secretSet));
+    setDunWaApiVersion(str("finance.dunning.wa.api_version") || "v21.0");
     const status = await fetchMailStatus();
     setMailStatus(status.ok ? status.data : null);
   }, [canCompanyWrite]);
@@ -378,6 +406,24 @@ export default function SettingsPage() {
       { key: "identity.smtp.user", value: smtpUser.trim() },
       { key: "identity.smtp.pass", value: smtpPass },
       { key: "identity.smtp.from", value: smtpFrom.trim() },
+      { key: "finance.dunning.smtp.host", value: dunSmtpHost.trim() },
+      {
+        key: "finance.dunning.smtp.port",
+        value: Math.max(1, Number(dunSmtpPort) || 587),
+      },
+      { key: "finance.dunning.smtp.secure", value: dunSmtpSecure },
+      { key: "finance.dunning.smtp.user", value: dunSmtpUser.trim() },
+      { key: "finance.dunning.smtp.pass", value: dunSmtpPass },
+      { key: "finance.dunning.smtp.from", value: dunSmtpFrom.trim() },
+      {
+        key: "finance.dunning.wa.phone_number_id",
+        value: dunWaPhoneId.trim(),
+      },
+      { key: "finance.dunning.wa.access_token", value: dunWaToken },
+      {
+        key: "finance.dunning.wa.api_version",
+        value: dunWaApiVersion.trim() || "v21.0",
+      },
     ];
     for (const row of puts) {
       const r = await putCompanySetting(row.key, row.value);
@@ -1089,6 +1135,157 @@ export default function SettingsPage() {
                 « Tester l’envoi » utilise la config enregistrée (Enregistrer
                 d’abord) et envoie un message à votre compte admin.
               </p>
+            </div>
+
+            <div className="space-y-4 a-underlay rounded-md p-4">
+              <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                Relances finance (SMTP dédié + WA Cloud)
+              </h2>
+              <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                Séparé du SMTP invitations. Vide jusqu’à saisie humaine —
+                secrets write-only. Thunder n’envoie pas automatiquement.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label
+                    htmlFor="dun-smtp-host"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    SMTP relances — hôte
+                  </label>
+                  <AInput
+                    id="dun-smtp-host"
+                    value={dunSmtpHost}
+                    onChange={(e) => setDunSmtpHost(e.target.value)}
+                    className="a-mono"
+                    placeholder="smtp.relances.tn"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="dun-smtp-port"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Port
+                  </label>
+                  <AInput
+                    id="dun-smtp-port"
+                    type="number"
+                    value={dunSmtpPort}
+                    onChange={(e) => setDunSmtpPort(e.target.value)}
+                    className="a-mono"
+                  />
+                </div>
+                <div className="flex items-end justify-between gap-3 pb-1">
+                  <p className="text-[length:var(--a-text-sm)] text-a-fg">
+                    Secure (465)
+                  </p>
+                  <ASwitch
+                    checked={dunSmtpSecure}
+                    onCheckedChange={setDunSmtpSecure}
+                    label="Dunning SMTP secure"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="dun-smtp-user"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Utilisateur
+                  </label>
+                  <AInput
+                    id="dun-smtp-user"
+                    value={dunSmtpUser}
+                    onChange={(e) => setDunSmtpUser(e.target.value)}
+                    className="a-mono"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="dun-smtp-pass"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Mot de passe
+                  </label>
+                  <AInput
+                    id="dun-smtp-pass"
+                    type="password"
+                    value={dunSmtpPass}
+                    onChange={(e) => setDunSmtpPass(e.target.value)}
+                    autoComplete="new-password"
+                    placeholder={
+                      dunSmtpPassSet
+                        ? "•••• enregistré — laisser vide pour conserver"
+                        : "saisir le mot de passe"
+                    }
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label
+                    htmlFor="dun-smtp-from"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    From
+                  </label>
+                  <AInput
+                    id="dun-smtp-from"
+                    value={dunSmtpFrom}
+                    onChange={(e) => setDunSmtpFrom(e.target.value)}
+                    placeholder="Relances &lt;relances@entreprise.tn&gt;"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="dun-wa-phone"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    WA Cloud — phone number id
+                  </label>
+                  <AInput
+                    id="dun-wa-phone"
+                    value={dunWaPhoneId}
+                    onChange={(e) => setDunWaPhoneId(e.target.value)}
+                    className="a-mono"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="dun-wa-version"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    API version
+                  </label>
+                  <AInput
+                    id="dun-wa-version"
+                    value={dunWaApiVersion}
+                    onChange={(e) => setDunWaApiVersion(e.target.value)}
+                    className="a-mono"
+                    placeholder="v21.0"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label
+                    htmlFor="dun-wa-token"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Access token
+                  </label>
+                  <AInput
+                    id="dun-wa-token"
+                    type="password"
+                    value={dunWaToken}
+                    onChange={(e) => setDunWaToken(e.target.value)}
+                    autoComplete="new-password"
+                    placeholder={
+                      dunWaTokenSet
+                        ? "•••• enregistré — laisser vide pour conserver"
+                        : "saisir le token Cloud API"
+                    }
+                  />
+                </div>
+              </div>
             </div>
 
             {envoisMsg ? (

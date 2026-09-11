@@ -7,17 +7,20 @@ import { ModulesRegistryModule } from '../modules-registry/modules-registry.modu
 import { TaxModule } from '../tax/tax.module';
 import { SettingsModule } from '../settings/settings.module';
 import { AccountingModule } from '../accounting/accounting.module';
+import { MailModule } from '../mail/mail.module';
 import { AllocationEngineService } from './allocation-engine.service';
 import { BankingService } from './banking.service';
 import { CollectionScheduleResolver } from './collection-schedule.resolver';
 import { CreditNoteService } from './credit-note.service';
 import { CreditPressureResolver } from './credit-pressure.resolver';
+import { DunningSettingsResolver } from './dunning-settings.resolver';
 import { DunningService } from './dunning.service';
 import { FinanceController } from './finance.controller';
 import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentService } from './payment.service';
 import { PromiseService } from './promise.service';
+import { WhatsAppCloudService } from './whatsapp-cloud.service';
 
 @Module({
   imports: [
@@ -29,6 +32,7 @@ import { PromiseService } from './promise.service';
     TaxModule,
     SettingsModule,
     AccountingModule,
+    MailModule,
   ],
   controllers: [FinanceController],
   providers: [
@@ -40,6 +44,8 @@ import { PromiseService } from './promise.service';
     PromiseService,
     BankingService,
     DunningService,
+    DunningSettingsResolver,
+    WhatsAppCloudService,
     CollectionScheduleResolver,
     CreditPressureResolver,
   ],

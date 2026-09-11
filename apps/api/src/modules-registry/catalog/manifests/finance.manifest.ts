@@ -58,6 +58,7 @@ export const financeManifest: ModuleManifest = {
     'finance.bank.fee_post',
     'finance.dunning.prepare',
     'finance.dunning.confirm',
+    'finance.dunning.send',
   ],
   queries: [
     'finance.open_items.list',
@@ -103,6 +104,8 @@ export const financeManifest: ModuleManifest = {
     'finance.bank.fee_posted.v1',
     'finance.dunning.prepared.v1',
     'finance.dunning.confirmed.v1',
+    'finance.dunning.sent.v1',
+    'finance.dunning.send_failed.v1',
   ],
   consumedEvents: ['delivery.shipment.delivered.v1'],
   navigationEntries: [

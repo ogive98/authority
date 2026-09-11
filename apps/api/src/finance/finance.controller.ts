@@ -663,4 +663,15 @@ export class FinanceController {
   ) {
     return this.dunningService.confirm(tenancy.companyId, id);
   }
+
+  /** D194 — explicit SMTP / WA Cloud send after confirm (mailto/wa.me stay fallback). */
+  @Post('dunning/:id/send')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  sendDunning(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.dunningService.send(tenancy.companyId, id);
+  }
 }

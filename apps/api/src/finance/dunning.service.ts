@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   FinDunningChannel,
+  FinDunningSendStatus,
   FinDunningStatus,
   FinOpenItemSide,
   FinOpenItemStatus,
@@ -8,17 +9,25 @@ import {
   Prisma,
 } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CollectionScheduleResolver,
   matchedMilestones,
 } from './collection-schedule.resolver';
 import {
+  isDunningSmtpConfigured,
+  isDunningWaConfigured,
+  type DunningChannelRuntimeConfig,
+} from './dunning-settings.constants';
+import { DunningSettingsResolver } from './dunning-settings.resolver';
+import {
   FINANCE_ERROR_CODES,
   FINANCE_EVENT_TYPES,
 } from './finance.constants';
 import type { PrepareDunningDto } from './finance.dto';
 import { FinanceException } from './finance.exception';
+import { WhatsAppCloudService } from './whatsapp-cloud.service';
 
 export type DunningContactDto = {
   id: string;
@@ -64,6 +73,11 @@ export type DunningDraftDto = {
   recipient: string;
   status: FinDunningStatus;
   confirmedAt: string | null;
+  sendStatus: FinDunningSendStatus;
+  sentAt: string | null;
+  sendError: string | null;
+  providerMessageId: string | null;
+  channelConfigured: boolean;
   mailtoHref: string | null;
   waMeHref: string | null;
   version: number;
@@ -77,6 +91,9 @@ export class DunningService {
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly schedule: CollectionScheduleResolver,
+    private readonly channelSettings: DunningSettingsResolver,
+    private readonly mail: MailService,
+    private readonly waCloud: WhatsAppCloudService,
   ) {}
 
   async preview(
@@ -209,7 +226,7 @@ export class DunningService {
       return created;
     });
 
-    return serializeDraft(row);
+    return this.toDto(companyId, row);
   }
 
   async confirm(
@@ -263,7 +280,135 @@ export class DunningService {
       return next;
     });
 
-    return serializeDraft(updated);
+    return this.toDto(companyId, updated);
+  }
+
+  /**
+   * Explicit provider send after confirm (D194 lock 3A).
+   * On failure: keep CONFIRMED, mark FAILED, mailto/wa.me remain (lock 4A).
+   */
+  async send(companyId: string, id: string): Promise<DunningDraftDto> {
+    const row = await this.prisma.finDunningDraft.findFirst({
+      where: { id, companyId, deletedAt: null },
+    });
+    if (!row) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.DUNNING_NOT_FOUND,
+        'Dunning draft not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (row.status !== FinDunningStatus.CONFIRMED) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.DUNNING_NOT_CONFIRMED,
+        'Confirm the draft before sending.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (row.sendStatus === FinDunningSendStatus.SENT) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.DUNNING_ALREADY_SENT,
+        'Dunning already sent via provider.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const cfg = await this.channelSettings.resolve(companyId);
+    const emailOk =
+      row.channel === FinDunningChannel.EMAIL &&
+      isDunningSmtpConfigured(cfg.smtp);
+    const waOk =
+      row.channel === FinDunningChannel.WHATSAPP &&
+      isDunningWaConfigured(cfg.wa);
+
+    if (!emailOk && !waOk) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.DUNNING_CHANNEL_NOT_CONFIGURED,
+        row.channel === FinDunningChannel.EMAIL
+          ? 'Configure finance.dunning.smtp.* in Préférences → Relances.'
+          : 'Configure finance.dunning.wa.* in Préférences → Relances.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    try {
+      let providerMessageId: string | null = null;
+      if (row.channel === FinDunningChannel.EMAIL) {
+        await this.mail.send(
+          {
+            to: row.recipient,
+            subject: row.subject,
+            text: row.body,
+          },
+          cfg.smtp,
+        );
+      } else {
+        const result = await this.waCloud.sendText({
+          phoneNumberId: cfg.wa.phoneNumberId,
+          accessToken: cfg.wa.accessToken,
+          apiVersion: cfg.wa.apiVersion,
+          toDigits: row.recipient,
+          body: row.body,
+        });
+        providerMessageId = result.messageId;
+      }
+
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const next = await tx.finDunningDraft.update({
+          where: { id: row.id },
+          data: {
+            sendStatus: FinDunningSendStatus.SENT,
+            sentAt: new Date(),
+            sendError: null,
+            providerMessageId,
+            version: { increment: 1 },
+          },
+        });
+        await this.outbox.enqueue(tx, {
+          companyId,
+          aggregateType: 'fin_dunning_draft',
+          aggregateId: next.id,
+          eventType: FINANCE_EVENT_TYPES.DUNNING_SENT,
+          payloadJson: {
+            draftId: next.id,
+            openItemId: next.openItemId,
+            channel: next.channel,
+            recipient: next.recipient,
+            providerMessageId,
+          },
+        });
+        return next;
+      });
+      return this.toDto(companyId, updated, cfg);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Provider send failed';
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const next = await tx.finDunningDraft.update({
+          where: { id: row.id },
+          data: {
+            sendStatus: FinDunningSendStatus.FAILED,
+            sendError: message.slice(0, 1000),
+            version: { increment: 1 },
+          },
+        });
+        await this.outbox.enqueue(tx, {
+          companyId,
+          aggregateType: 'fin_dunning_draft',
+          aggregateId: next.id,
+          eventType: FINANCE_EVENT_TYPES.DUNNING_SEND_FAILED,
+          payloadJson: {
+            draftId: next.id,
+            openItemId: next.openItemId,
+            channel: next.channel,
+            recipient: next.recipient,
+            error: message.slice(0, 500),
+          },
+        });
+        return next;
+      });
+      return this.toDto(companyId, updated, cfg);
+    }
   }
 
   async list(
@@ -285,7 +430,21 @@ export class DunningService {
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
-    return { items: rows.map(serializeDraft) };
+    const cfg = await this.channelSettings.resolve(companyId);
+    return {
+      items: rows.map((r) =>
+        serializeDraft(r, isChannelConfigured(r.channel, cfg)),
+      ),
+    };
+  }
+
+  private async toDto(
+    companyId: string,
+    row: Parameters<typeof serializeDraft>[0],
+    cfg?: DunningChannelRuntimeConfig,
+  ): Promise<DunningDraftDto> {
+    const resolved = cfg ?? (await this.channelSettings.resolve(companyId));
+    return serializeDraft(row, isChannelConfigured(row.channel, resolved));
   }
 
   private async loadContext(companyId: string, openItemId: string) {
@@ -469,27 +628,43 @@ function dateOnly(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function serializeDraft(row: {
-  id: string;
-  companyId: string;
-  number: string;
-  openItemId: string;
-  customerId: string;
-  contactId: string;
-  channel: FinDunningChannel;
-  milestoneDay: number;
-  daysPastDue: number;
-  amountOpen: Prisma.Decimal;
-  currency: string;
-  subject: string;
-  body: string;
-  recipient: string;
-  status: FinDunningStatus;
-  confirmedAt: Date | null;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-}): DunningDraftDto {
+function isChannelConfigured(
+  channel: FinDunningChannel,
+  cfg: DunningChannelRuntimeConfig,
+): boolean {
+  return channel === FinDunningChannel.EMAIL
+    ? isDunningSmtpConfigured(cfg.smtp)
+    : isDunningWaConfigured(cfg.wa);
+}
+
+function serializeDraft(
+  row: {
+    id: string;
+    companyId: string;
+    number: string;
+    openItemId: string;
+    customerId: string;
+    contactId: string;
+    channel: FinDunningChannel;
+    milestoneDay: number;
+    daysPastDue: number;
+    amountOpen: Prisma.Decimal;
+    currency: string;
+    subject: string;
+    body: string;
+    recipient: string;
+    status: FinDunningStatus;
+    confirmedAt: Date | null;
+    sendStatus: FinDunningSendStatus;
+    sentAt: Date | null;
+    sendError: string | null;
+    providerMessageId: string | null;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+  channelConfigured: boolean,
+): DunningDraftDto {
   return {
     id: row.id,
     companyId: row.companyId,
@@ -507,6 +682,11 @@ function serializeDraft(row: {
     recipient: row.recipient,
     status: row.status,
     confirmedAt: row.confirmedAt?.toISOString() ?? null,
+    sendStatus: row.sendStatus,
+    sentAt: row.sentAt?.toISOString() ?? null,
+    sendError: row.sendError,
+    providerMessageId: row.providerMessageId,
+    channelConfigured,
     mailtoHref:
       row.channel === FinDunningChannel.EMAIL
         ? buildMailtoHref(row.recipient, row.subject, row.body)

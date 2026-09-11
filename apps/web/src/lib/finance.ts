@@ -1404,9 +1404,10 @@ export function bankLineBadgeTone(
   return "neutral";
 }
 
-/** D190 dunning — human-gated mailto / wa.me */
+/** D190/D194 dunning — confirm then optional SMTP / WA Cloud */
 export type DunningChannel = "EMAIL" | "WHATSAPP";
 export type DunningStatus = "DRAFT" | "CONFIRMED" | "CANCELLED";
+export type DunningSendStatus = "NONE" | "SENT" | "FAILED";
 
 export type DunningPreview = {
   openItemId: string;
@@ -1446,6 +1447,11 @@ export type FinDunningDraft = {
   body: string;
   recipient: string;
   status: DunningStatus;
+  sendStatus: DunningSendStatus;
+  sentAt: string | null;
+  sendError: string | null;
+  providerMessageId: string | null;
+  channelConfigured: boolean;
   mailtoHref: string | null;
   waMeHref: string | null;
   confirmedAt: string | null;
@@ -1496,6 +1502,22 @@ export async function confirmDunning(
 ): Promise<{ ok: true; data: FinDunningDraft } | ApiFail> {
   try {
     const res = await fetch(`/api/v1/finance/dunning/${id}/confirm`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinDunningDraft };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function sendDunning(
+  id: string,
+): Promise<{ ok: true; data: FinDunningDraft } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/dunning/${id}/send`, {
       method: "POST",
       credentials: "include",
       headers: { Accept: "application/json" },

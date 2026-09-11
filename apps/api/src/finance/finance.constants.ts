@@ -28,6 +28,9 @@ export const FINANCE_ERROR_CODES = {
   DUNNING_NOT_FOUND: 'FIN.DUNNING_NOT_FOUND',
   DUNNING_CONTACT: 'FIN.DUNNING_CONTACT',
   DUNNING_EXISTS: 'FIN.DUNNING_EXISTS',
+  DUNNING_NOT_CONFIRMED: 'FIN.DUNNING_NOT_CONFIRMED',
+  DUNNING_CHANNEL_NOT_CONFIGURED: 'FIN.DUNNING_CHANNEL_NOT_CONFIGURED',
+  DUNNING_ALREADY_SENT: 'FIN.DUNNING_ALREADY_SENT',
   CREDIT_NOTE_NOT_FOUND: 'FIN.CREDIT_NOTE_NOT_FOUND',
   CREDIT_NOTE_OVER_CAP: 'FIN.CREDIT_NOTE_OVER_CAP',
 } as const;
@@ -55,6 +58,8 @@ export const FINANCE_EVENT_TYPES = {
   BANK_FEE_POSTED: 'finance.bank.fee_posted.v1',
   DUNNING_PREPARED: 'finance.dunning.prepared.v1',
   DUNNING_CONFIRMED: 'finance.dunning.confirmed.v1',
+  DUNNING_SENT: 'finance.dunning.sent.v1',
+  DUNNING_SEND_FAILED: 'finance.dunning.send_failed.v1',
 } as const;
 
 /** Company settings — credit exposure check on sales confirm (default off). */

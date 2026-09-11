@@ -1798,7 +1798,7 @@ model FinPromiseToPay {
   @@map("fin_promise_to_pay")
 }
 
-/** Human-gated dunning draft — mailto / wa.me only (D190). No auto-send. */
+/** Human-gated dunning draft — confirm then optional SMTP / WA Cloud send (D190/D194). */
 enum FinDunningStatus {
   DRAFT
   CONFIRMED
@@ -1810,28 +1810,39 @@ enum FinDunningChannel {
   WHATSAPP
 }
 
+/** Provider send outcome — confirm stays even on FAILED (lock 4A). */
+enum FinDunningSendStatus {
+  NONE
+  SENT
+  FAILED
+}
+
 model FinDunningDraft {
-  id            String            @id @default(uuid()) @db.Uuid
-  companyId     String            @map("company_id") @db.Uuid
-  number        String
-  openItemId    String            @map("open_item_id") @db.Uuid
-  customerId    String            @map("customer_id") @db.Uuid
-  contactId     String            @map("contact_id") @db.Uuid
-  channel       FinDunningChannel
+  id                String               @id @default(uuid()) @db.Uuid
+  companyId         String               @map("company_id") @db.Uuid
+  number            String
+  openItemId        String               @map("open_item_id") @db.Uuid
+  customerId        String               @map("customer_id") @db.Uuid
+  contactId         String               @map("contact_id") @db.Uuid
+  channel           FinDunningChannel
   /** Days past due milestone from finance.collection.remind_days. */
-  milestoneDay  Int               @map("milestone_day")
-  daysPastDue   Int               @map("days_past_due")
-  amountOpen    Decimal           @map("amount_open") @db.Decimal(18, 3)
-  currency      String            @default("TND")
-  subject       String
-  body          String
-  recipient     String
-  status        FinDunningStatus  @default(DRAFT)
-  confirmedAt   DateTime?         @map("confirmed_at") @db.Timestamptz(6)
-  version       Int               @default(0)
-  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt     DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  milestoneDay      Int                  @map("milestone_day")
+  daysPastDue       Int                  @map("days_past_due")
+  amountOpen        Decimal              @map("amount_open") @db.Decimal(18, 3)
+  currency          String               @default("TND")
+  subject           String
+  body              String
+  recipient         String
+  status            FinDunningStatus     @default(DRAFT)
+  confirmedAt       DateTime?            @map("confirmed_at") @db.Timestamptz(6)
+  sendStatus        FinDunningSendStatus @default(NONE) @map("send_status")
+  sentAt            DateTime?            @map("sent_at") @db.Timestamptz(6)
+  sendError         String?              @map("send_error")
+  providerMessageId String?              @map("provider_message_id")
+  version           Int                  @default(0)
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?            @map("deleted_at") @db.Timestamptz(6)
 
   openItem FinOpenItem @relation(fields: [openItemId], references: [id], onDelete: Cascade)
 
@@ -1840,6 +1851,7 @@ model FinDunningDraft {
   @@index([companyId, status, createdAt(sort: Desc)])
   @@index([companyId, openItemId])
   @@index([companyId, customerId])
+  @@index([companyId, sendStatus])
   @@map("fin_dunning_draft")
 }
 

@@ -26,9 +26,13 @@ export const SETTINGS_ENTITY_TYPES = {
 } as const;
 
 /** Never echoed in getEffective / audit payloads (D137). Empty PUT keeps previous. */
-export const SECRET_SETTING_KEYS = ['identity.smtp.pass'] as const;
+export const SECRET_SETTING_KEYS = [
+  'identity.smtp.pass',
+  'finance.dunning.smtp.pass',
+  'finance.dunning.wa.access_token',
+] as const;
 
-/** Company-scoped only — no USER override (D170/D180). */
+/** Company-scoped only — no USER override (D170/D180/D194). */
 export const COMPANY_ONLY_SETTING_KEYS = [
   'ops.unlock_code',
   'ops.ghost.hide_delivery',
@@ -37,6 +41,15 @@ export const COMPANY_ONLY_SETTING_KEYS = [
   'ops.ghost.accounting_partial',
   'finance.collection.remind_days',
   'finance.credit.warn_ratio',
+  'finance.dunning.smtp.host',
+  'finance.dunning.smtp.port',
+  'finance.dunning.smtp.secure',
+  'finance.dunning.smtp.user',
+  'finance.dunning.smtp.pass',
+  'finance.dunning.smtp.from',
+  'finance.dunning.wa.phone_number_id',
+  'finance.dunning.wa.access_token',
+  'finance.dunning.wa.api_version',
 ] as const;
 
 export function isCompanyOnlySettingKey(key: string): boolean {
