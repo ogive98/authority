@@ -17,7 +17,6 @@ type PrefsState = {
   jobAlerts: boolean;
   sidebarAutoCollapseSec: number;
   opsUnlockCode: string;
-  /** D180 — company ops visibility (cache; source = settings). */
   opsVisibility: OpsVisibilityPrefs;
   setDensity: (d: Density) => void;
   setSurfaceMode: (m: SurfaceMode) => void;
@@ -84,6 +83,12 @@ export const usePrefsStore = create<PrefsState>()(
       onRehydrateStorage: () => (state) => {
         if (state?.density) writeDensityAttr(state.density);
         if (state?.surfaceMode) writeSurfaceAttr(state.surfaceMode);
+        if (state?.opsVisibility) {
+          state.opsVisibility = {
+            ...OPS_VISIBILITY_DEFAULTS,
+            ...state.opsVisibility,
+          };
+        }
       },
     },
   ),

@@ -38,7 +38,10 @@ import {
   type TrialBalanceRow,
 } from "@/lib/accounting";
 import { putCompanySetting } from "@/lib/settings";
-import { isAccountingPartialMode } from "@/lib/ops-visibility";
+import {
+  filterEntriesByPatchRules,
+  isAccountingPartialMode,
+} from "@/lib/ops-visibility";
 import { localizeUiString } from "@/lib/i18n/route-labels";
 import { useLocaleStore } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
@@ -165,6 +168,14 @@ export default function AccountingPage() {
       const en = await fetchEntries({ limit: 50 });
       if (en.ok) entries = en.data.items;
     }
+
+    const shell = useShellStore.getState();
+    const prefs = usePrefsStore.getState().opsVisibility;
+    entries = filterEntriesByPatchRules(entries, {
+      patchEnabled: shell.patchEnabled,
+      intensity: prefs.patchAccountingIntensity,
+      rules: prefs.patchDisplayRules,
+    });
 
     setMapDraft(mapping);
     setState({

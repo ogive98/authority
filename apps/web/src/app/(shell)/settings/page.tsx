@@ -13,12 +13,29 @@ import {
   ASkeleton,
   ASwitch,
 } from "@/components/a";
+import { PrefsModesOpsPanel } from "@/components/settings/prefs-modes-ops-panel";
 import { useMeRegistry } from "@/hooks/use-me-registry";
+import {
+  fetchGlMapping,
+  GL_MAPPING_DEFAULTS,
+  GL_MAPPING_KEYS,
+} from "@/lib/accounting";
+import {
+  OPS_VISIBILITY_DEFAULTS,
+  OPS_VISIBILITY_KEYS,
+} from "@/lib/ops-visibility";
+import {
+  PREFS_COMPARTMENTS,
+  type PrefsCompartmentId,
+} from "@/lib/prefs-compartments";
 import {
   fetchEffectiveSettings,
   fetchExpertiseCatalog,
+  fetchSettingsCapabilities,
   postMailTest,
   putCompanySetting,
+  putRoleSetting,
+  putUserSetting,
   upsertExpertise,
   type ExpertiseSlot,
 } from "@/lib/settings";
@@ -26,26 +43,36 @@ import {
   fetchIrppBrackets,
   replaceIrppBrackets,
 } from "@/lib/hr";
+import { softPageBody, softPanel, softSelect } from "@/lib/soft-glass-ui";
 import { fetchMailStatus, type MailStatus } from "@/lib/users";
-import {
-  softChipClass,
-  softPageBody,
-  softPanel,
-} from "@/lib/soft-glass-ui";
-import { usePrefsStore, type Density } from "@/stores/prefs-store";
+import { usePrefsStore, type Density, type SurfaceMode } from "@/stores/prefs-store";
 
-type Tab =
-  | "general"
-  | "apparence"
-  | "notifications"
-  | "expertise"
-  | "envois";
+const HASH_COMPARTMENTS = new Set<PrefsCompartmentId>([
+  "expertise",
+  "envois",
+  "modes",
+  "finance",
+  "comptabilite",
+  "roles",
+  "poste",
+]);
 
-type CompanyTab = "expertise" | "envois";
+const SURFACE_LABELS: Record<SurfaceMode, string> = {
+  ghost: "Ghost (matériau glass)",
+  patch: "Patch (matériau glass)",
+  solid: "Solid (matériau glass)",
+  minimal: "Minimal (matériau glass)",
+};
 
-function isCompanyTab(tab: Tab): tab is CompanyTab {
-  return tab === "expertise" || tab === "envois";
-}
+type GlMapForm = {
+  ar: string;
+  bank: string;
+  revenue: string;
+  vat: string;
+  bankFee: string;
+  salesJournal: string;
+  bankJournal: string;
+};
 
 type ExpertiseLoad =
   | { kind: "loading" }
@@ -113,6 +140,15 @@ function statusLabel(status: ExpertiseSlot["status"]): string {
   }
 }
 
+function parseHashCompartment(hash: string): PrefsCompartmentId | null {
+  const id = hash.replace(/^#/, "") as PrefsCompartmentId;
+  return HASH_COMPARTMENTS.has(id) ? id : null;
+}
+
+function isAdminOnlyCompartment(id: PrefsCompartmentId): boolean {
+  return PREFS_COMPARTMENTS.some((c) => c.id === id && c.adminOnly);
+}
+
 export default function SettingsPage() {
   const { data: registry, isFetched } = useMeRegistry();
   const canCompanyWrite = useMemo(
@@ -125,8 +161,8 @@ export default function SettingsPage() {
     [registry.modules],
   );
 
-  const [tab, setTab] = useState<Tab>("apparence");
-  const tabInited = useRef(false);
+  const [compartment, setCompartment] = useState<PrefsCompartmentId>("poste");
+  const compartmentInited = useRef(false);
   const [companyDeniedHint, setCompanyDeniedHint] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [expertise, setExpertise] = useState<ExpertiseLoad>({
@@ -176,13 +212,36 @@ export default function SettingsPage() {
   const [envoisError, setEnvoisError] = useState<string | null>(null);
   const [mailStatus, setMailStatus] = useState<MailStatus | null>(null);
 
+  const [glDraft, setGlDraft] = useState<GlMapForm>({ ...GL_MAPPING_DEFAULTS });
+  const [glBusy, setGlBusy] = useState(false);
+  const [glMsg, setGlMsg] = useState<string | null>(null);
+  const [glError, setGlError] = useState<string | null>(null);
+
+  const [roleCaps, setRoleCaps] = useState<{
+    canWriteRole: boolean;
+    roles: string[];
+  } | null>(null);
+  const [roleCapsError, setRoleCapsError] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState("");
+  const [roleGhostHideDelivery, setRoleGhostHideDelivery] = useState(
+    OPS_VISIBILITY_DEFAULTS.ghostHideDelivery,
+  );
+  const [rolePatchHideDelivery, setRolePatchHideDelivery] = useState(
+    OPS_VISIBILITY_DEFAULTS.patchHideDelivery,
+  );
+  const [rolePatchIntensity, setRolePatchIntensity] = useState(
+    OPS_VISIBILITY_DEFAULTS.patchAccountingIntensity,
+  );
+  const [roleBusy, setRoleBusy] = useState(false);
+  const [roleMsg, setRoleMsg] = useState<string | null>(null);
+  const [roleError, setRoleError] = useState<string | null>(null);
+
   const density = usePrefsStore((s) => s.density);
   const setDensity = usePrefsStore((s) => s.setDensity);
   const surfaceMode = usePrefsStore((s) => s.surfaceMode);
   const setSurfaceMode = usePrefsStore((s) => s.setSurfaceMode);
   const opsUnlockCode = usePrefsStore((s) => s.opsUnlockCode);
   const setOpsUnlockCode = usePrefsStore((s) => s.setOpsUnlockCode);
-  const opsVisibility = usePrefsStore((s) => s.opsVisibility);
   const [unlockDraft, setUnlockDraft] = useState(opsUnlockCode);
   const [unlockBusy, setUnlockBusy] = useState(false);
   const [unlockMsg, setUnlockMsg] = useState<string | null>(null);
@@ -198,12 +257,18 @@ export default function SettingsPage() {
     (s) => s.setSidebarAutoCollapseSec,
   );
 
+  const visibleCompartments = useMemo(
+    () =>
+      PREFS_COMPARTMENTS.filter((c) => !c.adminOnly || canCompanyWrite),
+    [canCompanyWrite],
+  );
+
   useEffect(() => {
     setUnlockDraft(opsUnlockCode);
   }, [opsUnlockCode]);
 
   useEffect(() => {
-    if (tab !== "apparence" || !canCompanyWrite) return;
+    if (compartment !== "modes" || !canCompanyWrite) return;
     void (async () => {
       const res = await fetchEffectiveSettings();
       if (!res.ok) return;
@@ -212,7 +277,7 @@ export default function SettingsPage() {
         setOpsUnlockCode(row.value);
       }
     })();
-  }, [tab, canCompanyWrite, setOpsUnlockCode]);
+  }, [compartment, canCompanyWrite, setOpsUnlockCode]);
 
   async function onSaveUnlockCode() {
     if (!canCompanyWrite || unlockBusy) return;
@@ -246,31 +311,56 @@ export default function SettingsPage() {
     prefs.applySurfaceToDom(prefs.surfaceMode);
   }, []);
 
-  useEffect(() => {
-    if (!isFetched) return;
-    const hashExpertise =
-      typeof window !== "undefined" && window.location.hash === "#expertise";
-
-    if (!tabInited.current) {
-      tabInited.current = true;
-      if (hashExpertise) {
-        if (canCompanyWrite) {
-          setTab("expertise");
-          setCompanyDeniedHint(false);
-        } else {
-          setTab("apparence");
-          setCompanyDeniedHint(true);
+  const selectCompartment = useCallback(
+    (id: PrefsCompartmentId) => {
+      if (isAdminOnlyCompartment(id) && !canCompanyWrite) {
+        setCompanyDeniedHint(true);
+        setCompartment("poste");
+        if (typeof window !== "undefined") {
+          window.history.replaceState(null, "", "/settings#poste");
         }
         return;
       }
-      if (canCompanyWrite) setTab("expertise");
+      setCompanyDeniedHint(false);
+      setCompartment(id);
+      if (typeof window !== "undefined") {
+        if (HASH_COMPARTMENTS.has(id)) {
+          window.history.replaceState(null, "", `/settings#${id}`);
+        } else {
+          window.history.replaceState(null, "", "/settings");
+        }
+      }
+    },
+    [canCompanyWrite],
+  );
+
+  useEffect(() => {
+    if (!isFetched) return;
+    const hashId =
+      typeof window !== "undefined"
+        ? parseHashCompartment(window.location.hash)
+        : null;
+
+    if (!compartmentInited.current) {
+      compartmentInited.current = true;
+      if (hashId) {
+        if (isAdminOnlyCompartment(hashId) && !canCompanyWrite) {
+          setCompartment("poste");
+          setCompanyDeniedHint(true);
+        } else {
+          setCompartment(hashId);
+          setCompanyDeniedHint(false);
+        }
+        return;
+      }
+      setCompartment(canCompanyWrite ? "expertise" : "poste");
       return;
     }
 
-    if (!canCompanyWrite && isCompanyTab(tab)) {
-      setTab("apparence");
+    if (isAdminOnlyCompartment(compartment) && !canCompanyWrite) {
+      setCompartment("poste");
     }
-  }, [isFetched, canCompanyWrite, tab]);
+  }, [isFetched, canCompanyWrite, compartment]);
 
   const loadExpertise = useCallback(async () => {
     if (!canCompanyWrite) {
@@ -324,10 +414,10 @@ export default function SettingsPage() {
   }, [canCompanyWrite]);
 
   useEffect(() => {
-    if (tab === "expertise" && canCompanyWrite) {
+    if (compartment === "expertise" && canCompanyWrite) {
       void loadExpertise();
     }
-  }, [tab, loadExpertise, canCompanyWrite]);
+  }, [compartment, loadExpertise, canCompanyWrite]);
 
   const loadEnvois = useCallback(async () => {
     if (!canCompanyWrite) {
@@ -411,10 +501,46 @@ export default function SettingsPage() {
   }, [canCompanyWrite]);
 
   useEffect(() => {
-    if (tab === "envois" && canCompanyWrite) {
+    if (compartment === "envois" && canCompanyWrite) {
       void loadEnvois();
     }
-  }, [tab, loadEnvois, canCompanyWrite]);
+  }, [compartment, loadEnvois, canCompanyWrite]);
+
+  const loadGlMapping = useCallback(async () => {
+    if (!canCompanyWrite) return;
+    setGlError(null);
+    const res = await fetchGlMapping();
+    if (!res.ok) {
+      setGlError(res.message);
+      return;
+    }
+    setGlDraft({
+      ...GL_MAPPING_DEFAULTS,
+      ...res.data.codes,
+      bankFee: res.data.codes.bankFee ?? "",
+    });
+  }, [canCompanyWrite]);
+
+  useEffect(() => {
+    if (compartment === "comptabilite" && canCompanyWrite) {
+      void loadGlMapping();
+    }
+  }, [compartment, loadGlMapping, canCompanyWrite]);
+
+  useEffect(() => {
+    if (compartment !== "roles" || !canCompanyWrite) return;
+    void (async () => {
+      setRoleCapsError(null);
+      const res = await fetchSettingsCapabilities();
+      if (!res.ok) {
+        setRoleCaps(null);
+        setRoleCapsError(res.message);
+        return;
+      }
+      setRoleCaps(res.data);
+      setSelectedRole((prev) => prev || res.data.roles[0] || "");
+    })();
+  }, [compartment, canCompanyWrite]);
 
   async function onSaveEnvois() {
     if (!canCompanyWrite) return;
@@ -509,45 +635,61 @@ export default function SettingsPage() {
       setEnvoisError(res.message);
       return;
     }
-    setEnvoisMsg(`Test envoyé à ${res.to}${res.from ? ` (from ${res.from})` : ""}.`);
+    setEnvoisMsg(
+      `Test envoyé à ${res.to}${res.from ? ` (from ${res.from})` : ""}.`,
+    );
   }
 
   function applyDensity(next: Density) {
     setDensity(next);
+    void putUserSetting("ui.density", next);
   }
 
   function onSseBannerChange(on: boolean) {
     setShowSseBanner(on);
   }
 
-  function selectTab(id: Tab) {
-    if (isCompanyTab(id) && !canCompanyWrite) {
-      setCompanyDeniedHint(true);
-      setTab("apparence");
-      return;
+  async function onSaveGlMapping() {
+    if (!canCompanyWrite || glBusy) return;
+    setGlBusy(true);
+    setGlMsg(null);
+    setGlError(null);
+    const pairs: [string, string][] = [
+      [GL_MAPPING_KEYS.ar, glDraft.ar],
+      [GL_MAPPING_KEYS.bank, glDraft.bank],
+      [GL_MAPPING_KEYS.revenue, glDraft.revenue],
+      [GL_MAPPING_KEYS.vat, glDraft.vat],
+      [GL_MAPPING_KEYS.bankFee, glDraft.bankFee],
+      [GL_MAPPING_KEYS.salesJournal, glDraft.salesJournal],
+      [GL_MAPPING_KEYS.bankJournal, glDraft.bankJournal],
+    ];
+    for (const [key, value] of pairs) {
+      const r = await putCompanySetting(key, value.trim());
+      if (!r.ok) {
+        setGlError(`${key}: ${r.message}`);
+        setGlBusy(false);
+        return;
+      }
     }
-    setCompanyDeniedHint(false);
-    setTab(id);
-    if (id === "expertise" && typeof window !== "undefined") {
-      window.history.replaceState(null, "", "/settings#expertise");
-    } else if (typeof window !== "undefined" && window.location.hash) {
-      window.history.replaceState(null, "", "/settings");
-    }
+    setGlBusy(false);
+    setGlMsg("Mapping enregistré.");
+    setSavedFlash(true);
+    window.setTimeout(() => setSavedFlash(false), 1600);
   }
 
-  const tabs = (
-    [
-      ...(canCompanyWrite
-        ? ([
-            ["expertise", "Expertise légale"],
-            ["envois", "Envois"],
-          ] as const)
-        : []),
-      ["general", "Général"],
-      ["apparence", "Apparence"],
-      ["notifications", "Notifications"],
-    ] as const
-  );
+  async function persistRoleSetting(key: string, value: unknown) {
+    if (!roleCaps?.canWriteRole || !selectedRole || roleBusy) return;
+    setRoleBusy(true);
+    setRoleMsg(null);
+    setRoleError(null);
+    const r = await putRoleSetting(key, value, selectedRole);
+    setRoleBusy(false);
+    if (!r.ok) {
+      setRoleError(r.message);
+      return;
+    }
+    setRoleMsg("Override rôle enregistré.");
+  }
 
   function patchDraft(key: string, patch: Partial<ExpertDraft>) {
     setDrafts((prev) => ({
@@ -688,11 +830,11 @@ export default function SettingsPage() {
         title="Préférences"
         description={
           canCompanyWrite
-            ? "Apparence du poste · expertise légale société. Une préférence n’outrepasse jamais une permission."
-            : "Apparence et notifications de votre poste. Les paramètres société sont réservés à l’administrateur."
+            ? "Rail compartiments Soft Glass (D203) — poste, société, modes ops, expertise, envois, finance, compta, ventes, rôles. Une préférence n’outrepasse jamais une permission."
+            : "Rail compartiments Soft Glass (D203) — réglages de votre poste. Les compartiments société sont réservés à l’administrateur."
         }
         actions={
-          tab === "envois" && canCompanyWrite ? (
+          compartment === "envois" && canCompanyWrite ? (
             <div className="flex flex-wrap items-center gap-2">
               {mailStatus ? (
                 <ABadge
@@ -752,1160 +894,1289 @@ export default function SettingsPage() {
       <div className={softPageBody}>
         {companyDeniedHint ? (
           <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-            Expertise légale et Envois : réservés à l’administrateur société.
+            Compartiments société réservés à l’administrateur.
           </p>
         ) : null}
-        <div className="flex flex-wrap gap-1.5" role="tablist">
-          {tabs.map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => selectTab(id)}
-              className={softChipClass(tab === id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
 
-        {tab === "expertise" && canCompanyWrite ? (
-          <section className="space-y-5">
-            <p className="max-w-2xl text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Formulaire expert — champs{" "}
-              <span className="font-medium text-a-fg">vides par défaut</span>.
-              Aucun taux n’est inventé ni seedé. Saisie humaine uniquement ici
-              (Préférences) ; les modules ne consomment qu’après « Valider ».
-            </p>
-            {expertise.kind === "loading" ? (
-              <ASkeleton className="h-48 w-full max-w-3xl" />
-            ) : null}
-            {expertise.kind === "forbidden" ? (
-              <AForbiddenState message={expertise.message} />
-            ) : null}
-            {expertise.kind === "error" ? (
-              <AErrorState
-                message={expertise.message}
-                retryable
-                onRetry={() => void loadExpertise()}
-              />
-            ) : null}
-            {expertise.kind === "ok" && expertise.items.length === 0 ? (
-              <AEmptyState
-                title="Aucun slot d’expertise"
-                description="Le catalogue n’est pas initialisé."
-              />
-            ) : null}
-
-            {expertise.kind === "ok"
-              ? expertise.items.map((row) => {
-                  if (!row.writable) {
-                    return (
-                      <div
-                        key={row.key}
-                        className="rounded-[var(--a-radius-lg)] bg-a-surface-2 p-4"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="text-[length:var(--a-text-md)] font-medium">
-                                {row.label}
-                              </h3>
-                              <ABadge tone={statusTone(row.status)}>
-                                {statusLabel(row.status)}
-                              </ABadge>
-                            </div>
-                            <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                              {row.description}
-                            </p>
-                            {row.valueSummary ? (
-                              <p className="a-mono mt-2 text-[length:var(--a-text-sm)]">
-                                {row.valueSummary}
-                                {row.lawRef ? ` · ${row.lawRef}` : ""}
-                              </p>
-                            ) : null}
-                          </div>
-                          {row.manageHref ? (
-                            <Link
-                              href={row.manageHref}
-                              className="text-[length:var(--a-text-sm)] text-a-accent hover:underline"
-                            >
-                              Ouvrir catalogue TVA
-                            </Link>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  const draft = drafts[row.key] ?? emptyDraft();
-                  const err = formErrors[row.key];
-                  const canSubmit =
-                    Boolean(draft.valueLabel.trim()) &&
-                    Boolean(draft.lawRef.trim()) &&
-                    Boolean(draft.expertValidatedAt);
-
-                  return (
-                    <div
-                      key={row.key}
-                      className="space-y-4 rounded-[var(--a-radius-lg)] bg-a-surface-2 p-4"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-[length:var(--a-text-md)] font-medium">
-                              {row.label}
-                            </h3>
-                            <ABadge tone={statusTone(row.status)}>
-                              {statusLabel(row.status)}
-                            </ABadge>
-                            <span className="a-mono text-[length:var(--a-text-xs)] text-a-fg-muted">
-                              {row.key}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                            {row.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      {err ? (
-                        <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
-                          {err}
-                        </p>
-                      ) : null}
-
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="block space-y-1 sm:col-span-2">
-                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                            Libellé valeur
-                          </span>
-                          <AInput
-                            value={draft.valueLabel}
-                            onChange={(e) =>
-                              patchDraft(row.key, {
-                                valueLabel: e.target.value,
-                              })
-                            }
-                            placeholder="Vide — à saisir avec l’expert"
-                          />
-                        </label>
-                        <label className="block space-y-1 sm:col-span-2">
-                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                            Référence légale
-                          </span>
-                          <AInput
-                            value={draft.lawRef}
-                            onChange={(e) =>
-                              patchDraft(row.key, { lawRef: e.target.value })
-                            }
-                            placeholder="Vide — réf. expert / LF / note"
-                          />
-                        </label>
-                        <label className="block space-y-1">
-                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                            Date validation expert
-                          </span>
-                          <AInput
-                            type="date"
-                            value={draft.expertValidatedAt}
-                            onChange={(e) =>
-                              patchDraft(row.key, {
-                                expertValidatedAt: e.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                        <label className="block space-y-1">
-                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                            Taux bps (optionnel, 100 = 1 %)
-                          </span>
-                          <AInput
-                            value={draft.rateBps}
-                            onChange={(e) =>
-                              patchDraft(row.key, { rateBps: e.target.value })
-                            }
-                            placeholder="Vide"
-                            className="a-mono"
-                            disabled={
-                              row.key === "hr.irpp" ||
-                              row.key.startsWith("hr.irpp.abat.")
-                            }
-                          />
-                        </label>
-                        <label className="block space-y-1">
-                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                            Millimes (plafond / abattement annuel)
-                          </span>
-                          <AInput
-                            value={draft.amountMilli}
-                            onChange={(e) =>
-                              patchDraft(row.key, {
-                                amountMilli: e.target.value,
-                              })
-                            }
-                            placeholder="Vide"
-                            className="a-mono"
-                            disabled={row.key === "hr.irpp"}
-                          />
-                        </label>
-                        <label className="block space-y-1">
-                          <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                            Notes
-                          </span>
-                          <AInput
-                            value={draft.notes}
-                            onChange={(e) =>
-                              patchDraft(row.key, { notes: e.target.value })
-                            }
-                            placeholder="Vide"
-                          />
-                        </label>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        <AButton
-                          type="button"
-                          disabled={busyKey === row.key || !canSubmit}
-                          onClick={() => void onSubmitSlot(row)}
-                        >
-                          {row.status === "VALIDATED"
-                            ? "Mettre à jour"
-                            : "Valider expertise"}
-                        </AButton>
-                        {!canSubmit ? (
-                          <span className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                            Bouton actif seulement quand libellé + réf. + date
-                            sont renseignés.
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {row.key === "hr.irpp" ? (
-                        <div className="space-y-3 border-t border-transparent pt-3">
-                          <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                            Tranches annuelles (upToMilli = plafond en
-                            millimes). Dernière bande ouverte (plafond vide).
-                            Méthode calcul : annuel ÷ 12. Jamais prérempli.
-                          </p>
-                          {irppBracketError ? (
-                            <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
-                              {irppBracketError}
-                            </p>
-                          ) : null}
-                          {irppBracketDrafts.map((band, idx) => (
-                            <div
-                              key={`irpp-band-${idx}`}
-                              className="grid gap-2 sm:grid-cols-3"
-                            >
-                              <label className="block space-y-1">
-                                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                                  upToMilli{" "}
-                                  {idx === irppBracketDrafts.length - 1
-                                    ? "(vide = ouvert)"
-                                    : "(annuel)"}
-                                </span>
-                                <AInput
-                                  value={band.upToMilli}
-                                  onChange={(e) => {
-                                    const next = [...irppBracketDrafts];
-                                    next[idx] = {
-                                      ...band,
-                                      upToMilli: e.target.value,
-                                    };
-                                    setIrppBracketDrafts(next);
-                                  }}
-                                  placeholder={
-                                    idx === irppBracketDrafts.length - 1
-                                      ? "Ouvert"
-                                      : "ex. 5000000"
-                                  }
-                                  className="a-mono"
-                                  disabled={
-                                    idx === irppBracketDrafts.length - 1
-                                  }
-                                />
-                              </label>
-                              <label className="block space-y-1">
-                                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                                  rateBps
-                                </span>
-                                <AInput
-                                  value={band.rateBps}
-                                  onChange={(e) => {
-                                    const next = [...irppBracketDrafts];
-                                    next[idx] = {
-                                      ...band,
-                                      rateBps: e.target.value,
-                                    };
-                                    setIrppBracketDrafts(next);
-                                  }}
-                                  className="a-mono"
-                                />
-                              </label>
-                              <label className="block space-y-1">
-                                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                                  lawRef bande
-                                </span>
-                                <AInput
-                                  value={band.lawRef}
-                                  onChange={(e) => {
-                                    const next = [...irppBracketDrafts];
-                                    next[idx] = {
-                                      ...band,
-                                      lawRef: e.target.value,
-                                    };
-                                    setIrppBracketDrafts(next);
-                                  }}
-                                  placeholder="Vide"
-                                />
-                              </label>
-                            </div>
-                          ))}
-                          <div className="flex flex-wrap gap-2">
-                            <AButton
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() =>
-                                setIrppBracketDrafts((rows) => {
-                                  const copy = [...rows];
-                                  const last = copy.pop() ?? {
-                                    upToMilli: "",
-                                    rateBps: "0",
-                                    lawRef: "",
-                                  };
-                                  return [
-                                    ...copy,
-                                    {
-                                      upToMilli: "",
-                                      rateBps: "0",
-                                      lawRef: "",
-                                    },
-                                    last,
-                                  ];
-                                })
-                              }
-                            >
-                              + bande
-                            </AButton>
-                            <AButton
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={irppBracketDrafts.length <= 1}
-                              onClick={() =>
-                                setIrppBracketDrafts((rows) => {
-                                  if (rows.length <= 1) return rows;
-                                  const copy = [...rows];
-                                  copy.splice(copy.length - 2, 1);
-                                  return copy;
-                                })
-                              }
-                            >
-                              − bande
-                            </AButton>
-                            <AButton
-                              type="button"
-                              disabled={irppBracketBusy}
-                              onClick={() => void onSaveIrppBrackets()}
-                            >
-                              Enregistrer barème
-                            </AButton>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })
-              : null}
-          </section>
-        ) : null}
-
-        {tab === "envois" && canCompanyWrite ? (
-          <section className="max-w-2xl space-y-5">
-            <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Tous les paramètres d’envoi société (salubrité, invitations,
-              SMTP). Rien en dur côté produit — les défauts catalogue
-              s’appliquent tant que les champs ne sont pas surchargés.
-              Placeholders invite :{" "}
-              <span className="a-mono text-a-fg">
-                {"{{displayName}} {{inviteUrl}} {{ttlDays}} {{email}}"}
-              </span>
-              .
-            </p>
-            {envoisError ? (
-              <AErrorState
-                message={envoisError}
-                retryable
-                onRetry={() => void loadEnvois()}
-              />
-            ) : null}
-
-            <div className="space-y-4 a-underlay rounded-md p-4">
-              <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
-                Salubrité
-              </h2>
-              <div className="space-y-1">
-                <label
-                  htmlFor="salubrita-outlook-from"
-                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+        <div className="flex gap-6">
+          <nav
+            className="w-48 shrink-0 space-y-1"
+            aria-label="Compartiments préférences"
+          >
+            {visibleCompartments.map((c) => {
+              const active = compartment === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => selectCompartment(c.id)}
+                  className={`w-full rounded-md px-3 py-2 text-left transition-colors ${
+                    active
+                      ? "bg-a-accent-muted text-a-fg"
+                      : "text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
+                  }`}
                 >
-                  Outlook — expéditeur (from)
-                </label>
-                <AInput
-                  id="salubrita-outlook-from"
-                  type="email"
-                  value={outlookFrom}
-                  onChange={(e) => setOutlookFrom(e.target.value)}
-                  placeholder="ex. qualite@entreprise.tn"
-                />
-              </div>
-              <div className="space-y-1">
-                <label
-                  htmlFor="salubrita-wa-prefix"
-                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                >
-                  WhatsApp — préfixe pays
-                </label>
-                <AInput
-                  id="salubrita-wa-prefix"
-                  value={waPrefix}
-                  onChange={(e) => setWaPrefix(e.target.value)}
-                  placeholder="ex. 216"
-                  className="a-mono"
-                />
-              </div>
-            </div>
+                  <span className="block text-[length:var(--a-text-sm)] font-medium">
+                    {c.label}
+                  </span>
+                  <span className="mt-0.5 block text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                    {c.subtitle}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
 
-            <div className="space-y-4 a-underlay rounded-md p-4">
-              <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
-                Invitations
-              </h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label
-                    htmlFor="invite-ttl"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Durée du lien (jours)
-                  </label>
-                  <AInput
-                    id="invite-ttl"
-                    type="number"
-                    min={1}
-                    value={inviteTtl}
-                    onChange={(e) => setInviteTtl(e.target.value)}
-                    className="a-mono"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label
-                    htmlFor="invite-min-pwd"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    MDP min. (caractères)
-                  </label>
-                  <AInput
-                    id="invite-min-pwd"
-                    type="number"
-                    min={6}
-                    value={inviteMinPwd}
-                    onChange={(e) => setInviteMinPwd(e.target.value)}
-                    className="a-mono"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            {compartment === "poste" ? (
+              <section className={`${softPanel} max-w-xl`}>
                 <div>
-                  <p className="text-[length:var(--a-text-sm)] text-a-fg">
-                    Envoi SMTP automatique
+                  <p className="text-[length:var(--a-text-sm)] font-medium">
+                    Thème
                   </p>
-                  <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                    Si SMTP configuré — sinon Copier / Outlook.
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Dark et light sont tous deux de première classe — switch dans
+                    le header (même contrôle que le shell).
                   </p>
                 </div>
-                <ASwitch
-                  checked={inviteAutoSend}
-                  onCheckedChange={setInviteAutoSend}
-                  label="Envoi SMTP automatique"
-                />
-              </div>
-              <div className="space-y-1">
-                <label
-                  htmlFor="invite-web-origin"
-                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                >
-                  URL publique (liens invite)
-                </label>
-                <AInput
-                  id="invite-web-origin"
-                  value={inviteWebOrigin}
-                  onChange={(e) => setInviteWebOrigin(e.target.value)}
-                  placeholder="vide = AUTHORITY_WEB_ORIGIN / localhost:3000"
-                  className="a-mono"
-                />
-              </div>
-              <div className="space-y-1">
-                <label
-                  htmlFor="invite-subject"
-                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                >
-                  Objet e-mail
-                </label>
-                <AInput
-                  id="invite-subject"
-                  value={inviteSubject}
-                  onChange={(e) => setInviteSubject(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <label
-                  htmlFor="invite-body-text"
-                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                >
-                  Corps texte
-                </label>
-                <textarea
-                  id="invite-body-text"
-                  value={inviteBodyText}
-                  onChange={(e) => setInviteBodyText(e.target.value)}
-                  rows={6}
-                  className="w-full rounded-[10px] bg-a-surface-3 px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2"
-                />
-              </div>
-              <div className="space-y-1">
-                <label
-                  htmlFor="invite-body-html"
-                  className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                >
-                  Corps HTML
-                </label>
-                <textarea
-                  id="invite-body-html"
-                  value={inviteBodyHtml}
-                  onChange={(e) => setInviteBodyHtml(e.target.value)}
-                  rows={5}
-                  className="a-mono w-full rounded-[10px] bg-a-surface-3 px-3 py-2 text-[12px] text-a-fg outline-none ring-a-accent focus:ring-2"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4 a-underlay rounded-md p-4">
-              <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
-                SMTP société
-              </h2>
-              <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                Hôte vide → fallback variables d’environnement SMTP_* du
-                serveur.
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1 sm:col-span-2">
-                  <label
-                    htmlFor="smtp-host"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Hôte
-                  </label>
-                  <AInput
-                    id="smtp-host"
-                    value={smtpHost}
-                    onChange={(e) => setSmtpHost(e.target.value)}
-                    placeholder="smtp.exemple.tn"
-                    className="a-mono"
-                  />
+                <div>
+                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                    Densité
+                  </p>
+                  <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Compact resserre uniquement les lignes de tableaux — le chrome
+                    (header, sidebar, titres) ne bouge pas. Persisté via{" "}
+                    <span className="a-mono">ui.density</span>.
+                  </p>
+                  <div className="flex gap-2">
+                    <AButton
+                      type="button"
+                      size="sm"
+                      variant={
+                        density === "comfortable" ? "primary" : "secondary"
+                      }
+                      onClick={() => applyDensity("comfortable")}
+                    >
+                      Confortable
+                    </AButton>
+                    <AButton
+                      type="button"
+                      size="sm"
+                      variant={density === "compact" ? "primary" : "secondary"}
+                      onClick={() => applyDensity("compact")}
+                    >
+                      Compact
+                    </AButton>
+                    <AButton
+                      type="button"
+                      size="sm"
+                      variant={density === "spacious" ? "primary" : "secondary"}
+                      onClick={() => applyDensity("spacious")}
+                    >
+                      Spacieux
+                    </AButton>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label
-                    htmlFor="smtp-port"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Port
-                  </label>
-                  <AInput
-                    id="smtp-port"
-                    type="number"
-                    value={smtpPort}
-                    onChange={(e) => setSmtpPort(e.target.value)}
-                    className="a-mono"
-                  />
+                <div>
+                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                    Surface Soft Glass
+                  </p>
+                  <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Matériau glass (lock 10B) — aussi dans le Smart Action Dock.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        "ghost",
+                        "patch",
+                        "solid",
+                        "minimal",
+                      ] as const satisfies readonly SurfaceMode[]
+                    ).map((id) => (
+                      <AButton
+                        key={id}
+                        type="button"
+                        size="sm"
+                        variant={surfaceMode === id ? "primary" : "secondary"}
+                        onClick={() => setSurfaceMode(id)}
+                      >
+                        {SURFACE_LABELS[id]}
+                      </AButton>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-end justify-between gap-3 pb-1">
+                <div>
+                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                    Sidebar — auto-réduction
+                  </p>
+                  <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Réduit le menu latéral après N secondes sans survol. 0 =
+                    désactivé (bouton panneau uniquement). Défaut : 10 s.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <ASwitch
+                      label="Auto-réduction"
+                      checked={sidebarAutoCollapseSec > 0}
+                      onCheckedChange={(on) =>
+                        setSidebarAutoCollapseSec(on ? 10 : 0)
+                      }
+                    />
+                    {sidebarAutoCollapseSec > 0 ? (
+                      <label className="flex items-center gap-2 text-[length:var(--a-text-sm)] text-a-fg-muted">
+                        <span>Délai</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={120}
+                          value={sidebarAutoCollapseSec}
+                          onChange={(e) =>
+                            setSidebarAutoCollapseSec(
+                              Number.parseInt(e.target.value || "10", 10),
+                            )
+                          }
+                          className="a-mono w-16 rounded-lg bg-a-surface-3 px-2 py-1.5 text-[13px] text-a-fg outline-none focus:ring-2 focus:ring-a-accent/30"
+                        />
+                        <span>s</span>
+                      </label>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[length:var(--a-text-sm)] text-a-fg">
-                      Secure (465)
+                    <p className="text-[length:var(--a-text-sm)] font-medium">
+                      Alertes jobs
+                    </p>
+                    <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Afficher shed P4 / files Thunder dans le centre d’activité.
                     </p>
                   </div>
                   <ASwitch
-                    checked={smtpSecure}
-                    onCheckedChange={setSmtpSecure}
-                    label="SMTP secure"
+                    label="Alertes jobs"
+                    checked={jobAlerts}
+                    onCheckedChange={setJobAlerts}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label
-                    htmlFor="smtp-user"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Utilisateur
-                  </label>
-                  <AInput
-                    id="smtp-user"
-                    value={smtpUser}
-                    onChange={(e) => setSmtpUser(e.target.value)}
-                    className="a-mono"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label
-                    htmlFor="smtp-pass"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Mot de passe
-                  </label>
-                  <AInput
-                    id="smtp-pass"
-                    type="password"
-                    value={smtpPass}
-                    onChange={(e) => setSmtpPass(e.target.value)}
-                    autoComplete="new-password"
-                    placeholder={
-                      smtpPassSet
-                        ? "•••• enregistré — laisser vide pour conserver"
-                        : "saisir le mot de passe SMTP"
-                    }
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label
-                    htmlFor="smtp-from"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    From
-                  </label>
-                  <AInput
-                    id="smtp-from"
-                    value={smtpFrom}
-                    onChange={(e) => setSmtpFrom(e.target.value)}
-                    placeholder="AUTHORITY &lt;noreply@entreprise.tn&gt;"
-                  />
-                </div>
-              </div>
-              <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                « Tester l’envoi » utilise la config enregistrée (Enregistrer
-                d’abord) et envoie un message à votre compte admin.
-              </p>
-            </div>
-
-            <div className="space-y-4 a-underlay rounded-md p-4">
-              <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
-                Relances finance (SMTP dédié + WA Cloud)
-              </h2>
-              <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                Séparé du SMTP invitations. Vide jusqu’à saisie humaine —
-                secrets write-only. Thunder n’envoie pas automatiquement.
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label
-                    htmlFor="dun-smtp-host"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    SMTP relances — hôte
-                  </label>
-                  <AInput
-                    id="dun-smtp-host"
-                    value={dunSmtpHost}
-                    onChange={(e) => setDunSmtpHost(e.target.value)}
-                    className="a-mono"
-                    placeholder="smtp.relances.tn"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label
-                    htmlFor="dun-smtp-port"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Port
-                  </label>
-                  <AInput
-                    id="dun-smtp-port"
-                    type="number"
-                    value={dunSmtpPort}
-                    onChange={(e) => setDunSmtpPort(e.target.value)}
-                    className="a-mono"
-                  />
-                </div>
-                <div className="flex items-end justify-between gap-3 pb-1">
-                  <p className="text-[length:var(--a-text-sm)] text-a-fg">
-                    Secure (465)
-                  </p>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[length:var(--a-text-sm)] font-medium">
+                      Bannière SSE
+                    </p>
+                    <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Afficher « flux temps réel coupé » quand le stream est
+                      coupé.
+                    </p>
+                  </div>
                   <ASwitch
-                    checked={dunSmtpSecure}
-                    onCheckedChange={setDunSmtpSecure}
-                    label="Dunning SMTP secure"
+                    label="Bannière SSE"
+                    checked={showSseBanner}
+                    onCheckedChange={onSseBannerChange}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label
-                    htmlFor="dun-smtp-user"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Utilisateur
-                  </label>
-                  <AInput
-                    id="dun-smtp-user"
-                    value={dunSmtpUser}
-                    onChange={(e) => setDunSmtpUser(e.target.value)}
-                    className="a-mono"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label
-                    htmlFor="dun-smtp-pass"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Mot de passe
-                  </label>
-                  <AInput
-                    id="dun-smtp-pass"
-                    type="password"
-                    value={dunSmtpPass}
-                    onChange={(e) => setDunSmtpPass(e.target.value)}
-                    autoComplete="new-password"
-                    placeholder={
-                      dunSmtpPassSet
-                        ? "•••• enregistré — laisser vide pour conserver"
-                        : "saisir le mot de passe"
-                    }
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label
-                    htmlFor="dun-smtp-from"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    From
-                  </label>
-                  <AInput
-                    id="dun-smtp-from"
-                    value={dunSmtpFrom}
-                    onChange={(e) => setDunSmtpFrom(e.target.value)}
-                    placeholder="Relances &lt;relances@entreprise.tn&gt;"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label
-                    htmlFor="dun-wa-phone"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    WA Cloud — phone number id
-                  </label>
-                  <AInput
-                    id="dun-wa-phone"
-                    value={dunWaPhoneId}
-                    onChange={(e) => setDunWaPhoneId(e.target.value)}
-                    className="a-mono"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label
-                    htmlFor="dun-wa-version"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    API version
-                  </label>
-                  <AInput
-                    id="dun-wa-version"
-                    value={dunWaApiVersion}
-                    onChange={(e) => setDunWaApiVersion(e.target.value)}
-                    className="a-mono"
-                    placeholder="v21.0"
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label
-                    htmlFor="dun-wa-token"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Access token
-                  </label>
-                  <AInput
-                    id="dun-wa-token"
-                    type="password"
-                    value={dunWaToken}
-                    onChange={(e) => setDunWaToken(e.target.value)}
-                    autoComplete="new-password"
-                    placeholder={
-                      dunWaTokenSet
-                        ? "•••• enregistré — laisser vide pour conserver"
-                        : "saisir le token Cloud API"
-                    }
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label
-                    htmlFor="dun-wa-tpl-name"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Template Meta (nom)
-                  </label>
-                  <AInput
-                    id="dun-wa-tpl-name"
-                    value={dunWaTemplateName}
-                    onChange={(e) => setDunWaTemplateName(e.target.value)}
-                    className="a-mono"
-                    placeholder="nom approuvé Meta — vide jusqu’à saisie"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label
-                    htmlFor="dun-wa-tpl-lang"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Langue template
-                  </label>
-                  <AInput
-                    id="dun-wa-tpl-lang"
-                    value={dunWaTemplateLanguage}
-                    onChange={(e) => setDunWaTemplateLanguage(e.target.value)}
-                    className="a-mono"
-                    placeholder="fr"
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label
-                    htmlFor="dun-wa-tpl-params"
-                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-                  >
-                    Variables body {"{{n}}"} (ordre)
-                  </label>
-                  <AInput
-                    id="dun-wa-tpl-params"
-                    value={dunWaTemplateBodyParams}
-                    onChange={(e) => setDunWaTemplateBodyParams(e.target.value)}
-                    className="a-mono"
-                    placeholder="customer_name, open_item_number, amount_open, currency"
-                    autoComplete="off"
-                  />
-                  <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Clés : customer_name · open_item_number · amount_open ·
-                    currency · due_date · days_past_due · subject · body — vides
-                    jusqu’à saisie humaine ; envoi template Meta uniquement (pas
-                    texte libre).
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {envoisMsg ? (
-              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                {envoisMsg}
-              </p>
+              </section>
             ) : null}
-          </section>
-        ) : null}
 
-        {tab === "general" ? (
-          <section className={`${softPanel} max-w-xl`}>
-            <h2 className="text-[length:var(--a-text-md)] font-medium">
-              Contexte
-            </h2>
-            <dl className="grid grid-cols-[8rem_1fr] gap-y-3 text-[length:var(--a-text-sm)]">
-              <dt className="text-a-fg-muted">Société</dt>
-              <dd>Fromagerie ADV</dd>
-              <dt className="text-a-fg-muted">Site</dt>
-              <dd>Sfax</dd>
-              <dt className="text-a-fg-muted">Fuseau</dt>
-              <dd className="a-mono">Africa/Tunis</dd>
-              <dt className="text-a-fg-muted">Devise</dt>
-              <dd className="a-mono">TND</dd>
-            </dl>
-            <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-              Langue UI = Phase 2 (C14). Pas de globe ici.
-            </p>
-          </section>
-        ) : null}
+            {compartment === "societe" ? (
+              <section className={`${softPanel} max-w-xl`}>
+                <h2 className="text-[length:var(--a-text-md)] font-medium">
+                  Contexte
+                </h2>
+                <dl className="grid grid-cols-[8rem_1fr] gap-y-3 text-[length:var(--a-text-sm)]">
+                  <dt className="text-a-fg-muted">Société</dt>
+                  <dd>Fromagerie ADV</dd>
+                  <dt className="text-a-fg-muted">Site</dt>
+                  <dd>Sfax</dd>
+                  <dt className="text-a-fg-muted">Fuseau</dt>
+                  <dd className="a-mono">Africa/Tunis</dd>
+                  <dt className="text-a-fg-muted">Devise</dt>
+                  <dd className="a-mono">TND</dd>
+                </dl>
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                  Langue UI = Phase 2 (C14). Pas de globe ici.
+                </p>
+              </section>
+            ) : null}
 
-        {tab === "apparence" ? (
-          <section className={`${softPanel} max-w-xl`}>
-            <div>
-              <p className="text-[length:var(--a-text-sm)] font-medium">
-                Thème
-              </p>
-              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                Dark et light sont tous deux de première classe — switch dans le
-                header (même contrôle que le shell).
-              </p>
-            </div>
-            <div>
-              <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
-                Densité
-              </p>
-              <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                Compact resserre uniquement les lignes de tableaux — le chrome
-                (header, sidebar, titres) ne bouge pas.
-              </p>
-              <div className="flex gap-2">
-                <AButton
-                  type="button"
-                  size="sm"
-                  variant={density === "comfortable" ? "primary" : "secondary"}
-                  onClick={() => applyDensity("comfortable")}
-                >
-                  Confortable
-                </AButton>
-                <AButton
-                  type="button"
-                  size="sm"
-                  variant={density === "compact" ? "primary" : "secondary"}
-                  onClick={() => applyDensity("compact")}
-                >
-                  Compact
-                </AButton>
-                <AButton
-                  type="button"
-                  size="sm"
-                  variant={density === "spacious" ? "primary" : "secondary"}
-                  onClick={() => applyDensity("spacious")}
-                >
-                  Spacieux
-                </AButton>
-              </div>
-            </div>
-            <div>
-              <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
-                Surface Soft Glass
-              </p>
-              <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                Ghost / Patch / Solid / Minimal — opacité glass et glow (D161).
-                Aussi dans le Smart Action Dock.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {(
-                  [
-                    ["ghost", "Ghost"],
-                    ["patch", "Patch"],
-                    ["solid", "Solid"],
-                    ["minimal", "Minimal"],
-                  ] as const
-                ).map(([id, label]) => (
-                  <AButton
-                    key={id}
-                    type="button"
-                    size="sm"
-                    variant={surfaceMode === id ? "primary" : "secondary"}
-                    onClick={() => setSurfaceMode(id)}
-                  >
-                    {label}
-                  </AButton>
-                ))}
-              </div>
-            </div>
-            {canCompanyWrite ? (
-              <div>
-                <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
-                  Code sortie modes ops (calculatrice)
+            {compartment === "modes" && canCompanyWrite ? (
+              <PrefsModesOpsPanel
+                unlockDraft={unlockDraft}
+                setUnlockDraft={setUnlockDraft}
+                unlockBusy={unlockBusy}
+                unlockMsg={unlockMsg}
+                unlockError={unlockError}
+                onSaveUnlockCode={() => void onSaveUnlockCode()}
+              />
+            ) : null}
+
+            {compartment === "finance" && canCompanyWrite ? (
+              <section className={`${softPanel} max-w-xl space-y-6`}>
+                <div>
+                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                    Recouvrement — jalons J+n (D182)
+                  </p>
+                  <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Jours après échéance pour signal FIN-INTEL (ex. 1,7,15,30).
+                    Vide = tout retard. Pas de taux fiscaux.
+                  </p>
+                  <CollectionRemindDaysEditor canWrite={canCompanyWrite} />
+                </div>
+                <div>
+                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                    Crédit — seuil pression (D185)
+                  </p>
+                  <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Ratio encours / plafond pour signal Thunder (défaut 0,80).
+                    Dépassement = 100 %. Pas un barème fiscal.
+                  </p>
+                  <CreditWarnRatioEditor canWrite={canCompanyWrite} />
+                </div>
+              </section>
+            ) : null}
+
+            {compartment === "comptabilite" && canCompanyWrite ? (
+              <section className={`${softPanel} max-w-xl`}>
+                <h2 className="text-[length:var(--a-text-md)] font-medium">
+                  Mapping Finance→GL
+                </h2>
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Comptes et journaux pour le pont Finance → comptabilité.
+                  bank_fee vide jusqu’à saisie humaine.
                 </p>
-                <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  SPECTRE / PATCH / GHOST : l’icône disparaît à l’entrée. Sortie
-                  uniquement en tapant ce code (4–12 chiffres) sur la
-                  calculatrice du toolbox. Persisté côté société (Admin / Super
-                  Admin).
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    value={unlockDraft}
-                    onChange={(e) =>
-                      setUnlockDraft(e.target.value.replace(/\D/g, "").slice(0, 12))
-                    }
-                    className="a-mono h-9 w-36 rounded-xl bg-a-surface-3 px-3 text-[length:var(--a-text-sm)] text-a-fg outline-none focus:ring-2 focus:ring-a-accent"
-                    aria-label="Code déverrouillage modes"
+                {glError ? (
+                  <AErrorState
+                    message={glError}
+                    retryable
+                    onRetry={() => void loadGlMapping()}
                   />
+                ) : null}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(
+                    [
+                      ["ar", "Clients (AR)", GL_MAPPING_KEYS.ar],
+                      ["bank", "Banque", GL_MAPPING_KEYS.bank],
+                      ["revenue", "Produits", GL_MAPPING_KEYS.revenue],
+                      ["vat", "TVA", GL_MAPPING_KEYS.vat],
+                      ["bankFee", "Frais bancaires", GL_MAPPING_KEYS.bankFee],
+                      [
+                        "salesJournal",
+                        "Journal ventes",
+                        GL_MAPPING_KEYS.salesJournal,
+                      ],
+                      [
+                        "bankJournal",
+                        "Journal banque",
+                        GL_MAPPING_KEYS.bankJournal,
+                      ],
+                    ] as const
+                  ).map(([field, label, key]) => (
+                    <label key={field} className="block space-y-1">
+                      <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                        {label}{" "}
+                        <span className="a-mono text-a-fg-subtle">{key}</span>
+                      </span>
+                      <AInput
+                        value={glDraft[field]}
+                        onChange={(e) =>
+                          setGlDraft((d) => ({
+                            ...d,
+                            [field]: e.target.value,
+                          }))
+                        }
+                        className="a-mono"
+                        placeholder={
+                          field === "bankFee" ? "Vide jusqu’à saisie" : undefined
+                        }
+                      />
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   <AButton
                     type="button"
                     size="sm"
                     variant="primary"
-                    disabled={unlockBusy}
-                    onClick={() => void onSaveUnlockCode()}
+                    disabled={glBusy}
+                    onClick={() => void onSaveGlMapping()}
                   >
-                    {unlockBusy ? "…" : "Enregistrer"}
+                    {glBusy ? "…" : savedFlash ? "Enregistré" : "Enregistrer"}
                   </AButton>
-                  <span className="a-mono text-[10px] text-a-fg-subtle">
-                    défaut 3141
-                  </span>
+                  {glMsg ? (
+                    <p className="text-[length:var(--a-text-xs)] text-a-success">
+                      {glMsg}
+                    </p>
+                  ) : null}
                 </div>
-                {unlockMsg ? (
-                  <p className="mt-2 text-[length:var(--a-text-xs)] text-a-success">
-                    {unlockMsg}
-                  </p>
-                ) : null}
-                {unlockError ? (
-                  <p className="mt-2 text-[length:var(--a-text-xs)] text-a-danger">
-                    {unlockError}
-                  </p>
-                ) : null}
-              </div>
+              </section>
             ) : null}
-            {canCompanyWrite ? (
-              <div>
-                <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
-                  Modes ops — visibilité (D180)
+
+            {compartment === "ventes" && canCompanyWrite ? (
+              <section className={`${softPanel} max-w-xl`}>
+                <h2 className="text-[length:var(--a-text-md)] font-medium">
+                  Ventes & stock
+                </h2>
+                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  Les préférences modules ventes / inventaire s’ouvrent au
+                  prochain lot Soft Glass. Aucun taux ni barème inventé ici.
                 </p>
-                <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  GHOST / PATCH : masquer BL et/ou limiter la compta. Valeurs
-                  société (Admin). Super Admin : même siège Préférences.
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                  Clés connues aujourd’hui : aucune{" "}
+                  <span className="a-mono">sales.*</span> /{" "}
+                  <span className="a-mono">inventory.*</span> enregistrée dans le
+                  catalogue Préférences. Mapping GL ventes = compartiment
+                  Comptabilité (
+                  <span className="a-mono">accounting.gl.sales_journal</span>
+                  ).
                 </p>
-                <div className="space-y-2">
-                  {(
-                    [
-                      [
-                        "ops.ghost.hide_delivery",
-                        "GHOST masque livraison (BL)",
-                        "ghostHideDelivery",
-                      ],
-                      [
-                        "ops.patch.hide_delivery",
-                        "PATCH masque livraison (BL)",
-                        "patchHideDelivery",
-                      ],
-                      [
-                        "ops.patch.accounting_partial",
-                        "PATCH compta partielle (CoA seul)",
-                        "patchAccountingPartial",
-                      ],
-                      [
-                        "ops.ghost.accounting_partial",
-                        "GHOST compta partielle (CoA seul)",
-                        "ghostAccountingPartial",
-                      ],
-                    ] as const
-                  ).map(([key, label, field]) => (
+              </section>
+            ) : null}
+
+            {compartment === "roles" && canCompanyWrite ? (
+              <section className={`${softPanel} max-w-xl`}>
+                <h2 className="text-[length:var(--a-text-md)] font-medium">
+                  Overrides par rôle
+                </h2>
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Visible Admin — écriture Super Admin uniquement (D203).
+                </p>
+                {roleCapsError ? (
+                  <AErrorState message={roleCapsError} />
+                ) : null}
+                {!roleCaps ? (
+                  <ASkeleton className="h-24 w-full" />
+                ) : !roleCaps.canWriteRole ? (
+                  <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                    Écriture réservée Super Admin uniquement.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    <label className="block space-y-1">
+                      <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                        Rôle
+                      </span>
+                      <select
+                        className={softSelect}
+                        value={selectedRole}
+                        onChange={(e) => setSelectedRole(e.target.value)}
+                      >
+                        {roleCaps.roles.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <ASwitch
-                      key={key}
-                      label={label}
-                      checked={opsVisibility[field]}
+                      label="GHOST masque livraison (BL)"
+                      checked={roleGhostHideDelivery}
                       onCheckedChange={(on) => {
-                        usePrefsStore.getState().setOpsVisibility({
-                          [field]: on,
-                        });
-                        void putCompanySetting(key, on).then((r) => {
-                          if (!r.ok) {
-                            usePrefsStore.getState().setOpsVisibility({
-                              [field]: !on,
-                            });
-                          }
-                        });
+                        setRoleGhostHideDelivery(on);
+                        void persistRoleSetting(
+                          OPS_VISIBILITY_KEYS.ghostHideDelivery,
+                          on,
+                        );
                       }}
                     />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            {canCompanyWrite ? (
-              <div>
-                <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
-                  Recouvrement — jalons J+n (D182)
-                </p>
-                <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Jours après échéance pour signal FIN-INTEL (ex. 1,7,15,30).
-                  Vide = tout retard. Pas de taux fiscaux.
-                </p>
-                <CollectionRemindDaysEditor canWrite={canCompanyWrite} />
-              </div>
-            ) : null}
-            {canCompanyWrite ? (
-              <div>
-                <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
-                  Crédit — seuil pression (D185)
-                </p>
-                <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Ratio encours / plafond pour signal Thunder (défaut 0,80).
-                  Dépassement = 100 %. Pas un barème fiscal.
-                </p>
-                <CreditWarnRatioEditor canWrite={canCompanyWrite} />
-              </div>
-            ) : null}
-            <div>
-              <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
-                Sidebar — auto-réduction
-              </p>
-              <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                Réduit le menu latéral après N secondes sans survol. 0 =
-                désactivé (bouton panneau uniquement). Défaut : 10 s.
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <ASwitch
-                  label="Auto-réduction"
-                  checked={sidebarAutoCollapseSec > 0}
-                  onCheckedChange={(on) =>
-                    setSidebarAutoCollapseSec(on ? 10 : 0)
-                  }
-                />
-                {sidebarAutoCollapseSec > 0 ? (
-                  <label className="flex items-center gap-2 text-[length:var(--a-text-sm)] text-a-fg-muted">
-                    <span>Délai</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={120}
-                      value={sidebarAutoCollapseSec}
-                      onChange={(e) =>
-                        setSidebarAutoCollapseSec(
-                          Number.parseInt(e.target.value || "10", 10),
-                        )
-                      }
-                      className="a-mono w-16 rounded-lg bg-a-surface-3 px-2 py-1.5 text-[13px] text-a-fg outline-none focus:ring-2 focus:ring-a-accent/30"
+                    <ASwitch
+                      label="PATCH masque livraison (BL)"
+                      checked={rolePatchHideDelivery}
+                      onCheckedChange={(on) => {
+                        setRolePatchHideDelivery(on);
+                        void persistRoleSetting(
+                          OPS_VISIBILITY_KEYS.patchHideDelivery,
+                          on,
+                        );
+                      }}
                     />
-                    <span>s</span>
-                  </label>
-                ) : null}
-              </div>
-            </div>
-          </section>
-        ) : null}
+                    <label className="block space-y-2">
+                      <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                        Intensité PATCH comptable —{" "}
+                        <span className="a-mono">{rolePatchIntensity}%</span>
+                      </span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={rolePatchIntensity}
+                        disabled={!selectedRole || roleBusy}
+                        onChange={(e) => {
+                          const n = Number(e.target.value);
+                          setRolePatchIntensity(n);
+                          void persistRoleSetting(
+                            OPS_VISIBILITY_KEYS.patchAccountingIntensity,
+                            n,
+                          );
+                        }}
+                        className="w-full accent-[var(--a-accent)]"
+                      />
+                    </label>
+                    {roleMsg ? (
+                      <p className="text-[length:var(--a-text-xs)] text-a-success">
+                        {roleMsg}
+                      </p>
+                    ) : null}
+                    {roleError ? (
+                      <p className="text-[length:var(--a-text-xs)] text-a-danger">
+                        {roleError}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+              </section>
+            ) : null}
 
-        {tab === "notifications" ? (
-          <section className={`${softPanel} max-w-xl`}>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[length:var(--a-text-sm)] font-medium">
-                  Alertes jobs
+            {compartment === "expertise" && canCompanyWrite ? (
+              <section className="space-y-5">
+                <p className="max-w-2xl text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  Formulaire expert — champs{" "}
+                  <span className="font-medium text-a-fg">vides par défaut</span>.
+                  Aucun taux n’est inventé ni seedé. Saisie humaine uniquement ici
+                  (Préférences) ; les modules ne consomment qu’après « Valider ».
                 </p>
-                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Afficher shed P4 / files Thunder dans le centre d’activité.
+                {expertise.kind === "loading" ? (
+                  <ASkeleton className="h-48 w-full max-w-3xl" />
+                ) : null}
+                {expertise.kind === "forbidden" ? (
+                  <AForbiddenState message={expertise.message} />
+                ) : null}
+                {expertise.kind === "error" ? (
+                  <AErrorState
+                    message={expertise.message}
+                    retryable
+                    onRetry={() => void loadExpertise()}
+                  />
+                ) : null}
+                {expertise.kind === "ok" && expertise.items.length === 0 ? (
+                  <AEmptyState
+                    title="Aucun slot d’expertise"
+                    description="Le catalogue n’est pas initialisé."
+                  />
+                ) : null}
+
+                {expertise.kind === "ok"
+                  ? expertise.items.map((row) => {
+                      if (!row.writable) {
+                        return (
+                          <div
+                            key={row.key}
+                            className="rounded-[var(--a-radius-lg)] bg-a-surface-2 p-4"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-[length:var(--a-text-md)] font-medium">
+                                    {row.label}
+                                  </h3>
+                                  <ABadge tone={statusTone(row.status)}>
+                                    {statusLabel(row.status)}
+                                  </ABadge>
+                                </div>
+                                <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                  {row.description}
+                                </p>
+                                {row.valueSummary ? (
+                                  <p className="a-mono mt-2 text-[length:var(--a-text-sm)]">
+                                    {row.valueSummary}
+                                    {row.lawRef ? ` · ${row.lawRef}` : ""}
+                                  </p>
+                                ) : null}
+                              </div>
+                              {row.manageHref ? (
+                                <Link
+                                  href={row.manageHref}
+                                  className="text-[length:var(--a-text-sm)] text-a-accent hover:underline"
+                                >
+                                  Ouvrir catalogue TVA
+                                </Link>
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      const draft = drafts[row.key] ?? emptyDraft();
+                      const err = formErrors[row.key];
+                      const canSubmit =
+                        Boolean(draft.valueLabel.trim()) &&
+                        Boolean(draft.lawRef.trim()) &&
+                        Boolean(draft.expertValidatedAt);
+
+                      return (
+                        <div
+                          key={row.key}
+                          className="space-y-4 rounded-[var(--a-radius-lg)] bg-a-surface-2 p-4"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-[length:var(--a-text-md)] font-medium">
+                                  {row.label}
+                                </h3>
+                                <ABadge tone={statusTone(row.status)}>
+                                  {statusLabel(row.status)}
+                                </ABadge>
+                                <span className="a-mono text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                  {row.key}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                {row.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          {err ? (
+                            <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
+                              {err}
+                            </p>
+                          ) : null}
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <label className="block space-y-1 sm:col-span-2">
+                              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                Libellé valeur
+                              </span>
+                              <AInput
+                                value={draft.valueLabel}
+                                onChange={(e) =>
+                                  patchDraft(row.key, {
+                                    valueLabel: e.target.value,
+                                  })
+                                }
+                                placeholder="Vide — à saisir avec l’expert"
+                              />
+                            </label>
+                            <label className="block space-y-1 sm:col-span-2">
+                              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                Référence légale
+                              </span>
+                              <AInput
+                                value={draft.lawRef}
+                                onChange={(e) =>
+                                  patchDraft(row.key, {
+                                    lawRef: e.target.value,
+                                  })
+                                }
+                                placeholder="Vide — réf. expert / LF / note"
+                              />
+                            </label>
+                            <label className="block space-y-1">
+                              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                Date validation expert
+                              </span>
+                              <AInput
+                                type="date"
+                                value={draft.expertValidatedAt}
+                                onChange={(e) =>
+                                  patchDraft(row.key, {
+                                    expertValidatedAt: e.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <label className="block space-y-1">
+                              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                Taux bps (optionnel, 100 = 1 %)
+                              </span>
+                              <AInput
+                                value={draft.rateBps}
+                                onChange={(e) =>
+                                  patchDraft(row.key, {
+                                    rateBps: e.target.value,
+                                  })
+                                }
+                                placeholder="Vide"
+                                className="a-mono"
+                                disabled={
+                                  row.key === "hr.irpp" ||
+                                  row.key.startsWith("hr.irpp.abat.")
+                                }
+                              />
+                            </label>
+                            <label className="block space-y-1">
+                              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                Millimes (plafond / abattement annuel)
+                              </span>
+                              <AInput
+                                value={draft.amountMilli}
+                                onChange={(e) =>
+                                  patchDraft(row.key, {
+                                    amountMilli: e.target.value,
+                                  })
+                                }
+                                placeholder="Vide"
+                                className="a-mono"
+                                disabled={row.key === "hr.irpp"}
+                              />
+                            </label>
+                            <label className="block space-y-1">
+                              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                Notes
+                              </span>
+                              <AInput
+                                value={draft.notes}
+                                onChange={(e) =>
+                                  patchDraft(row.key, {
+                                    notes: e.target.value,
+                                  })
+                                }
+                                placeholder="Vide"
+                              />
+                            </label>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <AButton
+                              type="button"
+                              disabled={busyKey === row.key || !canSubmit}
+                              onClick={() => void onSubmitSlot(row)}
+                            >
+                              {row.status === "VALIDATED"
+                                ? "Mettre à jour"
+                                : "Valider expertise"}
+                            </AButton>
+                            {!canSubmit ? (
+                              <span className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                                Bouton actif seulement quand libellé + réf. + date
+                                sont renseignés.
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {row.key === "hr.irpp" ? (
+                            <div className="space-y-3 border-t border-transparent pt-3">
+                              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                Tranches annuelles (upToMilli = plafond en
+                                millimes). Dernière bande ouverte (plafond vide).
+                                Méthode calcul : annuel ÷ 12. Jamais prérempli.
+                              </p>
+                              {irppBracketError ? (
+                                <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
+                                  {irppBracketError}
+                                </p>
+                              ) : null}
+                              {irppBracketDrafts.map((band, idx) => (
+                                <div
+                                  key={`irpp-band-${idx}`}
+                                  className="grid gap-2 sm:grid-cols-3"
+                                >
+                                  <label className="block space-y-1">
+                                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                      upToMilli{" "}
+                                      {idx === irppBracketDrafts.length - 1
+                                        ? "(vide = ouvert)"
+                                        : "(annuel)"}
+                                    </span>
+                                    <AInput
+                                      value={band.upToMilli}
+                                      onChange={(e) => {
+                                        const next = [...irppBracketDrafts];
+                                        next[idx] = {
+                                          ...band,
+                                          upToMilli: e.target.value,
+                                        };
+                                        setIrppBracketDrafts(next);
+                                      }}
+                                      placeholder={
+                                        idx === irppBracketDrafts.length - 1
+                                          ? "Ouvert"
+                                          : "ex. 5000000"
+                                      }
+                                      className="a-mono"
+                                      disabled={
+                                        idx === irppBracketDrafts.length - 1
+                                      }
+                                    />
+                                  </label>
+                                  <label className="block space-y-1">
+                                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                      rateBps
+                                    </span>
+                                    <AInput
+                                      value={band.rateBps}
+                                      onChange={(e) => {
+                                        const next = [...irppBracketDrafts];
+                                        next[idx] = {
+                                          ...band,
+                                          rateBps: e.target.value,
+                                        };
+                                        setIrppBracketDrafts(next);
+                                      }}
+                                      className="a-mono"
+                                    />
+                                  </label>
+                                  <label className="block space-y-1">
+                                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                      lawRef bande
+                                    </span>
+                                    <AInput
+                                      value={band.lawRef}
+                                      onChange={(e) => {
+                                        const next = [...irppBracketDrafts];
+                                        next[idx] = {
+                                          ...band,
+                                          lawRef: e.target.value,
+                                        };
+                                        setIrppBracketDrafts(next);
+                                      }}
+                                      placeholder="Vide"
+                                    />
+                                  </label>
+                                </div>
+                              ))}
+                              <div className="flex flex-wrap gap-2">
+                                <AButton
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() =>
+                                    setIrppBracketDrafts((rows) => {
+                                      const copy = [...rows];
+                                      const last = copy.pop() ?? {
+                                        upToMilli: "",
+                                        rateBps: "0",
+                                        lawRef: "",
+                                      };
+                                      return [
+                                        ...copy,
+                                        {
+                                          upToMilli: "",
+                                          rateBps: "0",
+                                          lawRef: "",
+                                        },
+                                        last,
+                                      ];
+                                    })
+                                  }
+                                >
+                                  + bande
+                                </AButton>
+                                <AButton
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={irppBracketDrafts.length <= 1}
+                                  onClick={() =>
+                                    setIrppBracketDrafts((rows) => {
+                                      if (rows.length <= 1) return rows;
+                                      const copy = [...rows];
+                                      copy.splice(copy.length - 2, 1);
+                                      return copy;
+                                    })
+                                  }
+                                >
+                                  − bande
+                                </AButton>
+                                <AButton
+                                  type="button"
+                                  disabled={irppBracketBusy}
+                                  onClick={() => void onSaveIrppBrackets()}
+                                >
+                                  Enregistrer barème
+                                </AButton>
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })
+                  : null}
+              </section>
+            ) : null}
+
+            {compartment === "envois" && canCompanyWrite ? (
+              <section className="max-w-2xl space-y-5">
+                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  Tous les paramètres d’envoi société (salubrité, invitations,
+                  SMTP). Rien en dur côté produit — les défauts catalogue
+                  s’appliquent tant que les champs ne sont pas surchargés.
+                  Placeholders invite :{" "}
+                  <span className="a-mono text-a-fg">
+                    {"{{displayName}} {{inviteUrl}} {{ttlDays}} {{email}}"}
+                  </span>
+                  .
                 </p>
-              </div>
-              <ASwitch
-                label="Alertes jobs"
-                checked={jobAlerts}
-                onCheckedChange={setJobAlerts}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[length:var(--a-text-sm)] font-medium">
-                  Bannière SSE
-                </p>
-                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Afficher « flux temps réel coupé » quand le stream est coupé.
-                </p>
-              </div>
-              <ASwitch
-                label="Bannière SSE"
-                checked={showSseBanner}
-                onCheckedChange={onSseBannerChange}
-              />
-            </div>
-          </section>
-        ) : null}
+                {envoisError ? (
+                  <AErrorState
+                    message={envoisError}
+                    retryable
+                    onRetry={() => void loadEnvois()}
+                  />
+                ) : null}
+
+                <div className="space-y-4 a-underlay rounded-md p-4">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                    Salubrité
+                  </h2>
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="salubrita-outlook-from"
+                      className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                    >
+                      Outlook — expéditeur (from)
+                    </label>
+                    <AInput
+                      id="salubrita-outlook-from"
+                      type="email"
+                      value={outlookFrom}
+                      onChange={(e) => setOutlookFrom(e.target.value)}
+                      placeholder="ex. qualite@entreprise.tn"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="salubrita-wa-prefix"
+                      className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                    >
+                      WhatsApp — préfixe pays
+                    </label>
+                    <AInput
+                      id="salubrita-wa-prefix"
+                      value={waPrefix}
+                      onChange={(e) => setWaPrefix(e.target.value)}
+                      placeholder="ex. 216"
+                      className="a-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4 a-underlay rounded-md p-4">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                    Invitations
+                  </h2>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="invite-ttl"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Durée du lien (jours)
+                      </label>
+                      <AInput
+                        id="invite-ttl"
+                        type="number"
+                        min={1}
+                        value={inviteTtl}
+                        onChange={(e) => setInviteTtl(e.target.value)}
+                        className="a-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="invite-min-pwd"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        MDP min. (caractères)
+                      </label>
+                      <AInput
+                        id="invite-min-pwd"
+                        type="number"
+                        min={6}
+                        value={inviteMinPwd}
+                        onChange={(e) => setInviteMinPwd(e.target.value)}
+                        className="a-mono"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[length:var(--a-text-sm)] text-a-fg">
+                        Envoi SMTP automatique
+                      </p>
+                      <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                        Si SMTP configuré — sinon Copier / Outlook.
+                      </p>
+                    </div>
+                    <ASwitch
+                      checked={inviteAutoSend}
+                      onCheckedChange={setInviteAutoSend}
+                      label="Envoi SMTP automatique"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="invite-web-origin"
+                      className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                    >
+                      URL publique (liens invite)
+                    </label>
+                    <AInput
+                      id="invite-web-origin"
+                      value={inviteWebOrigin}
+                      onChange={(e) => setInviteWebOrigin(e.target.value)}
+                      placeholder="vide = AUTHORITY_WEB_ORIGIN / localhost:3000"
+                      className="a-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="invite-subject"
+                      className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                    >
+                      Objet e-mail
+                    </label>
+                    <AInput
+                      id="invite-subject"
+                      value={inviteSubject}
+                      onChange={(e) => setInviteSubject(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="invite-body-text"
+                      className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                    >
+                      Corps texte
+                    </label>
+                    <textarea
+                      id="invite-body-text"
+                      value={inviteBodyText}
+                      onChange={(e) => setInviteBodyText(e.target.value)}
+                      rows={6}
+                      className="w-full rounded-[10px] bg-a-surface-3 px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="invite-body-html"
+                      className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                    >
+                      Corps HTML
+                    </label>
+                    <textarea
+                      id="invite-body-html"
+                      value={inviteBodyHtml}
+                      onChange={(e) => setInviteBodyHtml(e.target.value)}
+                      rows={5}
+                      className="a-mono w-full rounded-[10px] bg-a-surface-3 px-3 py-2 text-[12px] text-a-fg outline-none ring-a-accent focus:ring-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4 a-underlay rounded-md p-4">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                    SMTP société
+                  </h2>
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                    Hôte vide → fallback variables d’environnement SMTP_* du
+                    serveur.
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1 sm:col-span-2">
+                      <label
+                        htmlFor="smtp-host"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Hôte
+                      </label>
+                      <AInput
+                        id="smtp-host"
+                        value={smtpHost}
+                        onChange={(e) => setSmtpHost(e.target.value)}
+                        placeholder="smtp.exemple.tn"
+                        className="a-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="smtp-port"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Port
+                      </label>
+                      <AInput
+                        id="smtp-port"
+                        type="number"
+                        value={smtpPort}
+                        onChange={(e) => setSmtpPort(e.target.value)}
+                        className="a-mono"
+                      />
+                    </div>
+                    <div className="flex items-end justify-between gap-3 pb-1">
+                      <div>
+                        <p className="text-[length:var(--a-text-sm)] text-a-fg">
+                          Secure (465)
+                        </p>
+                      </div>
+                      <ASwitch
+                        checked={smtpSecure}
+                        onCheckedChange={setSmtpSecure}
+                        label="SMTP secure"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="smtp-user"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Utilisateur
+                      </label>
+                      <AInput
+                        id="smtp-user"
+                        value={smtpUser}
+                        onChange={(e) => setSmtpUser(e.target.value)}
+                        className="a-mono"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="smtp-pass"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Mot de passe
+                      </label>
+                      <AInput
+                        id="smtp-pass"
+                        type="password"
+                        value={smtpPass}
+                        onChange={(e) => setSmtpPass(e.target.value)}
+                        autoComplete="new-password"
+                        placeholder={
+                          smtpPassSet
+                            ? "•••• enregistré — laisser vide pour conserver"
+                            : "saisir le mot de passe SMTP"
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <label
+                        htmlFor="smtp-from"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        From
+                      </label>
+                      <AInput
+                        id="smtp-from"
+                        value={smtpFrom}
+                        onChange={(e) => setSmtpFrom(e.target.value)}
+                        placeholder="AUTHORITY &lt;noreply@entreprise.tn&gt;"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                    « Tester l’envoi » utilise la config enregistrée (Enregistrer
+                    d’abord) et envoie un message à votre compte admin.
+                  </p>
+                </div>
+
+                <div className="space-y-4 a-underlay rounded-md p-4">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                    Relances finance (SMTP dédié + WA Cloud)
+                  </h2>
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                    Séparé du SMTP invitations. Vide jusqu’à saisie humaine —
+                    secrets write-only. Thunder n’envoie pas automatiquement.
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="dun-smtp-host"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        SMTP relances — hôte
+                      </label>
+                      <AInput
+                        id="dun-smtp-host"
+                        value={dunSmtpHost}
+                        onChange={(e) => setDunSmtpHost(e.target.value)}
+                        className="a-mono"
+                        placeholder="smtp.relances.tn"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="dun-smtp-port"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Port
+                      </label>
+                      <AInput
+                        id="dun-smtp-port"
+                        type="number"
+                        value={dunSmtpPort}
+                        onChange={(e) => setDunSmtpPort(e.target.value)}
+                        className="a-mono"
+                      />
+                    </div>
+                    <div className="flex items-end justify-between gap-3 pb-1">
+                      <p className="text-[length:var(--a-text-sm)] text-a-fg">
+                        Secure (465)
+                      </p>
+                      <ASwitch
+                        checked={dunSmtpSecure}
+                        onCheckedChange={setDunSmtpSecure}
+                        label="Dunning SMTP secure"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="dun-smtp-user"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Utilisateur
+                      </label>
+                      <AInput
+                        id="dun-smtp-user"
+                        value={dunSmtpUser}
+                        onChange={(e) => setDunSmtpUser(e.target.value)}
+                        className="a-mono"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="dun-smtp-pass"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Mot de passe
+                      </label>
+                      <AInput
+                        id="dun-smtp-pass"
+                        type="password"
+                        value={dunSmtpPass}
+                        onChange={(e) => setDunSmtpPass(e.target.value)}
+                        autoComplete="new-password"
+                        placeholder={
+                          dunSmtpPassSet
+                            ? "•••• enregistré — laisser vide pour conserver"
+                            : "saisir le mot de passe"
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <label
+                        htmlFor="dun-smtp-from"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        From
+                      </label>
+                      <AInput
+                        id="dun-smtp-from"
+                        value={dunSmtpFrom}
+                        onChange={(e) => setDunSmtpFrom(e.target.value)}
+                        placeholder="Relances &lt;relances@entreprise.tn&gt;"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="dun-wa-phone"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        WA Cloud — phone number id
+                      </label>
+                      <AInput
+                        id="dun-wa-phone"
+                        value={dunWaPhoneId}
+                        onChange={(e) => setDunWaPhoneId(e.target.value)}
+                        className="a-mono"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="dun-wa-version"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        API version
+                      </label>
+                      <AInput
+                        id="dun-wa-version"
+                        value={dunWaApiVersion}
+                        onChange={(e) => setDunWaApiVersion(e.target.value)}
+                        className="a-mono"
+                        placeholder="v21.0"
+                      />
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <label
+                        htmlFor="dun-wa-token"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Access token
+                      </label>
+                      <AInput
+                        id="dun-wa-token"
+                        type="password"
+                        value={dunWaToken}
+                        onChange={(e) => setDunWaToken(e.target.value)}
+                        autoComplete="new-password"
+                        placeholder={
+                          dunWaTokenSet
+                            ? "•••• enregistré — laisser vide pour conserver"
+                            : "saisir le token Cloud API"
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="dun-wa-tpl-name"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Template Meta (nom)
+                      </label>
+                      <AInput
+                        id="dun-wa-tpl-name"
+                        value={dunWaTemplateName}
+                        onChange={(e) => setDunWaTemplateName(e.target.value)}
+                        className="a-mono"
+                        placeholder="nom approuvé Meta — vide jusqu’à saisie"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="dun-wa-tpl-lang"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Langue template
+                      </label>
+                      <AInput
+                        id="dun-wa-tpl-lang"
+                        value={dunWaTemplateLanguage}
+                        onChange={(e) =>
+                          setDunWaTemplateLanguage(e.target.value)
+                        }
+                        className="a-mono"
+                        placeholder="fr"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <label
+                        htmlFor="dun-wa-tpl-params"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Variables body {"{{n}}"} (ordre)
+                      </label>
+                      <AInput
+                        id="dun-wa-tpl-params"
+                        value={dunWaTemplateBodyParams}
+                        onChange={(e) =>
+                          setDunWaTemplateBodyParams(e.target.value)
+                        }
+                        className="a-mono"
+                        placeholder="customer_name, open_item_number, amount_open, currency"
+                        autoComplete="off"
+                      />
+                      <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                        Clés : customer_name · open_item_number · amount_open ·
+                        currency · due_date · days_past_due · subject · body —
+                        vides jusqu’à saisie humaine ; envoi template Meta
+                        uniquement (pas texte libre).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {envoisMsg ? (
+                  <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                    {envoisMsg}
+                  </p>
+                ) : null}
+              </section>
+            ) : null}
+          </div>
+        </div>
       </div>
     </>
   );

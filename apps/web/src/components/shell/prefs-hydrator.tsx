@@ -2,8 +2,15 @@
 
 import { useEffect } from "react";
 import { fetchEffectiveSettings } from "@/lib/settings";
-import { OPS_VISIBILITY_KEYS } from "@/lib/ops-visibility";
-import { usePrefsStore } from "@/stores/prefs-store";
+import {
+  OPS_VISIBILITY_DEFAULTS,
+  OPS_VISIBILITY_KEYS,
+  parseHiddenFeatures,
+  parsePatchDisplayRules,
+  parsePatchIntensity,
+  parsePatchPreset,
+} from "@/lib/ops-visibility";
+import { usePrefsStore, type Density } from "@/stores/prefs-store";
 import { useLocaleStore } from "@/stores/locale-store";
 
 const LEGACY_DENSITY_KEY = "authority-density";
@@ -16,7 +23,7 @@ function asBool(value: unknown, fallback: boolean): boolean {
   return fallback;
 }
 
-/** Apply persisted density + surface + locale; hydrate ops unlock + visibility. */
+/** Apply density/surface; hydrate ops + chrome from effective (ROLE→USER, D203 12C). */
 export function PrefsHydrator() {
   useEffect(() => {
     const legacy = localStorage.getItem(LEGACY_DENSITY_KEY);
@@ -49,8 +56,19 @@ export function PrefsHydrator() {
       ) {
         usePrefsStore.getState().setOpsUnlockCode(unlock);
       }
+
+      const densityVal = byKey.get("ui.density");
+      if (
+        densityVal === "compact" ||
+        densityVal === "comfortable" ||
+        densityVal === "spacious"
+      ) {
+        usePrefsStore.getState().setDensity(densityVal as Density);
+      }
+
       const cur = usePrefsStore.getState().opsVisibility;
       usePrefsStore.getState().setOpsVisibility({
+        ...OPS_VISIBILITY_DEFAULTS,
         ghostHideDelivery: asBool(
           byKey.get(OPS_VISIBILITY_KEYS.ghostHideDelivery),
           cur.ghostHideDelivery,
@@ -66,6 +84,19 @@ export function PrefsHydrator() {
         ghostAccountingPartial: asBool(
           byKey.get(OPS_VISIBILITY_KEYS.ghostAccountingPartial),
           cur.ghostAccountingPartial,
+        ),
+        patchAccountingPreset: parsePatchPreset(
+          byKey.get(OPS_VISIBILITY_KEYS.patchAccountingPreset),
+        ),
+        patchAccountingIntensity: parsePatchIntensity(
+          byKey.get(OPS_VISIBILITY_KEYS.patchAccountingIntensity),
+          cur.patchAccountingIntensity,
+        ),
+        patchDisplayRules: parsePatchDisplayRules(
+          byKey.get(OPS_VISIBILITY_KEYS.patchDisplayRules),
+        ),
+        ghostHiddenFeatures: parseHiddenFeatures(
+          byKey.get(OPS_VISIBILITY_KEYS.ghostHiddenFeatures),
         ),
       });
     })();

@@ -32,13 +32,17 @@ export const SECRET_SETTING_KEYS = [
   'finance.dunning.wa.access_token',
 ] as const;
 
-/** Company-scoped only — no USER override (D170/D180/D194). */
+/** Company-scoped only — no USER override (D170/D180/D194/D203). */
 export const COMPANY_ONLY_SETTING_KEYS = [
   'ops.unlock_code',
   'ops.ghost.hide_delivery',
   'ops.patch.hide_delivery',
   'ops.patch.accounting_partial',
   'ops.ghost.accounting_partial',
+  'ops.patch.accounting_preset',
+  'ops.patch.accounting_intensity',
+  'ops.patch.display_rules',
+  'ops.ghost.hidden_features',
   'finance.collection.remind_days',
   'finance.credit.warn_ratio',
   'finance.dunning.smtp.host',
@@ -53,6 +57,13 @@ export const COMPANY_ONLY_SETTING_KEYS = [
   'finance.dunning.wa.template_name',
   'finance.dunning.wa.template_language',
   'finance.dunning.wa.template_body_params',
+  'accounting.gl.ar',
+  'accounting.gl.bank',
+  'accounting.gl.revenue',
+  'accounting.gl.vat',
+  'accounting.gl.bank_fee',
+  'accounting.gl.sales_journal',
+  'accounting.gl.bank_journal',
 ] as const;
 
 export function isCompanyOnlySettingKey(key: string): boolean {
@@ -63,22 +74,30 @@ export function isCompanyOnlySettingKey(key: string): boolean {
 export const OPS_UNLOCK_CODE_KEY = 'ops.unlock_code';
 export const OPS_UNLOCK_CODE_DEFAULT = '3141';
 
-/** Ops visibility — defaults match GHOST/PATCH product intent (D180). Prefs Admin later. */
+/** Ops visibility (D180/D203) — Prefs Admin · COMPANY_ONLY. */
 export const OPS_VISIBILITY_SETTING_KEYS = {
   GHOST_HIDE_DELIVERY: 'ops.ghost.hide_delivery',
   PATCH_HIDE_DELIVERY: 'ops.patch.hide_delivery',
   PATCH_ACCOUNTING_PARTIAL: 'ops.patch.accounting_partial',
   GHOST_ACCOUNTING_PARTIAL: 'ops.ghost.accounting_partial',
+  PATCH_ACCOUNTING_PRESET: 'ops.patch.accounting_preset',
+  PATCH_ACCOUNTING_INTENSITY: 'ops.patch.accounting_intensity',
+  PATCH_DISPLAY_RULES: 'ops.patch.display_rules',
+  GHOST_HIDDEN_FEATURES: 'ops.ghost.hidden_features',
 } as const;
 
-export const OPS_VISIBILITY_DEFAULTS: Record<
-  (typeof OPS_VISIBILITY_SETTING_KEYS)[keyof typeof OPS_VISIBILITY_SETTING_KEYS],
-  boolean
-> = {
+export type OpsVisibilitySettingKey =
+  (typeof OPS_VISIBILITY_SETTING_KEYS)[keyof typeof OPS_VISIBILITY_SETTING_KEYS];
+
+export const OPS_VISIBILITY_DEFAULTS: Record<string, unknown> = {
   [OPS_VISIBILITY_SETTING_KEYS.GHOST_HIDE_DELIVERY]: true,
   [OPS_VISIBILITY_SETTING_KEYS.PATCH_HIDE_DELIVERY]: true,
   [OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_PARTIAL]: true,
   [OPS_VISIBILITY_SETTING_KEYS.GHOST_ACCOUNTING_PARTIAL]: false,
+  [OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_PRESET]: 'partial',
+  [OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_INTENSITY]: 30,
+  [OPS_VISIBILITY_SETTING_KEYS.PATCH_DISPLAY_RULES]: ['by_date'],
+  [OPS_VISIBILITY_SETTING_KEYS.GHOST_HIDDEN_FEATURES]: [],
 };
 
 export function normalizeOpsUnlockCode(value: unknown): string | null {
@@ -130,7 +149,7 @@ export const SETTING_ENUM_VALUES: Record<KernelSettingKey, readonly string[]> =
   {
     'ui.locale': ['fr-TN', 'en-US', 'ar-TN'],
     'ui.theme': ['light', 'dark', 'system'],
-    'ui.density': ['compact', 'comfortable'],
+    'ui.density': ['compact', 'comfortable', 'spacious'],
   };
 
 /**

@@ -5,6 +5,7 @@ import {
   buildScopeKey,
   OPS_VISIBILITY_DEFAULTS,
   OPS_VISIBILITY_SETTING_KEYS,
+  type OpsVisibilitySettingKey,
 } from '../settings/settings.constants';
 
 export type OpsVisibilityPolicy = {
@@ -12,26 +13,50 @@ export type OpsVisibilityPolicy = {
   patchHideDelivery: boolean;
   patchAccountingPartial: boolean;
   ghostAccountingPartial: boolean;
+  patchAccountingPreset: 'none' | 'partial' | 'full';
+  patchAccountingIntensity: number;
+  patchDisplayRules: string[];
+  ghostHiddenFeatures: string[];
 };
 
-const META: Record<
-  (typeof OPS_VISIBILITY_SETTING_KEYS)[keyof typeof OPS_VISIBILITY_SETTING_KEYS],
-  string
-> = {
+const META: Record<OpsVisibilitySettingKey, string> = {
   [OPS_VISIBILITY_SETTING_KEYS.GHOST_HIDE_DELIVERY]:
     'When GHOST mode is on, hide Delivery (BL) from navigation',
   [OPS_VISIBILITY_SETTING_KEYS.PATCH_HIDE_DELIVERY]:
     'When PATCH mode is on, hide Delivery (BL) from navigation',
   [OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_PARTIAL]:
-    'When PATCH mode is on, show only CoA (hide entries/TB/mapping write)',
+    'When PATCH mode is on, show only CoA (legacy bool — prefer preset)',
   [OPS_VISIBILITY_SETTING_KEYS.GHOST_ACCOUNTING_PARTIAL]:
     'When GHOST mode is on, show only CoA (hide entries/TB/mapping write)',
+  [OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_PRESET]:
+    'PATCH accounting preset: none | partial | full (D203)',
+  [OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_INTENSITY]:
+    'PATCH ledger visibility percent 0–100 (D203)',
+  [OPS_VISIBILITY_SETTING_KEYS.PATCH_DISPLAY_RULES]:
+    'PATCH display rules JSON: random | large_moves | by_date (D203)',
+  [OPS_VISIBILITY_SETTING_KEYS.GHOST_HIDDEN_FEATURES]:
+    'GHOST hidden features JSON moduleKey/featureId (D203)',
 };
 
+function valueTypeFor(key: OpsVisibilitySettingKey): string {
+  if (
+    key === OPS_VISIBILITY_SETTING_KEYS.PATCH_DISPLAY_RULES ||
+    key === OPS_VISIBILITY_SETTING_KEYS.GHOST_HIDDEN_FEATURES
+  ) {
+    return 'json';
+  }
+  if (key === OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_INTENSITY) {
+    return 'number';
+  }
+  if (key === OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_PRESET) {
+    return 'string';
+  }
+  return 'boolean';
+}
+
 /**
- * Company ops visibility policy (D180).
- * Defaults: GHOST/PATCH hide BL; PATCH partial accounting; GHOST full accounting.
- * Admin Prefs UI can override later — keys are COMPANY_ONLY.
+ * Company ops visibility policy (D180/D203).
+ * Admin Prefs — COMPANY_ONLY. Modes combinable (lock 2A).
  */
 @Injectable()
 export class OpsVisibilityResolver {
@@ -42,15 +67,15 @@ export class OpsVisibilityResolver {
       await this.prisma.setDef.upsert({
         where: { key },
         update: {
-          valueType: 'boolean',
-          defaultJson: OPS_VISIBILITY_DEFAULTS[key],
+          valueType: valueTypeFor(key),
+          defaultJson: OPS_VISIBILITY_DEFAULTS[key] as never,
           description: META[key],
           isPrefOnly: true,
         },
         create: {
           key,
-          valueType: 'boolean',
-          defaultJson: OPS_VISIBILITY_DEFAULTS[key],
+          valueType: valueTypeFor(key),
+          defaultJson: OPS_VISIBILITY_DEFAULTS[key] as never,
           description: META[key],
           isPrefOnly: true,
         },
@@ -71,33 +96,68 @@ export class OpsVisibilityResolver {
     const byKey = new Map(values.map((v) => [v.defKey, v.valueJson]));
     const defByKey = new Map(defs.map((d) => [d.key, d.defaultJson]));
 
-    const asBool = (
-      key: keyof typeof OPS_VISIBILITY_DEFAULTS,
-    ): boolean => {
-      const raw = byKey.has(key)
-        ? byKey.get(key)
-        : defByKey.has(key)
-          ? defByKey.get(key)
-          : OPS_VISIBILITY_DEFAULTS[key];
+    const read = (key: OpsVisibilitySettingKey): unknown => {
+      if (byKey.has(key)) return byKey.get(key);
+      if (defByKey.has(key)) return defByKey.get(key);
+      return OPS_VISIBILITY_DEFAULTS[key];
+    };
+
+    const asBool = (key: OpsVisibilitySettingKey, fallback: boolean): boolean => {
+      const raw = read(key);
       if (typeof raw === 'boolean') return raw;
       if (raw === 'true' || raw === '1') return true;
       if (raw === 'false' || raw === '0') return false;
-      return OPS_VISIBILITY_DEFAULTS[key];
+      return fallback;
     };
+
+    const presetRaw = read(OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_PRESET);
+    const preset =
+      presetRaw === 'none' || presetRaw === 'partial' || presetRaw === 'full'
+        ? presetRaw
+        : 'partial';
+
+    const intensityRaw = read(
+      OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_INTENSITY,
+    );
+    let intensity =
+      typeof intensityRaw === 'number' && Number.isFinite(intensityRaw)
+        ? Math.round(intensityRaw)
+        : 30;
+    intensity = Math.max(0, Math.min(100, intensity));
+
+    const rulesRaw = read(OPS_VISIBILITY_SETTING_KEYS.PATCH_DISPLAY_RULES);
+    const rules = Array.isArray(rulesRaw)
+      ? rulesRaw.filter((x): x is string => typeof x === 'string')
+      : ['by_date'];
+
+    const hiddenRaw = read(OPS_VISIBILITY_SETTING_KEYS.GHOST_HIDDEN_FEATURES);
+    const hidden = Array.isArray(hiddenRaw)
+      ? hiddenRaw.filter((x): x is string => typeof x === 'string')
+      : [];
+
+    const patchPartialLegacy = asBool(
+      OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_PARTIAL,
+      true,
+    );
 
     return {
       ghostHideDelivery: asBool(
         OPS_VISIBILITY_SETTING_KEYS.GHOST_HIDE_DELIVERY,
+        true,
       ),
       patchHideDelivery: asBool(
         OPS_VISIBILITY_SETTING_KEYS.PATCH_HIDE_DELIVERY,
+        true,
       ),
-      patchAccountingPartial: asBool(
-        OPS_VISIBILITY_SETTING_KEYS.PATCH_ACCOUNTING_PARTIAL,
-      ),
+      patchAccountingPartial: preset !== 'full' || patchPartialLegacy,
       ghostAccountingPartial: asBool(
         OPS_VISIBILITY_SETTING_KEYS.GHOST_ACCOUNTING_PARTIAL,
+        false,
       ),
+      patchAccountingPreset: preset,
+      patchAccountingIntensity: intensity,
+      patchDisplayRules: rules,
+      ghostHiddenFeatures: hidden,
     };
   }
 }

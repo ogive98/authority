@@ -61,6 +61,25 @@ export class SettingsController {
     });
   }
 
+  /** D203 — Super Admin can write ROLE overrides. */
+  @Get('capabilities')
+  @UseGuards(TenancyGuard)
+  async capabilities(
+    @CurrentUser() user: { id: string },
+    @CurrentTenancy() tenancy: TenancyContext,
+  ) {
+    await this.assertPermission(
+      user.id,
+      PERMISSION_KEYS.settingsSelf,
+      tenancy.companyId,
+    );
+    const canWriteRole = await this.settingsService.isSuperAdminMember(user.id);
+    return {
+      canWriteRole,
+      roles: ['admin', 'accountant', 'operator'],
+    };
+  }
+
   /** Legal expertise slots (FODEC / timbre / CNSS…) — Admin company write only (D112). */
   @Get('expertise')
   @UseGuards(TenancyGuard)
@@ -142,11 +161,21 @@ export class SettingsController {
   ) {
     const level = dto.level ?? 'USER';
     const permissionKey =
-      level === 'COMPANY'
+      level === 'COMPANY' || level === 'ROLE'
         ? PERMISSION_KEYS.settingsCompanyWrite
         : PERMISSION_KEYS.settingsSelf;
 
     await this.assertPermission(user.id, permissionKey, tenancy.companyId);
+
+    const actorIsSuperAdmin =
+      await this.settingsService.isSuperAdminMember(user.id);
+
+    if (level === 'ROLE' && !actorIsSuperAdmin) {
+      throw new ForbiddenException({
+        code: PERMISSION_ERROR_CODES.FORBIDDEN,
+        message: 'ROLE settings require Super Admin membership.',
+      });
+    }
 
     const roleCode = await this.settingsService.resolveRoleCode(
       user.id,
@@ -166,7 +195,9 @@ export class SettingsController {
       key: dto.key,
       value: dto.value,
       level,
+      roleCode: dto.roleCode,
       actorUserId: user.id,
+      actorIsSuperAdmin,
       ip: req.ip,
       userAgent: req.headers['user-agent'],
       correlationId: typeof correlation === 'string' ? correlation : undefined,

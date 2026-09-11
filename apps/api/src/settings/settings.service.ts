@@ -402,18 +402,43 @@ export class SettingsService {
     context: ResolveContext;
     key: string;
     value: unknown;
-    level: 'USER' | 'COMPANY';
+    level: 'USER' | 'COMPANY' | 'ROLE';
+    roleCode?: string;
     actorUserId: string;
+    /** Super Admin membership required for ROLE writes (D203 lock 8B). */
+    actorIsSuperAdmin: boolean;
     correlationId?: string;
     ip?: string;
     userAgent?: string;
   }): Promise<EffectiveSetting> {
-    if (isCompanyOnlySettingKey(params.key) && params.level !== 'COMPANY') {
+    if (params.level === 'ROLE') {
+      if (!params.actorIsSuperAdmin) {
+        throw new SettingsException(
+          SETTINGS_ERROR_CODES.FORBIDDEN_LEVEL,
+          'ROLE settings can only be written by Super Admin.',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+      const roleCode = params.roleCode?.trim();
+      if (!roleCode) {
+        throw new SettingsException(
+          SETTINGS_ERROR_CODES.INVALID,
+          'roleCode is required when level=ROLE.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+
+    if (isCompanyOnlySettingKey(params.key) && params.level === 'USER') {
       throw new SettingsException(
         SETTINGS_ERROR_CODES.FORBIDDEN_LEVEL,
         `${params.key} is company-scoped only.`,
         HttpStatus.FORBIDDEN,
       );
+    }
+
+    if (params.key.startsWith('ops.')) {
+      await this.opsVisibility.ensureDefinitions();
     }
 
     const definition = await this.loadWritableDefinition(params.key);
@@ -428,11 +453,17 @@ export class SettingsService {
     this.validateValue(definition, value);
 
     const setLevel =
-      params.level === 'COMPANY' ? SetLevel.COMPANY : SetLevel.USER;
+      params.level === 'COMPANY'
+        ? SetLevel.COMPANY
+        : params.level === 'ROLE'
+          ? SetLevel.ROLE
+          : SetLevel.USER;
     const subjectId =
       setLevel === SetLevel.COMPANY
         ? params.context.companyId
-        : params.context.userId;
+        : setLevel === SetLevel.ROLE
+          ? params.roleCode!.trim()
+          : params.context.userId;
     const scopeKey = buildScopeKey(setLevel, {
       companyId: params.context.companyId,
       subjectId,
@@ -555,6 +586,14 @@ export class SettingsService {
       where: { userId, companyId, deletedAt: null },
     });
     return assignment?.roleCode ?? undefined;
+  }
+
+  /** D203 lock 8B — ROLE prefs write gated on Super Admin membership. */
+  async isSuperAdminMember(userId: string): Promise<boolean> {
+    const row = await this.prisma.iamSuperAdminMembership.findUnique({
+      where: { userId },
+    });
+    return Boolean(row && row.status === 'ACTIVE');
   }
 
   private buildScopeKeys(context: ResolveContext): string[] {

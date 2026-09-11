@@ -154,6 +154,7 @@ describe('SettingsService hierarchy', () => {
         value: 'allowed',
         level: 'USER',
         actorUserId: 'user-demo',
+        actorIsSuperAdmin: false,
       }),
     ).rejects.toMatchObject({ code: 'SET.INVALID' });
   });
@@ -293,6 +294,7 @@ describe('SettingsService hierarchy', () => {
         value: 10,
         level: 'COMPANY',
         actorUserId: 'admin-1',
+        actorIsSuperAdmin: false,
       });
       expect(row.value).toBe(10);
       expect(prisma.setValue.create).toHaveBeenCalled();
@@ -314,6 +316,7 @@ describe('SettingsService hierarchy', () => {
         value: true,
         level: 'COMPANY',
         actorUserId: 'admin-1',
+        actorIsSuperAdmin: false,
       });
       expect(row.value).toBe(true);
     });
@@ -334,6 +337,7 @@ describe('SettingsService hierarchy', () => {
         value: '',
         level: 'COMPANY',
         actorUserId: 'admin-1',
+        actorIsSuperAdmin: false,
       });
       expect(row.value).toBe('');
     });
@@ -347,6 +351,7 @@ describe('SettingsService hierarchy', () => {
           value: '10',
           level: 'COMPANY',
           actorUserId: 'admin-1',
+        actorIsSuperAdmin: false,
         }),
       ).rejects.toMatchObject({ code: 'SET.INVALID' });
     });
@@ -420,6 +425,7 @@ describe('SettingsService hierarchy', () => {
         value: '',
         level: 'COMPANY',
         actorUserId: 'admin-1',
+        actorIsSuperAdmin: false,
       });
       expect(row.value).toBe('');
       expect(row.secretSet).toBe(true);
@@ -432,6 +438,7 @@ describe('SettingsService hierarchy', () => {
     const actor = {
       companyId: 'company-demo',
       actorUserId: 'admin-1',
+        actorIsSuperAdmin: false,
       actorEmail: 'demo@authority.local',
     };
     const smtp = {
@@ -499,3 +506,4 @@ describe('SettingsService hierarchy', () => {
     });
   });
 });
+

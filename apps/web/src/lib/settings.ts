@@ -222,6 +222,30 @@ export async function putCompanySetting(
   key: string,
   value: unknown,
 ): Promise<{ ok: true; data: EffectiveSetting } | ApiFail> {
+  return putSetting(key, value, "COMPANY");
+}
+
+export async function putUserSetting(
+  key: string,
+  value: unknown,
+): Promise<{ ok: true; data: EffectiveSetting } | ApiFail> {
+  return putSetting(key, value, "USER");
+}
+
+export async function putRoleSetting(
+  key: string,
+  value: unknown,
+  roleCode: string,
+): Promise<{ ok: true; data: EffectiveSetting } | ApiFail> {
+  return putSetting(key, value, "ROLE", roleCode);
+}
+
+async function putSetting(
+  key: string,
+  value: unknown,
+  level: "USER" | "COMPANY" | "ROLE",
+  roleCode?: string,
+): Promise<{ ok: true; data: EffectiveSetting } | ApiFail> {
   try {
     const res = await fetch("/api/v1/settings", {
       method: "PUT",
@@ -230,11 +254,36 @@ export async function putCompanySetting(
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ key, value, level: "COMPANY" }),
+      body: JSON.stringify({
+        key,
+        value,
+        level,
+        ...(roleCode ? { roleCode } : {}),
+      }),
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return parseError(res);
     return { ok: true, data: (await res.json()) as EffectiveSetting };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchSettingsCapabilities(): Promise<
+  | { ok: true; data: { canWriteRole: boolean; roles: string[] } }
+  | ApiFail
+> {
+  try {
+    const res = await fetch("/api/v1/settings/capabilities", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) return parseError(res);
+    return {
+      ok: true,
+      data: (await res.json()) as { canWriteRole: boolean; roles: string[] },
+    };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
