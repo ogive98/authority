@@ -18,6 +18,7 @@ import {
 import {
   isDunningSmtpConfigured,
   isDunningWaConfigured,
+  resolveWaTemplateBodyTexts,
   type DunningChannelRuntimeConfig,
 } from './dunning-settings.constants';
 import { DunningSettingsResolver } from './dunning-settings.resolver';
@@ -326,7 +327,7 @@ export class DunningService {
         FINANCE_ERROR_CODES.DUNNING_CHANNEL_NOT_CONFIGURED,
         row.channel === FinDunningChannel.EMAIL
           ? 'Configure finance.dunning.smtp.* in Préférences → Relances.'
-          : 'Configure finance.dunning.wa.* in Préférences → Relances.',
+          : 'Configure finance.dunning.wa.* (credentials + template_name + template_language) in Préférences → Relances.',
         HttpStatus.CONFLICT,
       );
     }
@@ -343,12 +344,32 @@ export class DunningService {
           cfg.smtp,
         );
       } else {
-        const result = await this.waCloud.sendText({
+        const ctx = await this.loadContext(companyId, row.openItemId);
+        const dueDate =
+          ctx.openItem.dueDate != null
+            ? ctx.openItem.dueDate.toISOString().slice(0, 10)
+            : null;
+        const bodyTexts = resolveWaTemplateBodyTexts(
+          cfg.wa.templateBodyParams,
+          {
+            customerName: ctx.customerName,
+            openItemNumber: ctx.openItem.number,
+            amountOpen: ctx.openItem.amountOpen.toFixed(3),
+            currency: ctx.openItem.currency,
+            dueDate,
+            daysPastDue: ctx.daysPastDue,
+            subject: row.subject,
+            body: row.body,
+          },
+        );
+        const result = await this.waCloud.sendTemplate({
           phoneNumberId: cfg.wa.phoneNumberId,
           accessToken: cfg.wa.accessToken,
           apiVersion: cfg.wa.apiVersion,
           toDigits: row.recipient,
-          body: row.body,
+          templateName: cfg.wa.templateName,
+          languageCode: cfg.wa.templateLanguage,
+          bodyTexts,
         });
         providerMessageId = result.messageId;
       }

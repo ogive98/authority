@@ -169,6 +169,9 @@ export default function SettingsPage() {
   const [dunWaToken, setDunWaToken] = useState("");
   const [dunWaTokenSet, setDunWaTokenSet] = useState(false);
   const [dunWaApiVersion, setDunWaApiVersion] = useState("v21.0");
+  const [dunWaTemplateName, setDunWaTemplateName] = useState("");
+  const [dunWaTemplateLanguage, setDunWaTemplateLanguage] = useState("");
+  const [dunWaTemplateBodyParams, setDunWaTemplateBodyParams] = useState("");
   const [envoisMsg, setEnvoisMsg] = useState<string | null>(null);
   const [envoisError, setEnvoisError] = useState<string | null>(null);
   const [mailStatus, setMailStatus] = useState<MailStatus | null>(null);
@@ -390,6 +393,19 @@ export default function SettingsPage() {
     setDunWaToken("");
     setDunWaTokenSet(Boolean(dunTokRow?.secretSet));
     setDunWaApiVersion(str("finance.dunning.wa.api_version") || "v21.0");
+    setDunWaTemplateName(str("finance.dunning.wa.template_name"));
+    setDunWaTemplateLanguage(str("finance.dunning.wa.template_language"));
+    const bodyParamsRow = res.data.settings.find(
+      (s) => s.key === "finance.dunning.wa.template_body_params",
+    );
+    const bodyParamsVal = bodyParamsRow?.value;
+    setDunWaTemplateBodyParams(
+      Array.isArray(bodyParamsVal)
+        ? bodyParamsVal
+            .filter((x): x is string => typeof x === "string")
+            .join(", ")
+        : "",
+    );
     const status = await fetchMailStatus();
     setMailStatus(status.ok ? status.data : null);
   }, [canCompanyWrite]);
@@ -450,6 +466,21 @@ export default function SettingsPage() {
       {
         key: "finance.dunning.wa.api_version",
         value: dunWaApiVersion.trim() || "v21.0",
+      },
+      {
+        key: "finance.dunning.wa.template_name",
+        value: dunWaTemplateName.trim(),
+      },
+      {
+        key: "finance.dunning.wa.template_language",
+        value: dunWaTemplateLanguage.trim(),
+      },
+      {
+        key: "finance.dunning.wa.template_body_params",
+        value: dunWaTemplateBodyParams
+          .split(/[,\n]+/)
+          .map((s) => s.trim())
+          .filter(Boolean),
       },
     ];
     for (const row of puts) {
@@ -1510,6 +1541,60 @@ export default function SettingsPage() {
                         : "saisir le token Cloud API"
                     }
                   />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="dun-wa-tpl-name"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Template Meta (nom)
+                  </label>
+                  <AInput
+                    id="dun-wa-tpl-name"
+                    value={dunWaTemplateName}
+                    onChange={(e) => setDunWaTemplateName(e.target.value)}
+                    className="a-mono"
+                    placeholder="nom approuvé Meta — vide jusqu’à saisie"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="dun-wa-tpl-lang"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Langue template
+                  </label>
+                  <AInput
+                    id="dun-wa-tpl-lang"
+                    value={dunWaTemplateLanguage}
+                    onChange={(e) => setDunWaTemplateLanguage(e.target.value)}
+                    className="a-mono"
+                    placeholder="fr"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label
+                    htmlFor="dun-wa-tpl-params"
+                    className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                  >
+                    Variables body {"{{n}}"} (ordre)
+                  </label>
+                  <AInput
+                    id="dun-wa-tpl-params"
+                    value={dunWaTemplateBodyParams}
+                    onChange={(e) => setDunWaTemplateBodyParams(e.target.value)}
+                    className="a-mono"
+                    placeholder="customer_name, open_item_number, amount_open, currency"
+                    autoComplete="off"
+                  />
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Clés : customer_name · open_item_number · amount_open ·
+                    currency · due_date · days_past_due · subject · body — vides
+                    jusqu’à saisie humaine ; envoi template Meta uniquement (pas
+                    texte libre).
+                  </p>
                 </div>
               </div>
             </div>

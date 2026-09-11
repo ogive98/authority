@@ -31,6 +31,12 @@ import {
 import { SettingsException } from './settings.exception';
 import type { UpsertExpertiseDto } from './upsert-expertise.dto';
 import { OpsVisibilityResolver } from './ops-visibility.resolver';
+import {
+  DUNNING_SETTING_DEFAULTS,
+  DUNNING_SETTING_KEYS,
+  DUNNING_SETTING_META,
+  type DunningSettingKey,
+} from '../finance/dunning-settings.constants';
 
 export interface EffectiveSetting {
   key: string;
@@ -94,6 +100,7 @@ export class SettingsService {
     await this.opsVisibility.ensureDefinitions();
     await this.ensureCollectionRemindDefinition();
     await this.ensureCreditWarnDefinition();
+    await this.ensureAllDunningDefinitions();
 
     const definitions = await this.prisma.setDef.findMany({
       orderBy: { key: 'asc' },
@@ -704,6 +711,41 @@ export class SettingsService {
     });
   }
 
+  private async ensureAllDunningDefinitions(): Promise<void> {
+    for (const key of Object.values(DUNNING_SETTING_KEYS)) {
+      await this.ensureDunningDefinition(key);
+    }
+  }
+
+  private async ensureDunningDefinition(
+    key: DunningSettingKey,
+  ): Promise<SetDef> {
+    const valueType =
+      key === DUNNING_SETTING_KEYS.SMTP_PORT
+        ? 'number'
+        : key === DUNNING_SETTING_KEYS.SMTP_SECURE
+          ? 'boolean'
+          : key === DUNNING_SETTING_KEYS.WA_TEMPLATE_BODY_PARAMS
+            ? 'json'
+            : 'string';
+    return this.prisma.setDef.upsert({
+      where: { key },
+      update: {
+        valueType,
+        defaultJson: DUNNING_SETTING_DEFAULTS[key],
+        description: DUNNING_SETTING_META[key],
+        isPrefOnly: true,
+      },
+      create: {
+        key,
+        valueType,
+        defaultJson: DUNNING_SETTING_DEFAULTS[key],
+        description: DUNNING_SETTING_META[key],
+        isPrefOnly: true,
+      },
+    });
+  }
+
   private async loadWritableDefinition(key: string): Promise<SetDef> {
     if (isCataloguedPermission(key)) {
       throw new SettingsException(
@@ -721,6 +763,11 @@ export class SettingsService {
     }
     if (key === 'finance.credit.warn_ratio') {
       return this.ensureCreditWarnDefinition();
+    }
+    if (
+      (Object.values(DUNNING_SETTING_KEYS) as string[]).includes(key)
+    ) {
+      return this.ensureDunningDefinition(key as DunningSettingKey);
     }
 
     const definition = await this.prisma.setDef.findUnique({ where: { key } });

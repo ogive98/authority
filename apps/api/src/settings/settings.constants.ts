@@ -50,6 +50,9 @@ export const COMPANY_ONLY_SETTING_KEYS = [
   'finance.dunning.wa.phone_number_id',
   'finance.dunning.wa.access_token',
   'finance.dunning.wa.api_version',
+  'finance.dunning.wa.template_name',
+  'finance.dunning.wa.template_language',
+  'finance.dunning.wa.template_body_params',
 ] as const;
 
 export function isCompanyOnlySettingKey(key: string): boolean {

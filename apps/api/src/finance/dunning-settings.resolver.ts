@@ -6,13 +6,14 @@ import {
   DUNNING_SETTING_DEFAULTS,
   DUNNING_SETTING_KEYS,
   DUNNING_SETTING_META,
+  parseWaTemplateBodyParams,
   type DunningChannelRuntimeConfig,
   type DunningSettingKey,
 } from './dunning-settings.constants';
 
 /**
- * Resolve finance-dedicated dunning SMTP / WA Cloud prefs (D194).
- * No env fallback — empty until human Prefs (lock 1B).
+ * Resolve finance-dedicated dunning SMTP / WA Cloud prefs (D194/D201).
+ * No env fallback — empty until human Prefs.
  */
 @Injectable()
 export class DunningSettingsResolver {
@@ -20,27 +21,25 @@ export class DunningSettingsResolver {
 
   async ensureDefinitions(): Promise<void> {
     for (const key of Object.values(DUNNING_SETTING_KEYS)) {
+      const valueType =
+        key === DUNNING_SETTING_KEYS.SMTP_PORT
+          ? 'number'
+          : key === DUNNING_SETTING_KEYS.SMTP_SECURE
+            ? 'boolean'
+            : key === DUNNING_SETTING_KEYS.WA_TEMPLATE_BODY_PARAMS
+              ? 'json'
+              : 'string';
       await this.prisma.setDef.upsert({
         where: { key },
         update: {
-          valueType:
-            key === DUNNING_SETTING_KEYS.SMTP_PORT
-              ? 'number'
-              : key === DUNNING_SETTING_KEYS.SMTP_SECURE
-                ? 'boolean'
-                : 'string',
+          valueType,
           defaultJson: DUNNING_SETTING_DEFAULTS[key],
           description: DUNNING_SETTING_META[key],
           isPrefOnly: true,
         },
         create: {
           key,
-          valueType:
-            key === DUNNING_SETTING_KEYS.SMTP_PORT
-              ? 'number'
-              : key === DUNNING_SETTING_KEYS.SMTP_SECURE
-                ? 'boolean'
-                : 'string',
+          valueType,
           defaultJson: DUNNING_SETTING_DEFAULTS[key],
           description: DUNNING_SETTING_META[key],
           isPrefOnly: true,
@@ -119,6 +118,13 @@ export class DunningSettingsResolver {
         apiVersion:
           asString(DUNNING_SETTING_KEYS.WA_API_VERSION).trim() ||
           DUNNING_SETTING_DEFAULTS[DUNNING_SETTING_KEYS.WA_API_VERSION],
+        templateName: asString(DUNNING_SETTING_KEYS.WA_TEMPLATE_NAME).trim(),
+        templateLanguage: asString(
+          DUNNING_SETTING_KEYS.WA_TEMPLATE_LANGUAGE,
+        ).trim(),
+        templateBodyParams: parseWaTemplateBodyParams(
+          read(DUNNING_SETTING_KEYS.WA_TEMPLATE_BODY_PARAMS),
+        ),
       },
     };
   }
