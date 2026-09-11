@@ -162,7 +162,7 @@ describe('SettingsService hierarchy', () => {
     const catalog = await service.listExpertise('company-demo');
     expect(catalog.items.length).toBeGreaterThanOrEqual(6);
     const fodec = catalog.items.find((i) => i.key === 'tax.fodec');
-    const cnss = catalog.items.find((i) => i.key === 'hr.cnss');
+    const cnss = catalog.items.find((i) => i.key === 'hr.cnss.employee');
     const vat = catalog.items.find((i) => i.key === 'tax.vat');
     expect(fodec?.status).toBe('PENDING_EXPERT');
     expect(fodec?.valueSummary).toBeNull();

@@ -59,30 +59,43 @@ export class ExpertiseResolverService {
     return this.getValidated(companyId, 'tax.timbre');
   }
 
-  /** HR contribution slots — all PENDING until expert. */
+  /** HR contribution slots — all PENDING until expert (D195 split CNSS). */
   async getHrContributionSnapshot(companyId: string): Promise<{
-    cnss: ValidatedExpertise | null;
+    cnssEmployee: ValidatedExpertise | null;
+    cnssEmployer: ValidatedExpertise | null;
+    cnssCeiling: ValidatedExpertise | null;
     irpp: ValidatedExpertise | null;
     tfp: ValidatedExpertise | null;
     pendingKeys: string[];
   }> {
-    const [cnss, irpp, tfp] = await Promise.all([
-      this.getValidated(companyId, 'hr.cnss'),
-      this.getValidated(companyId, 'hr.irpp'),
-      this.getValidated(companyId, 'hr.tfp'),
-    ]);
+    const [cnssEmployee, cnssEmployer, cnssCeiling, irpp, tfp] =
+      await Promise.all([
+        this.getValidated(companyId, 'hr.cnss.employee'),
+        this.getValidated(companyId, 'hr.cnss.employer'),
+        this.getValidated(companyId, 'hr.cnss.ceiling'),
+        this.getValidated(companyId, 'hr.irpp'),
+        this.getValidated(companyId, 'hr.tfp'),
+      ]);
+    const validated = new Set(
+      [cnssEmployee, cnssEmployer, cnssCeiling, irpp, tfp]
+        .filter(Boolean)
+        .map((v) => v!.key),
+    );
     const pendingKeys = EXPERTISE_CATALOG.filter(
       (s) =>
         isExpertiseWritableKey(s.key) &&
         s.domain === 'hr' &&
-        !(
-          (s.key === 'hr.cnss' && cnss) ||
-          (s.key === 'hr.irpp' && irpp) ||
-          (s.key === 'hr.tfp' && tfp)
-        ),
+        !validated.has(s.key),
     ).map((s) => s.key);
 
-    return { cnss, irpp, tfp, pendingKeys };
+    return {
+      cnssEmployee,
+      cnssEmployer,
+      cnssCeiling,
+      irpp,
+      tfp,
+      pendingKeys,
+    };
   }
 }
 

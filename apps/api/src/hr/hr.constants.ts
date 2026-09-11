@@ -5,6 +5,9 @@ export const HR_ERROR_CODES = {
   MATRICULE_EXISTS: 'HR.MATRICULE_EXISTS',
   INVALID_STATUS: 'HR.INVALID_STATUS',
   INVALID_DATES: 'HR.INVALID_DATES',
+  CNSS_INVALID_PERIOD: 'HR.CNSS_INVALID_PERIOD',
+  CNSS_RATES_PENDING: 'HR.CNSS_RATES_PENDING',
+  CNSS_SNAPSHOT_EXISTS: 'HR.CNSS_SNAPSHOT_EXISTS',
 } as const;
 
 export type HrErrorCode = (typeof HR_ERROR_CODES)[keyof typeof HR_ERROR_CODES];
@@ -14,4 +17,5 @@ export const HR_EVENT_TYPES = {
   EMPLOYEE_UPDATED: 'hr.employee.updated.v1',
   CONTRACT_CREATED: 'hr.contract.created.v1',
   CONTRACT_ENDED: 'hr.contract.ended.v1',
+  CNSS_SNAPSHOT_CREATED: 'hr.cnss_snapshot.created.v1',
 } as const;

@@ -7,6 +7,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { SettingsModule } from '../settings/settings.module';
 import { HrController } from './hr.controller';
 import { HrService } from './hr.service';
+import { CnssService } from './cnss.service';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { HrService } from './hr.service';
     SettingsModule,
   ],
   controllers: [HrController],
-  providers: [HrService],
-  exports: [HrService],
+  providers: [HrService, CnssService],
+  exports: [HrService, CnssService],
 })
 export class HrModule {}

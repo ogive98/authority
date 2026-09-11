@@ -23,12 +23,15 @@ import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import { PermissionService } from '../permissions/permission.service';
 import {
+  CreateCnssSnapshotDto,
   CreateContractDto,
   CreateEmployeeDto,
   EndContractDto,
+  PatchContractDto,
   PatchEmployeeDto,
 } from './hr.dto';
 import { HrService } from './hr.service';
+import { CnssService } from './cnss.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
 
 @Controller('api/v1/hr')
@@ -37,12 +40,13 @@ import { ExpertiseResolverService } from '../settings/expertise-resolver.service
 export class HrController {
   constructor(
     private readonly hr: HrService,
+    private readonly cnss: CnssService,
     private readonly permissions: PermissionService,
     private readonly expertise: ExpertiseResolverService,
   ) {}
 
   /**
-   * CNSS / IRPP / TFP readiness (D092) — null until expert validates in Préférences.
+   * CNSS / IRPP / TFP readiness (D092/D195) — null until expert validates in Préférences.
    */
   @Get('expertise-hints')
   @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
@@ -54,8 +58,44 @@ export class HrController {
       companyId: tenancy.companyId,
       ...snap,
       prefsHref: '/settings#expertise',
-      note: 'Payroll calc must use VALIDATED slots only — never invent CNSS/IRPP/TFP.',
+      note: 'CNSS calc uses VALIDATED hr.cnss.* only — never invent rates.',
     };
+  }
+
+  @Get('cnss/preview')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  cnssPreview(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('contractId', ParseUUIDPipe) contractId: string,
+    @Query('periodYm') periodYm?: string,
+  ) {
+    return this.cnss.preview(tenancy.companyId, contractId, periodYm);
+  }
+
+  @Get('cnss/snapshots')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  listCnssSnapshots(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('periodYm') periodYm?: string,
+    @Query('employeeId') employeeId?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.cnss.listSnapshots(tenancy.companyId, {
+      periodYm,
+      employeeId,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Post('cnss/snapshots')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  createCnssSnapshot(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateCnssSnapshotDto,
+  ) {
+    return this.cnss.createSnapshot(tenancy.companyId, dto);
   }
 
   @Get('employees')
@@ -145,6 +185,23 @@ export class HrController {
       { companyId: tenancy.companyId },
     );
     return this.hr.createContract(tenancy.companyId, dto, includeWage);
+  }
+
+  @Patch('contracts/:id')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  async patchContract(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: PatchContractDto,
+  ) {
+    const includeWage = await this.permissions.evaluate(
+      user.id,
+      PERMISSION_KEYS.hrWageRead,
+      { companyId: tenancy.companyId },
+    );
+    return this.hr.patchContract(tenancy.companyId, id, dto, includeWage);
   }
 
   @Post('contracts/:id/end')

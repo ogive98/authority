@@ -14,6 +14,7 @@ import type {
   CreateContractDto,
   CreateEmployeeDto,
   EndContractDto,
+  PatchContractDto,
   PatchEmployeeDto,
 } from './hr.dto';
 import { HrException } from './hr.exception';
@@ -29,6 +30,8 @@ export type HrContractDto = {
   endDate: string | null;
   /** Label only — never a CNSS/IRPP rate. Omitted without hr.wage.read. */
   wageRef: string | null;
+  /** Human wage base TND — omitted without hr.wage.read. */
+  wageBase: string | null;
   notes: string | null;
   version: number;
   createdAt: string;
@@ -273,6 +276,10 @@ export class HrService {
           startDate,
           endDate,
           wageRef: dto.wageRef?.trim() || null,
+          wageBase:
+            dto.wageBase != null && Number.isFinite(dto.wageBase)
+              ? new Prisma.Decimal(dto.wageBase)
+              : null,
           notes: dto.notes?.trim() || null,
         },
       });
@@ -292,6 +299,44 @@ export class HrService {
     });
 
     return this.toContractDto(created, includeWage);
+  }
+
+  async patchContract(
+    companyId: string,
+    id: string,
+    dto: PatchContractDto,
+    includeWage = false,
+  ): Promise<HrContractDto> {
+    const row = await this.prisma.hrContract.findFirst({
+      where: { id, companyId, deletedAt: null },
+    });
+    if (!row) {
+      throw new HrException(
+        HR_ERROR_CODES.CONTRACT_NOT_FOUND,
+        'Contract not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    const data: Prisma.HrContractUpdateInput = {
+      version: { increment: 1 },
+    };
+    if (dto.wageRef !== undefined) {
+      data.wageRef = dto.wageRef?.trim() || null;
+    }
+    if (dto.wageBase !== undefined) {
+      data.wageBase =
+        dto.wageBase != null && Number.isFinite(dto.wageBase)
+          ? new Prisma.Decimal(dto.wageBase)
+          : null;
+    }
+    if (dto.notes !== undefined) {
+      data.notes = dto.notes?.trim() || null;
+    }
+    const updated = await this.prisma.hrContract.update({
+      where: { id },
+      data,
+    });
+    return this.toContractDto(updated, includeWage);
   }
 
   async endContract(
@@ -423,6 +468,10 @@ export class HrService {
       startDate: toDateOnly(row.startDate),
       endDate: row.endDate ? toDateOnly(row.endDate) : null,
       wageRef: includeWage ? row.wageRef : null,
+      wageBase:
+        includeWage && row.wageBase != null
+          ? row.wageBase.toFixed(3)
+          : null,
       notes: row.notes,
       version: row.version,
       createdAt: row.createdAt.toISOString(),

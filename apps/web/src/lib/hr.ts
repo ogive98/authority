@@ -1,4 +1,4 @@
-/** Client helpers for HR light (`/api/v1/hr`). */
+/** Client helpers for HR (`/api/v1/hr`). */
 
 export type HrContract = {
   id: string;
@@ -9,6 +9,7 @@ export type HrContract = {
   startDate: string;
   endDate: string | null;
   wageRef: string | null;
+  wageBase: string | null;
   notes: string | null;
 };
 
@@ -26,6 +27,36 @@ export type HrEmployee = {
   notes: string | null;
   contracts: HrContract[];
   createdAt: string;
+};
+
+export type CnssPreview = {
+  contractId: string;
+  employeeId: string;
+  periodYm: string;
+  wageBase: number;
+  assiette: number;
+  ceilingApplied: boolean;
+  ceilingAmount: number | null;
+  employeeRateBps: number | null;
+  employerRateBps: number | null;
+  employeeAmount: number | null;
+  employerAmount: number | null;
+  ready: boolean;
+  pending: string[];
+  prefsHref: string;
+  currency: string;
+};
+
+export type CnssSnapshot = {
+  id: string;
+  periodYm: string;
+  contractId: string;
+  employeeId: string;
+  wageBase: string;
+  assiette: string;
+  employeeAmount: string | null;
+  employerAmount: string | null;
+  ceilingApplied: boolean;
 };
 
 type ApiFail = { ok: false; status: number; message: string };
@@ -91,9 +122,26 @@ export async function createContract(input: {
   startDate: string;
   endDate?: string;
   wageRef?: string;
+  wageBase?: number;
 }): Promise<ApiOk<HrContract> | ApiFail> {
   const res = await fetch("/api/v1/hr/contracts", {
     method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrContract };
+}
+
+export async function patchContract(
+  id: string,
+  input: { wageRef?: string | null; wageBase?: number | null },
+): Promise<ApiOk<HrContract> | ApiFail> {
+  const res = await fetch(`/api/v1/hr/contracts/${id}`, {
+    method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(input),
@@ -118,4 +166,35 @@ export async function endContract(
     return { ok: false, status: res.status, message: await parseError(res) };
   }
   return { ok: true, data: (await res.json()) as HrContract };
+}
+
+export async function fetchCnssPreview(
+  contractId: string,
+  periodYm?: string,
+): Promise<ApiOk<CnssPreview> | ApiFail> {
+  const params = new URLSearchParams({ contractId });
+  if (periodYm) params.set("periodYm", periodYm);
+  const res = await fetch(`/api/v1/hr/cnss/preview?${params}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as CnssPreview };
+}
+
+export async function createCnssSnapshot(input: {
+  contractId: string;
+  periodYm?: string;
+}): Promise<ApiOk<CnssSnapshot> | ApiFail> {
+  const res = await fetch("/api/v1/hr/cnss/snapshots", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as CnssSnapshot };
 }

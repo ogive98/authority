@@ -41,6 +41,7 @@ describe('HrService', () => {
       startDate: new Date('2024-01-15T00:00:00.000Z'),
       endDate: null as Date | null,
       wageRef: 'grille A',
+      wageBase: null as unknown,
       notes: null as string | null,
       version: 0,
       createdAt: new Date(),

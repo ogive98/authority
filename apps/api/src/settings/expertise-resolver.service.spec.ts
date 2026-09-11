@@ -1,5 +1,4 @@
 import { ExpertiseResolverService } from './expertise-resolver.service';
-import { SettingsService } from './settings.service';
 
 describe('ExpertiseResolverService', () => {
   const companyId = 'company-demo';
@@ -65,14 +64,44 @@ describe('ExpertiseResolverService', () => {
     });
   });
 
-  it('HR snapshot lists pending keys when empty', async () => {
+  it('HR snapshot lists pending CNSS split keys when empty', async () => {
     const { resolver } = build([
       {
-        key: 'hr.cnss',
+        key: 'hr.cnss.employee',
         status: 'PENDING_EXPERT',
         valueSummary: null,
         domain: 'hr',
-        label: 'CNSS',
+        label: 'CNSS salarié',
+        lawRef: null,
+        rateBps: null,
+        amountMilli: null,
+        expertValidatedAt: null,
+        writable: true,
+        description: '',
+        manageHref: null,
+        notes: null,
+      },
+      {
+        key: 'hr.cnss.employer',
+        status: 'PENDING_EXPERT',
+        valueSummary: null,
+        domain: 'hr',
+        label: 'CNSS employeur',
+        lawRef: null,
+        rateBps: null,
+        amountMilli: null,
+        expertValidatedAt: null,
+        writable: true,
+        description: '',
+        manageHref: null,
+        notes: null,
+      },
+      {
+        key: 'hr.cnss.ceiling',
+        status: 'PENDING_EXPERT',
+        valueSummary: null,
+        domain: 'hr',
+        label: 'CNSS plafond',
         lawRef: null,
         rateBps: null,
         amountMilli: null,
@@ -114,9 +143,17 @@ describe('ExpertiseResolverService', () => {
       },
     ]);
     const snap = await resolver.getHrContributionSnapshot(companyId);
-    expect(snap.cnss).toBeNull();
+    expect(snap.cnssEmployee).toBeNull();
+    expect(snap.cnssEmployer).toBeNull();
+    expect(snap.cnssCeiling).toBeNull();
     expect(snap.pendingKeys).toEqual(
-      expect.arrayContaining(['hr.cnss', 'hr.irpp', 'hr.tfp']),
+      expect.arrayContaining([
+        'hr.cnss.employee',
+        'hr.cnss.employer',
+        'hr.cnss.ceiling',
+        'hr.irpp',
+        'hr.tfp',
+      ]),
     );
   });
 });

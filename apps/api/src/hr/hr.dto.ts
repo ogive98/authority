@@ -2,11 +2,13 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { HrContractType, HrEmployeeStatus } from '@prisma/client';
 
 export class CreateEmployeeDto {
@@ -113,10 +115,43 @@ export class CreateContractDto {
   @MaxLength(80)
   wageRef?: string;
 
+  /** Human wage base TND for CNSS — not a contribution rate. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  wageBase?: number;
+
   @IsOptional()
   @IsString()
   @MaxLength(500)
   notes?: string;
+}
+
+export class PatchContractDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  wageRef?: string | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  wageBase?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  notes?: string | null;
+}
+
+export class CreateCnssSnapshotDto {
+  @IsUUID()
+  contractId!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(7)
+  periodYm?: string;
 }
 
 export class EndContractDto {

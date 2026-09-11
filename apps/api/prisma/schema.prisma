@@ -2375,6 +2375,7 @@ model HrEmployee {
   deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz(6)
 
   contracts HrContract[]
+  cnssSnapshots HrCnssSnapshot[]
 
   @@unique([companyId, matricule])
   @@index([companyId, status])
@@ -2393,16 +2394,56 @@ model HrContract {
   endDate    DateTime?        @map("end_date") @db.Date
   /** Wage reference label only — no invented payroll rates. */
   wageRef    String?          @map("wage_ref")
+  /** Human numeric wage base TND for CNSS preview/snapshot (D195) — not a rate. */
+  wageBase   Decimal?         @map("wage_base") @db.Decimal(18, 3)
   notes      String?
   version    Int              @default(0)
   createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt  DateTime?        @map("deleted_at") @db.Timestamptz(6)
 
-  employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee      HrEmployee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  cnssSnapshots HrCnssSnapshot[]
 
   @@unique([companyId, number])
   @@index([companyId, employeeId])
   @@index([companyId, status])
   @@map("hr_contract")
+}
+
+/**
+ * Period CNSS snapshot (D195) — amounts from VALIDATED Prefs rates only.
+ * Never stores invented barèmes.
+ */
+model HrCnssSnapshot {
+  id               String    @id @default(uuid()) @db.Uuid
+  companyId        String    @map("company_id") @db.Uuid
+  /** YYYY-MM */
+  periodYm         String    @map("period_ym")
+  employeeId       String    @map("employee_id") @db.Uuid
+  contractId       String    @map("contract_id") @db.Uuid
+  wageBase         Decimal   @map("wage_base") @db.Decimal(18, 3)
+  assiette         Decimal   @db.Decimal(18, 3)
+  ceilingApplied   Boolean   @default(false) @map("ceiling_applied")
+  ceilingAmount    Decimal?  @map("ceiling_amount") @db.Decimal(18, 3)
+  employeeRateBps  Int?      @map("employee_rate_bps")
+  employerRateBps  Int?      @map("employer_rate_bps")
+  employeeAmount   Decimal?  @map("employee_amount") @db.Decimal(18, 3)
+  employerAmount   Decimal?  @map("employer_amount") @db.Decimal(18, 3)
+  employeeLawRef   String?   @map("employee_law_ref")
+  employerLawRef   String?   @map("employer_law_ref")
+  ceilingLawRef    String?   @map("ceiling_law_ref")
+  currency         String    @default("TND")
+  version          Int       @default(0)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  contract HrContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, periodYm, contractId])
+  @@index([companyId, periodYm])
+  @@index([companyId, employeeId])
+  @@map("hr_cnss_snapshot")
 }

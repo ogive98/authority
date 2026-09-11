@@ -13,10 +13,14 @@ import {
   ASkeleton,
 } from "@/components/a";
 import {
+  createCnssSnapshot,
   createContract,
   createEmployee,
   endContract,
+  fetchCnssPreview,
   fetchEmployees,
+  type CnssPreview,
+  type HrContract,
   type HrEmployee,
 } from "@/lib/hr";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
@@ -34,7 +38,7 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-type DrawerMode = "employee" | "contract";
+type DrawerMode = "employee" | "contract" | "cnss";
 
 function statusTone(
   status: string,
@@ -71,6 +75,12 @@ export default function HrEmployeesPage() {
   );
   const [endDate, setEndDate] = useState("");
   const [wageRef, setWageRef] = useState("");
+  const [wageBase, setWageBase] = useState("");
+  const [cnssContract, setCnssContract] = useState<HrContract | null>(null);
+  const [cnssPreview, setCnssPreview] = useState<CnssPreview | null>(null);
+  const [periodYm, setPeriodYm] = useState(
+    new Date().toISOString().slice(0, 7),
+  );
 
   const load = useCallback(async (query?: string) => {
     setState({ kind: "loading" });
@@ -110,7 +120,56 @@ export default function HrEmployeesPage() {
     setStartDate(new Date().toISOString().slice(0, 10));
     setEndDate("");
     setWageRef("");
+    setWageBase("");
     setDrawerOpen(true);
+  }
+
+  async function openCnss(contract: HrContract) {
+    setDrawerMode("cnss");
+    setCnssContract(contract);
+    setCnssPreview(null);
+    setFormError(null);
+    const ym = new Date().toISOString().slice(0, 7);
+    setPeriodYm(ym);
+    setDrawerOpen(true);
+    setBusy(true);
+    const res = await fetchCnssPreview(contract.id, ym);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setCnssPreview(res.data);
+  }
+
+  async function refreshCnssPreview() {
+    if (!cnssContract) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await fetchCnssPreview(cnssContract.id, periodYm);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setCnssPreview(res.data);
+  }
+
+  async function onSnapshot() {
+    if (!cnssContract) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await createCnssSnapshot({
+      contractId: cnssContract.id,
+      periodYm,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setDrawerOpen(false);
+    await load(q);
   }
 
   async function onCreateEmployee() {
@@ -143,6 +202,7 @@ export default function HrEmployeesPage() {
       startDate,
       endDate: endDate || undefined,
       wageRef: wageRef.trim() || undefined,
+      wageBase: wageBase.trim() ? Number(wageBase) : undefined,
     });
     setBusy(false);
     if (!res.ok) {
@@ -170,7 +230,7 @@ export default function HrEmployeesPage() {
       <AScreenHeader
         kicker="Ressources humaines"
         title="Employés"
-        description="RH light — matricules et contrats. Pas de calcul CNSS / IRPP (paie séparée)."
+        description="RH — contrats, wageBase saisi, CNSS preview/snapshot si expertise VALIDATED."
         actions={
           <AButton type="button" onClick={openCreateEmployee}>
             Nouvel employé
@@ -179,7 +239,15 @@ export default function HrEmployeesPage() {
       />
 
       <div className={softPageBody}>
-      <ExpertiseHintsStrip keys={["hr.cnss", "hr.irpp", "hr.tfp"]} />
+      <ExpertiseHintsStrip
+        keys={[
+          "hr.cnss.employee",
+          "hr.cnss.employer",
+          "hr.cnss.ceiling",
+          "hr.irpp",
+          "hr.tfp",
+        ]}
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <AInput
@@ -259,6 +327,14 @@ export default function HrEmployeesPage() {
                                 type="button"
                                 variant="ghost"
                                 disabled={busy}
+                                onClick={() => void openCnss(c)}
+                              >
+                                CNSS
+                              </AButton>
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                disabled={busy}
                                 onClick={() => void onEndContract(c.id)}
                               >
                                 Clôturer
@@ -292,7 +368,11 @@ export default function HrEmployeesPage() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title={
-          drawerMode === "employee" ? "Nouvel employé" : "Nouveau contrat"
+          drawerMode === "employee"
+            ? "Nouvel employé"
+            : drawerMode === "contract"
+              ? "Nouveau contrat"
+              : "CNSS — preview"
         }
       >
         <div className="space-y-4 p-1">
@@ -369,7 +449,9 @@ export default function HrEmployeesPage() {
                 Créer
               </AButton>
             </>
-          ) : (
+          ) : null}
+
+          {drawerMode === "contract" ? (
             <>
               <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                 {selected?.displayName} ({selected?.matricule})
@@ -420,6 +502,17 @@ export default function HrEmployeesPage() {
                   placeholder="Pas de taux inventé"
                 />
               </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Base CNSS TND (saisie humaine)
+                </span>
+                <AInput
+                  value={wageBase}
+                  onChange={(e) => setWageBase(e.target.value)}
+                  placeholder="ex. 1200.000"
+                  className="a-mono"
+                />
+              </label>
               <AButton
                 type="button"
                 disabled={busy || !startDate}
@@ -428,7 +521,77 @@ export default function HrEmployeesPage() {
                 Créer le contrat
               </AButton>
             </>
-          )}
+          ) : null}
+
+          {drawerMode === "cnss" ? (
+            <>
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Contrat {cnssContract?.number} · base{" "}
+                <span className="a-mono">
+                  {cnssContract?.wageBase ?? "—"}
+                </span>{" "}
+                TND
+              </p>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Période (YYYY-MM)
+                </span>
+                <AInput
+                  value={periodYm}
+                  onChange={(e) => setPeriodYm(e.target.value)}
+                  className="a-mono"
+                />
+              </label>
+              <AButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={busy}
+                onClick={() => void refreshCnssPreview()}
+              >
+                Recalculer
+              </AButton>
+              {cnssPreview ? (
+                <div className="a-underlay space-y-2 rounded-md p-3 text-[length:var(--a-text-sm)]">
+                  <p>
+                    Assiette{" "}
+                    <span className="a-mono tabular-nums">
+                      {cnssPreview.assiette.toFixed(3)}
+                    </span>
+                    {cnssPreview.ceilingApplied ? " · plafond appliqué" : ""}
+                  </p>
+                  <p>
+                    Salarié{" "}
+                    <span className="a-mono tabular-nums">
+                      {cnssPreview.employeeAmount != null
+                        ? cnssPreview.employeeAmount.toFixed(3)
+                        : "—"}
+                    </span>
+                  </p>
+                  <p>
+                    Employeur{" "}
+                    <span className="a-mono tabular-nums">
+                      {cnssPreview.employerAmount != null
+                        ? cnssPreview.employerAmount.toFixed(3)
+                        : "—"}
+                    </span>
+                  </p>
+                  {!cnssPreview.ready ? (
+                    <p className="text-a-warning">
+                      Expertise requise : {cnssPreview.pending.join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              <AButton
+                type="button"
+                disabled={busy || !cnssPreview?.ready}
+                onClick={() => void onSnapshot()}
+              >
+                Enregistrer snapshot
+              </AButton>
+            </>
+          ) : null}
         </div>
       </ADrawer>
     </>

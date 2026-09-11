@@ -139,7 +139,9 @@ export const EXPERTISE_SLOT_KEYS = [
   'tax.vat',
   'tax.fodec',
   'tax.timbre',
-  'hr.cnss',
+  'hr.cnss.employee',
+  'hr.cnss.employer',
+  'hr.cnss.ceiling',
   'hr.irpp',
   'hr.tfp',
 ] as const;
@@ -195,11 +197,31 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     manageHref: null,
   },
   {
-    key: 'hr.cnss',
+    key: 'hr.cnss.employee',
     domain: 'hr',
-    label: 'CNSS',
+    label: 'CNSS salarié',
     description:
-      'Cotisations sociales — taux employeur/salarié après expert (Payroll).',
+      'Taux part salarié (rateBps) — vide jusqu’à saisie expert. Jamais seedé.',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: '/hr',
+  },
+  {
+    key: 'hr.cnss.employer',
+    domain: 'hr',
+    label: 'CNSS employeur',
+    description:
+      'Taux part employeur (rateBps) — vide jusqu’à saisie expert. Jamais seedé.',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: '/hr',
+  },
+  {
+    key: 'hr.cnss.ceiling',
+    domain: 'hr',
+    label: 'CNSS plafond',
+    description:
+      'Plafond assiette mensuelle (amountMilli) — vide jusqu’à saisie expert.',
     defaultStatus: 'PENDING_EXPERT',
     lawRefHint: null,
     manageHref: '/hr',
@@ -228,7 +250,9 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
 export const EXPERTISE_WRITABLE_KEYS = [
   'tax.fodec',
   'tax.timbre',
-  'hr.cnss',
+  'hr.cnss.employee',
+  'hr.cnss.employer',
+  'hr.cnss.ceiling',
   'hr.irpp',
   'hr.tfp',
 ] as const;
