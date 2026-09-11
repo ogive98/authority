@@ -42,7 +42,7 @@ export const PREFS_COMPARTMENTS: readonly PrefsCompartmentDef[] = [
   {
     id: "expertise",
     label: "Expertise légale",
-    subtitle: "FODEC, timbre, CNSS, IRPP, abattements, TFP",
+    subtitle: "FODEC, timbre, CNSS, IRPP, abattements, TFP, FOPROLOS",
     adminOnly: true,
   },
   {

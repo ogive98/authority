@@ -4,6 +4,7 @@ import { IdentityModule } from '../identity/identity.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
+import { SettingsModule } from '../settings/settings.module';
 import { AccountingController } from './accounting.controller';
 import { AccountingService } from './accounting.service';
 import { AccountingGlMappingResolver } from './accounting-gl-mapping.resolver';
@@ -16,6 +17,7 @@ import { FinanceGlPostingService } from './finance-gl-posting.service';
     PermissionsModule,
     ModulesRegistryModule,
     AuditModule,
+    SettingsModule,
   ],
   controllers: [AccountingController],
   providers: [

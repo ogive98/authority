@@ -153,7 +153,9 @@ describe('ExpertiseResolverService', () => {
         'hr.cnss.ceiling',
         'hr.irpp',
         'hr.tfp',
+        'hr.foprolos',
       ]),
     );
+    expect(snap.foprolos).toBeNull();
   });
 });

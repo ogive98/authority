@@ -6,14 +6,14 @@ export const financeManifest: ModuleManifest = {
   version: '1.1.0',
   apiVersion: '1',
   description:
-    'Finance AR — invoices, payments, instruments, promises, bank soft recon',
+    'Finance AR/AP — invoices, receipts, AP disbursements, bank soft recon',
   capabilities: [
     {
       key: 'finance.ar.read',
       moduleId: 'finance',
       version: '1',
       description:
-        'List and read AR invoices / open items / payments / credit / bank lines',
+        'List and read AR invoices / open items / payments / AP disbursements / bank lines',
       permissionKey: 'finance.ar.read',
       riskLevel: 'low',
     },
@@ -32,7 +32,7 @@ export const financeManifest: ModuleManifest = {
       moduleId: 'finance',
       version: '1',
       description:
-        'Record payments, allocate, instruments, bank match/unmatch (no GL on match)',
+        'Record AR/AP payments, allocate, instruments, bank match/unmatch (no GL on match)',
       permissionKey: 'finance.allocate',
       riskLevel: 'high',
       requiresAudit: true,
@@ -48,6 +48,7 @@ export const financeManifest: ModuleManifest = {
     'finance.credit_note.issue',
     'finance.credit_note.cancel',
     'finance.payment.create',
+    'finance.ap_payment.create',
     'finance.payment.allocate',
     'finance.payment.reverse',
     'finance.instrument.transition',
@@ -59,6 +60,7 @@ export const financeManifest: ModuleManifest = {
     'finance.dunning.prepare',
     'finance.dunning.confirm',
     'finance.dunning.send',
+    'finance.dunning.wa_webhook',
   ],
   queries: [
     'finance.open_items.list',
@@ -66,6 +68,7 @@ export const financeManifest: ModuleManifest = {
     'finance.invoices.list',
     'finance.credit_notes.list',
     'finance.payments.list',
+    'finance.ap_payments.list',
     'finance.instruments.list',
     'finance.credit.snapshot',
     'finance.bank.accounts.list',
@@ -102,10 +105,12 @@ export const financeManifest: ModuleManifest = {
     'finance.bank.ignored.v1',
     'finance.bank.unignored.v1',
     'finance.bank.fee_posted.v1',
+    'finance.ap_payment.posted.v1',
     'finance.dunning.prepared.v1',
     'finance.dunning.confirmed.v1',
     'finance.dunning.sent.v1',
     'finance.dunning.send_failed.v1',
+    'finance.dunning.wa_status.v1',
   ],
   consumedEvents: ['delivery.shipment.delivered.v1'],
   navigationEntries: [

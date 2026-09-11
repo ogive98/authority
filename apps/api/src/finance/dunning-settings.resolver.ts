@@ -125,6 +125,8 @@ export class DunningSettingsResolver {
         templateBodyParams: parseWaTemplateBodyParams(
           read(DUNNING_SETTING_KEYS.WA_TEMPLATE_BODY_PARAMS),
         ),
+        verifyToken: asString(DUNNING_SETTING_KEYS.WA_VERIFY_TOKEN).trim(),
+        appSecret: asString(DUNNING_SETTING_KEYS.WA_APP_SECRET),
       },
     };
   }

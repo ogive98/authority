@@ -3,6 +3,7 @@ import {
   FinDunningChannel,
   FinDunningSendStatus,
   FinDunningStatus,
+  FinDunningWaDeliveryStatus,
   FinOpenItemSide,
   FinOpenItemStatus,
   FinPromiseStatus,
@@ -78,6 +79,9 @@ export type DunningDraftDto = {
   sentAt: string | null;
   sendError: string | null;
   providerMessageId: string | null;
+  waDeliveryStatus: FinDunningWaDeliveryStatus;
+  waDeliveryAt: string | null;
+  waDeliveryError: string | null;
   channelConfigured: boolean;
   mailtoHref: string | null;
   waMeHref: string | null;
@@ -680,6 +684,9 @@ function serializeDraft(
     sentAt: Date | null;
     sendError: string | null;
     providerMessageId: string | null;
+    waDeliveryStatus: FinDunningWaDeliveryStatus;
+    waDeliveryAt: Date | null;
+    waDeliveryError: string | null;
     version: number;
     createdAt: Date;
     updatedAt: Date;
@@ -707,6 +714,9 @@ function serializeDraft(
     sentAt: row.sentAt?.toISOString() ?? null,
     sendError: row.sendError,
     providerMessageId: row.providerMessageId,
+    waDeliveryStatus: row.waDeliveryStatus,
+    waDeliveryAt: row.waDeliveryAt?.toISOString() ?? null,
+    waDeliveryError: row.waDeliveryError,
     channelConfigured,
     mailtoHref:
       row.channel === FinDunningChannel.EMAIL

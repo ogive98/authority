@@ -30,6 +30,7 @@ export const SECRET_SETTING_KEYS = [
   'identity.smtp.pass',
   'finance.dunning.smtp.pass',
   'finance.dunning.wa.access_token',
+  'finance.dunning.wa.app_secret',
 ] as const;
 
 /** Company-scoped only — no USER override (D170/D180/D194/D203). */
@@ -58,6 +59,8 @@ export const COMPANY_ONLY_SETTING_KEYS = [
   'finance.dunning.wa.template_name',
   'finance.dunning.wa.template_language',
   'finance.dunning.wa.template_body_params',
+  'finance.dunning.wa.verify_token',
+  'finance.dunning.wa.app_secret',
   'accounting.gl.ar',
   'accounting.gl.bank',
   'accounting.gl.revenue',
@@ -176,6 +179,7 @@ export const EXPERTISE_SLOT_KEYS = [
   'hr.irpp.abat.chef',
   'hr.irpp.abat.enfant',
   'hr.tfp',
+  'hr.foprolos',
 ] as const;
 
 export type ExpertiseSlotKey = (typeof EXPERTISE_SLOT_KEYS)[number];
@@ -292,10 +296,21 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     key: 'hr.tfp',
     domain: 'hr',
     label: 'TFP',
-    description: 'Taxe sur la formation professionnelle — après expert.',
+    description:
+      'Taxe de formation professionnelle — taux employeur (rateBps). Vide jusqu’à expert. Jamais seedé.',
     defaultStatus: 'PENDING_EXPERT',
     lawRefHint: null,
-    manageHref: null,
+    manageHref: '/hr',
+  },
+  {
+    key: 'hr.foprolos',
+    domain: 'hr',
+    label: 'FOPROLOS',
+    description:
+      'Fonds de promotion du logement social — taux employeur (rateBps). Vide jusqu’à expert. Jamais seedé.',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: '/hr',
   },
 ] as const;
 
@@ -310,6 +325,7 @@ export const EXPERTISE_WRITABLE_KEYS = [
   'hr.irpp.abat.chef',
   'hr.irpp.abat.enfant',
   'hr.tfp',
+  'hr.foprolos',
 ] as const;
 
 export type ExpertiseWritableKey = (typeof EXPERTISE_WRITABLE_KEYS)[number];

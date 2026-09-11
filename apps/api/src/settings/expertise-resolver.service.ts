@@ -66,18 +66,20 @@ export class ExpertiseResolverService {
     cnssCeiling: ValidatedExpertise | null;
     irpp: ValidatedExpertise | null;
     tfp: ValidatedExpertise | null;
+    foprolos: ValidatedExpertise | null;
     pendingKeys: string[];
   }> {
-    const [cnssEmployee, cnssEmployer, cnssCeiling, irpp, tfp] =
+    const [cnssEmployee, cnssEmployer, cnssCeiling, irpp, tfp, foprolos] =
       await Promise.all([
         this.getValidated(companyId, 'hr.cnss.employee'),
         this.getValidated(companyId, 'hr.cnss.employer'),
         this.getValidated(companyId, 'hr.cnss.ceiling'),
         this.getValidated(companyId, 'hr.irpp'),
         this.getValidated(companyId, 'hr.tfp'),
+        this.getValidated(companyId, 'hr.foprolos'),
       ]);
     const validated = new Set(
-      [cnssEmployee, cnssEmployer, cnssCeiling, irpp, tfp]
+      [cnssEmployee, cnssEmployer, cnssCeiling, irpp, tfp, foprolos]
         .filter(Boolean)
         .map((v) => v!.key),
     );
@@ -94,6 +96,7 @@ export class ExpertiseResolverService {
       cnssCeiling,
       irpp,
       tfp,
+      foprolos,
       pendingKeys,
     };
   }

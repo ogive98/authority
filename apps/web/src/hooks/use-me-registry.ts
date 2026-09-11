@@ -36,9 +36,16 @@ export function useMeRegistry() {
     });
   }, [raw, locale, ghostEnabled, patchEnabled, opsVisibility]);
 
+  const unfiltered = useMemo(
+    () => localizeRegistry(raw, locale),
+    [raw, locale],
+  );
+
   return {
     ...query,
     /** Always defined — rail icons never depend on a failed fetch. Localized (D166). */
     data,
+    /** Registry before GHOST/PATCH filter — for URL gates (D208). */
+    unfiltered,
   };
 }

@@ -35,13 +35,11 @@ import {
   type AccJournal,
   type AccJournalEntry,
   type AccPeriod,
+  type PatchSampleMeta,
   type TrialBalanceRow,
 } from "@/lib/accounting";
 import { putCompanySetting } from "@/lib/settings";
-import {
-  filterEntriesByPatchRules,
-  isAccountingPartialMode,
-} from "@/lib/ops-visibility";
+import { isAccountingPartialMode } from "@/lib/ops-visibility";
 import { localizeUiString } from "@/lib/i18n/route-labels";
 import { useLocaleStore } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
@@ -78,6 +76,7 @@ type LoadState =
       periods: AccPeriod[];
       trial: TrialBalanceRow[];
       entries: AccJournalEntry[];
+      patchSample?: PatchSampleMeta;
       periodId: string;
       mapping: GlMapForm;
     }
@@ -157,25 +156,24 @@ export default function AccountingPage() {
 
     let trial: TrialBalanceRow[] = [];
     let entries: AccJournalEntry[] = [];
+    let patchSample: PatchSampleMeta | undefined;
     if (selected) {
       const [tb, en] = await Promise.all([
         fetchTrialBalance(selected),
         fetchEntries({ periodId: selected, limit: 50 }),
       ]);
       if (tb.ok) trial = tb.data.items;
-      if (en.ok) entries = en.data.items;
+      if (en.ok) {
+        entries = en.data.items;
+        patchSample = en.data.patchSample;
+      }
     } else {
       const en = await fetchEntries({ limit: 50 });
-      if (en.ok) entries = en.data.items;
+      if (en.ok) {
+        entries = en.data.items;
+        patchSample = en.data.patchSample;
+      }
     }
-
-    const shell = useShellStore.getState();
-    const prefs = usePrefsStore.getState().opsVisibility;
-    entries = filterEntriesByPatchRules(entries, {
-      patchEnabled: shell.patchEnabled,
-      intensity: prefs.patchAccountingIntensity,
-      rules: prefs.patchDisplayRules,
-    });
 
     setMapDraft(mapping);
     setState({
@@ -185,14 +183,28 @@ export default function AccountingPage() {
       periods: per.data.items,
       trial,
       entries,
+      patchSample,
       periodId: selected,
       mapping,
     });
-  }, []);
+  }, [patchEnabled]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (
+      t === "trial" ||
+      t === "entries" ||
+      t === "periods" ||
+      t === "mapping" ||
+      t === "coa"
+    ) {
+      setTab(t);
+    }
+  }, []);
 
   const accountOptions = useMemo(() => {
     if (state.kind !== "ok") return [];
@@ -225,7 +237,7 @@ export default function AccountingPage() {
         return;
       }
     }
-    setMapMsg("Mapping enregistré — applicable aux prochains ponts Finance→GL.");
+    setMapMsg(`Mapping enregistré — applicable aux prochains ponts Finance→GL.`);
     setMapBusy(false);
     void load(state.kind === "ok" ? state.periodId : undefined);
   }
@@ -471,6 +483,13 @@ export default function AccountingPage() {
                       ))}
                     </select>
                   </label>
+                  {state.patchSample?.applied ? (
+                    <ABadge tone="warning">
+                      PATCH échantillon {state.patchSample.kept}/
+                      {state.patchSample.total} · {state.patchSample.intensity}{" "}
+                      %
+                    </ABadge>
+                  ) : null}
                 </div>
                 {state.entries.length === 0 ? (
                   <AEmptyState

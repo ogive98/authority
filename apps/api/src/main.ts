@@ -8,7 +8,7 @@ import { startThunderTracing } from './thunder-core/observability/tracing-bootst
 async function bootstrap() {
   await startThunderTracing();
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableShutdownHooks();
   app.use(cookieParser());
   app.useGlobalPipes(

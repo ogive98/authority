@@ -929,6 +929,19 @@ export default function FinancePage() {
                     : dunningDraft.sendStatus === "FAILED"
                       ? "échec"
                       : "non envoyé"}
+                  {dunningDraft.channel === "WHATSAPP" &&
+                  dunningDraft.waDeliveryStatus &&
+                  dunningDraft.waDeliveryStatus !== "NONE"
+                    ? ` · livraison ${
+                        dunningDraft.waDeliveryStatus === "SENT"
+                          ? "envoyée Meta"
+                          : dunningDraft.waDeliveryStatus === "DELIVERED"
+                            ? "livrée"
+                            : dunningDraft.waDeliveryStatus === "READ"
+                              ? "lue"
+                              : "échec"
+                      }`
+                    : ""}
                   {dunningDraft.channelConfigured
                     ? " · canal Prefs prêt"
                     : " · canal Prefs non configuré"}
@@ -936,6 +949,11 @@ export default function FinancePage() {
                 {dunningDraft.sendError ? (
                   <p className="text-[length:var(--a-text-xs)] text-a-danger">
                     {dunningDraft.sendError}
+                  </p>
+                ) : null}
+                {dunningDraft.waDeliveryError ? (
+                  <p className="text-[length:var(--a-text-xs)] text-a-danger">
+                    Livraison WA : {dunningDraft.waDeliveryError}
                   </p>
                 ) : null}
               </div>

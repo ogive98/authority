@@ -184,13 +184,14 @@ export function PrefsModesOpsPanel({
           </h2>
           <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
             Mode démo topbar. Réduit la visibilité comptable (intensité) et peut
-            masquer la livraison. Les règles d’affichage choisissent comment
-            échantillonner les écritures restantes.
+            masquer la livraison. L’échantillon d’écritures est appliqué par
+            l’API si PATCH est déclaré (header). Les URLs masquées affichent un
+            écran interdit — l’API n’est pas 403 IAM.
           </p>
         </div>
         <PrefsToggleRow
           title="Masquer la livraison (BL)"
-          description="En PATCH actif, retire le module Livraison de la navigation et bloque /delivery."
+          description="En PATCH actif, retire Livraison de la navigation et bloque l’URL /delivery."
           checked={opsVisibility.patchHideDelivery}
           onCheckedChange={(on) => {
             const prev = opsVisibility.patchHideDelivery;
@@ -277,8 +278,9 @@ export function PrefsModesOpsPanel({
             GHOST
           </h2>
           <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
-            Mode topbar. Masque des opérations choisies (checklist) sans changer
-            les permissions serveur. Combinable avec PATCH.
+            Mode topbar. Masque des opérations choisies (checklist + URL
+            interdite) sans changer les permissions serveur. Combinable avec
+            PATCH.
           </p>
         </div>
         <PrefsToggleRow
@@ -310,8 +312,8 @@ export function PrefsModesOpsPanel({
             Checklist fonctionnalités à masquer
           </p>
           <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
-            Coché = masqué dans la navigation / Mission Control lorsque GHOST
-            est actif. Liste issue du registry modules.
+            Coché = masqué dans la navigation / Mission Control et URL interdite
+            lorsque GHOST est actif. Liste issue du registry.
           </p>
           <div className="mt-3 max-h-96 space-y-4 overflow-y-auto">
             {modules

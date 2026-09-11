@@ -12,6 +12,8 @@ import { SyncModuleFromRoute } from "./sync-module-from-route";
 import { ShellMain } from "./shell-main";
 import { FloatingToolbox } from "./floating-toolbox";
 import { SmartActionDock } from "./smart-action-dock";
+import { OpsRouteGate } from "./ops-route-gate";
+import { OpsModeBanner } from "./ops-mode-banner";
 
 /**
  * Enterprise OS shell (D184) — topbar; sidebar + main + dock (online/sync/resources).
@@ -30,7 +32,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <ShellSidebar />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <ShellBreadcrumbs />
-          <ShellMain>{children}</ShellMain>
+          <OpsModeBanner />
+          <ShellMain>
+            <OpsRouteGate>{children}</OpsRouteGate>
+          </ShellMain>
         </div>
         <SmartActionDock />
       </div>

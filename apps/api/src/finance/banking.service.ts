@@ -27,18 +27,50 @@ import { FinanceException } from './finance.exception';
 import { parseBankStatementCsv } from './bank-csv';
 import { parseBankStatementOfx } from './bank-ofx';
 
-/** Pure guard — payment XOR instrument. */
+const BANK_MATCH_RELATIONS = {
+  payment: { select: { number: true } },
+  instrument: { select: { number: true } },
+  apPayment: { select: { number: true } },
+} as const;
+
+/** Pure guard — exactly one of payment / instrument / AP disbursement. */
 export function assertXorMatchTarget(input: {
   paymentId?: string;
   instrumentId?: string;
+  apPaymentId?: string;
 }): void {
-  const hasPayment = Boolean(input.paymentId);
-  const hasInstrument = Boolean(input.instrumentId);
-  if (hasPayment === hasInstrument) {
+  const n = [input.paymentId, input.instrumentId, input.apPaymentId].filter(
+    Boolean,
+  ).length;
+  if (n !== 1) {
     throw new FinanceException(
       FINANCE_ERROR_CODES.BANK_MATCH_TARGET,
-      'Provide exactly one of paymentId or instrumentId.',
+      'Provide exactly one of paymentId, instrumentId, or apPaymentId.',
       HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
+/** Credit (+) → AR ; debit (−) → AP. */
+export function assertMatchSide(input: {
+  lineAmount: Prisma.Decimal;
+  wantsAp: boolean;
+}): void {
+  if (input.lineAmount.isZero()) {
+    throw new FinanceException(
+      FINANCE_ERROR_CODES.INVALID_AMOUNT,
+      'Zero-amount lines cannot be matched.',
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+  const isDebit = input.lineAmount.isNegative();
+  if (input.wantsAp !== isDebit) {
+    throw new FinanceException(
+      FINANCE_ERROR_CODES.BANK_MATCH_SIDE,
+      input.wantsAp
+        ? 'AP disbursements match debit (−) statement lines only.'
+        : 'AR payments / instruments match credit (+) statement lines only.',
+      HttpStatus.CONFLICT,
     );
   }
 }
@@ -125,10 +157,12 @@ export type BankMatchDto = {
   id: string;
   paymentId: string | null;
   instrumentId: string | null;
+  apPaymentId: string | null;
   note: string | null;
   matchedAt: string;
   paymentNumber: string | null;
   instrumentNumber: string | null;
+  apPaymentNumber: string | null;
 };
 
 export type BankStatementLineDto = {
@@ -368,8 +402,7 @@ export class BankingService {
       include: {
         match: {
           include: {
-            payment: { select: { number: true } },
-            instrument: { select: { number: true } },
+            ...BANK_MATCH_RELATIONS
           },
         },
       },
@@ -569,8 +602,7 @@ export class BankingService {
       include: {
         match: {
           include: {
-            payment: { select: { number: true } },
-            instrument: { select: { number: true } },
+            ...BANK_MATCH_RELATIONS
           },
         },
       },
@@ -623,8 +655,7 @@ export class BankingService {
         include: {
           match: {
             include: {
-              payment: { select: { number: true } },
-              instrument: { select: { number: true } },
+              ...BANK_MATCH_RELATIONS
             },
           },
         },
@@ -690,8 +721,7 @@ export class BankingService {
         include: {
           match: {
             include: {
-              payment: { select: { number: true } },
-              instrument: { select: { number: true } },
+              ...BANK_MATCH_RELATIONS
             },
           },
         },
@@ -721,8 +751,7 @@ export class BankingService {
       include: {
         match: {
           include: {
-            payment: { select: { number: true } },
-            instrument: { select: { number: true } },
+            ...BANK_MATCH_RELATIONS
           },
         },
       },
@@ -758,8 +787,7 @@ export class BankingService {
         include: {
           match: {
             include: {
-              payment: { select: { number: true } },
-              instrument: { select: { number: true } },
+              ...BANK_MATCH_RELATIONS
             },
           },
         },
@@ -813,6 +841,10 @@ export class BankingService {
     }
 
     const absLine = line.amount.abs();
+    assertMatchSide({
+      lineAmount: line.amount,
+      wantsAp: Boolean(dto.apPaymentId),
+    });
 
     if (dto.paymentId) {
       const payment = await this.prisma.finPayment.findFirst({
@@ -895,6 +927,45 @@ export class BankingService {
       }
     }
 
+    if (dto.apPaymentId) {
+      const apPayment = await this.prisma.finApPayment.findFirst({
+        where: { id: dto.apPaymentId, companyId, deletedAt: null },
+        include: { bankMatches: true },
+      });
+      if (!apPayment) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.AP_PAYMENT_NOT_FOUND,
+          'AP disbursement not found.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      if (apPayment.status !== FinPaymentStatus.POSTED) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_STATUS,
+          'Only POSTED AP disbursements can be matched.',
+          HttpStatus.CONFLICT,
+        );
+      }
+      if (apPayment.bankMatches.length > 0) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.BANK_ALREADY_MATCHED,
+          'AP disbursement already matched to a bank line.',
+          HttpStatus.CONFLICT,
+        );
+      }
+      if (!apPayment.amount.equals(absLine)) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.BANK_AMOUNT_MISMATCH,
+          'AP disbursement amount does not match statement line.',
+          HttpStatus.CONFLICT,
+          {
+            lineAmount: absLine.toFixed(3),
+            apPaymentAmount: apPayment.amount.toFixed(3),
+          },
+        );
+      }
+    }
+
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.finBankMatch.create({
         data: {
@@ -902,6 +973,7 @@ export class BankingService {
           statementLineId: line.id,
           paymentId: dto.paymentId ?? null,
           instrumentId: dto.instrumentId ?? null,
+          apPaymentId: dto.apPaymentId ?? null,
           note: dto.note?.trim() || null,
         },
       });
@@ -914,8 +986,7 @@ export class BankingService {
         include: {
           match: {
             include: {
-              payment: { select: { number: true } },
-              instrument: { select: { number: true } },
+              ...BANK_MATCH_RELATIONS
             },
           },
         },
@@ -930,6 +1001,7 @@ export class BankingService {
           bankAccountId: line.bankAccountId,
           paymentId: dto.paymentId ?? null,
           instrumentId: dto.instrumentId ?? null,
+          apPaymentId: dto.apPaymentId ?? null,
           amount: absLine.toFixed(3),
         },
       });
@@ -973,8 +1045,7 @@ export class BankingService {
         include: {
           match: {
             include: {
-              payment: { select: { number: true } },
-              instrument: { select: { number: true } },
+              ...BANK_MATCH_RELATIONS
             },
           },
         },
@@ -989,6 +1060,7 @@ export class BankingService {
           bankAccountId: line.bankAccountId,
           priorPaymentId: line.match!.paymentId,
           priorInstrumentId: line.match!.instrumentId,
+          priorApPaymentId: line.match!.apPaymentId,
         },
       });
       return row;
@@ -997,12 +1069,13 @@ export class BankingService {
     return serializeLine(updated);
   }
 
-  /** Candidates with exact absolute amount, not yet matched (AR V0). */
+  /** Candidates: credit → AR payment/instrument ; debit → AP disbursement. */
   async matchCandidates(
     companyId: string,
     lineId: string,
   ): Promise<{
     line: BankStatementLineDto;
+    side: 'AR' | 'AP' | 'NONE';
     payments: {
       id: string;
       number: string;
@@ -1022,14 +1095,22 @@ export class BankingService {
       paymentNumber: string;
       bankName: string | null;
     }[];
+    apPayments: {
+      id: string;
+      number: string;
+      amount: string;
+      method: string;
+      paymentDate: string;
+      vendorName: string;
+      reference: string | null;
+    }[];
   }> {
     const line = await this.prisma.finBankStatementLine.findFirst({
       where: { id: lineId, companyId, deletedAt: null },
       include: {
         match: {
           include: {
-            payment: { select: { number: true } },
-            instrument: { select: { number: true } },
+            ...BANK_MATCH_RELATIONS,
           },
         },
       },
@@ -1042,6 +1123,59 @@ export class BankingService {
       );
     }
     const abs = line.amount.abs();
+    const side: 'AR' | 'AP' | 'NONE' = line.amount.isNegative()
+      ? 'AP'
+      : line.amount.isPositive()
+        ? 'AR'
+        : 'NONE';
+
+    if (side === 'NONE') {
+      return {
+        line: serializeLine(line),
+        side,
+        payments: [],
+        instruments: [],
+        apPayments: [],
+      };
+    }
+
+    if (side === 'AP') {
+      const matchedApIds = (
+        await this.prisma.finBankMatch.findMany({
+          where: { companyId, apPaymentId: { not: null } },
+          select: { apPaymentId: true },
+        })
+      )
+        .map((m) => m.apPaymentId!)
+        .filter(Boolean);
+      const apPayments = await this.prisma.finApPayment.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: FinPaymentStatus.POSTED,
+          amount: abs,
+          id: { notIn: matchedApIds.length ? matchedApIds : undefined },
+        },
+        orderBy: { paymentDate: 'desc' },
+        take: 40,
+      });
+      return {
+        line: serializeLine(line),
+        side,
+        payments: [],
+        instruments: [],
+        apPayments: apPayments.map((p) => ({
+          id: p.id,
+          number: p.number,
+          amount: p.amount.toFixed(3),
+          method: p.method,
+          paymentDate: p.paymentDate.toISOString().slice(0, 10),
+          vendorName: p.vendorName,
+          reference: p.reference,
+        })),
+      };
+    }
+
     const matchedPaymentIds = (
       await this.prisma.finBankMatch.findMany({
         where: { companyId, paymentId: { not: null } },
@@ -1105,6 +1239,7 @@ export class BankingService {
 
     return {
       line: serializeLine(line),
+      side,
       payments: payments.map((p) => ({
         id: p.id,
         number: p.number,
@@ -1124,6 +1259,7 @@ export class BankingService {
         paymentNumber: i.payment.number,
         bankName: i.bankName,
       })),
+      apPayments: [],
     };
   }
 
@@ -1316,10 +1452,12 @@ function serializeLine(row: {
         id: string;
         paymentId: string | null;
         instrumentId: string | null;
+        apPaymentId: string | null;
         note: string | null;
         matchedAt: Date;
         payment: { number: string } | null;
         instrument: { number: string } | null;
+        apPayment: { number: string } | null;
       } | null)
     | null;
 }): BankStatementLineDto {
@@ -1344,10 +1482,12 @@ function serializeLine(row: {
           id: row.match.id,
           paymentId: row.match.paymentId,
           instrumentId: row.match.instrumentId,
+          apPaymentId: row.match.apPaymentId,
           note: row.match.note,
           matchedAt: row.match.matchedAt.toISOString(),
           paymentNumber: row.match.payment?.number ?? null,
           instrumentNumber: row.match.instrument?.number ?? null,
+          apPaymentNumber: row.match.apPayment?.number ?? null,
         }
       : null,
   };

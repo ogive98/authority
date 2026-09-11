@@ -170,6 +170,41 @@ export async function endContract(
   return { ok: true, data: (await res.json()) as HrContract };
 }
 
+export type LevyLinePreview = {
+  slotKey: string;
+  rateBps: number | null;
+  amount: number | null;
+  lawRef: string | null;
+  pending: string[];
+  ready: boolean;
+};
+
+export type LevyPreview = {
+  contractId: string;
+  employeeId: string;
+  wageBase: number;
+  tfp: LevyLinePreview;
+  foprolos: LevyLinePreview;
+  ready: boolean;
+  pending: string[];
+  prefsHref: string;
+  currency: string;
+  note: string;
+};
+
+export async function fetchLevyPreview(
+  contractId: string,
+): Promise<ApiOk<LevyPreview> | ApiFail> {
+  const params = new URLSearchParams({ contractId });
+  const res = await fetch(`/api/v1/hr/levies/preview?${params}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as LevyPreview };
+}
+
 export async function fetchCnssPreview(
   contractId: string,
   periodYm?: string,

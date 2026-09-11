@@ -23,6 +23,8 @@ export const FINANCE_ERROR_CODES = {
   BANK_FEE_NOT_ELIGIBLE: 'FIN.BANK_FEE_NOT_ELIGIBLE',
   BANK_FEE_GL_MISSING: 'FIN.BANK_FEE_GL_MISSING',
   BANK_FEE_ALREADY_POSTED: 'FIN.BANK_FEE_ALREADY_POSTED',
+  BANK_MATCH_SIDE: 'FIN.BANK_MATCH_SIDE',
+  AP_PAYMENT_NOT_FOUND: 'FIN.AP_PAYMENT_NOT_FOUND',
   DUNNING_NOT_ELIGIBLE: 'FIN.DUNNING_NOT_ELIGIBLE',
   DUNNING_PROMISE_OPEN: 'FIN.DUNNING_PROMISE_OPEN',
   DUNNING_NOT_FOUND: 'FIN.DUNNING_NOT_FOUND',
@@ -56,10 +58,12 @@ export const FINANCE_EVENT_TYPES = {
   BANK_IGNORED: 'finance.bank.ignored.v1',
   BANK_UNIGNORED: 'finance.bank.unignored.v1',
   BANK_FEE_POSTED: 'finance.bank.fee_posted.v1',
+  AP_PAYMENT_POSTED: 'finance.ap_payment.posted.v1',
   DUNNING_PREPARED: 'finance.dunning.prepared.v1',
   DUNNING_CONFIRMED: 'finance.dunning.confirmed.v1',
   DUNNING_SENT: 'finance.dunning.sent.v1',
   DUNNING_SEND_FAILED: 'finance.dunning.send_failed.v1',
+  DUNNING_WA_STATUS: 'finance.dunning.wa_status.v1',
 } as const;
 
 /** Company settings — credit exposure check on sales confirm (default off). */

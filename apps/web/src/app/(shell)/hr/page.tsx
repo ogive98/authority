@@ -28,6 +28,7 @@ import {
   fetchCnssPreview,
   fetchEmployees,
   fetchIrppPreview,
+  fetchLevyPreview,
   patchEmployee,
   type Bulletin,
   type BulletinPreview,
@@ -35,6 +36,7 @@ import {
   type HrContract,
   type HrEmployee,
   type IrppPreview,
+  type LevyPreview,
 } from "@/lib/hr";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
@@ -102,6 +104,7 @@ export default function HrEmployeesPage() {
   const [irppPreview, setIrppPreview] = useState<IrppPreview | null>(null);
   const [bulletinPreview, setBulletinPreview] =
     useState<BulletinPreview | null>(null);
+  const [levyPreview, setLevyPreview] = useState<LevyPreview | null>(null);
   const [periodYm, setPeriodYm] = useState(
     new Date().toISOString().slice(0, 7),
   );
@@ -200,18 +203,23 @@ export default function HrEmployeesPage() {
     setCnssPreview(null);
     setIrppPreview(null);
     setBulletinPreview(null);
+    setLevyPreview(null);
     setFormError(null);
     const ym = new Date().toISOString().slice(0, 7);
     setPeriodYm(ym);
     setDrawerOpen(true);
     setBusy(true);
-    const res = await fetchCnssPreview(contract.id, ym);
+    const [res, levyRes] = await Promise.all([
+      fetchCnssPreview(contract.id, ym),
+      fetchLevyPreview(contract.id),
+    ]);
     setBusy(false);
     if (!res.ok) {
       setFormError(res.message);
       return;
     }
     setCnssPreview(res.data);
+    if (levyRes.ok) setLevyPreview(levyRes.data);
   }
 
   async function openIrpp(contract: HrContract) {
@@ -220,6 +228,7 @@ export default function HrEmployeesPage() {
     setCnssPreview(null);
     setIrppPreview(null);
     setBulletinPreview(null);
+    setLevyPreview(null);
     setFormError(null);
     const ym = new Date().toISOString().slice(0, 7);
     setPeriodYm(ym);
@@ -240,6 +249,7 @@ export default function HrEmployeesPage() {
     setCnssPreview(null);
     setIrppPreview(null);
     setBulletinPreview(null);
+    setLevyPreview(null);
     setFormError(null);
     const ym = new Date().toISOString().slice(0, 7);
     setPeriodYm(ym);
@@ -258,13 +268,17 @@ export default function HrEmployeesPage() {
     if (!cnssContract) return;
     setBusy(true);
     setFormError(null);
-    const res = await fetchCnssPreview(cnssContract.id, periodYm);
+    const [res, levyRes] = await Promise.all([
+      fetchCnssPreview(cnssContract.id, periodYm),
+      fetchLevyPreview(cnssContract.id),
+    ]);
     setBusy(false);
     if (!res.ok) {
       setFormError(res.message);
       return;
     }
     setCnssPreview(res.data);
+    if (levyRes.ok) setLevyPreview(levyRes.data);
   }
 
   async function refreshIrppPreview() {
@@ -403,7 +417,7 @@ export default function HrEmployeesPage() {
       <AScreenHeader
         kicker="Ressources humaines"
         title="Employés"
-        description="RH — wageBase, CNSS, IRPP + abattements Prefs, bulletin + PDF serveur. Aucun taux inventé."
+        description="RH — wageBase, CNSS, IRPP + abattements Prefs, TFP/FOPROLOS employeur (preview). Aucun taux inventé."
         actions={
           <AButton type="button" onClick={openCreateEmployee}>
             Nouvel employé
@@ -419,6 +433,7 @@ export default function HrEmployeesPage() {
           "hr.cnss.ceiling",
           "hr.irpp",
           "hr.tfp",
+          "hr.foprolos",
         ]}
       />
 
@@ -890,6 +905,36 @@ export default function HrEmployeesPage() {
                   ) : null}
                 </div>
               ) : null}
+              {levyPreview ? (
+                <div className="a-underlay space-y-2 rounded-md p-3 text-[length:var(--a-text-sm)]">
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Taxes employeur (Prefs) — hors net bulletin
+                  </p>
+                  <p>
+                    TFP{" "}
+                    <span className="a-mono tabular-nums">
+                      {levyPreview.tfp.amount != null
+                        ? levyPreview.tfp.amount.toFixed(3)
+                        : "—"}
+                    </span>{" "}
+                    TND
+                  </p>
+                  <p>
+                    FOPROLOS{" "}
+                    <span className="a-mono tabular-nums">
+                      {levyPreview.foprolos.amount != null
+                        ? levyPreview.foprolos.amount.toFixed(3)
+                        : "—"}
+                    </span>{" "}
+                    TND
+                  </p>
+                  {!levyPreview.ready ? (
+                    <p className="text-a-warning">
+                      Expertise requise : {levyPreview.pending.join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               <AButton
                 type="button"
                 disabled={busy || !cnssPreview?.ready}
@@ -1009,7 +1054,8 @@ export default function HrEmployeesPage() {
             <>
               <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                 Compose CNSS + IRPP snapshots pour la période. Net = wageBase −
-                CNSS salarié − IRPP mensuel. PDF serveur via fiche bulletin.
+                CNSS salarié − IRPP mensuel (TFP/FOPROLOS employeur hors net).
+                PDF serveur via fiche bulletin.
               </p>
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">

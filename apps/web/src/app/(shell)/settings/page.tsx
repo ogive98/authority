@@ -208,6 +208,9 @@ export default function SettingsPage() {
   const [dunWaTemplateName, setDunWaTemplateName] = useState("");
   const [dunWaTemplateLanguage, setDunWaTemplateLanguage] = useState("");
   const [dunWaTemplateBodyParams, setDunWaTemplateBodyParams] = useState("");
+  const [dunWaVerifyToken, setDunWaVerifyToken] = useState("");
+  const [dunWaAppSecret, setDunWaAppSecret] = useState("");
+  const [dunWaAppSecretSet, setDunWaAppSecretSet] = useState(false);
   const [envoisMsg, setEnvoisMsg] = useState<string | null>(null);
   const [envoisError, setEnvoisError] = useState<string | null>(null);
   const [mailStatus, setMailStatus] = useState<MailStatus | null>(null);
@@ -512,6 +515,12 @@ export default function SettingsPage() {
             .join(", ")
         : "",
     );
+    setDunWaVerifyToken(str("finance.dunning.wa.verify_token"));
+    const dunSecretRow = res.data.settings.find(
+      (s) => s.key === "finance.dunning.wa.app_secret",
+    );
+    setDunWaAppSecret("");
+    setDunWaAppSecretSet(Boolean(dunSecretRow?.secretSet));
     const status = await fetchMailStatus();
     setMailStatus(status.ok ? status.data : null);
   }, [canCompanyWrite]);
@@ -704,6 +713,11 @@ export default function SettingsPage() {
           .map((s) => s.trim())
           .filter(Boolean),
       },
+      {
+        key: "finance.dunning.wa.verify_token",
+        value: dunWaVerifyToken.trim(),
+      },
+      { key: "finance.dunning.wa.app_secret", value: dunWaAppSecret },
     ];
     for (const row of puts) {
       const r = await putCompanySetting(row.key, row.value);
@@ -1720,7 +1734,11 @@ export default function SettingsPage() {
                                 }
                                 placeholder="Vide"
                                 className="a-mono"
-                                disabled={row.key === "hr.irpp"}
+                                disabled={
+                                  row.key === "hr.irpp" ||
+                                  row.key === "hr.tfp" ||
+                                  row.key === "hr.foprolos"
+                                }
                               />
                             </label>
                             <label className="block space-y-1">
@@ -2360,6 +2378,52 @@ export default function SettingsPage() {
                         vides jusqu’à saisie humaine ; envoi template Meta
                         uniquement (pas texte libre).
                       </p>
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                        Webhook Meta :{" "}
+                        <span className="a-mono">
+                          /api/v1/webhooks/whatsapp/&#123;companyId&#125;
+                        </span>{" "}
+                        — GET verify_token · POST HMAC app_secret. Vide jusqu’à
+                        saisie. Thunder n’ingère pas.
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="dun-wa-verify"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        Webhook verify token
+                      </label>
+                      <AInput
+                        id="dun-wa-verify"
+                        value={dunWaVerifyToken}
+                        onChange={(e) => setDunWaVerifyToken(e.target.value)}
+                        className="a-mono"
+                        placeholder="jeton handshake Meta — vide jusqu’à saisie"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="dun-wa-app-secret"
+                        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
+                      >
+                        App secret (HMAC)
+                      </label>
+                      <AInput
+                        id="dun-wa-app-secret"
+                        type="password"
+                        value={dunWaAppSecret}
+                        onChange={(e) => setDunWaAppSecret(e.target.value)}
+                        autoComplete="new-password"
+                        placeholder={
+                          dunWaAppSecretSet
+                            ? "•••• enregistré — laisser vide pour conserver"
+                            : "saisir l’app secret Meta"
+                        }
+                      />
                     </div>
                   </div>
                 </div>

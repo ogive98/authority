@@ -1004,10 +1004,12 @@ export type FinBankMatch = {
   id: string;
   paymentId: string | null;
   instrumentId: string | null;
+  apPaymentId: string | null;
   note: string | null;
   matchedAt: string;
   paymentNumber: string | null;
   instrumentNumber: string | null;
+  apPaymentNumber: string | null;
 };
 
 export type FinBankStatementLine = {
@@ -1031,6 +1033,7 @@ export type FinBankStatementLine = {
 
 export type BankMatchCandidates = {
   line: FinBankStatementLine;
+  side: "AR" | "AP" | "NONE";
   payments: {
     id: string;
     number: string;
@@ -1050,6 +1053,34 @@ export type BankMatchCandidates = {
     paymentNumber: string;
     bankName: string | null;
   }[];
+  apPayments: {
+    id: string;
+    number: string;
+    amount: string;
+    method: string;
+    paymentDate: string;
+    vendorName: string;
+    reference: string | null;
+  }[];
+};
+
+export type FinApPayment = {
+  id: string;
+  companyId: string;
+  number: string;
+  vendorName: string;
+  amount: string;
+  currency: string;
+  method: string;
+  status: string;
+  paymentDate: string;
+  accountingDate: string;
+  reference: string | null;
+  notes: string | null;
+  version: number;
+  matched: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export async function fetchBankAccounts(): Promise<
@@ -1175,7 +1206,12 @@ export async function fetchBankMatchCandidates(
 
 export async function matchBankLine(
   lineId: string,
-  body: { paymentId?: string; instrumentId?: string; note?: string },
+  body: {
+    paymentId?: string;
+    instrumentId?: string;
+    apPaymentId?: string;
+    note?: string;
+  },
 ): Promise<{ ok: true; data: FinBankStatementLine } | ApiFail> {
   try {
     const res = await fetch(`/api/v1/finance/bank-lines/${lineId}/match`, {
@@ -1205,6 +1241,49 @@ export async function unmatchBankLine(
     });
     if (!res.ok) return parseFail(res);
     return { ok: true, data: (await res.json()) as FinBankStatementLine };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchApPayments(): Promise<
+  { ok: true; data: { items: FinApPayment[] } } | ApiFail
+> {
+  try {
+    const res = await fetch("/api/v1/finance/ap-payments?limit=50", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as { items: FinApPayment[] },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function createApPayment(body: {
+  vendorName: string;
+  amount: number;
+  method: string;
+  paymentDate: string;
+  reference?: string;
+  notes?: string;
+}): Promise<{ ok: true; data: FinApPayment } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/finance/ap-payments", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinApPayment };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
@@ -1438,6 +1517,13 @@ export type DunningPreview = {
   }[];
 };
 
+export type DunningWaDeliveryStatus =
+  | "NONE"
+  | "SENT"
+  | "DELIVERED"
+  | "READ"
+  | "FAILED";
+
 export type FinDunningDraft = {
   id: string;
   number: string;
@@ -1455,6 +1541,9 @@ export type FinDunningDraft = {
   sentAt: string | null;
   sendError: string | null;
   providerMessageId: string | null;
+  waDeliveryStatus: DunningWaDeliveryStatus;
+  waDeliveryAt: string | null;
+  waDeliveryError: string | null;
   channelConfigured: boolean;
   mailtoHref: string | null;
   waMeHref: string | null;

@@ -68,7 +68,7 @@ export const OPS_VISIBILITY_KEYS = {
 } as const;
 
 /** Features hidden when accounting is "partial" under ops mode (D180). */
-const PARTIAL_ACCOUNTING_FEATURE_IDS = new Set([
+export const PARTIAL_ACCOUNTING_FEATURE_IDS = new Set([
   "entries",
   "journals",
   "trial-balance",

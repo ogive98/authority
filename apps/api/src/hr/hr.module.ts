@@ -12,6 +12,7 @@ import { CnssService } from './cnss.service';
 import { IrppService } from './irpp.service';
 import { BulletinService } from './bulletin.service';
 import { BulletinPdfService } from './bulletin-pdf.service';
+import { LevyService } from './levy.service';
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { BulletinPdfService } from './bulletin-pdf.service';
     IrppService,
     BulletinService,
     BulletinPdfService,
+    LevyService,
   ],
-  exports: [HrService, CnssService, IrppService, BulletinService],
+  exports: [HrService, CnssService, IrppService, BulletinService, LevyService],
 })
 export class HrModule {}

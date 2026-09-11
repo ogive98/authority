@@ -43,6 +43,7 @@ import { IrppService } from './irpp.service';
 import { BulletinService } from './bulletin.service';
 import { BulletinPdfService } from './bulletin-pdf.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
+import { LevyService } from './levy.service';
 
 @Controller('api/v1/hr')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
@@ -56,10 +57,11 @@ export class HrController {
     private readonly bulletinPdf: BulletinPdfService,
     private readonly expertise: ExpertiseResolverService,
     private readonly permissions: PermissionService,
+    private readonly levies: LevyService,
   ) {}
 
   /**
-   * CNSS / IRPP / TFP readiness (D092/D195/D196) — null until expert validates in Préférences.
+   * CNSS / IRPP / TFP / FOPROLOS readiness — null until expert validates in Préférences.
    */
   @Get('expertise-hints')
   @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
@@ -71,8 +73,17 @@ export class HrController {
       companyId: tenancy.companyId,
       ...snap,
       prefsHref: '/settings#expertise',
-      note: 'CNSS/IRPP use VALIDATED Prefs + human brackets only — never invent rates.',
+      note: 'CNSS/IRPP/TFP/FOPROLOS use VALIDATED Prefs only — never invent rates.',
     };
+  }
+
+  @Get('levies/preview')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  leviesPreview(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('contractId', ParseUUIDPipe) contractId: string,
+  ) {
+    return this.levies.preview(tenancy.companyId, contractId);
   }
 
   @Get('cnss/preview')

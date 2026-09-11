@@ -38,6 +38,8 @@ describe('dunning channel config helpers', () => {
         templateName: '',
         templateLanguage: 'fr',
         templateBodyParams: [],
+        verifyToken: '',
+        appSecret: '',
       }),
     ).toBe(false);
     expect(
@@ -48,6 +50,8 @@ describe('dunning channel config helpers', () => {
         templateName: 'relance_creance',
         templateLanguage: 'fr',
         templateBodyParams: ['customer_name'],
+        verifyToken: '',
+        appSecret: '',
       }),
     ).toBe(true);
   });

@@ -16,7 +16,9 @@ import {
 import {
   addBankLines,
   bankLineBadgeTone,
+  createApPayment,
   createBankAccount,
+  fetchApPayments,
   fetchBankAccounts,
   fetchBankLines,
   fetchBankMatchCandidates,
@@ -34,6 +36,7 @@ import {
   type BankMatchCandidates,
   type BankOfxPreview,
   type BankTreasury,
+  type FinApPayment,
   type FinBankAccount,
   type FinBankStatementLine,
 } from "@/lib/finance";
@@ -85,6 +88,15 @@ export default function FinanceBankingPage() {
   const [candidates, setCandidates] = useState<BankMatchCandidates | null>(
     null,
   );
+  const [apPayments, setApPayments] = useState<FinApPayment[]>([]);
+  const [apOpen, setApOpen] = useState(false);
+  const [apForm, setApForm] = useState<{
+    vendorName: string;
+    amount: string;
+    method: string;
+    paymentDate: string;
+    reference: string;
+  } | null>(null);
 
   const [csvOpen, setCsvOpen] = useState(false);
   const [csvText, setCsvText] = useState("");
@@ -93,6 +105,11 @@ export default function FinanceBankingPage() {
   const [ofxOpen, setOfxOpen] = useState(false);
   const [ofxText, setOfxText] = useState("");
   const [ofxPreview, setOfxPreview] = useState<BankOfxPreview | null>(null);
+
+  const loadAp = useCallback(async () => {
+    const res = await fetchApPayments();
+    if (res.ok) setApPayments(res.data.items);
+  }, []);
 
   const loadAccounts = useCallback(async () => {
     setState({ kind: "loading" });
@@ -135,7 +152,8 @@ export default function FinanceBankingPage() {
 
   useEffect(() => {
     void loadAccounts();
-  }, [loadAccounts]);
+    void loadAp();
+  }, [loadAccounts, loadAp]);
 
   useEffect(() => {
     if (selectedId) void loadLines(selectedId, lineFilter);
@@ -144,8 +162,9 @@ export default function FinanceBankingPage() {
 
   const refresh = useCallback(async () => {
     await loadAccounts();
+    await loadAp();
     if (selectedId) await loadLines(selectedId, lineFilter);
-  }, [loadAccounts, loadLines, selectedId, lineFilter]);
+  }, [loadAccounts, loadAp, loadLines, selectedId, lineFilter]);
 
   async function onCreateAccount() {
     if (!accountForm) return;
@@ -214,6 +233,7 @@ export default function FinanceBankingPage() {
   async function onMatch(body: {
     paymentId?: string;
     instrumentId?: string;
+    apPaymentId?: string;
   }) {
     if (!candidates) return;
     setBusy(true);
@@ -238,6 +258,32 @@ export default function FinanceBankingPage() {
       return;
     }
     await refresh();
+  }
+
+  async function onCreateAp() {
+    if (!apForm) return;
+    const amount = Number(apForm.amount.replace(",", "."));
+    if (!apForm.vendorName.trim() || !Number.isFinite(amount) || amount <= 0) {
+      setFormError("Fournisseur et montant TND > 0 requis.");
+      return;
+    }
+    setBusy(true);
+    setFormError(null);
+    const res = await createApPayment({
+      vendorName: apForm.vendorName.trim(),
+      amount,
+      method: apForm.method,
+      paymentDate: apForm.paymentDate,
+      reference: apForm.reference || undefined,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setApOpen(false);
+    setApForm(null);
+    await loadAp();
   }
 
   async function onIgnore(lineId: string) {
@@ -391,7 +437,7 @@ export default function FinanceBankingPage() {
       <AScreenHeader
         kicker="Finance"
         title="Banque"
-        description="Rapprochement soft · CSV/OFX · ignore sans GL · Comptabiliser frais (Prefs bank_fee)."
+        description="Rapprochement soft AR (+) / AP (−) · CSV/OFX · ignore sans GL · frais (Prefs bank_fee)."
         actions={
           <div className="flex items-center gap-2">
             <Link
@@ -521,6 +567,69 @@ export default function FinanceBankingPage() {
               </div>
             ) : null}
 
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                  Décaissements AP
+                </h3>
+                <AButton
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setApForm({
+                      vendorName: "",
+                      amount: "",
+                      method: "BANK_TRANSFER",
+                      paymentDate: new Date().toISOString().slice(0, 10),
+                      reference: "",
+                    });
+                    setFormError(null);
+                    setApOpen(true);
+                  }}
+                >
+                  Nouveau décaissement
+                </AButton>
+              </div>
+              {apPayments.length === 0 ? (
+                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  Saisir un décaissement (nom fournisseur libre) puis rapprocher
+                  une ligne débit (−). Pas de facture AP ni de GL.
+                </p>
+              ) : (
+                <div className={softTableWrap}>
+                  <table className="w-full text-left text-[length:var(--a-text-sm)]">
+                    <thead className={softThead}>
+                      <tr>
+                        <th className="px-3 py-2 font-medium">N°</th>
+                        <th className="px-3 py-2 font-medium">Fournisseur</th>
+                        <th className="px-3 py-2 font-medium">Montant</th>
+                        <th className="px-3 py-2 font-medium">Date</th>
+                        <th className="px-3 py-2 font-medium">Banque</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {apPayments.map((p) => (
+                        <tr key={p.id} className={softTr}>
+                          <td className="px-3 py-2 a-mono">{p.number}</td>
+                          <td className="px-3 py-2">{p.vendorName}</td>
+                          <td className="px-3 py-2 a-mono tabular-nums">
+                            {p.amount} {p.currency}
+                          </td>
+                          <td className="px-3 py-2 a-mono">{p.paymentDate}</td>
+                          <td className="px-3 py-2">
+                            <ABadge tone={p.matched ? "success" : "neutral"}>
+                              {p.matched ? "Rapproché" : "Ouvert"}
+                            </ABadge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-wrap items-center gap-2">
               {(
                 [
@@ -640,6 +749,7 @@ export default function FinanceBankingPage() {
                         <td className="px-3 py-2 a-mono text-a-fg-muted">
                           {line.match?.paymentNumber ||
                             line.match?.instrumentNumber ||
+                            line.match?.apPaymentNumber ||
                             line.fitId ||
                             "—"}
                         </td>
@@ -944,13 +1054,57 @@ export default function FinanceBankingPage() {
               <span className="a-mono text-a-fg">
                 {candidates.line.amount} TND
               </span>{" "}
-              — candidats montant exact (paiement ou instrument).
+              —{" "}
+              {candidates.side === "AP"
+                ? "débit : décaissements AP montant exact."
+                : candidates.side === "AR"
+                  ? "crédit : encaissements / instruments montant exact."
+                  : "montant nul — non rapprochable."}
             </p>
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {formError}
               </p>
             ) : null}
+            {candidates.side === "AP" ? (
+            <div>
+              <h4 className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                Décaissements AP
+              </h4>
+              {(candidates.apPayments ?? []).length === 0 ? (
+                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  Aucun décaissement POSTED non lié au même montant.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {(candidates.apPayments ?? []).map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex items-center justify-between gap-2 a-underlay rounded-md px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="a-mono text-[length:var(--a-text-sm)]">
+                          {p.number}
+                        </p>
+                        <p className="truncate text-[length:var(--a-text-xs)] text-a-fg-muted">
+                          {p.vendorName} · {p.method} · {p.paymentDate}
+                        </p>
+                      </div>
+                      <AButton
+                        type="button"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => void onMatch({ apPaymentId: p.id })}
+                      >
+                        Lier
+                      </AButton>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            ) : (
+            <>
             <div>
               <h4 className="mb-2 text-[length:var(--a-text-sm)] font-medium">
                 Encaissements
@@ -1023,6 +1177,70 @@ export default function FinanceBankingPage() {
                 </ul>
               )}
             </div>
+            </>
+            )}
+          </div>
+        ) : null}
+      </ADrawer>
+
+      <ADrawer
+        open={apOpen}
+        onOpenChange={setApOpen}
+        title="Décaissement AP"
+        description="Nom fournisseur libre · montant TND positif · aucun GL."
+      >
+        {apForm ? (
+          <div className="space-y-3">
+            <Field
+              label="Fournisseur"
+              value={apForm.vendorName}
+              onChange={(v) => setApForm({ ...apForm, vendorName: v })}
+            />
+            <Field
+              label="Montant TND"
+              value={apForm.amount}
+              onChange={(v) => setApForm({ ...apForm, amount: v })}
+            />
+            <label className="block space-y-1">
+              <span className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Mode
+              </span>
+              <select
+                className="a-underlay w-full rounded-md px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg"
+                value={apForm.method}
+                onChange={(e) =>
+                  setApForm({ ...apForm, method: e.target.value })
+                }
+              >
+                <option value="BANK_TRANSFER">Virement</option>
+                <option value="CHEQUE">Chèque</option>
+                <option value="CASH">Espèces</option>
+                <option value="OTHER">Autre</option>
+              </select>
+            </label>
+            <Field
+              label="Date"
+              type="date"
+              value={apForm.paymentDate}
+              onChange={(v) => setApForm({ ...apForm, paymentDate: v })}
+            />
+            <Field
+              label="Référence"
+              value={apForm.reference}
+              onChange={(v) => setApForm({ ...apForm, reference: v })}
+            />
+            {formError ? (
+              <p className="text-[length:var(--a-text-sm)] text-a-danger">
+                {formError}
+              </p>
+            ) : null}
+            <AButton
+              type="button"
+              disabled={busy}
+              onClick={() => void onCreateAp()}
+            >
+              Enregistrer
+            </AButton>
           </div>
         ) : null}
       </ADrawer>

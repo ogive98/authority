@@ -1,3 +1,5 @@
+import { opsModesHeaders } from "@/lib/ops-modes-header";
+
 export type AccAccountType =
   | "ASSET"
   | "LIABILITY"
@@ -58,6 +60,16 @@ export type AccJournalEntry = {
   sourceType: string | null;
   sourceId: string | null;
   lines: AccJournalEntryLine[];
+};
+
+export type PatchSampleMeta = {
+  declared: true;
+  applied: boolean;
+  intensity: number;
+  rules: string[];
+  kept: number;
+  total: number;
+  note: string;
 };
 
 /** Pref keys for Finance→GL mapping (D179/D193). */
@@ -204,7 +216,13 @@ export async function fetchEntries(opts?: {
   periodId?: string;
   status?: string;
   limit?: number;
-}): Promise<{ ok: true; data: { items: AccJournalEntry[] } } | ApiFail> {
+}): Promise<
+  | {
+      ok: true;
+      data: { items: AccJournalEntry[]; patchSample?: PatchSampleMeta };
+    }
+  | ApiFail
+> {
   try {
     const q = new URLSearchParams();
     if (opts?.periodId) q.set("periodId", opts.periodId);
@@ -214,14 +232,17 @@ export async function fetchEntries(opts?: {
       `/api/v1/accounting/entries${q.size ? `?${q}` : ""}`,
       {
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", ...opsModesHeaders() },
         cache: "no-store",
       },
     );
     if (!res.ok) return parseFail(res);
     return {
       ok: true,
-      data: (await res.json()) as { items: AccJournalEntry[] },
+      data: (await res.json()) as {
+        items: AccJournalEntry[];
+        patchSample?: PatchSampleMeta;
+      },
     };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };

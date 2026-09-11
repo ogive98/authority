@@ -16,6 +16,8 @@ export const DUNNING_SETTING_KEYS = {
   WA_TEMPLATE_NAME: 'finance.dunning.wa.template_name',
   WA_TEMPLATE_LANGUAGE: 'finance.dunning.wa.template_language',
   WA_TEMPLATE_BODY_PARAMS: 'finance.dunning.wa.template_body_params',
+  WA_VERIFY_TOKEN: 'finance.dunning.wa.verify_token',
+  WA_APP_SECRET: 'finance.dunning.wa.app_secret',
 } as const;
 
 export type DunningSettingKey =
@@ -49,6 +51,8 @@ export const DUNNING_SETTING_DEFAULTS = {
   [DUNNING_SETTING_KEYS.WA_TEMPLATE_NAME]: '',
   [DUNNING_SETTING_KEYS.WA_TEMPLATE_LANGUAGE]: '',
   [DUNNING_SETTING_KEYS.WA_TEMPLATE_BODY_PARAMS]: [] as string[],
+  [DUNNING_SETTING_KEYS.WA_VERIFY_TOKEN]: '',
+  [DUNNING_SETTING_KEYS.WA_APP_SECRET]: '',
 } as const;
 
 export const DUNNING_SETTING_META: Record<DunningSettingKey, string> = {
@@ -72,6 +76,10 @@ export const DUNNING_SETTING_META: Record<DunningSettingKey, string> = {
     'Meta template language code e.g. fr (empty until human)',
   [DUNNING_SETTING_KEYS.WA_TEMPLATE_BODY_PARAMS]:
     'Ordered JSON array of body {{n}} keys (customer_name, open_item_number, …)',
+  [DUNNING_SETTING_KEYS.WA_VERIFY_TOKEN]:
+    'Meta webhook verify token (empty until human — D206)',
+  [DUNNING_SETTING_KEYS.WA_APP_SECRET]:
+    'Meta app secret for X-Hub-Signature-256 (write-only — D206)',
 };
 
 export type DunningChannelRuntimeConfig = {
@@ -91,6 +99,8 @@ export type DunningChannelRuntimeConfig = {
     templateLanguage: string;
     /** Ordered keys for Meta template body parameters. */
     templateBodyParams: WaTemplateBodyParamKey[];
+    verifyToken: string;
+    appSecret: string;
   };
 };
 

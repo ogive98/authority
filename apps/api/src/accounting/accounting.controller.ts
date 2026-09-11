@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  Headers,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentTenancy } from '../organization/organization.decorators';
@@ -30,6 +31,11 @@ import {
 import { AccountingService } from './accounting.service';
 import { AccountingGlMappingResolver } from './accounting-gl-mapping.resolver';
 import { FinanceGlPostingService } from './finance-gl-posting.service';
+import { OpsVisibilityResolver } from '../settings/ops-visibility.resolver';
+import {
+  parseOpsModesHeader,
+  sampleEntriesForPatch,
+} from './patch-entry-sample';
 
 @Controller('api/v1/accounting')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
@@ -39,6 +45,7 @@ export class AccountingController {
     private readonly accounting: AccountingService,
     private readonly glMapping: AccountingGlMappingResolver,
     private readonly financeGl: FinanceGlPostingService,
+    private readonly opsVisibility: OpsVisibilityResolver,
   ) {}
 
   /** D179 — ensure prefs defs + return effective Finance→GL codes. */
@@ -173,22 +180,35 @@ export class AccountingController {
 
   @Get('entries')
   @RequirePermission(PERMISSION_KEYS.accountingRead)
-  listEntries(
+  async listEntries(
     @CurrentTenancy() tenancy: TenancyContext,
     @Query('journalId') journalId?: string,
     @Query('periodId') periodId?: string,
     @Query('status') status?: string,
     @Query('limit') limitRaw?: string,
     @Query('cursor') cursor?: string,
+    @Headers('x-authority-ops-modes') opsModes?: string,
   ) {
     const limit = limitRaw ? Number(limitRaw) : undefined;
-    return this.accounting.listEntries(tenancy.companyId, {
+    const page = await this.accounting.listEntries(tenancy.companyId, {
       journalId,
       periodId,
       status,
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor,
     });
+    const declared = parseOpsModesHeader(opsModes);
+    if (!declared.patch) return page;
+    const policy = await this.opsVisibility.resolve(tenancy.companyId);
+    const sampled = sampleEntriesForPatch(page.items, {
+      intensity: policy.patchAccountingIntensity,
+      rules: policy.patchDisplayRules,
+    });
+    return {
+      items: sampled.items,
+      nextCursor: page.nextCursor,
+      patchSample: sampled.patchSample,
+    };
   }
 
   @Get('entries/:id')

@@ -22,6 +22,7 @@ import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
   AllocateOpenItemDto,
   ConfirmAllocationDto,
+  CreateApPaymentDto,
   CreateBankAccountDto,
   CreateBankStatementLinesDto,
   CreateCreditNoteDto,
@@ -38,6 +39,7 @@ import {
   TransitionInstrumentDto,
   UpdateBankAccountDto,
 } from './finance.dto';
+import { ApPaymentService } from './ap-payment.service';
 import { BankingService } from './banking.service';
 import { CreditNoteService } from './credit-note.service';
 import { DunningService } from './dunning.service';
@@ -56,6 +58,7 @@ export class FinanceController {
     private readonly invoiceService: InvoiceService,
     private readonly creditNoteService: CreditNoteService,
     private readonly paymentService: PaymentService,
+    private readonly apPaymentService: ApPaymentService,
     private readonly promiseService: PromiseService,
     private readonly bankingService: BankingService,
     private readonly dunningService: DunningService,
@@ -505,6 +508,33 @@ export class FinanceController {
     @Body() dto: CreateBankStatementLinesDto,
   ) {
     return this.bankingService.addLines(tenancy.companyId, id, dto);
+  }
+
+  /** D205 — AP disbursements (vendorName free text). */
+  @Get('ap-payments')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  listApPayments(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.apPaymentService.list(tenancy.companyId, {
+      q,
+      status,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Post('ap-payments')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.financeAllocate)
+  createApPayment(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateApPaymentDto,
+  ) {
+    return this.apPaymentService.create(tenancy.companyId, dto);
   }
 
   @Get('bank-treasury')

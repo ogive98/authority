@@ -1748,8 +1748,38 @@ model FinBankStatementLine {
 }
 
 /**
- * Soft match statement line ↔ payment and/or instrument.
- * No GL side-effect — bank GL stays on allocate (D073/D189).
+ * AP disbursement V0 (D205) — vendorName free text.
+ * No supplier master, no AP bill, no GL on post or bank match.
+ */
+model FinApPayment {
+  id             String           @id @default(uuid()) @db.Uuid
+  companyId      String           @map("company_id") @db.Uuid
+  number         String
+  vendorName     String           @map("vendor_name")
+  amount         Decimal          @db.Decimal(18, 3)
+  currency       String           @default("TND")
+  method         FinPaymentMethod @default(OTHER)
+  status         FinPaymentStatus @default(POSTED)
+  paymentDate    DateTime         @map("payment_date") @db.Date
+  accountingDate DateTime         @map("accounting_date") @db.Date
+  reference      String?
+  notes          String?
+  version        Int              @default(0)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?        @map("deleted_at") @db.Timestamptz(6)
+
+  bankMatches FinBankMatch[]
+
+  @@unique([companyId, number])
+  @@index([companyId, paymentDate(sort: Desc)])
+  @@index([companyId, status])
+  @@map("fin_ap_payment")
+}
+
+/**
+ * Soft match statement line ↔ AR payment XOR instrument XOR AP disbursement.
+ * No GL side-effect — bank GL stays on allocate (D073/D189) / AP has no GL (D205).
  */
 model FinBankMatch {
   id              String   @id @default(uuid()) @db.Uuid
@@ -1757,6 +1787,7 @@ model FinBankMatch {
   statementLineId String   @unique @map("statement_line_id") @db.Uuid
   paymentId       String?  @map("payment_id") @db.Uuid
   instrumentId    String?  @map("instrument_id") @db.Uuid
+  apPaymentId     String?  @map("ap_payment_id") @db.Uuid
   note            String?
   matchedAt       DateTime @default(now()) @map("matched_at") @db.Timestamptz(6)
   version         Int      @default(0)
@@ -1766,9 +1797,11 @@ model FinBankMatch {
   statementLine FinBankStatementLine  @relation(fields: [statementLineId], references: [id], onDelete: Cascade)
   payment       FinPayment?           @relation(fields: [paymentId], references: [id])
   instrument    FinPaymentInstrument? @relation(fields: [instrumentId], references: [id])
+  apPayment     FinApPayment?         @relation(fields: [apPaymentId], references: [id])
 
   @@unique([paymentId])
   @@unique([instrumentId])
+  @@unique([apPaymentId])
   @@index([companyId, matchedAt(sort: Desc)])
   @@map("fin_bank_match")
 }
@@ -1819,6 +1852,15 @@ enum FinDunningSendStatus {
   FAILED
 }
 
+/** Meta Cloud webhook delivery (D206) — independent of sendStatus (API call). */
+enum FinDunningWaDeliveryStatus {
+  NONE
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
 model FinDunningDraft {
   id                String               @id @default(uuid()) @db.Uuid
   companyId         String               @map("company_id") @db.Uuid
@@ -1841,6 +1883,9 @@ model FinDunningDraft {
   sentAt            DateTime?            @map("sent_at") @db.Timestamptz(6)
   sendError         String?              @map("send_error")
   providerMessageId String?              @map("provider_message_id")
+  waDeliveryStatus  FinDunningWaDeliveryStatus @default(NONE) @map("wa_delivery_status")
+  waDeliveryAt      DateTime?            @map("wa_delivery_at") @db.Timestamptz(6)
+  waDeliveryError   String?              @map("wa_delivery_error")
   version           Int                  @default(0)
   createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -1854,6 +1899,7 @@ model FinDunningDraft {
   @@index([companyId, openItemId])
   @@index([companyId, customerId])
   @@index([companyId, sendStatus])
+  @@index([companyId, providerMessageId])
   @@map("fin_dunning_draft")
 }
 

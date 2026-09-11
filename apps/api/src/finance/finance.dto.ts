@@ -459,9 +459,50 @@ export class MatchBankLineDto {
   instrumentId?: string;
 
   @IsOptional()
+  @IsUUID()
+  apPaymentId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(240)
   note?: string;
+}
+
+/** D205 — AP disbursement (vendorName free text, no supplier master). */
+export class CreateApPaymentDto {
+  @IsString()
+  @MaxLength(160)
+  vendorName!: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  amount!: number;
+
+  @IsEnum(FinPaymentMethod)
+  method!: FinPaymentMethod;
+
+  @IsDateString()
+  paymentDate!: string;
+
+  @IsOptional()
+  @IsDateString()
+  accountingDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  reference?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  notes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  currency?: string;
 }
 
 /** D191 — mark fee/orphan as IGNORED (no GL). */
