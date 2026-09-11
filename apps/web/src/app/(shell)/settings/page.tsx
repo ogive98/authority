@@ -22,6 +22,10 @@ import {
   upsertExpertise,
   type ExpertiseSlot,
 } from "@/lib/settings";
+import {
+  fetchIrppBrackets,
+  replaceIrppBrackets,
+} from "@/lib/hr";
 import { fetchMailStatus, type MailStatus } from "@/lib/users";
 import {
   softChipClass,
@@ -131,6 +135,11 @@ export default function SettingsPage() {
   const [drafts, setDrafts] = useState<Record<string, ExpertDraft>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [irppBracketDrafts, setIrppBracketDrafts] = useState<
+    Array<{ upToMilli: string; rateBps: string; lawRef: string }>
+  >([{ upToMilli: "", rateBps: "0", lawRef: "" }]);
+  const [irppBracketBusy, setIrppBracketBusy] = useState(false);
+  const [irppBracketError, setIrppBracketError] = useState<string | null>(null);
   const [outlookFrom, setOutlookFrom] = useState("");
   const [waPrefix, setWaPrefix] = useState("");
   const [inviteTtl, setInviteTtl] = useState("7");
@@ -291,6 +300,24 @@ export default function SettingsPage() {
       items: res.data.items,
       pending: res.data.pendingExpertCount,
     });
+
+    const bracketsRes = await fetchIrppBrackets();
+    if (bracketsRes.ok) {
+      if (bracketsRes.data.items.length === 0) {
+        setIrppBracketDrafts([{ upToMilli: "", rateBps: "0", lawRef: "" }]);
+      } else {
+        setIrppBracketDrafts(
+          bracketsRes.data.items.map((b) => ({
+            upToMilli: b.upToMilli == null ? "" : String(b.upToMilli),
+            rateBps: String(b.rateBps),
+            lawRef: b.lawRef ?? "",
+          })),
+        );
+      }
+      setIrppBracketError(null);
+    } else if (bracketsRes.status !== 403) {
+      setIrppBracketError(bracketsRes.message);
+    }
   }, [canCompanyWrite]);
 
   useEffect(() => {
@@ -562,6 +589,68 @@ export default function SettingsPage() {
     await loadExpertise();
   }
 
+  async function onSaveIrppBrackets() {
+    setIrppBracketBusy(true);
+    setIrppBracketError(null);
+    const parsed: Array<{
+      upToMilli: number | null;
+      rateBps: number;
+      lawRef?: string | null;
+    }> = [];
+    for (let i = 0; i < irppBracketDrafts.length; i++) {
+      const row = irppBracketDrafts[i]!;
+      const rateBps = Number(row.rateBps);
+      if (!Number.isInteger(rateBps) || rateBps < 0) {
+        setIrppBracketBusy(false);
+        setIrppBracketError(`rateBps invalide (bande ${i + 1}).`);
+        return;
+      }
+      const isLast = i === irppBracketDrafts.length - 1;
+      const rawUp = row.upToMilli.trim();
+      if (isLast) {
+        if (rawUp) {
+          setIrppBracketBusy(false);
+          setIrppBracketError(
+            "La dernière bande doit être ouverte (upToMilli vide).",
+          );
+          return;
+        }
+        parsed.push({
+          upToMilli: null,
+          rateBps,
+          lawRef: row.lawRef.trim() || null,
+        });
+      } else {
+        const upToMilli = Number(rawUp);
+        if (!Number.isInteger(upToMilli) || upToMilli <= 0) {
+          setIrppBracketBusy(false);
+          setIrppBracketError(
+            `upToMilli annuel (millimes) invalide (bande ${i + 1}).`,
+          );
+          return;
+        }
+        parsed.push({
+          upToMilli,
+          rateBps,
+          lawRef: row.lawRef.trim() || null,
+        });
+      }
+    }
+    const res = await replaceIrppBrackets(parsed);
+    setIrppBracketBusy(false);
+    if (!res.ok) {
+      setIrppBracketError(res.message);
+      return;
+    }
+    setIrppBracketDrafts(
+      res.data.items.map((b) => ({
+        upToMilli: b.upToMilli == null ? "" : String(b.upToMilli),
+        rateBps: String(b.rateBps),
+        lawRef: b.lawRef ?? "",
+      })),
+    );
+  }
+
   return (
     <>
       <AScreenHeader
@@ -806,6 +895,7 @@ export default function SettingsPage() {
                             }
                             placeholder="Vide"
                             className="a-mono"
+                            disabled={row.key === "hr.irpp"}
                           />
                         </label>
                         <label className="block space-y-1">
@@ -821,6 +911,7 @@ export default function SettingsPage() {
                             }
                             placeholder="Vide"
                             className="a-mono"
+                            disabled={row.key === "hr.irpp"}
                           />
                         </label>
                         <label className="block space-y-1">
@@ -854,6 +945,141 @@ export default function SettingsPage() {
                           </span>
                         ) : null}
                       </div>
+
+                      {row.key === "hr.irpp" ? (
+                        <div className="space-y-3 border-t border-transparent pt-3">
+                          <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                            Tranches annuelles (upToMilli = plafond en
+                            millimes). Dernière bande ouverte (plafond vide).
+                            Méthode calcul : annuel ÷ 12. Jamais prérempli.
+                          </p>
+                          {irppBracketError ? (
+                            <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
+                              {irppBracketError}
+                            </p>
+                          ) : null}
+                          {irppBracketDrafts.map((band, idx) => (
+                            <div
+                              key={`irpp-band-${idx}`}
+                              className="grid gap-2 sm:grid-cols-3"
+                            >
+                              <label className="block space-y-1">
+                                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                  upToMilli{" "}
+                                  {idx === irppBracketDrafts.length - 1
+                                    ? "(vide = ouvert)"
+                                    : "(annuel)"}
+                                </span>
+                                <AInput
+                                  value={band.upToMilli}
+                                  onChange={(e) => {
+                                    const next = [...irppBracketDrafts];
+                                    next[idx] = {
+                                      ...band,
+                                      upToMilli: e.target.value,
+                                    };
+                                    setIrppBracketDrafts(next);
+                                  }}
+                                  placeholder={
+                                    idx === irppBracketDrafts.length - 1
+                                      ? "Ouvert"
+                                      : "ex. 5000000"
+                                  }
+                                  className="a-mono"
+                                  disabled={
+                                    idx === irppBracketDrafts.length - 1
+                                  }
+                                />
+                              </label>
+                              <label className="block space-y-1">
+                                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                  rateBps
+                                </span>
+                                <AInput
+                                  value={band.rateBps}
+                                  onChange={(e) => {
+                                    const next = [...irppBracketDrafts];
+                                    next[idx] = {
+                                      ...band,
+                                      rateBps: e.target.value,
+                                    };
+                                    setIrppBracketDrafts(next);
+                                  }}
+                                  className="a-mono"
+                                />
+                              </label>
+                              <label className="block space-y-1">
+                                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                  lawRef bande
+                                </span>
+                                <AInput
+                                  value={band.lawRef}
+                                  onChange={(e) => {
+                                    const next = [...irppBracketDrafts];
+                                    next[idx] = {
+                                      ...band,
+                                      lawRef: e.target.value,
+                                    };
+                                    setIrppBracketDrafts(next);
+                                  }}
+                                  placeholder="Vide"
+                                />
+                              </label>
+                            </div>
+                          ))}
+                          <div className="flex flex-wrap gap-2">
+                            <AButton
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() =>
+                                setIrppBracketDrafts((rows) => {
+                                  const copy = [...rows];
+                                  const last = copy.pop() ?? {
+                                    upToMilli: "",
+                                    rateBps: "0",
+                                    lawRef: "",
+                                  };
+                                  return [
+                                    ...copy,
+                                    {
+                                      upToMilli: "",
+                                      rateBps: "0",
+                                      lawRef: "",
+                                    },
+                                    last,
+                                  ];
+                                })
+                              }
+                            >
+                              + bande
+                            </AButton>
+                            <AButton
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={irppBracketDrafts.length <= 1}
+                              onClick={() =>
+                                setIrppBracketDrafts((rows) => {
+                                  if (rows.length <= 1) return rows;
+                                  const copy = [...rows];
+                                  copy.splice(copy.length - 2, 1);
+                                  return copy;
+                                })
+                              }
+                            >
+                              − bande
+                            </AButton>
+                            <AButton
+                              type="button"
+                              disabled={irppBracketBusy}
+                              onClick={() => void onSaveIrppBrackets()}
+                            >
+                              Enregistrer barème
+                            </AButton>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })

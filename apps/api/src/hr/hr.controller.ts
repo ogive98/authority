@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -26,12 +27,15 @@ import {
   CreateCnssSnapshotDto,
   CreateContractDto,
   CreateEmployeeDto,
+  CreateIrppSnapshotDto,
   EndContractDto,
   PatchContractDto,
   PatchEmployeeDto,
+  ReplaceIrppBracketsDto,
 } from './hr.dto';
 import { HrService } from './hr.service';
 import { CnssService } from './cnss.service';
+import { IrppService } from './irpp.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
 
 @Controller('api/v1/hr')
@@ -41,12 +45,13 @@ export class HrController {
   constructor(
     private readonly hr: HrService,
     private readonly cnss: CnssService,
+    private readonly irpp: IrppService,
     private readonly permissions: PermissionService,
     private readonly expertise: ExpertiseResolverService,
   ) {}
 
   /**
-   * CNSS / IRPP / TFP readiness (D092/D195) — null until expert validates in Préférences.
+   * CNSS / IRPP / TFP readiness (D092/D195/D196) — null until expert validates in Préférences.
    */
   @Get('expertise-hints')
   @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
@@ -58,7 +63,7 @@ export class HrController {
       companyId: tenancy.companyId,
       ...snap,
       prefsHref: '/settings#expertise',
-      note: 'CNSS calc uses VALIDATED hr.cnss.* only — never invent rates.',
+      note: 'CNSS/IRPP use VALIDATED Prefs + human brackets only — never invent rates.',
     };
   }
 
@@ -96,6 +101,58 @@ export class HrController {
     @Body() dto: CreateCnssSnapshotDto,
   ) {
     return this.cnss.createSnapshot(tenancy.companyId, dto);
+  }
+
+  @Get('irpp/brackets')
+  @RequirePermission(PERMISSION_KEYS.settingsCompanyWrite)
+  listIrppBrackets(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.irpp.listBrackets(tenancy.companyId);
+  }
+
+  @Put('irpp/brackets')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.settingsCompanyWrite)
+  replaceIrppBrackets(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: ReplaceIrppBracketsDto,
+  ) {
+    return this.irpp.replaceBrackets(tenancy.companyId, dto.brackets);
+  }
+
+  @Get('irpp/preview')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  irppPreview(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('contractId', ParseUUIDPipe) contractId: string,
+    @Query('periodYm') periodYm?: string,
+  ) {
+    return this.irpp.preview(tenancy.companyId, contractId, periodYm);
+  }
+
+  @Get('irpp/snapshots')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  listIrppSnapshots(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('periodYm') periodYm?: string,
+    @Query('employeeId') employeeId?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.irpp.listSnapshots(tenancy.companyId, {
+      periodYm,
+      employeeId,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Post('irpp/snapshots')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  createIrppSnapshot(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateIrppSnapshotDto,
+  ) {
+    return this.irpp.createSnapshot(tenancy.companyId, dto);
   }
 
   @Get('employees')

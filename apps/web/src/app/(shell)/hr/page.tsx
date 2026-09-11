@@ -16,12 +16,15 @@ import {
   createCnssSnapshot,
   createContract,
   createEmployee,
+  createIrppSnapshot,
   endContract,
   fetchCnssPreview,
   fetchEmployees,
+  fetchIrppPreview,
   type CnssPreview,
   type HrContract,
   type HrEmployee,
+  type IrppPreview,
 } from "@/lib/hr";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
@@ -38,7 +41,7 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-type DrawerMode = "employee" | "contract" | "cnss";
+type DrawerMode = "employee" | "contract" | "cnss" | "irpp";
 
 function statusTone(
   status: string,
@@ -78,6 +81,7 @@ export default function HrEmployeesPage() {
   const [wageBase, setWageBase] = useState("");
   const [cnssContract, setCnssContract] = useState<HrContract | null>(null);
   const [cnssPreview, setCnssPreview] = useState<CnssPreview | null>(null);
+  const [irppPreview, setIrppPreview] = useState<IrppPreview | null>(null);
   const [periodYm, setPeriodYm] = useState(
     new Date().toISOString().slice(0, 7),
   );
@@ -128,6 +132,7 @@ export default function HrEmployeesPage() {
     setDrawerMode("cnss");
     setCnssContract(contract);
     setCnssPreview(null);
+    setIrppPreview(null);
     setFormError(null);
     const ym = new Date().toISOString().slice(0, 7);
     setPeriodYm(ym);
@@ -140,6 +145,25 @@ export default function HrEmployeesPage() {
       return;
     }
     setCnssPreview(res.data);
+  }
+
+  async function openIrpp(contract: HrContract) {
+    setDrawerMode("irpp");
+    setCnssContract(contract);
+    setCnssPreview(null);
+    setIrppPreview(null);
+    setFormError(null);
+    const ym = new Date().toISOString().slice(0, 7);
+    setPeriodYm(ym);
+    setDrawerOpen(true);
+    setBusy(true);
+    const res = await fetchIrppPreview(contract.id, ym);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setIrppPreview(res.data);
   }
 
   async function refreshCnssPreview() {
@@ -155,11 +179,41 @@ export default function HrEmployeesPage() {
     setCnssPreview(res.data);
   }
 
+  async function refreshIrppPreview() {
+    if (!cnssContract) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await fetchIrppPreview(cnssContract.id, periodYm);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setIrppPreview(res.data);
+  }
+
   async function onSnapshot() {
     if (!cnssContract) return;
     setBusy(true);
     setFormError(null);
     const res = await createCnssSnapshot({
+      contractId: cnssContract.id,
+      periodYm,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setDrawerOpen(false);
+    await load(q);
+  }
+
+  async function onIrppSnapshot() {
+    if (!cnssContract) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await createIrppSnapshot({
       contractId: cnssContract.id,
       periodYm,
     });
@@ -230,7 +284,7 @@ export default function HrEmployeesPage() {
       <AScreenHeader
         kicker="Ressources humaines"
         title="Employés"
-        description="RH — contrats, wageBase saisi, CNSS preview/snapshot si expertise VALIDATED."
+        description="RH — wageBase, CNSS & IRPP preview/snapshot si expertise VALIDATED (+ barème annuel saisi)."
         actions={
           <AButton type="button" onClick={openCreateEmployee}>
             Nouvel employé
@@ -335,6 +389,14 @@ export default function HrEmployeesPage() {
                                 type="button"
                                 variant="ghost"
                                 disabled={busy}
+                                onClick={() => void openIrpp(c)}
+                              >
+                                IRPP
+                              </AButton>
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                disabled={busy}
                                 onClick={() => void onEndContract(c.id)}
                               >
                                 Clôturer
@@ -372,7 +434,9 @@ export default function HrEmployeesPage() {
             ? "Nouvel employé"
             : drawerMode === "contract"
               ? "Nouveau contrat"
-              : "CNSS — preview"
+              : drawerMode === "irpp"
+                ? "IRPP — preview"
+                : "CNSS — preview"
         }
       >
         <div className="space-y-4 p-1">
@@ -587,6 +651,97 @@ export default function HrEmployeesPage() {
                 type="button"
                 disabled={busy || !cnssPreview?.ready}
                 onClick={() => void onSnapshot()}
+              >
+                Enregistrer snapshot
+              </AButton>
+            </>
+          ) : null}
+
+          {drawerMode === "irpp" ? (
+            <>
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Assiette = wageBase − CNSS salarié · barème annuel / 12. Aucun
+                seuil inventé.
+              </p>
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Contrat {cnssContract?.number} · base{" "}
+                <span className="a-mono">
+                  {cnssContract?.wageBase ?? "—"}
+                </span>{" "}
+                TND
+              </p>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Période (YYYY-MM)
+                </span>
+                <AInput
+                  value={periodYm}
+                  onChange={(e) => setPeriodYm(e.target.value)}
+                  className="a-mono"
+                />
+              </label>
+              <AButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={busy}
+                onClick={() => void refreshIrppPreview()}
+              >
+                Recalculer
+              </AButton>
+              {irppPreview ? (
+                <div className="a-underlay space-y-2 rounded-md p-3 text-[length:var(--a-text-sm)]">
+                  <p>
+                    CNSS salarié{" "}
+                    <span className="a-mono tabular-nums">
+                      {irppPreview.cnssEmployeeAmount != null
+                        ? irppPreview.cnssEmployeeAmount.toFixed(3)
+                        : "—"}
+                    </span>
+                  </p>
+                  <p>
+                    Imposable mensuel{" "}
+                    <span className="a-mono tabular-nums">
+                      {irppPreview.taxableMonthly != null
+                        ? irppPreview.taxableMonthly.toFixed(3)
+                        : "—"}
+                    </span>
+                  </p>
+                  <p>
+                    Imposable annuel{" "}
+                    <span className="a-mono tabular-nums">
+                      {irppPreview.annualTaxable != null
+                        ? irppPreview.annualTaxable.toFixed(3)
+                        : "—"}
+                    </span>
+                  </p>
+                  <p>
+                    IRPP annuel{" "}
+                    <span className="a-mono tabular-nums">
+                      {irppPreview.annualIrpp != null
+                        ? irppPreview.annualIrpp.toFixed(3)
+                        : "—"}
+                    </span>
+                  </p>
+                  <p>
+                    IRPP mensuel{" "}
+                    <span className="a-mono tabular-nums">
+                      {irppPreview.monthlyIrpp != null
+                        ? irppPreview.monthlyIrpp.toFixed(3)
+                        : "—"}
+                    </span>
+                  </p>
+                  {!irppPreview.ready ? (
+                    <p className="text-a-warning">
+                      Expertise requise : {irppPreview.pending.join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              <AButton
+                type="button"
+                disabled={busy || !irppPreview?.ready}
+                onClick={() => void onIrppSnapshot()}
               >
                 Enregistrer snapshot
               </AButton>

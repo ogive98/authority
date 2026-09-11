@@ -2376,6 +2376,7 @@ model HrEmployee {
 
   contracts HrContract[]
   cnssSnapshots HrCnssSnapshot[]
+  irppSnapshots HrIrppSnapshot[]
 
   @@unique([companyId, matricule])
   @@index([companyId, status])
@@ -2404,11 +2405,33 @@ model HrContract {
 
   employee      HrEmployee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   cnssSnapshots HrCnssSnapshot[]
+  irppSnapshots HrIrppSnapshot[]
 
   @@unique([companyId, number])
   @@index([companyId, employeeId])
   @@index([companyId, status])
   @@map("hr_contract")
+}
+
+/**
+ * Annual IRPP brackets (D196) — human-entered only, never seeded.
+ * Consumed only when Prefs slot `hr.irpp` is VALIDATED.
+ */
+model HrIrppBracket {
+  id         String    @id @default(uuid()) @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  sortOrder  Int       @map("sort_order")
+  /** Annual upper bound in millimes; null = open-ended band. */
+  upToMilli  Int?      @map("up_to_milli")
+  rateBps    Int       @map("rate_bps")
+  lawRef     String?   @map("law_ref")
+  version    Int       @default(0)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([companyId, sortOrder])
+  @@map("hr_irpp_bracket")
 }
 
 /**
@@ -2446,4 +2469,40 @@ model HrCnssSnapshot {
   @@index([companyId, periodYm])
   @@index([companyId, employeeId])
   @@map("hr_cnss_snapshot")
+}
+
+/**
+ * Period IRPP snapshot (D196) — progressive annual brackets / 12.
+ * Assiette = wageBase − CNSS salarié; never invents brackets.
+ */
+model HrIrppSnapshot {
+  id                 String    @id @default(uuid()) @db.Uuid
+  companyId          String    @map("company_id") @db.Uuid
+  /** YYYY-MM */
+  periodYm           String    @map("period_ym")
+  employeeId         String    @map("employee_id") @db.Uuid
+  contractId         String    @map("contract_id") @db.Uuid
+  wageBase           Decimal   @map("wage_base") @db.Decimal(18, 3)
+  cnssEmployeeAmount Decimal   @map("cnss_employee_amount") @db.Decimal(18, 3)
+  taxableMonthly     Decimal   @map("taxable_monthly") @db.Decimal(18, 3)
+  annualTaxable      Decimal   @map("annual_taxable") @db.Decimal(18, 3)
+  annualIrpp         Decimal   @map("annual_irpp") @db.Decimal(18, 3)
+  monthlyIrpp        Decimal   @map("monthly_irpp") @db.Decimal(18, 3)
+  /** Frozen annual brackets used at snapshot time. */
+  bracketsJson       Json      @map("brackets_json")
+  irppLawRef         String?   @map("irpp_law_ref")
+  methodNote         String    @default("annual_brackets_div_12") @map("method_note")
+  currency           String    @default("TND")
+  version            Int       @default(0)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  contract HrContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, periodYm, contractId])
+  @@index([companyId, periodYm])
+  @@index([companyId, employeeId])
+  @@map("hr_irpp_snapshot")
 }

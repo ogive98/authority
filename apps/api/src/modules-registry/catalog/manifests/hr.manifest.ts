@@ -1,16 +1,16 @@
 import type { ModuleManifest } from '../manifest.types';
 
 /**
- * HR light + CNSS V0 (D089/D195) — employees / contracts / CNSS preview+snapshot.
- * Rates only from VALIDATED Prefs — never invent CNSS/IRPP.
+ * HR light + CNSS/IRPP V0 (D089/D195/D196) — employees / contracts / preview+snapshot.
+ * Rates & brackets only from VALIDATED Prefs / human tables — never invent.
  */
 export const hrManifest: ModuleManifest = {
   id: 'hr',
   name: 'Ressources humaines',
-  version: '1.1.0',
+  version: '1.2.0',
   apiVersion: '1',
   description:
-    'HR — employees, contracts, CNSS preview/snapshot from VALIDATED Prefs',
+    'HR — employees, contracts, CNSS/IRPP preview/snapshot from VALIDATED Prefs',
   capabilities: [
     {
       key: 'hr.employee.read',
@@ -33,7 +33,7 @@ export const hrManifest: ModuleManifest = {
       key: 'hr.wage.read',
       moduleId: 'hr',
       version: '1',
-      description: 'Reveal wage fields and CNSS amounts (field ACL)',
+      description: 'Reveal wage fields and CNSS/IRPP amounts (field ACL)',
       permissionKey: 'hr.wage.read',
       riskLevel: 'high',
     },
@@ -45,12 +45,17 @@ export const hrManifest: ModuleManifest = {
     'hr.contract.patch',
     'hr.contract.end',
     'hr.cnss.snapshot.create',
+    'hr.irpp.brackets.replace',
+    'hr.irpp.snapshot.create',
   ],
   queries: [
     'hr.employees.list',
     'hr.employee.get',
     'hr.cnss.preview',
     'hr.cnss.snapshots.list',
+    'hr.irpp.brackets.list',
+    'hr.irpp.preview',
+    'hr.irpp.snapshots.list',
   ],
   permissions: ['hr.employee.read', 'hr.employee.write', 'hr.wage.read'],
   dependencies: ['platform', 'organization', 'identity'],
@@ -60,6 +65,8 @@ export const hrManifest: ModuleManifest = {
     'hr.contract.created.v1',
     'hr.contract.ended.v1',
     'hr.cnss_snapshot.created.v1',
+    'hr.irpp_brackets.replaced.v1',
+    'hr.irpp_snapshot.created.v1',
   ],
   navigationEntries: [
     { id: 'hr-employees', label: 'Employés', href: '/hr' },

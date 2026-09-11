@@ -198,3 +198,99 @@ export async function createCnssSnapshot(input: {
   }
   return { ok: true, data: (await res.json()) as CnssSnapshot };
 }
+
+export type IrppPreview = {
+  contractId: string;
+  employeeId: string;
+  periodYm: string;
+  wageBase: number;
+  cnssEmployeeAmount: number | null;
+  taxableMonthly: number | null;
+  annualTaxable: number | null;
+  annualIrpp: number | null;
+  monthlyIrpp: number | null;
+  ready: boolean;
+  pending: string[];
+  prefsHref: string;
+  methodNote: string;
+  currency: string;
+};
+
+export type IrppSnapshot = {
+  id: string;
+  periodYm: string;
+  contractId: string;
+  monthlyIrpp: string;
+  annualIrpp: string;
+  taxableMonthly: string;
+};
+
+export type IrppBracket = {
+  id?: string;
+  sortOrder?: number;
+  upToMilli: number | null;
+  rateBps: number;
+  lawRef: string | null;
+};
+
+export async function fetchIrppPreview(
+  contractId: string,
+  periodYm?: string,
+): Promise<ApiOk<IrppPreview> | ApiFail> {
+  const params = new URLSearchParams({ contractId });
+  if (periodYm) params.set("periodYm", periodYm);
+  const res = await fetch(`/api/v1/hr/irpp/preview?${params}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as IrppPreview };
+}
+
+export async function createIrppSnapshot(input: {
+  contractId: string;
+  periodYm?: string;
+}): Promise<ApiOk<IrppSnapshot> | ApiFail> {
+  const res = await fetch("/api/v1/hr/irpp/snapshots", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as IrppSnapshot };
+}
+
+export async function fetchIrppBrackets(): Promise<
+  ApiOk<{ items: IrppBracket[] }> | ApiFail
+> {
+  const res = await fetch("/api/v1/hr/irpp/brackets", {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as { items: IrppBracket[] } };
+}
+
+export async function replaceIrppBrackets(
+  brackets: Array<{
+    upToMilli: number | null;
+    rateBps: number;
+    lawRef?: string | null;
+  }>,
+): Promise<ApiOk<{ items: IrppBracket[] }> | ApiFail> {
+  const res = await fetch("/api/v1/hr/irpp/brackets", {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ brackets }),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as { items: IrppBracket[] } };
+}

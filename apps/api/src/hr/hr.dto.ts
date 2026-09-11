@@ -1,12 +1,19 @@
 import {
+  IsArray,
   IsDateString,
   IsEmail,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
+  ArrayMinSize,
+  ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { HrContractType, HrEmployeeStatus } from '@prisma/client';
@@ -152,6 +159,45 @@ export class CreateCnssSnapshotDto {
   @IsString()
   @MaxLength(7)
   periodYm?: string;
+}
+
+export class CreateIrppSnapshotDto {
+  @IsUUID()
+  contractId!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(7)
+  periodYm?: string;
+}
+
+export class IrppBracketRowDto {
+  /** Annual ceiling in millimes; omit/null for open-ended last band. */
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  upToMilli?: number | null;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100_000)
+  rateBps!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  lawRef?: string | null;
+}
+
+export class ReplaceIrppBracketsDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => IrppBracketRowDto)
+  brackets!: IrppBracketRowDto[];
 }
 
 export class EndContractDto {

@@ -230,7 +230,8 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     key: 'hr.irpp',
     domain: 'hr',
     label: 'IRPP',
-    description: 'Barème IRPP — après validation expert (Payroll).',
+    description:
+      'Barème IRPP annuel (table hr_irpp_bracket) — VALIDATED + tranches saisies expert. Jamais seedé. Méthode retenue: annuel/12.',
     defaultStatus: 'PENDING_EXPERT',
     lawRefHint: null,
     manageHref: '/hr',
