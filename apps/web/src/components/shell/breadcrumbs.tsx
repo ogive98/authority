@@ -23,7 +23,11 @@ function labelForPart(
   locale: "fr" | "it",
 ): string {
   if (looksLikeRecordId(part)) {
-    if (parent === "products" || parent === "customers") {
+    if (
+      parent === "products" ||
+      parent === "customers" ||
+      parent === "employees"
+    ) {
       return routeLabel("fiche", locale, "fiche");
     }
     return routeLabel("detail", locale, "detail");

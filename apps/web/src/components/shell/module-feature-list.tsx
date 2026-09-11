@@ -12,8 +12,15 @@ import {
 } from "./icon-personality";
 
 function featureHint(href: string): string {
-  const clean = href.replace(/^\//, "").replace(/\//g, " · ");
-  return clean || "Accueil";
+  try {
+    const u = new URL(href, "http://authority.local");
+    const path = u.pathname.replace(/^\//, "").replace(/\//g, " · ");
+    const tab = u.searchParams.get("tab");
+    if (tab) return path ? `${path} · ${tab}` : tab;
+    return path || "Accueil";
+  } catch {
+    return href.replace(/^\//, "").replace(/\//g, " · ") || "Accueil";
+  }
 }
 
 function SoftRing({ value }: { value: number }) {

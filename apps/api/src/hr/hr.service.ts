@@ -1,15 +1,18 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  DocLinkType,
+  DocVisibility,
   HrContractStatus,
   HrContractType,
   HrEmployeeStatus,
   Prisma,
   type HrContract,
   type HrEmployee,
+  type HrJobTitle,
 } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { HR_ERROR_CODES, HR_EVENT_TYPES } from './hr.constants';
+import { HR_ERROR_CODES, HR_EVENT_TYPES, isHrImageMime } from './hr.constants';
 import type {
   CreateContractDto,
   CreateEmployeeDto,
@@ -18,6 +21,7 @@ import type {
   PatchEmployeeDto,
 } from './hr.dto';
 import { HrException } from './hr.exception';
+import { JobTitleService } from './job-title.service';
 
 export type HrContractDto = {
   id: string;
@@ -45,6 +49,8 @@ export type HrEmployeeDto = {
   displayName: string;
   siteId: string | null;
   department: string | null;
+  jobTitleId: string | null;
+  /** Resolved catalog name — not free text. */
   jobTitle: string | null;
   cnssNo: string | null;
   email: string | null;
@@ -54,6 +60,7 @@ export type HrEmployeeDto = {
   notes: string | null;
   taxChefDeFamille: boolean | null;
   taxEnfantCount: number | null;
+  photoDocumentId: string | null;
   version: number;
   contracts: HrContractDto[];
   createdAt: string;
@@ -65,6 +72,7 @@ export class HrService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly jobTitles: JobTitleService,
   ) {}
 
   async listEmployees(
@@ -95,6 +103,7 @@ export class HrService {
               { displayName: { contains: q, mode: 'insensitive' } },
               { department: { contains: q, mode: 'insensitive' } },
               { cnssNo: { contains: q, mode: 'insensitive' } },
+              { jobTitle: { name: { contains: q, mode: 'insensitive' } } },
             ],
           }
         : {}),
@@ -103,12 +112,7 @@ export class HrService {
 
     const rows = await this.prisma.hrEmployee.findMany({
       where,
-      include: {
-        contracts: {
-          where: { deletedAt: null },
-          orderBy: { startDate: 'desc' },
-        },
-      },
+      include: employeeInclude,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
     });
@@ -147,6 +151,11 @@ export class HrService {
       );
     }
 
+    const jobTitleId = await this.jobTitles.resolveAssignableId(
+      companyId,
+      dto.jobTitleId ?? null,
+    );
+
     const created = await this.prisma.$transaction(async (tx) => {
       const row = await tx.hrEmployee.create({
         data: {
@@ -155,16 +164,14 @@ export class HrService {
           displayName: dto.displayName.trim(),
           siteId: dto.siteId ?? null,
           department: dto.department?.trim() || null,
-          jobTitle: dto.jobTitle?.trim() || null,
+          jobTitleId: jobTitleId ?? null,
           cnssNo: dto.cnssNo?.trim() || null,
           email: dto.email?.trim() || null,
           hiredAt: dto.hiredAt ? startOfUtcDay(new Date(dto.hiredAt)) : null,
           notes: dto.notes?.trim() || null,
           status: HrEmployeeStatus.ACTIVE,
         },
-        include: {
-          contracts: { where: { deletedAt: null } },
-        },
+        include: employeeInclude,
       });
       await this.outbox.enqueue(tx, {
         companyId,
@@ -188,7 +195,7 @@ export class HrService {
     dto: PatchEmployeeDto,
     includeWage = false,
   ): Promise<HrEmployeeDto> {
-    await this.findEmployee(companyId, id);
+    const current = await this.findEmployee(companyId, id);
 
     const data: Prisma.HrEmployeeUpdateInput = {};
     if (dto.displayName !== undefined) {
@@ -198,12 +205,23 @@ export class HrService {
     if (dto.department !== undefined) {
       data.department = dto.department?.trim() || null;
     }
-    if (dto.jobTitle !== undefined) {
-      data.jobTitle = dto.jobTitle?.trim() || null;
+    if (dto.jobTitleId !== undefined) {
+      const nextId = await this.jobTitles.resolveAssignableId(
+        companyId,
+        dto.jobTitleId,
+        current.jobTitleId,
+      );
+      data.jobTitle =
+        nextId === null ? { disconnect: true } : { connect: { id: nextId } };
     }
     if (dto.cnssNo !== undefined) data.cnssNo = dto.cnssNo?.trim() || null;
     if (dto.email !== undefined) data.email = dto.email?.trim() || null;
     if (dto.notes !== undefined) data.notes = dto.notes?.trim() || null;
+    if (dto.hiredAt !== undefined) {
+      data.hiredAt = dto.hiredAt
+        ? startOfUtcDay(new Date(dto.hiredAt))
+        : null;
+    }
     if (dto.status !== undefined) {
       data.status = dto.status;
       if (dto.status === HrEmployeeStatus.LEFT && dto.leftAt === undefined) {
@@ -221,17 +239,36 @@ export class HrService {
     if (dto.taxEnfantCount !== undefined) {
       data.taxEnfantCount = dto.taxEnfantCount;
     }
+    if (dto.photoDocumentId !== undefined) {
+      if (dto.photoDocumentId === null) {
+        data.photoDocument = { disconnect: true };
+      } else {
+        const doc = await this.prisma.docDocument.findFirst({
+          where: {
+            id: dto.photoDocumentId,
+            companyId,
+            deletedAt: null,
+            visibility: DocVisibility.INTERNAL,
+            linkType: DocLinkType.HR_EMPLOYEE,
+            linkId: id,
+          },
+        });
+        if (!doc || !isHrImageMime(doc.mime)) {
+          throw new HrException(
+            HR_ERROR_CODES.PHOTO_INVALID,
+            'Photo must be an INTERNAL image linked to this employee.',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+        data.photoDocument = { connect: { id: doc.id } };
+      }
+    }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.hrEmployee.update({
         where: { id },
         data: { ...data, version: { increment: 1 } },
-        include: {
-          contracts: {
-            where: { deletedAt: null },
-            orderBy: { startDate: 'desc' },
-          },
-        },
+        include: employeeInclude,
       });
       await this.outbox.enqueue(tx, {
         companyId,
@@ -411,15 +448,10 @@ export class HrService {
   private async findEmployee(
     companyId: string,
     id: string,
-  ): Promise<HrEmployee & { contracts: HrContract[] }> {
+  ): Promise<EmployeeRow> {
     const row = await this.prisma.hrEmployee.findFirst({
       where: { id, companyId, deletedAt: null },
-      include: {
-        contracts: {
-          where: { deletedAt: null },
-          orderBy: { startDate: 'desc' },
-        },
-      },
+      include: employeeInclude,
     });
     if (!row) {
       throw new HrException(
@@ -440,10 +472,7 @@ export class HrService {
     return `${prefix}${String(count + 1).padStart(4, '0')}`;
   }
 
-  private toEmployeeDto(
-    row: HrEmployee & { contracts: HrContract[] },
-    includeWage: boolean,
-  ): HrEmployeeDto {
+  private toEmployeeDto(row: EmployeeRow, includeWage: boolean): HrEmployeeDto {
     return {
       id: row.id,
       companyId: row.companyId,
@@ -451,7 +480,8 @@ export class HrService {
       displayName: row.displayName,
       siteId: row.siteId,
       department: row.department,
-      jobTitle: row.jobTitle,
+      jobTitleId: row.jobTitleId,
+      jobTitle: row.jobTitle?.name ?? null,
       cnssNo: row.cnssNo,
       email: row.email,
       status: row.status,
@@ -460,6 +490,7 @@ export class HrService {
       notes: row.notes,
       taxChefDeFamille: row.taxChefDeFamille,
       taxEnfantCount: row.taxEnfantCount,
+      photoDocumentId: row.photoDocumentId,
       version: row.version,
       contracts: row.contracts.map((c) => this.toContractDto(c, includeWage)),
       createdAt: row.createdAt.toISOString(),
@@ -503,3 +534,16 @@ function startOfUtcDay(d: Date): Date {
 function toDateOnly(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
+
+const employeeInclude = {
+  jobTitle: true,
+  contracts: {
+    where: { deletedAt: null },
+    orderBy: { startDate: 'desc' as const },
+  },
+} satisfies Prisma.HrEmployeeInclude;
+
+type EmployeeRow = HrEmployee & {
+  jobTitle: HrJobTitle | null;
+  contracts: HrContract[];
+};

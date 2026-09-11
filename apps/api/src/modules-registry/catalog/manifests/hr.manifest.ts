@@ -1,16 +1,16 @@
 import type { ModuleManifest } from '../manifest.types';
 
 /**
- * HR light + CNSS/IRPP V0 (D089/D195/D196) — employees / contracts / preview+snapshot.
+ * HR light + job titles/docs (D209) + CNSS/IRPP V0.
  * Rates & brackets only from VALIDATED Prefs / human tables — never invent.
  */
 export const hrManifest: ModuleManifest = {
   id: 'hr',
   name: 'Ressources humaines',
-  version: '1.2.0',
+  version: '1.3.0',
   apiVersion: '1',
   description:
-    'HR — employees, contracts, CNSS/IRPP preview/snapshot from VALIDATED Prefs',
+    'HR — employees, job titles, contracts, dossier docs, CNSS/IRPP from VALIDATED Prefs',
   capabilities: [
     {
       key: 'hr.employee.read',
@@ -48,10 +48,16 @@ export const hrManifest: ModuleManifest = {
     'hr.irpp.brackets.replace',
     'hr.irpp.snapshot.create',
     'hr.bulletin.create',
+    'hr.job_title.create',
+    'hr.job_title.patch',
+    'hr.employee.document.upload',
   ],
   queries: [
     'hr.employees.list',
     'hr.employee.get',
+    'hr.job_titles.list',
+    'hr.employee.documents.list',
+    'hr.employee.document.download',
     'hr.cnss.preview',
     'hr.cnss.snapshots.list',
     'hr.irpp.brackets.list',
@@ -72,9 +78,13 @@ export const hrManifest: ModuleManifest = {
     'hr.irpp_brackets.replaced.v1',
     'hr.irpp_snapshot.created.v1',
     'hr.bulletin.created.v1',
+    'hr.job_title.created.v1',
+    'hr.job_title.updated.v1',
+    'hr.employee.document.attached.v1',
   ],
   navigationEntries: [
     { id: 'hr-employees', label: 'Employés', href: '/hr' },
-    { id: 'hr-bulletins', label: 'Bulletins', href: '/hr#bulletins' },
+    { id: 'hr-job-titles', label: 'Postes', href: '/hr?tab=postes' },
+    { id: 'hr-bulletins', label: 'Bulletins', href: '/hr?tab=bulletins' },
   ],
 };

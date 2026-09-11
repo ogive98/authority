@@ -18,6 +18,7 @@ export type HrEmployee = {
   matricule: string;
   displayName: string;
   department: string | null;
+  jobTitleId: string | null;
   jobTitle: string | null;
   cnssNo: string | null;
   email: string | null;
@@ -27,9 +28,30 @@ export type HrEmployee = {
   notes: string | null;
   taxChefDeFamille: boolean | null;
   taxEnfantCount: number | null;
+  photoDocumentId: string | null;
   contracts: HrContract[];
   createdAt: string;
 };
+
+export function hrEmployeeDocumentContentHref(
+  employeeId: string,
+  documentId: string,
+): string {
+  return `/api/v1/hr/employees/${encodeURIComponent(employeeId)}/documents/${encodeURIComponent(documentId)}/content`;
+}
+
+export function isHrImageMime(mime: string | undefined | null): boolean {
+  if (!mime) return false;
+  return ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(
+    mime.toLowerCase(),
+  );
+}
+
+export function isHrPreviewableMime(mime: string | undefined | null): boolean {
+  if (!mime) return false;
+  const m = mime.toLowerCase();
+  return isHrImageMime(m) || m === "application/pdf";
+}
 
 export type CnssPreview = {
   contractId: string;
@@ -97,11 +119,157 @@ export async function fetchEmployees(
   return { ok: true, data: (await res.json()) as { items: HrEmployee[] } };
 }
 
+export async function fetchEmployee(
+  id: string,
+): Promise<ApiOk<HrEmployee> | ApiFail> {
+  const res = await fetch(`/api/v1/hr/employees/${encodeURIComponent(id)}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrEmployee };
+}
+
+export type HrJobTitle = {
+  id: string;
+  code: string;
+  name: string;
+  active: boolean;
+};
+
+export type HrEmployeeDocument = {
+  id: string;
+  number: string;
+  title: string;
+  mime: string;
+  size: string;
+  createdAt: string;
+};
+
+export async function fetchJobTitles(
+  activeOnly = false,
+): Promise<ApiOk<{ items: HrJobTitle[] }> | ApiFail> {
+  const qs = activeOnly ? "?activeOnly=1" : "";
+  const res = await fetch(`/api/v1/hr/job-titles${qs}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as { items: HrJobTitle[] } };
+}
+
+export async function createJobTitle(input: {
+  code: string;
+  name: string;
+}): Promise<ApiOk<HrJobTitle> | ApiFail> {
+  const res = await fetch("/api/v1/hr/job-titles", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrJobTitle };
+}
+
+export async function patchJobTitle(
+  id: string,
+  input: { code?: string; name?: string; active?: boolean },
+): Promise<ApiOk<HrJobTitle> | ApiFail> {
+  const res = await fetch(`/api/v1/hr/job-titles/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrJobTitle };
+}
+
+export async function fetchEmployeeDocuments(
+  employeeId: string,
+): Promise<ApiOk<{ items: HrEmployeeDocument[] }> | ApiFail> {
+  const res = await fetch(
+    `/api/v1/hr/employees/${encodeURIComponent(employeeId)}/documents`,
+    { credentials: "include" },
+  );
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return {
+    ok: true,
+    data: (await res.json()) as { items: HrEmployeeDocument[] },
+  };
+}
+
+export async function uploadEmployeeDocument(
+  employeeId: string,
+  file: File,
+  title?: string,
+): Promise<ApiOk<HrEmployeeDocument> | ApiFail> {
+  const body = new FormData();
+  body.append("file", file);
+  if (title?.trim()) body.append("title", title.trim());
+  const res = await fetch(
+    `/api/v1/hr/employees/${encodeURIComponent(employeeId)}/documents`,
+    { method: "POST", credentials: "include", body },
+  );
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrEmployeeDocument };
+}
+
+export async function uploadEmployeePhoto(
+  employeeId: string,
+  file: File,
+): Promise<ApiOk<HrEmployee> | ApiFail> {
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch(
+    `/api/v1/hr/employees/${encodeURIComponent(employeeId)}/photo`,
+    { method: "POST", credentials: "include", body },
+  );
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrEmployee };
+}
+
+export async function downloadEmployeeDocument(
+  employeeId: string,
+  documentId: string,
+): Promise<{ ok: true } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/hr/employees/${encodeURIComponent(employeeId)}/documents/${encodeURIComponent(documentId)}/download`,
+      { credentials: "include" },
+    );
+    if (!res.ok) {
+      return { ok: false, status: res.status, message: await parseError(res) };
+    }
+    const body = (await res.json()) as { downloadUrl?: string };
+    if (!body.downloadUrl) {
+      return { ok: false, status: 500, message: "URL de téléchargement absente." };
+    }
+    window.open(body.downloadUrl, "_blank", "noopener,noreferrer");
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function createEmployee(input: {
   matricule: string;
   displayName: string;
   department?: string;
-  jobTitle?: string;
+  jobTitleId?: string;
   cnssNo?: string;
   email?: string;
   hiredAt?: string;
@@ -444,8 +612,18 @@ export async function createBulletin(input: {
 export async function patchEmployee(
   id: string,
   input: {
+    displayName?: string;
+    department?: string | null;
+    jobTitleId?: string | null;
+    cnssNo?: string | null;
+    email?: string | null;
+    status?: string;
+    hiredAt?: string | null;
+    leftAt?: string | null;
+    notes?: string | null;
     taxChefDeFamille?: boolean | null;
     taxEnfantCount?: number | null;
+    photoDocumentId?: string | null;
   },
 ): Promise<ApiOk<HrEmployee> | ApiFail> {
   const res = await fetch(`/api/v1/hr/employees/${encodeURIComponent(id)}`, {

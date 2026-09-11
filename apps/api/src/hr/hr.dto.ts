@@ -38,9 +38,8 @@ export class CreateEmployeeDto {
   department?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(80)
-  jobTitle?: string;
+  @IsUUID()
+  jobTitleId?: string;
 
   @IsOptional()
   @IsString()
@@ -77,9 +76,9 @@ export class PatchEmployeeDto {
   department?: string | null;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(80)
-  jobTitle?: string | null;
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsUUID()
+  jobTitleId?: string | null;
 
   @IsOptional()
   @IsString()
@@ -95,6 +94,12 @@ export class PatchEmployeeDto {
   status?: HrEmployeeStatus;
 
   @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsDateString()
+  hiredAt?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
   @IsDateString()
   leftAt?: string | null;
 
@@ -102,6 +107,11 @@ export class PatchEmployeeDto {
   @IsString()
   @MaxLength(500)
   notes?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsUUID()
+  photoDocumentId?: string | null;
 
   @IsOptional()
   @ValidateIf((_, v) => v !== null && v !== undefined)
@@ -228,4 +238,30 @@ export class EndContractDto {
   @IsOptional()
   @IsDateString()
   endDate?: string;
+}
+
+export class CreateJobTitleDto {
+  @IsString()
+  @MaxLength(32)
+  code!: string;
+
+  @IsString()
+  @MaxLength(80)
+  name!: string;
+}
+
+export class PatchJobTitleDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  code?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  name?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
 }

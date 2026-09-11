@@ -32,7 +32,8 @@ describe('DocumentsService', () => {
       ptlClaim: {
         findFirst: jest.fn().mockResolvedValue({ customerId }),
       },
-      salOrder: { findFirst: jest.fn() },
+      hrBulletin: { findFirst: jest.fn() },
+      hrEmployee: { findFirst: jest.fn(), findMany: jest.fn() },
       dlvShipment: { findFirst: jest.fn() },
       docDocument: {
         count: jest.fn().mockResolvedValue(0),
@@ -182,5 +183,29 @@ describe('DocumentsService', () => {
       status: HttpStatus.NOT_FOUND,
       response: { code: DOCUMENTS_ERROR_CODES.NOT_FOUND },
     });
+  });
+
+  it('links an INTERNAL employee dossier file', async () => {
+    const { service, prisma } = build();
+    const employeeId = '66666666-6666-6666-6666-666666666666';
+    prisma.hrEmployee.findFirst = jest.fn().mockResolvedValue({ id: employeeId });
+    const dto = await service.createFromUpload(
+      companyId,
+      userId,
+      {
+        buffer: Buffer.from('cin-scan'),
+        mimetype: 'application/pdf',
+        originalname: 'cin.pdf',
+      },
+      {
+        title: 'CIN',
+        visibility: DocVisibility.INTERNAL,
+        linkType: DocLinkType.HR_EMPLOYEE,
+        linkId: employeeId,
+      },
+    );
+    expect(dto.linkType).toBe(DocLinkType.HR_EMPLOYEE);
+    expect(dto.visibility).toBe(DocVisibility.INTERNAL);
+    expect(dto.customerId).toBeNull();
   });
 });

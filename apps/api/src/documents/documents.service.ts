@@ -235,6 +235,20 @@ export class DocumentsService {
     };
   }
 
+  async getContent(
+    companyId: string,
+    id: string,
+  ): Promise<{ buffer: Buffer; mime: string; filename: string }> {
+    const doc = await this.findActive(companyId, id);
+    const file = await this.files.getBuffer(doc.coreFileId, companyId);
+    const safe = doc.title.replace(/[^\w.\-]+/g, '_').slice(0, 80) || doc.number;
+    return {
+      buffer: file.buffer,
+      mime: doc.mime || file.mime,
+      filename: safe,
+    };
+  }
+
   /** Portal-scoped list: CUSTOMER_PORTAL + matching customerId. */
   async listForCustomer(
     companyId: string,
@@ -266,7 +280,7 @@ export class DocumentsService {
     ) {
       throw new DocumentsException(
         DOCUMENTS_ERROR_CODES.INVALID_META,
-        'linkType must be CLAIM, ORDER, SHIPMENT, or HR_BULLETIN.',
+        'linkType must be CLAIM, ORDER, SHIPMENT, HR_BULLETIN, or HR_EMPLOYEE.',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -321,6 +335,61 @@ export class DocumentsService {
           label: `${r.number} · ${r.status}`,
         })),
       };
+    }
+
+    if (linkType === DocLinkType.HR_EMPLOYEE) {
+      const rows = await this.prisma.hrEmployee.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          ...(q
+            ? {
+                OR: [
+                  { matricule: { contains: q, mode: 'insensitive' } },
+                  { displayName: { contains: q, mode: 'insensitive' } },
+                ],
+              }
+            : {}),
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: limit,
+        select: { id: true, matricule: true, displayName: true },
+      });
+      return {
+        items: rows.map((r) => ({
+          id: r.id,
+          number: r.matricule,
+          label: `${r.matricule} · ${r.displayName}`,
+        })),
+      };
+    }
+
+    if (linkType === DocLinkType.HR_BULLETIN) {
+      const rows = await this.prisma.hrBulletin.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          ...(q ? { number: { contains: q, mode: 'insensitive' } } : {}),
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: limit,
+        select: { id: true, number: true, periodYm: true },
+      });
+      return {
+        items: rows.map((r) => ({
+          id: r.id,
+          number: r.number,
+          label: `${r.number} · ${r.periodYm}`,
+        })),
+      };
+    }
+
+    if (linkType !== DocLinkType.SHIPMENT) {
+      throw new DocumentsException(
+        DOCUMENTS_ERROR_CODES.INVALID_META,
+        'linkType must be CLAIM, ORDER, SHIPMENT, HR_BULLETIN, or HR_EMPLOYEE.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const rows = await this.prisma.dlvShipment.findMany({
@@ -547,6 +616,21 @@ export class DocumentsService {
         throw new DocumentsException(
           DOCUMENTS_ERROR_CODES.LINK_NOT_FOUND,
           'Bulletin not found for link.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      return null;
+    }
+
+    if (linkType === DocLinkType.HR_EMPLOYEE) {
+      const employee = await this.prisma.hrEmployee.findFirst({
+        where: { id: linkId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!employee) {
+        throw new DocumentsException(
+          DOCUMENTS_ERROR_CODES.LINK_NOT_FOUND,
+          'Employee not found for link.',
           HttpStatus.NOT_FOUND,
         );
       }

@@ -48,6 +48,8 @@ export const FEATURE_LABELS_IT: Record<string, string> = {
   promises: "Promesse di pagamento",
   "tax-catalog": "IVA Tunisia",
   "hr-employees": "Dipendenti",
+  "hr-job-titles": "Mansioni",
+  "hr-bulletins": "Buste paga",
   gl: "Libro mastro",
   "repair-home": "Riparazione",
   "repair-diagnostics": "Diagnostica",

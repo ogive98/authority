@@ -161,4 +161,31 @@ export class FileService {
       expiresInSeconds: SIGNED_URL_TTL_SECONDS,
     };
   }
+
+  async getBuffer(
+    fileId: string,
+    companyId: string,
+  ): Promise<{ buffer: Buffer; mime: string }> {
+    const file = await this.prisma.coreFile.findFirst({
+      where: {
+        id: fileId,
+        companyId,
+        deletedAt: null,
+      },
+    });
+
+    if (!file) {
+      throw new PlatformException(
+        PLATFORM_ERROR_CODES.FILE_NOT_FOUND,
+        'File not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const buffer = await this.minio.getObjectBuffer(file.key);
+    return {
+      buffer,
+      mime: file.mime,
+    };
+  }
 }

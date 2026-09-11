@@ -87,6 +87,18 @@ const FEATURE_RULES: Rule[] = [
     kind: "sales",
   },
   {
+    match: /job.?title|poste|mansioni/i,
+    colorClass: "text-[#64d2ff]",
+    motion: "stamp",
+    kind: "job",
+  },
+  {
+    match: /bulletin|payslip|buste/i,
+    colorClass: "text-[#0a84ff]",
+    motion: "doc",
+    kind: "doc",
+  },
+  {
     match: /customer|client|employé|contrat|hr|rh|user|people/i,
     colorClass: "text-[#bf5af2]",
     motion: "people",

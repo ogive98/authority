@@ -3,6 +3,11 @@ export const HR_ERROR_CODES = {
   EMPLOYEE_NOT_FOUND: 'HR.EMPLOYEE_NOT_FOUND',
   CONTRACT_NOT_FOUND: 'HR.CONTRACT_NOT_FOUND',
   MATRICULE_EXISTS: 'HR.MATRICULE_EXISTS',
+  JOB_TITLE_NOT_FOUND: 'HR.JOB_TITLE_NOT_FOUND',
+  JOB_TITLE_CODE_EXISTS: 'HR.JOB_TITLE_CODE_EXISTS',
+  JOB_TITLE_INVALID_CODE: 'HR.JOB_TITLE_INVALID_CODE',
+  JOB_TITLE_INACTIVE: 'HR.JOB_TITLE_INACTIVE',
+  DOCUMENT_NOT_FOUND: 'HR.DOCUMENT_NOT_FOUND',
   INVALID_STATUS: 'HR.INVALID_STATUS',
   INVALID_DATES: 'HR.INVALID_DATES',
   CNSS_INVALID_PERIOD: 'HR.CNSS_INVALID_PERIOD',
@@ -17,9 +22,28 @@ export const HR_ERROR_CODES = {
   BULLETIN_EXISTS: 'HR.BULLETIN_EXISTS',
   BULLETIN_NOT_FOUND: 'HR.BULLETIN_NOT_FOUND',
   BULLETIN_PDF_UNAVAILABLE: 'HR.BULLETIN_PDF_UNAVAILABLE',
+  PHOTO_INVALID: 'HR.PHOTO_INVALID',
 } as const;
 
 export type HrErrorCode = (typeof HR_ERROR_CODES)[keyof typeof HR_ERROR_CODES];
+
+export const HR_IMAGE_MIMES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+] as const;
+
+export function isHrImageMime(mime: string | undefined | null): boolean {
+  if (!mime) return false;
+  return (HR_IMAGE_MIMES as readonly string[]).includes(mime.toLowerCase());
+}
+
+export function isHrPreviewableMime(mime: string | undefined | null): boolean {
+  if (!mime) return false;
+  const m = mime.toLowerCase();
+  return isHrImageMime(m) || m === 'application/pdf';
+}
 
 export const HR_EVENT_TYPES = {
   EMPLOYEE_CREATED: 'hr.employee.created.v1',
@@ -31,4 +55,7 @@ export const HR_EVENT_TYPES = {
   IRPP_SNAPSHOT_CREATED: 'hr.irpp_snapshot.created.v1',
   BULLETIN_CREATED: 'hr.bulletin.created.v1',
   BULLETIN_PDF_GENERATED: 'hr.bulletin.pdf_generated.v1',
+  JOB_TITLE_CREATED: 'hr.job_title.created.v1',
+  JOB_TITLE_UPDATED: 'hr.job_title.updated.v1',
+  EMPLOYEE_DOCUMENT_ATTACHED: 'hr.employee.document.attached.v1',
 } as const;

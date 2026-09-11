@@ -84,6 +84,21 @@ export class MinioService implements OnModuleInit {
     );
   }
 
+  async getObjectBuffer(key: string): Promise<Buffer> {
+    if (!this.ready) {
+      throw storageUnavailable();
+    }
+
+    const res = await this.client.send(
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }),
+    );
+    const bytes = await res.Body?.transformToByteArray();
+    return Buffer.from(bytes ?? []);
+  }
+
   async signedDownloadUrl(key: string): Promise<string> {
     if (!this.ready) {
       throw storageUnavailable();

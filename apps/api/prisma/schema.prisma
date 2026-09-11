@@ -991,6 +991,8 @@ enum DocLinkType {
   SHIPMENT
   /** HR bulletin PDF (D202). */
   HR_BULLETIN
+  /** Employee dossier file (D209) — INTERNAL only. */
+  HR_EMPLOYEE
 }
 
 model DocDocument {
@@ -1011,6 +1013,8 @@ model DocDocument {
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt       DateTime?     @map("deleted_at") @db.Timestamptz(6)
+
+  hrPhotoEmployees HrEmployee[]
 
   @@unique([companyId, number])
   @@index([companyId, createdAt(sort: Desc)])
@@ -2401,6 +2405,25 @@ enum HrContractType {
   OTHER
 }
 
+model HrJobTitle {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  code      String
+  name      String
+  active    Boolean   @default(true)
+  version   Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  employees HrEmployee[]
+
+  @@unique([companyId, code])
+  @@index([companyId, active])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("hr_job_title")
+}
+
 model HrEmployee {
   id          String           @id @default(uuid()) @db.Uuid
   companyId   String           @map("company_id") @db.Uuid
@@ -2408,7 +2431,7 @@ model HrEmployee {
   displayName String           @map("display_name")
   siteId      String?          @map("site_id") @db.Uuid
   department  String?
-  jobTitle    String?          @map("job_title")
+  jobTitleId  String?          @map("job_title_id") @db.Uuid
   /** CNSS affiliation number — identifier only, never a contribution rate. */
   cnssNo      String?          @map("cnss_no")
   email       String?
@@ -2421,18 +2444,24 @@ model HrEmployee {
   taxChefDeFamille Boolean?    @map("tax_chef_de_famille")
   /** Dependent children count — null until human sets. */
   taxEnfantCount   Int?        @map("tax_enfant_count")
+  /** Portrait — Documents HR_EMPLOYEE image (D211). */
+  photoDocumentId  String?     @map("photo_document_id") @db.Uuid
   version     Int              @default(0)
   createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz(6)
 
-  contracts HrContract[]
+  jobTitle      HrJobTitle?      @relation(fields: [jobTitleId], references: [id], onDelete: SetNull)
+  photoDocument DocDocument?     @relation(fields: [photoDocumentId], references: [id], onDelete: SetNull)
+  contracts     HrContract[]
   cnssSnapshots HrCnssSnapshot[]
   irppSnapshots HrIrppSnapshot[]
-  bulletins HrBulletin[]
+  bulletins     HrBulletin[]
 
   @@unique([companyId, matricule])
   @@index([companyId, status])
+  @@index([companyId, jobTitleId])
+  @@index([companyId, photoDocumentId])
   @@index([companyId, createdAt(sort: Desc)])
   @@map("hr_employee")
 }

@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import {
+  Briefcase,
+  FileText,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import {
   ABadge,
   AButton,
@@ -13,30 +19,23 @@ import {
   AInput,
   AScreenHeader,
   ASkeleton,
-  ASwitch,
 } from "@/components/a";
+import { hrTabHref, parseHrTab, hrEmployeeHref, type HrTab } from "@/lib/hr-tabs";
+import { localizeUiString } from "@/lib/i18n/route-labels";
+import { useLocaleStore } from "@/stores/locale-store";
+import { cn } from "@/lib/utils";
 import {
-  createBulletin,
-  createCnssSnapshot,
-  createContract,
   createEmployee,
-  createIrppSnapshot,
+  createJobTitle,
   downloadBulletinPdf,
-  endContract,
-  fetchBulletinPreview,
   fetchBulletins,
-  fetchCnssPreview,
   fetchEmployees,
-  fetchIrppPreview,
-  fetchLevyPreview,
-  patchEmployee,
+  fetchJobTitles,
+  hrEmployeeDocumentContentHref,
+  patchJobTitle,
   type Bulletin,
-  type BulletinPreview,
-  type CnssPreview,
-  type HrContract,
   type HrEmployee,
-  type IrppPreview,
-  type LevyPreview,
+  type HrJobTitle,
 } from "@/lib/hr";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
@@ -45,6 +44,7 @@ import {
   softTableWrap,
   softThead,
   softTr,
+  softUnderlineTabClass,
 } from "@/lib/soft-glass-ui";
 
 type LoadState =
@@ -53,13 +53,7 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-type DrawerMode =
-  | "employee"
-  | "contract"
-  | "cnss"
-  | "irpp"
-  | "bulletin"
-  | "fiscal";
+type DrawerMode = "employee" | "jobTitle";
 
 function statusTone(
   status: string,
@@ -75,8 +69,26 @@ function statusTone(
   }
 }
 
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "?") + (parts[1]?.[0] ?? "")).toUpperCase();
+}
+
 export default function HrEmployeesPage() {
+  return (
+    <Suspense fallback={<ASkeleton className="h-48 w-full" />}>
+      <HrWorkspace />
+    </Suspense>
+  );
+}
+
+function HrWorkspace() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const locale = useLocaleStore((s) => s.locale);
+  const [tab, setTab] = useState<HrTab>(() =>
+    parseHrTab(searchParams.toString()),
+  );
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
   const [q, setQ] = useState("");
@@ -84,40 +96,26 @@ export default function HrEmployeesPage() {
   const [drawerMode, setDrawerMode] = useState<DrawerMode>("employee");
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<HrEmployee | null>(null);
 
   const [matricule, setMatricule] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [department, setDepartment] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
+  const [jobTitleId, setJobTitleId] = useState("");
+  const [jobTitles, setJobTitles] = useState<HrJobTitle[]>([]);
+  const [jobCode, setJobCode] = useState("");
+  const [jobName, setJobName] = useState("");
   const [cnssNo, setCnssNo] = useState("");
   const [hiredAt, setHiredAt] = useState("");
-  const [contractType, setContractType] = useState("CDI");
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
-  const [endDate, setEndDate] = useState("");
-  const [wageRef, setWageRef] = useState("");
-  const [wageBase, setWageBase] = useState("");
-  const [cnssContract, setCnssContract] = useState<HrContract | null>(null);
-  const [cnssPreview, setCnssPreview] = useState<CnssPreview | null>(null);
-  const [irppPreview, setIrppPreview] = useState<IrppPreview | null>(null);
-  const [bulletinPreview, setBulletinPreview] =
-    useState<BulletinPreview | null>(null);
-  const [levyPreview, setLevyPreview] = useState<LevyPreview | null>(null);
-  const [periodYm, setPeriodYm] = useState(
-    new Date().toISOString().slice(0, 7),
-  );
-  const [taxChef, setTaxChef] = useState(false);
-  const [taxEnfantCount, setTaxEnfantCount] = useState("0");
   const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
 
   const load = useCallback(async (query?: string) => {
     setState({ kind: "loading" });
-    const [res, bul] = await Promise.all([
+    const [res, bul, titles] = await Promise.all([
       fetchEmployees(query),
       fetchBulletins({ limit: 30 }),
+      fetchJobTitles(),
     ]);
+    if (titles.ok) setJobTitles(titles.data.items);
     if (bul.ok) setBulletins(bul.data.items);
     if (!res.ok) {
       if (res.status === 403) {
@@ -134,57 +132,43 @@ export default function HrEmployeesPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    function apply() {
+      const next = parseHrTab(
+        searchParams.toString(),
+        window.location.hash,
+      );
+      setTab(next);
+    }
+    apply();
+    window.addEventListener("hashchange", apply);
+    return () => window.removeEventListener("hashchange", apply);
+  }, [searchParams]);
+
+  function goTab(next: HrTab) {
+    setTab(next);
+    setDrawerOpen(false);
+    router.replace(hrTabHref(next), { scroll: false });
+  }
+
   function openCreateEmployee() {
     setDrawerMode("employee");
     setFormError(null);
     setMatricule("");
     setDisplayName("");
     setDepartment("");
-    setJobTitle("");
+    setJobTitleId("");
     setCnssNo("");
     setHiredAt("");
     setDrawerOpen(true);
   }
 
-  function openCreateContract(row: HrEmployee) {
-    setSelected(row);
-    setDrawerMode("contract");
+  function openCreateJobTitle() {
+    setDrawerMode("jobTitle");
     setFormError(null);
-    setContractType("CDI");
-    setStartDate(new Date().toISOString().slice(0, 10));
-    setEndDate("");
-    setWageRef("");
-    setWageBase("");
+    setJobCode("");
+    setJobName("");
     setDrawerOpen(true);
-  }
-
-  function openFiscal(row: HrEmployee) {
-    setSelected(row);
-    setDrawerMode("fiscal");
-    setFormError(null);
-    setTaxChef(row.taxChefDeFamille === true);
-    setTaxEnfantCount(
-      row.taxEnfantCount != null ? String(row.taxEnfantCount) : "0",
-    );
-    setDrawerOpen(true);
-  }
-
-  async function onSaveFiscal() {
-    if (!selected) return;
-    setBusy(true);
-    setFormError(null);
-    const enfants = Math.max(0, Math.min(20, Number(taxEnfantCount) || 0));
-    const res = await patchEmployee(selected.id, {
-      taxChefDeFamille: taxChef,
-      taxEnfantCount: enfants,
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setFormError(res.message);
-      return;
-    }
-    setDrawerOpen(false);
-    await load(q);
   }
 
   async function onDownloadPdf(id: string) {
@@ -197,168 +181,6 @@ export default function HrEmployeesPage() {
     }
   }
 
-  async function openCnss(contract: HrContract) {
-    setDrawerMode("cnss");
-    setCnssContract(contract);
-    setCnssPreview(null);
-    setIrppPreview(null);
-    setBulletinPreview(null);
-    setLevyPreview(null);
-    setFormError(null);
-    const ym = new Date().toISOString().slice(0, 7);
-    setPeriodYm(ym);
-    setDrawerOpen(true);
-    setBusy(true);
-    const [res, levyRes] = await Promise.all([
-      fetchCnssPreview(contract.id, ym),
-      fetchLevyPreview(contract.id),
-    ]);
-    setBusy(false);
-    if (!res.ok) {
-      setFormError(res.message);
-      return;
-    }
-    setCnssPreview(res.data);
-    if (levyRes.ok) setLevyPreview(levyRes.data);
-  }
-
-  async function openIrpp(contract: HrContract) {
-    setDrawerMode("irpp");
-    setCnssContract(contract);
-    setCnssPreview(null);
-    setIrppPreview(null);
-    setBulletinPreview(null);
-    setLevyPreview(null);
-    setFormError(null);
-    const ym = new Date().toISOString().slice(0, 7);
-    setPeriodYm(ym);
-    setDrawerOpen(true);
-    setBusy(true);
-    const res = await fetchIrppPreview(contract.id, ym);
-    setBusy(false);
-    if (!res.ok) {
-      setFormError(res.message);
-      return;
-    }
-    setIrppPreview(res.data);
-  }
-
-  async function openBulletin(contract: HrContract) {
-    setDrawerMode("bulletin");
-    setCnssContract(contract);
-    setCnssPreview(null);
-    setIrppPreview(null);
-    setBulletinPreview(null);
-    setLevyPreview(null);
-    setFormError(null);
-    const ym = new Date().toISOString().slice(0, 7);
-    setPeriodYm(ym);
-    setDrawerOpen(true);
-    setBusy(true);
-    const res = await fetchBulletinPreview(contract.id, ym);
-    setBusy(false);
-    if (!res.ok) {
-      setFormError(res.message);
-      return;
-    }
-    setBulletinPreview(res.data);
-  }
-
-  async function refreshCnssPreview() {
-    if (!cnssContract) return;
-    setBusy(true);
-    setFormError(null);
-    const [res, levyRes] = await Promise.all([
-      fetchCnssPreview(cnssContract.id, periodYm),
-      fetchLevyPreview(cnssContract.id),
-    ]);
-    setBusy(false);
-    if (!res.ok) {
-      setFormError(res.message);
-      return;
-    }
-    setCnssPreview(res.data);
-    if (levyRes.ok) setLevyPreview(levyRes.data);
-  }
-
-  async function refreshIrppPreview() {
-    if (!cnssContract) return;
-    setBusy(true);
-    setFormError(null);
-    const res = await fetchIrppPreview(cnssContract.id, periodYm);
-    setBusy(false);
-    if (!res.ok) {
-      setFormError(res.message);
-      return;
-    }
-    setIrppPreview(res.data);
-  }
-
-  async function refreshBulletinPreview() {
-    if (!cnssContract) return;
-    setBusy(true);
-    setFormError(null);
-    const res = await fetchBulletinPreview(cnssContract.id, periodYm);
-    setBusy(false);
-    if (!res.ok) {
-      setFormError(res.message);
-      return;
-    }
-    setBulletinPreview(res.data);
-  }
-
-  async function onSnapshot() {
-    if (!cnssContract) return;
-    setBusy(true);
-    setFormError(null);
-    const res = await createCnssSnapshot({
-      contractId: cnssContract.id,
-      periodYm,
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setFormError(res.message);
-      return;
-    }
-    setDrawerOpen(false);
-    await load(q);
-  }
-
-  async function onIrppSnapshot() {
-    if (!cnssContract) return;
-    setBusy(true);
-    setFormError(null);
-    const res = await createIrppSnapshot({
-      contractId: cnssContract.id,
-      periodYm,
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setFormError(res.message);
-      return;
-    }
-    setDrawerOpen(false);
-    await load(q);
-  }
-
-  async function onCreateBulletin() {
-    if (!cnssContract) return;
-    setBusy(true);
-    setFormError(null);
-    const res = await createBulletin({
-      contractId: cnssContract.id,
-      periodYm,
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setFormError(res.message);
-      return;
-    }
-    setDrawerOpen(false);
-    await load(q);
-    router.push(`/hr/bulletins/${res.data.id}`);
-  }
-
   async function onCreateEmployee() {
     setBusy(true);
     setFormError(null);
@@ -366,7 +188,7 @@ export default function HrEmployeesPage() {
       matricule: matricule.trim(),
       displayName: displayName.trim(),
       department: department.trim() || undefined,
-      jobTitle: jobTitle.trim() || undefined,
+      jobTitleId: jobTitleId || undefined,
       cnssNo: cnssNo.trim() || undefined,
       hiredAt: hiredAt || undefined,
     });
@@ -376,20 +198,15 @@ export default function HrEmployeesPage() {
       return;
     }
     setDrawerOpen(false);
-    await load(q);
+    router.push(hrEmployeeHref(res.data.id));
   }
 
-  async function onCreateContract() {
-    if (!selected) return;
+  async function onCreateJobTitle() {
     setBusy(true);
     setFormError(null);
-    const res = await createContract({
-      employeeId: selected.id,
-      type: contractType,
-      startDate,
-      endDate: endDate || undefined,
-      wageRef: wageRef.trim() || undefined,
-      wageBase: wageBase.trim() ? Number(wageBase) : undefined,
+    const res = await createJobTitle({
+      code: jobCode.trim(),
+      name: jobName.trim(),
     });
     setBusy(false);
     if (!res.ok) {
@@ -397,13 +214,13 @@ export default function HrEmployeesPage() {
       return;
     }
     setDrawerOpen(false);
-    setSelected(null);
+    goTab("postes");
     await load(q);
   }
 
-  async function onEndContract(contractId: string) {
+  async function onArchiveJobTitle(id: string, active: boolean) {
     setBusy(true);
-    const res = await endContract(contractId);
+    const res = await patchJobTitle(id, { active });
     setBusy(false);
     if (!res.ok) {
       setState({ kind: "error", message: res.message });
@@ -416,243 +233,315 @@ export default function HrEmployeesPage() {
     <>
       <AScreenHeader
         kicker="Ressources humaines"
-        title="Employés"
-        description="RH — wageBase, CNSS, IRPP + abattements Prefs, TFP/FOPROLOS employeur (preview). Aucun taux inventé."
+        title={
+          tab === "postes"
+            ? "Postes"
+            : tab === "bulletins"
+              ? "Bulletins"
+              : "Employés"
+        }
+        description={
+          tab === "postes"
+            ? "Catalogue société — code + libellé, vide jusqu’à saisie. Pas de texte libre sur l’employé."
+            : tab === "bulletins"
+              ? "Bulletins persistés (CNSS + IRPP). Création depuis la fiche salarié."
+              : "Liste des salariés. Ouvrir la fiche pour contrats, fiscal, dossier."
+        }
         actions={
-          <AButton type="button" onClick={openCreateEmployee}>
-            Nouvel employé
-          </AButton>
+          tab === "postes" ? (
+            <AButton type="button" onClick={openCreateJobTitle}>
+              Nouveau poste
+            </AButton>
+          ) : tab === "employees" ? (
+            <AButton type="button" onClick={openCreateEmployee}>
+              Nouvel employé
+            </AButton>
+          ) : undefined
         }
       />
 
       <div className={softPageBody}>
-      <ExpertiseHintsStrip
-        keys={[
-          "hr.cnss.employee",
-          "hr.cnss.employer",
-          "hr.cnss.ceiling",
-          "hr.irpp",
-          "hr.tfp",
-          "hr.foprolos",
-        ]}
-      />
+        {tab !== "postes" ? (
+          <ExpertiseHintsStrip
+            keys={[
+              "hr.cnss.employee",
+              "hr.cnss.employer",
+              "hr.cnss.ceiling",
+              "hr.irpp",
+              "hr.tfp",
+              "hr.foprolos",
+            ]}
+          />
+        ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <AInput
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Matricule, nom, CNSS…"
-          className="max-w-xs"
-        />
-        <AButton type="button" variant="ghost" onClick={() => void load(q)}>
-          Filtrer
-        </AButton>
-      </div>
-
-      {state.kind === "loading" ? <ASkeleton className="h-48 w-full" /> : null}
-      {state.kind === "forbidden" ? (
-        <AForbiddenState message={state.message} />
-      ) : null}
-      {state.kind === "error" ? (
-        <AErrorState
-          message={state.message}
-          retryable
-          onRetry={() => void load(q)}
-        />
-      ) : null}
-      {state.kind === "ok" && state.items.length === 0 ? (
-        <AEmptyState
-          title="Aucun employé"
-          description="Créez un employé pour démarrer le dossier RH."
-          actionLabel="Nouvel employé"
-          onAction={openCreateEmployee}
-        />
-      ) : null}
-
-      {state.kind === "ok" && state.items.length > 0 ? (
-        <div className={softTableWrap}>
-          <table className="w-full min-w-[720px] text-left text-[length:var(--a-text-sm)]">
-            <thead className={softThead}>
-              <tr>
-                <th className="a-table-cell font-medium">Matricule</th>
-                <th className="a-table-cell font-medium">Nom</th>
-                <th className="a-table-cell font-medium">Poste</th>
-                <th className="a-table-cell font-medium">CNSS n°</th>
-                <th className="a-table-cell font-medium">Statut</th>
-                <th className="a-table-cell font-medium">Contrats</th>
-                <th className="a-table-cell font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {state.items.map((row) => {
-                const active = row.contracts.filter((c) => c.status === "ACTIVE");
-                return (
-                  <tr key={row.id} className={softTr}>
-                    <td className="a-table-cell">
-                      <span className="a-mono font-medium">{row.matricule}</span>
-                    </td>
-                    <td className="a-table-cell">{row.displayName}</td>
-                    <td className="a-table-cell text-a-fg-muted">
-                      {[row.jobTitle, row.department].filter(Boolean).join(" · ") ||
-                        "—"}
-                    </td>
-                    <td className="a-mono a-table-cell">{row.cnssNo ?? "—"}</td>
-                    <td className="a-table-cell">
-                      <ABadge tone={statusTone(row.status)}>{row.status}</ABadge>
-                    </td>
-                    <td className="a-table-cell">
-                      {active.length === 0 ? (
-                        <span className="text-a-fg-muted">—</span>
-                      ) : (
-                        <div className="flex flex-col gap-1">
-                          {active.map((c) => (
-                            <div key={c.id} className="flex items-center gap-2">
-                              <span className="a-mono text-[length:var(--a-text-xs)]">
-                                {c.number}
-                              </span>
-                              <ABadge tone="accent">{c.type}</ABadge>
-                              <AButton
-                                type="button"
-                                variant="ghost"
-                                disabled={busy}
-                                onClick={() => void openCnss(c)}
-                              >
-                                CNSS
-                              </AButton>
-                              <AButton
-                                type="button"
-                                variant="ghost"
-                                disabled={busy}
-                                onClick={() => void openIrpp(c)}
-                              >
-                                IRPP
-                              </AButton>
-                              <AButton
-                                type="button"
-                                variant="ghost"
-                                disabled={busy}
-                                onClick={() => void openBulletin(c)}
-                              >
-                                Bulletin
-                              </AButton>
-                              <AButton
-                                type="button"
-                                variant="ghost"
-                                disabled={busy}
-                                onClick={() => void onEndContract(c.id)}
-                              >
-                                Clôturer
-                              </AButton>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td className="a-table-cell">
-                      {row.status === "ACTIVE" ? (
-                        <div className="flex flex-col gap-1">
-                          <AButton
-                            type="button"
-                            variant="ghost"
-                            onClick={() => openCreateContract(row)}
-                          >
-                            Contrat
-                          </AButton>
-                          <AButton
-                            type="button"
-                            variant="ghost"
-                            onClick={() => openFiscal(row)}
-                          >
-                            Fiscal
-                            {row.taxChefDeFamille == null &&
-                            row.taxEnfantCount == null
-                              ? " · —"
-                              : ""}
-                          </AButton>
-                        </div>
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="flex flex-wrap gap-5">
+          {(
+            [
+              ["employees", "Employés", Users],
+              ["postes", "Postes", Briefcase],
+              ["bulletins", "Bulletins", FileText],
+            ] as const satisfies ReadonlyArray<
+              readonly [HrTab, string, LucideIcon]
+            >
+          ).map(([id, label, Icon]) => {
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                className={softUnderlineTabClass(active)}
+                onClick={() => goTab(id)}
+              >
+                <Icon
+                  className={cn(
+                    "h-4 w-4 shrink-0",
+                    active ? "text-a-fg" : "text-a-fg-muted",
+                  )}
+                  strokeWidth={1.5}
+                  aria-hidden
+                />
+                <span>{localizeUiString(label, locale) ?? label}</span>
+              </button>
+            );
+          })}
         </div>
-      ) : null}
 
-      {bulletins.length > 0 ? (
-        <section className="mt-8 space-y-3">
-          <h2
-            id="bulletins"
-            className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#f97316]"
-          >
-            Bulletins récents
-          </h2>
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">N°</th>
-                  <th className="a-table-cell font-medium">Période</th>
-                  <th className="a-table-cell font-medium">Employé</th>
-                  <th className="a-table-cell font-medium">Net</th>
-                  <th className="a-table-cell font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bulletins.map((b) => (
-                  <tr key={b.id} className={softTr}>
-                    <td className="a-mono a-table-cell">{b.number}</td>
-                    <td className="a-mono a-table-cell">{b.periodYm}</td>
-                    <td className="a-table-cell">
-                      {b.matricule ? `${b.matricule} · ` : ""}
-                      {b.employeeName ?? "—"}
-                    </td>
-                    <td className="a-mono a-table-cell tabular-nums">
-                      {b.netPay} {b.currency}
-                    </td>
-                    <td className="a-table-cell">
-                      <div className="flex flex-wrap gap-2">
-                        <Link
-                          href={`/hr/bulletins/${b.id}`}
-                          className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline"
-                        >
-                          Imprimer
-                        </Link>
-                        <button
-                          type="button"
-                          className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline disabled:opacity-50"
-                          disabled={pdfBusyId === b.id}
-                          onClick={() => void onDownloadPdf(b.id)}
-                        >
-                          PDF
-                        </button>
-                      </div>
-                    </td>
+        {formError ? (
+          <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
+            {formError}
+          </p>
+        ) : null}
+
+        {state.kind === "loading" ? <ASkeleton className="h-48 w-full" /> : null}
+        {state.kind === "forbidden" ? (
+          <AForbiddenState message={state.message} />
+        ) : null}
+        {state.kind === "error" ? (
+          <AErrorState
+            message={state.message}
+            retryable
+            onRetry={() => void load(q)}
+          />
+        ) : null}
+
+        {tab === "employees" && state.kind === "ok" ? (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <AInput
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Matricule, nom, CNSS…"
+                className="max-w-xs"
+              />
+              <AButton type="button" variant="ghost" onClick={() => void load(q)}>
+                Filtrer
+              </AButton>
+            </div>
+
+            {state.items.length === 0 ? (
+              <AEmptyState
+                title="Aucun employé"
+                description="Créez un employé pour ouvrir la fiche RH."
+                actionLabel="Nouvel employé"
+                onAction={openCreateEmployee}
+              />
+            ) : (
+              <div className={softTableWrap}>
+                <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
+                  <thead className={softThead}>
+                    <tr>
+                      <th className="a-table-cell font-medium">Matricule</th>
+                      <th className="a-table-cell font-medium">Nom</th>
+                      <th className="a-table-cell font-medium">Poste</th>
+                      <th className="a-table-cell font-medium">CNSS n°</th>
+                      <th className="a-table-cell font-medium">Statut</th>
+                      <th className="a-table-cell font-medium">Contrats</th>
+                      <th className="a-table-cell font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {state.items.map((row) => {
+                      const active = row.contracts.filter(
+                        (c) => c.status === "ACTIVE",
+                      );
+                      return (
+                        <tr key={row.id} className={softTr}>
+                          <td className="a-table-cell">
+                            <Link
+                              href={hrEmployeeHref(row.id)}
+                              className="a-mono font-medium text-a-accent hover:underline"
+                            >
+                              {row.matricule}
+                            </Link>
+                          </td>
+                          <td className="a-table-cell">
+                            <span className="inline-flex items-center gap-2">
+                              {row.photoDocumentId ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={`${hrEmployeeDocumentContentHref(row.id, row.photoDocumentId)}?v=${row.photoDocumentId}`}
+                                  alt=""
+                                  className="h-8 w-8 shrink-0 rounded-full object-cover"
+                                />
+                              ) : (
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-a-surface-3 text-[length:var(--a-text-xs)] font-medium text-a-fg-muted">
+                                  {initials(row.displayName)}
+                                </span>
+                              )}
+                              {row.displayName}
+                            </span>
+                          </td>
+                          <td className="a-table-cell text-a-fg-muted">
+                            {[row.jobTitle, row.department]
+                              .filter(Boolean)
+                              .join(" · ") || "—"}
+                          </td>
+                          <td className="a-mono a-table-cell">
+                            {row.cnssNo ?? "—"}
+                          </td>
+                          <td className="a-table-cell">
+                            <ABadge tone={statusTone(row.status)}>
+                              {row.status}
+                            </ABadge>
+                          </td>
+                          <td className="a-table-cell">
+                            {active.length === 0 ? (
+                              <span className="text-a-fg-muted">—</span>
+                            ) : (
+                              <span className="a-mono text-[length:var(--a-text-xs)]">
+                                {active.map((c) => c.number).join(" · ")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="a-table-cell">
+                            <Link
+                              href={hrEmployeeHref(row.id)}
+                              className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline"
+                            >
+                              Fiche
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        ) : null}
+
+        {tab === "postes" && state.kind === "ok" ? (
+          jobTitles.length === 0 ? (
+            <AEmptyState
+              title="Aucun poste"
+              description="Catalogue société vide jusqu’à saisie humaine — pas de texte libre sur l’employé."
+              actionLabel="Nouveau poste"
+              onAction={openCreateJobTitle}
+            />
+          ) : (
+            <div className={softTableWrap}>
+              <table className="w-full min-w-[480px] text-left text-[length:var(--a-text-sm)]">
+                <thead className={softThead}>
+                  <tr>
+                    <th className="a-table-cell font-medium">Code</th>
+                    <th className="a-table-cell font-medium">Libellé</th>
+                    <th className="a-table-cell font-medium">Statut</th>
+                    <th className="a-table-cell font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : null}
+                </thead>
+                <tbody>
+                  {jobTitles.map((t) => (
+                    <tr key={t.id} className={softTr}>
+                      <td className="a-mono a-table-cell">{t.code}</td>
+                      <td className="a-table-cell">{t.name}</td>
+                      <td className="a-table-cell">
+                        <ABadge tone={t.active ? "success" : "neutral"}>
+                          {t.active ? "ACTIF" : "ARCHIVÉ"}
+                        </ABadge>
+                      </td>
+                      <td className="a-table-cell">
+                        <AButton
+                          type="button"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => void onArchiveJobTitle(t.id, !t.active)}
+                        >
+                          {t.active ? "Archiver" : "Réactiver"}
+                        </AButton>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : null}
+
+        {tab === "bulletins" && state.kind === "ok" ? (
+          bulletins.length === 0 ? (
+            <AEmptyState
+              title="Aucun bulletin"
+              description="Générez un bulletin depuis un contrat actif (fiche salarié)."
+              actionLabel="Aller aux employés"
+              onAction={() => goTab("employees")}
+            />
+          ) : (
+            <div className={softTableWrap}>
+              <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
+                <thead className={softThead}>
+                  <tr>
+                    <th className="a-table-cell font-medium">N°</th>
+                    <th className="a-table-cell font-medium">Période</th>
+                    <th className="a-table-cell font-medium">Employé</th>
+                    <th className="a-table-cell font-medium">Net</th>
+                    <th className="a-table-cell font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bulletins.map((b) => (
+                    <tr key={b.id} className={softTr}>
+                      <td className="a-mono a-table-cell">{b.number}</td>
+                      <td className="a-mono a-table-cell">{b.periodYm}</td>
+                      <td className="a-table-cell">
+                        {b.matricule ? `${b.matricule} · ` : ""}
+                        {b.employeeName ?? "—"}
+                      </td>
+                      <td className="a-mono a-table-cell tabular-nums">
+                        {b.netPay} {b.currency}
+                      </td>
+                      <td className="a-table-cell">
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            href={`/hr/bulletins/${b.id}`}
+                            className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline"
+                          >
+                            Imprimer
+                          </Link>
+                          <button
+                            type="button"
+                            className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline disabled:opacity-50"
+                            disabled={pdfBusyId === b.id}
+                            onClick={() => void onDownloadPdf(b.id)}
+                          >
+                            PDF
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : null}
       </div>
 
       <ADrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title={
-          drawerMode === "employee"
-            ? "Nouvel employé"
-            : drawerMode === "contract"
-              ? "Nouveau contrat"
-              : drawerMode === "fiscal"
-                ? "Situation fiscale"
-                : drawerMode === "irpp"
-                  ? "IRPP — preview"
-                  : drawerMode === "bulletin"
-                    ? "Bulletin — preview"
-                    : "CNSS — preview"
+          drawerMode === "jobTitle" ? "Nouveau poste" : "Nouvel employé"
         }
       >
         <div className="space-y-4 p-1">
@@ -694,12 +583,22 @@ export default function HrEmployeesPage() {
               </label>
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Poste
+                  Poste (catalogue)
                 </span>
-                <AInput
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                />
+                <select
+                  className={softSelect}
+                  value={jobTitleId}
+                  onChange={(e) => setJobTitleId(e.target.value)}
+                >
+                  <option value="">— Aucun —</option>
+                  {jobTitles
+                    .filter((t) => t.active)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.code} · {t.name}
+                      </option>
+                    ))}
+                </select>
               </label>
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -731,400 +630,39 @@ export default function HrEmployeesPage() {
             </>
           ) : null}
 
-          {drawerMode === "fiscal" ? (
+          {drawerMode === "jobTitle" ? (
             <>
               <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Défauts employé — figés dans le snapshot IRPP. Obligatoires si
-                Prefs abattements VALIDATED.
+                Catalogue société — vide jusqu’à saisie. Pas de libellés
+                seedés.
               </p>
-              <p className="text-[length:var(--a-text-sm)]">
-                {selected?.displayName} · {selected?.matricule}
-              </p>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[length:var(--a-text-sm)]">
-                  Chef de famille
-                </span>
-                <ASwitch
-                  checked={taxChef}
-                  onCheckedChange={setTaxChef}
-                  label="Chef de famille"
-                />
-              </div>
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Nombre d’enfants à charge
+                  Code
                 </span>
                 <AInput
-                  type="number"
-                  min={0}
-                  max={20}
-                  value={taxEnfantCount}
-                  onChange={(e) => setTaxEnfantCount(e.target.value)}
+                  value={jobCode}
+                  onChange={(e) => setJobCode(e.target.value)}
+                  placeholder="OPE"
                   className="a-mono"
                 />
               </label>
-              <AButton
-                type="button"
-                disabled={busy}
-                onClick={() => void onSaveFiscal()}
-              >
-                Enregistrer
-              </AButton>
-            </>
-          ) : null}
-
-          {drawerMode === "contract" ? (
-            <>
-              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                {selected?.displayName} ({selected?.matricule})
-              </p>
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Type
-                </span>
-                <select
-                  className={softSelect}
-                  value={contractType}
-                  onChange={(e) => setContractType(e.target.value)}
-                >
-                  <option value="CDI">CDI</option>
-                  <option value="CDD">CDD</option>
-                  <option value="INTERIM">Intérim</option>
-                  <option value="STAGE">Stage</option>
-                  <option value="OTHER">Autre</option>
-                </select>
-              </label>
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Début
+                  Libellé
                 </span>
                 <AInput
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Fin (optionnel)
-                </span>
-                <AInput
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Réf. salaire (libellé)
-                </span>
-                <AInput
-                  value={wageRef}
-                  onChange={(e) => setWageRef(e.target.value)}
-                  placeholder="Pas de taux inventé"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Base CNSS TND (saisie humaine)
-                </span>
-                <AInput
-                  value={wageBase}
-                  onChange={(e) => setWageBase(e.target.value)}
-                  placeholder="ex. 1200.000"
-                  className="a-mono"
+                  value={jobName}
+                  onChange={(e) => setJobName(e.target.value)}
+                  placeholder="Opérateur"
                 />
               </label>
               <AButton
                 type="button"
-                disabled={busy || !startDate}
-                onClick={() => void onCreateContract()}
+                disabled={busy || !jobCode.trim() || !jobName.trim()}
+                onClick={() => void onCreateJobTitle()}
               >
-                Créer le contrat
-              </AButton>
-            </>
-          ) : null}
-
-          {drawerMode === "cnss" ? (
-            <>
-              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Contrat {cnssContract?.number} · base{" "}
-                <span className="a-mono">
-                  {cnssContract?.wageBase ?? "—"}
-                </span>{" "}
-                TND
-              </p>
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Période (YYYY-MM)
-                </span>
-                <AInput
-                  value={periodYm}
-                  onChange={(e) => setPeriodYm(e.target.value)}
-                  className="a-mono"
-                />
-              </label>
-              <AButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={busy}
-                onClick={() => void refreshCnssPreview()}
-              >
-                Recalculer
-              </AButton>
-              {cnssPreview ? (
-                <div className="a-underlay space-y-2 rounded-md p-3 text-[length:var(--a-text-sm)]">
-                  <p>
-                    Assiette{" "}
-                    <span className="a-mono tabular-nums">
-                      {cnssPreview.assiette.toFixed(3)}
-                    </span>
-                    {cnssPreview.ceilingApplied ? " · plafond appliqué" : ""}
-                  </p>
-                  <p>
-                    Salarié{" "}
-                    <span className="a-mono tabular-nums">
-                      {cnssPreview.employeeAmount != null
-                        ? cnssPreview.employeeAmount.toFixed(3)
-                        : "—"}
-                    </span>
-                  </p>
-                  <p>
-                    Employeur{" "}
-                    <span className="a-mono tabular-nums">
-                      {cnssPreview.employerAmount != null
-                        ? cnssPreview.employerAmount.toFixed(3)
-                        : "—"}
-                    </span>
-                  </p>
-                  {!cnssPreview.ready ? (
-                    <p className="text-a-warning">
-                      Expertise requise : {cnssPreview.pending.join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-              {levyPreview ? (
-                <div className="a-underlay space-y-2 rounded-md p-3 text-[length:var(--a-text-sm)]">
-                  <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Taxes employeur (Prefs) — hors net bulletin
-                  </p>
-                  <p>
-                    TFP{" "}
-                    <span className="a-mono tabular-nums">
-                      {levyPreview.tfp.amount != null
-                        ? levyPreview.tfp.amount.toFixed(3)
-                        : "—"}
-                    </span>{" "}
-                    TND
-                  </p>
-                  <p>
-                    FOPROLOS{" "}
-                    <span className="a-mono tabular-nums">
-                      {levyPreview.foprolos.amount != null
-                        ? levyPreview.foprolos.amount.toFixed(3)
-                        : "—"}
-                    </span>{" "}
-                    TND
-                  </p>
-                  {!levyPreview.ready ? (
-                    <p className="text-a-warning">
-                      Expertise requise : {levyPreview.pending.join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-              <AButton
-                type="button"
-                disabled={busy || !cnssPreview?.ready}
-                onClick={() => void onSnapshot()}
-              >
-                Enregistrer snapshot
-              </AButton>
-            </>
-          ) : null}
-
-          {drawerMode === "irpp" ? (
-            <>
-              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Assiette = wageBase − CNSS − abattements annuels Prefs (si
-                VALIDATED) · barème / 12. Aucun seuil inventé.
-              </p>
-              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Contrat {cnssContract?.number} · base{" "}
-                <span className="a-mono">
-                  {cnssContract?.wageBase ?? "—"}
-                </span>{" "}
-                TND
-              </p>
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Période (YYYY-MM)
-                </span>
-                <AInput
-                  value={periodYm}
-                  onChange={(e) => setPeriodYm(e.target.value)}
-                  className="a-mono"
-                />
-              </label>
-              <AButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={busy}
-                onClick={() => void refreshIrppPreview()}
-              >
-                Recalculer
-              </AButton>
-              {irppPreview ? (
-                <div className="a-underlay space-y-2 rounded-md p-3 text-[length:var(--a-text-sm)]">
-                  <p>
-                    CNSS salarié{" "}
-                    <span className="a-mono tabular-nums">
-                      {irppPreview.cnssEmployeeAmount != null
-                        ? irppPreview.cnssEmployeeAmount.toFixed(3)
-                        : "—"}
-                    </span>
-                  </p>
-                  <p>
-                    Imposable mensuel{" "}
-                    <span className="a-mono tabular-nums">
-                      {irppPreview.taxableMonthly != null
-                        ? irppPreview.taxableMonthly.toFixed(3)
-                        : "—"}
-                    </span>
-                  </p>
-                  <p>
-                    Imposable annuel (avant abat.){" "}
-                    <span className="a-mono tabular-nums">
-                      {irppPreview.annualTaxableBeforeAbat != null
-                        ? irppPreview.annualTaxableBeforeAbat.toFixed(3)
-                        : "—"}
-                    </span>
-                  </p>
-                  <p>
-                    Abattements annuels{" "}
-                    <span className="a-mono tabular-nums">
-                      {irppPreview.abatTotalAnnual.toFixed(3)}
-                    </span>
-                  </p>
-                  <p>
-                    Imposable annuel (après abat.){" "}
-                    <span className="a-mono tabular-nums">
-                      {irppPreview.annualTaxable != null
-                        ? irppPreview.annualTaxable.toFixed(3)
-                        : "—"}
-                    </span>
-                  </p>
-                  <p>
-                    IRPP annuel{" "}
-                    <span className="a-mono tabular-nums">
-                      {irppPreview.annualIrpp != null
-                        ? irppPreview.annualIrpp.toFixed(3)
-                        : "—"}
-                    </span>
-                  </p>
-                  <p>
-                    IRPP mensuel{" "}
-                    <span className="a-mono tabular-nums">
-                      {irppPreview.monthlyIrpp != null
-                        ? irppPreview.monthlyIrpp.toFixed(3)
-                        : "—"}
-                    </span>
-                  </p>
-                  {!irppPreview.ready ? (
-                    <p className="text-a-warning">
-                      Expertise requise : {irppPreview.pending.join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-              <AButton
-                type="button"
-                disabled={busy || !irppPreview?.ready}
-                onClick={() => void onIrppSnapshot()}
-              >
-                Enregistrer snapshot
-              </AButton>
-            </>
-          ) : null}
-
-          {drawerMode === "bulletin" ? (
-            <>
-              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Compose CNSS + IRPP snapshots pour la période. Net = wageBase −
-                CNSS salarié − IRPP mensuel (TFP/FOPROLOS employeur hors net).
-                PDF serveur via fiche bulletin.
-              </p>
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Période (YYYY-MM)
-                </span>
-                <AInput
-                  value={periodYm}
-                  onChange={(e) => setPeriodYm(e.target.value)}
-                  className="a-mono"
-                />
-              </label>
-              <AButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={busy}
-                onClick={() => void refreshBulletinPreview()}
-              >
-                Recalculer
-              </AButton>
-              {bulletinPreview ? (
-                <div className="a-underlay space-y-2 rounded-md p-3 text-[length:var(--a-text-sm)]">
-                  <p>
-                    {bulletinPreview.matricule} · {bulletinPreview.employeeName}
-                  </p>
-                  <p>
-                    Base{" "}
-                    <span className="a-mono tabular-nums">
-                      {bulletinPreview.wageBase?.toFixed(3) ?? "—"}
-                    </span>
-                  </p>
-                  <p>
-                    CNSS salarié{" "}
-                    <span className="a-mono tabular-nums">
-                      {bulletinPreview.cnssEmployeeAmount?.toFixed(3) ?? "—"}
-                    </span>
-                  </p>
-                  <p>
-                    CNSS employeur{" "}
-                    <span className="a-mono tabular-nums">
-                      {bulletinPreview.cnssEmployerAmount?.toFixed(3) ?? "—"}
-                    </span>
-                  </p>
-                  <p>
-                    IRPP mensuel{" "}
-                    <span className="a-mono tabular-nums">
-                      {bulletinPreview.irppMonthly?.toFixed(3) ?? "—"}
-                    </span>
-                  </p>
-                  <p>
-                    Net{" "}
-                    <span className="a-mono tabular-nums font-medium">
-                      {bulletinPreview.netPay?.toFixed(3) ?? "—"}
-                    </span>{" "}
-                    {bulletinPreview.currency}
-                  </p>
-                  {!bulletinPreview.ready ? (
-                    <p className="text-a-warning">
-                      Snapshots requis : {bulletinPreview.pending.join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-              <AButton
-                type="button"
-                disabled={busy || !bulletinPreview?.ready}
-                onClick={() => void onCreateBulletin()}
-              >
-                Enregistrer & imprimer
+                Créer le poste
               </AButton>
             </>
           ) : null}

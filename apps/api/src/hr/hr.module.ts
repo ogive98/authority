@@ -13,6 +13,8 @@ import { IrppService } from './irpp.service';
 import { BulletinService } from './bulletin.service';
 import { BulletinPdfService } from './bulletin-pdf.service';
 import { LevyService } from './levy.service';
+import { JobTitleService } from './job-title.service';
+import { HrDocumentService } from './hr-document.service';
 
 @Module({
   imports: [
@@ -32,7 +34,16 @@ import { LevyService } from './levy.service';
     BulletinService,
     BulletinPdfService,
     LevyService,
+    JobTitleService,
+    HrDocumentService,
   ],
-  exports: [HrService, CnssService, IrppService, BulletinService, LevyService],
+  exports: [
+    HrService,
+    CnssService,
+    IrppService,
+    BulletinService,
+    LevyService,
+    JobTitleService,
+  ],
 })
 export class HrModule {}

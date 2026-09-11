@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { featureHideKey, OPS_VISIBILITY_DEFAULTS } from "./ops-visibility";
-import { resolveOpsRouteBlock } from "./ops-route-block";
+import {
+  longestMatchingFeature,
+  resolveOpsRouteBlock,
+} from "./ops-route-block";
 import type { MeRegistry } from "./registry";
 
 const registry: MeRegistry = {
@@ -25,6 +28,15 @@ const registry: MeRegistry = {
       features: [
         { id: "coa", label: "Plan comptable", href: "/accounting" },
         { id: "entries", label: "Écritures", href: "/accounting?tab=entries" },
+      ],
+    },
+    {
+      key: "hr",
+      name: "RH",
+      features: [
+        { id: "hr-employees", label: "Employés", href: "/hr" },
+        { id: "hr-job-titles", label: "Postes", href: "/hr?tab=postes" },
+        { id: "hr-bulletins", label: "Bulletins", href: "/hr?tab=bulletins" },
       ],
     },
   ],
@@ -86,6 +98,23 @@ assert.equal(
     },
   )?.reason,
   "accounting-partial",
+);
+
+assert.equal(
+  longestMatchingFeature(registry, {
+    pathname: "/hr",
+    search: "?tab=postes",
+    hash: "",
+  })?.feature.id,
+  "hr-job-titles",
+);
+assert.equal(
+  longestMatchingFeature(registry, {
+    pathname: "/hr",
+    search: "",
+    hash: "",
+  })?.feature.id,
+  "hr-employees",
 );
 
 console.log("ops-route-block OK");

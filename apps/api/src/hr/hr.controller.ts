@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -11,8 +12,11 @@ import {
   Query,
   Res,
   StreamableFile,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import type { IamUser } from '@prisma/client';
 import { SessionGuard } from '../identity/session.guard';
@@ -26,15 +30,18 @@ import { PermissionGuard } from '../permissions/permission.guard';
 import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import { PermissionService } from '../permissions/permission.service';
+import { DEFAULT_MAX_UPLOAD_MB } from '../platform/platform.constants';
 import {
   CreateBulletinDto,
   CreateCnssSnapshotDto,
   CreateContractDto,
   CreateEmployeeDto,
   CreateIrppSnapshotDto,
+  CreateJobTitleDto,
   EndContractDto,
   PatchContractDto,
   PatchEmployeeDto,
+  PatchJobTitleDto,
   ReplaceIrppBracketsDto,
 } from './hr.dto';
 import { HrService } from './hr.service';
@@ -44,6 +51,13 @@ import { BulletinService } from './bulletin.service';
 import { BulletinPdfService } from './bulletin-pdf.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
 import { LevyService } from './levy.service';
+import { JobTitleService } from './job-title.service';
+import { HR_ERROR_CODES, isHrImageMime } from './hr.constants';
+import { HrException } from './hr.exception';
+import { HrDocumentService } from './hr-document.service';
+
+const maxUploadBytes =
+  Number(process.env.MAX_UPLOAD_MB ?? DEFAULT_MAX_UPLOAD_MB) * 1024 * 1024;
 
 @Controller('api/v1/hr')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
@@ -58,6 +72,8 @@ export class HrController {
     private readonly expertise: ExpertiseResolverService,
     private readonly permissions: PermissionService,
     private readonly levies: LevyService,
+    private readonly jobTitles: JobTitleService,
+    private readonly hrDocuments: HrDocumentService,
   ) {}
 
   /**
@@ -84,6 +100,38 @@ export class HrController {
     @Query('contractId', ParseUUIDPipe) contractId: string,
   ) {
     return this.levies.preview(tenancy.companyId, contractId);
+  }
+
+  @Get('job-titles')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
+  listJobTitles(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('activeOnly') activeOnlyRaw?: string,
+  ) {
+    const activeOnly =
+      activeOnlyRaw === '1' || activeOnlyRaw === 'true';
+    return this.jobTitles.list(tenancy.companyId, { activeOnly });
+  }
+
+  @Post('job-titles')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  createJobTitle(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateJobTitleDto,
+  ) {
+    return this.jobTitles.create(tenancy.companyId, dto);
+  }
+
+  @Patch('job-titles/:id')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  patchJobTitle(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: PatchJobTitleDto,
+  ) {
+    return this.jobTitles.patch(tenancy.companyId, id, dto);
   }
 
   @Get('cnss/preview')
@@ -287,6 +335,111 @@ export class HrController {
       { companyId: tenancy.companyId },
     );
     return this.hr.getEmployee(tenancy.companyId, id, includeWage);
+  }
+
+  @Get('employees/:id/documents')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
+  listEmployeeDocuments(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.hrDocuments.list(tenancy.companyId, id);
+  }
+
+  @Post('employees/:id/documents')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: maxUploadBytes } }),
+  )
+  uploadEmployeeDocument(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile()
+    file: { buffer: Buffer; mimetype: string; originalname?: string },
+    @Body() body: { title?: string },
+  ) {
+    return this.hrDocuments.upload(
+      tenancy.companyId,
+      user.id,
+      id,
+      file,
+      body.title,
+    );
+  }
+
+  @Get('employees/:id/documents/:docId/download')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
+  downloadEmployeeDocument(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('docId', ParseUUIDPipe) docId: string,
+  ) {
+    return this.hrDocuments.getDownload(tenancy.companyId, id, docId);
+  }
+
+  /** Inline stream for aperçu / impression (same IDOR as download). */
+  @Get('employees/:id/documents/:docId/content')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
+  async streamEmployeeDocument(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('docId', ParseUUIDPipe) docId: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const file = await this.hrDocuments.getContent(
+      tenancy.companyId,
+      id,
+      docId,
+    );
+    res.setHeader('Content-Type', file.mime);
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${file.filename}"`,
+    );
+    res.setHeader('Cache-Control', 'private, max-age=60');
+    return new StreamableFile(file.buffer);
+  }
+
+  @Post('employees/:id/photo')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: maxUploadBytes } }),
+  )
+  async uploadEmployeePhoto(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile()
+    file: { buffer: Buffer; mimetype: string; originalname?: string },
+  ) {
+    if (!file?.buffer || !isHrImageMime(file.mimetype)) {
+      throw new HrException(
+        HR_ERROR_CODES.PHOTO_INVALID,
+        'Photo must be JPEG, PNG, WebP or GIF.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const includeWage = await this.permissions.evaluate(
+      user.id,
+      PERMISSION_KEYS.hrWageRead,
+      { companyId: tenancy.companyId },
+    );
+    const doc = await this.hrDocuments.upload(
+      tenancy.companyId,
+      user.id,
+      id,
+      file,
+      'Photo',
+    );
+    return this.hr.patchEmployee(
+      tenancy.companyId,
+      id,
+      { photoDocumentId: doc.id },
+      includeWage,
+    );
   }
 
   @Post('employees')

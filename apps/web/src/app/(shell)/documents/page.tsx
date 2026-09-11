@@ -51,7 +51,14 @@ const VIS_FILTERS: Array<{
   { id: "CUSTOMER_PORTAL", label: "Portal" },
 ];
 
-const LINK_TYPES = ["NONE", "CLAIM", "ORDER", "SHIPMENT"] as const;
+const LINK_TYPES = [
+  "NONE",
+  "CLAIM",
+  "ORDER",
+  "SHIPMENT",
+  "HR_EMPLOYEE",
+  "HR_BULLETIN",
+] as const;
 
 function visibilityTone(visibility: string) {
   return visibility === "CUSTOMER_PORTAL" ? "accent" : "neutral";
@@ -202,7 +209,7 @@ export default function DocumentsPage() {
       <AScreenHeader
         kicker="Documents"
         title="Bibliothèque"
-        description="Fichiers SOC-09 · lien CLAIM/ORDER/SHIPMENT · signed URL portal."
+        description="Fichiers SOC-09 · lien CLAIM/ORDER/SHIPMENT/HR_EMPLOYEE/HR_BULLETIN · signed URL portal."
         actions={
           <AButton type="button" size="sm" onClick={() => setDrawerOpen(true)}>
             Déposer un fichier
