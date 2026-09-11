@@ -121,6 +121,60 @@ describe('FinanceGlPostingService', () => {
     );
   });
 
+  it('posts credit note VAT split as inverse of invoice', async () => {
+    const prisma = {
+      accJournalEntry: { findFirst: jest.fn().mockResolvedValue(null) },
+      accAccount: {
+        findMany: jest.fn().mockResolvedValue([
+          { code: '411', id: 'a-ar' },
+          { code: '701', id: 'a-rev' },
+          { code: '4367', id: 'a-vat' },
+        ]),
+      },
+      accJournal: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'j-ven' }),
+      },
+      accFiscalPeriod: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'p-1' }),
+      },
+    };
+    const accounting = {
+      createEntry: jest.fn().mockResolvedValue({ id: 'draft-cn' }),
+      postEntry: jest
+        .fn()
+        .mockResolvedValue({ id: 'posted-cn', number: 'JE-CN' }),
+      reverseEntry: jest.fn(),
+    };
+    const svc = new FinanceGlPostingService(
+      prisma as never,
+      accounting as never,
+      glMapping as never,
+    );
+    const result = await svc.postCreditNoteIssued(companyId, {
+      sourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      creditNoteId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+      amount: 119,
+      amountHt: 100,
+      amountTax: 19,
+      entryDate: '2026-09-11',
+    });
+    expect(result.outcome).toBe('posted');
+    expect(accounting.createEntry).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        sourceType: 'fin_credit_note',
+        lines: expect.arrayContaining([
+          expect.objectContaining({ credit: 119, memo: 'AR credit TTC' }),
+          expect.objectContaining({ debit: 100, memo: 'Revenue reverse HT' }),
+          expect.objectContaining({
+            debit: 19,
+            memo: 'VAT reverse as-recorded',
+          }),
+        ]),
+      }),
+    );
+  });
+
   it('deaccounts invoice GL via reverse', async () => {
     const prisma = {
       accJournalEntry: {

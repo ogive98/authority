@@ -136,6 +136,61 @@ export class CreateInvoiceDto {
   issue?: boolean;
 }
 
+export class CreateCreditNoteLineDto {
+  @IsString()
+  @MaxLength(240)
+  description!: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  qty!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  unitPriceHt!: number;
+
+  @IsUUID()
+  taxCodeId!: string;
+}
+
+/** Credit note / avoir V0 (D192) — invoice-linked only. */
+export class CreateCreditNoteDto {
+  @IsUUID()
+  sourceInvoiceId!: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateCreditNoteLineDto)
+  lines?: CreateCreditNoteLineDto[];
+
+  /** Clone all lines from the source ISSUED invoice. */
+  @IsOptional()
+  @IsBoolean()
+  copyFull?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  reason?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  notes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  currency?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  issue?: boolean;
+}
+
 export class CreatePaymentInstrumentDto {
   @IsEnum(FinInstrumentType)
   type!: FinInstrumentType;

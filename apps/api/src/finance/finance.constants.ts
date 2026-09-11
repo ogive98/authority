@@ -24,6 +24,8 @@ export const FINANCE_ERROR_CODES = {
   DUNNING_NOT_FOUND: 'FIN.DUNNING_NOT_FOUND',
   DUNNING_CONTACT: 'FIN.DUNNING_CONTACT',
   DUNNING_EXISTS: 'FIN.DUNNING_EXISTS',
+  CREDIT_NOTE_NOT_FOUND: 'FIN.CREDIT_NOTE_NOT_FOUND',
+  CREDIT_NOTE_OVER_CAP: 'FIN.CREDIT_NOTE_OVER_CAP',
 } as const;
 
 export type FinanceErrorCode =
@@ -34,6 +36,7 @@ export const FINANCE_EVENT_TYPES = {
   ALLOCATION_RECORDED: 'finance.allocation.recorded.v1',
   INVOICE_ISSUED: 'finance.invoice.issued.v1',
   INVOICE_CANCELLED: 'finance.invoice.cancelled.v1',
+  CREDIT_NOTE_ISSUED: 'finance.credit_note.issued.v1',
   PAYMENT_POSTED: 'finance.payment.posted.v1',
   PAYMENT_ALLOCATED: 'finance.payment.allocated.v1',
   PAYMENT_REVERSED: 'finance.payment.reversed.v1',

@@ -237,6 +237,12 @@ export default function FinanceInvoicesPage() {
               Créances
             </Link>
             <Link
+              href="/finance/credit-notes"
+              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
+            >
+              Avoirs
+            </Link>
+            <Link
               href="/finance/banking"
               className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
             >
@@ -355,6 +361,16 @@ export default function FinanceInvoicesPage() {
                           >
                             Émettre
                           </AButton>
+                        ) : null}
+                        {inv.status === "ISSUED" ? (
+                          <Link
+                            href={`/finance/credit-notes?invoiceId=${encodeURIComponent(inv.id)}`}
+                            className="inline-flex"
+                          >
+                            <AButton type="button" variant="secondary" size="sm">
+                              Avoir
+                            </AButton>
+                          </Link>
                         ) : null}
                         {inv.status === "DRAFT" || inv.status === "ISSUED" ? (
                           <AButton

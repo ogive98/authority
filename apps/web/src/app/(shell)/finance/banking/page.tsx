@@ -320,6 +320,12 @@ export default function FinanceBankingPage() {
               Encaissements
             </Link>
             <Link
+              href="/finance/credit-notes"
+              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
+            >
+              Avoirs
+            </Link>
+            <Link
               href="/finance/instruments"
               className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
             >

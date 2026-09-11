@@ -9,6 +9,7 @@ describe('ThunderDomainRegistrar', () => {
   const productId = '44444444-4444-4444-4444-444444444444';
   const gl = {
     postInvoiceIssued: jest.fn(),
+    postCreditNoteIssued: jest.fn(),
     postPaymentAllocated: jest.fn(),
     reversePaymentOnInstrumentReject: jest.fn(),
     reverseInvoiceIssued: jest.fn(),
@@ -46,6 +47,7 @@ describe('ThunderDomainRegistrar', () => {
         consumes: [
           'finance.invoice.issued.v1',
           'finance.invoice.cancelled.v1',
+          'finance.credit_note.issued.v1',
           'finance.payment.allocated.v1',
           'finance.payment.reversed.v1',
           'finance.instrument.rejected.v1',
@@ -216,6 +218,48 @@ describe('ThunderDomainRegistrar', () => {
         invoiceId,
         amount: 120.5,
         sourceId: '77777777-7777-7777-7777-777777777777',
+      }),
+    );
+  });
+
+  it('posts GL from finance.credit_note.issued when accounting enabled', async () => {
+    gl.postCreditNoteIssued.mockResolvedValue({
+      outcome: 'posted',
+      entryId: 'je-cn',
+      number: 'JE-CN',
+    });
+    const registrar = new ThunderDomainRegistrar(
+      { register: jest.fn() } as never,
+      { isEnabled: jest.fn().mockResolvedValue(true) } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      gl as never,
+    );
+    const creditNoteId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    await registrar.onFinanceToGl({
+      eventId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+      eventType: 'finance.credit_note.issued.v1',
+      eventVersion: 1,
+      occurredAt: new Date().toISOString(),
+      source: 'finance',
+      companyId,
+      correlationId: 'c4b',
+      aggregateType: 'fin_credit_note',
+      aggregateId: creditNoteId,
+      payload: {
+        creditNoteId,
+        amountTotal: '50.000',
+        amountHt: '42.017',
+        amountTax: '7.983',
+      },
+    });
+    expect(gl.postCreditNoteIssued).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        creditNoteId,
+        amount: 50,
+        sourceId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
       }),
     );
   });

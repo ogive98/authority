@@ -9,6 +9,7 @@ import { SettingsModule } from '../settings/settings.module';
 import { AllocationEngineService } from './allocation-engine.service';
 import { BankingService } from './banking.service';
 import { CollectionScheduleResolver } from './collection-schedule.resolver';
+import { CreditNoteService } from './credit-note.service';
 import { CreditPressureResolver } from './credit-pressure.resolver';
 import { DunningService } from './dunning.service';
 import { FinanceController } from './finance.controller';
@@ -31,6 +32,7 @@ import { PromiseService } from './promise.service';
   providers: [
     FinanceService,
     InvoiceService,
+    CreditNoteService,
     PaymentService,
     AllocationEngineService,
     PromiseService,
@@ -42,6 +44,7 @@ import { PromiseService } from './promise.service';
   exports: [
     FinanceService,
     InvoiceService,
+    CreditNoteService,
     PaymentService,
     PromiseService,
     BankingService,

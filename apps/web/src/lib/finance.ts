@@ -1,5 +1,6 @@
 export type OpenItemStatus = "OPEN" | "PARTIAL" | "CLOSED";
 export type InvoiceStatus = "DRAFT" | "ISSUED" | "CANCELLED";
+export type CreditNoteStatus = "DRAFT" | "ISSUED" | "CANCELLED";
 export type PaymentMethod =
   | "CASH"
   | "BANK_TRANSFER"
@@ -74,6 +75,45 @@ export type FinInvoice = {
   label: string | null;
   notes: string | null;
   openItemId: string | null;
+  expertiseApplied?: { fodec: boolean; timbre: boolean };
+  lines: {
+    id: string;
+    lineNo: number;
+    description: string;
+    qty: string;
+    unitPriceHt: string;
+    taxCodeId: string;
+    taxCode: string | null;
+    amountHt: string;
+    amountTax: string;
+    amountTtc: string;
+  }[];
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FinCreditNote = {
+  id: string;
+  companyId: string;
+  number: string;
+  invoiceId: string;
+  invoiceNumber: string | null;
+  customerId: string;
+  customerCode: string | null;
+  customerName: string | null;
+  status: CreditNoteStatus;
+  currency: string;
+  amountHt: string;
+  amountTax: string;
+  amountFodec?: string;
+  amountTimbre?: string;
+  amountTotal: string;
+  amountAppliedToAr: string;
+  amountUnapplied: string;
+  reason: string | null;
+  notes: string | null;
+  issuedAt: string | null;
   expertiseApplied?: { fodec: boolean; timbre: boolean };
   lines: {
     id: string;
@@ -200,6 +240,12 @@ export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
   DRAFT: "Brouillon",
   ISSUED: "Émise",
   CANCELLED: "Annulée",
+};
+
+export const CREDIT_NOTE_STATUS_LABELS: Record<CreditNoteStatus, string> = {
+  DRAFT: "Brouillon",
+  ISSUED: "Émis",
+  CANCELLED: "Annulé",
 };
 
 export const POLICY_LABELS: Record<AllocationPolicy, string> = {
@@ -446,6 +492,104 @@ export async function cancelInvoice(
     });
     if (!res.ok) return parseFail(res);
     return { ok: true, data: (await res.json()) as FinInvoice };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchCreditNotes(opts?: {
+  q?: string;
+  status?: CreditNoteStatus | "";
+  invoiceId?: string;
+}): Promise<
+  | { ok: true; data: { items: FinCreditNote[]; nextCursor: string | null } }
+  | ApiFail
+> {
+  try {
+    const params = new URLSearchParams();
+    if (opts?.q?.trim()) params.set("q", opts.q.trim());
+    if (opts?.status) params.set("status", opts.status);
+    if (opts?.invoiceId) params.set("invoiceId", opts.invoiceId);
+    const qs = params.toString();
+    const res = await fetch(
+      `/api/v1/finance/credit-notes${qs ? `?${qs}` : ""}`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as {
+        items: FinCreditNote[];
+        nextCursor: string | null;
+      },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function createCreditNote(body: {
+  sourceInvoiceId: string;
+  lines?: {
+    description: string;
+    qty: number;
+    unitPriceHt: number;
+    taxCodeId: string;
+  }[];
+  copyFull?: boolean;
+  reason?: string;
+  notes?: string;
+  currency?: string;
+  issue?: boolean;
+}): Promise<{ ok: true; data: FinCreditNote } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/finance/credit-notes", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinCreditNote };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function issueCreditNote(
+  id: string,
+): Promise<{ ok: true; data: FinCreditNote } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/credit-notes/${id}/issue`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinCreditNote };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function cancelCreditNote(
+  id: string,
+): Promise<{ ok: true; data: FinCreditNote } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/credit-notes/${id}/cancel`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinCreditNote };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
@@ -763,6 +907,14 @@ export function isOpenItemOverdue(
 
 export function invoiceBadgeTone(
   status: InvoiceStatus,
+): "success" | "warning" | "accent" | "neutral" {
+  if (status === "ISSUED") return "success";
+  if (status === "DRAFT") return "warning";
+  return "neutral";
+}
+
+export function creditNoteBadgeTone(
+  status: CreditNoteStatus,
 ): "success" | "warning" | "accent" | "neutral" {
   if (status === "ISSUED") return "success";
   if (status === "DRAFT") return "warning";

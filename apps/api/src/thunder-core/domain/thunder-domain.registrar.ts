@@ -48,6 +48,7 @@ export class ThunderDomainRegistrar implements OnModuleInit {
         consumes: [
           THUNDER_DOMAIN_EVENT_TYPES.financeInvoiceIssued,
           THUNDER_DOMAIN_EVENT_TYPES.financeInvoiceCancelled,
+          THUNDER_DOMAIN_EVENT_TYPES.financeCreditNoteIssued,
           THUNDER_DOMAIN_EVENT_TYPES.financePaymentAllocated,
           THUNDER_DOMAIN_EVENT_TYPES.financePaymentReversed,
           THUNDER_DOMAIN_EVENT_TYPES.financeInstrumentRejected,
@@ -206,6 +207,38 @@ export class ThunderDomainRegistrar implements OnModuleInit {
       });
       this.logger.log(
         `accounting.postFromFinance invoice ${result.outcome} ${
+          'number' in result ? result.number : result.reason
+        }`,
+      );
+      return;
+    }
+
+    if (
+      envelope.eventType === THUNDER_DOMAIN_EVENT_TYPES.financeCreditNoteIssued
+    ) {
+      const creditNoteId =
+        stringPayload(envelope.payload, 'creditNoteId') ||
+        envelope.aggregateId;
+      const amount = numberPayload(envelope.payload, 'amountTotal');
+      const amountHt = numberPayload(envelope.payload, 'amountHt');
+      const amountTax = numberPayload(envelope.payload, 'amountTax');
+      if (!creditNoteId || amount == null) {
+        this.logger.warn(
+          'accounting.postFromFinance credit_note: missing fields',
+        );
+        return;
+      }
+      const result = await this.financeGl.postCreditNoteIssued(companyId, {
+        sourceId: envelope.eventId,
+        creditNoteId,
+        amount,
+        amountHt: amountHt ?? undefined,
+        amountTax: amountTax ?? undefined,
+        entryDate: today,
+        description: `credit_note:${creditNoteId}`,
+      });
+      this.logger.log(
+        `accounting.postFromFinance credit_note ${result.outcome} ${
           'number' in result ? result.number : result.reason
         }`,
       );

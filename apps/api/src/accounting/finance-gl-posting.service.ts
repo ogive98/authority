@@ -148,6 +148,130 @@ export class FinanceGlPostingService {
     });
   }
 
+  /** Credit note issued → Cr Clients TTC / Dr Ventes HT [/ Dr TVA] (inverse of invoice). */
+  async postCreditNoteIssued(
+    companyId: string,
+    input: {
+      sourceId: string;
+      creditNoteId: string;
+      /** TTC — always required for AR credit. */
+      amount: number;
+      amountHt?: number;
+      amountTax?: number;
+      entryDate: string;
+      description?: string;
+    },
+  ): Promise<FinanceGlPostResult> {
+    const amountTtc = round3(input.amount);
+    if (amountTtc <= 0) {
+      return { outcome: 'skipped', reason: 'non-positive amount' };
+    }
+
+    const existing = await this.findBySource(
+      companyId,
+      'fin_credit_note',
+      input.sourceId,
+    );
+    if (existing) {
+      return {
+        outcome: 'existing',
+        entryId: existing.id,
+        number: existing.number,
+      };
+    }
+
+    const map = await this.glMapping.resolve(companyId);
+    const tax = round3(input.amountTax ?? 0);
+    const ht =
+      input.amountHt != null
+        ? round3(input.amountHt)
+        : round3(amountTtc - tax);
+
+    const useVatSplit =
+      tax > 0 && Math.abs(round3(ht + tax) - amountTtc) < 0.002;
+
+    if (useVatSplit) {
+      const accounts = await this.resolveAccounts(companyId, [
+        map.ar,
+        map.revenue,
+        map.vat,
+      ]);
+      if (!accounts) {
+        return {
+          outcome: 'skipped',
+          reason: `missing CoA ${map.ar}/${map.revenue}/${map.vat}`,
+        };
+      }
+      return this.createAndPost(companyId, {
+        sourceType: 'fin_credit_note',
+        sourceId: input.sourceId,
+        entryDate: input.entryDate,
+        description:
+          input.description ?? `credit_note:${input.creditNoteId}`,
+        journalCode: map.salesJournal,
+        lines: [
+          {
+            accountId: accounts[map.ar]!,
+            debit: 0,
+            credit: amountTtc,
+            lineNo: 1,
+            memo: 'AR credit TTC',
+          },
+          {
+            accountId: accounts[map.revenue]!,
+            debit: ht,
+            credit: 0,
+            lineNo: 2,
+            memo: 'Revenue reverse HT',
+          },
+          {
+            accountId: accounts[map.vat]!,
+            debit: tax,
+            credit: 0,
+            lineNo: 3,
+            memo: 'VAT reverse as-recorded',
+          },
+        ],
+      });
+    }
+
+    const accounts = await this.resolveAccounts(companyId, [
+      map.ar,
+      map.revenue,
+    ]);
+    if (!accounts) {
+      return {
+        outcome: 'skipped',
+        reason: `missing CoA ${map.ar}/${map.revenue}`,
+      };
+    }
+
+    return this.createAndPost(companyId, {
+      sourceType: 'fin_credit_note',
+      sourceId: input.sourceId,
+      entryDate: input.entryDate,
+      description:
+        input.description ?? `credit_note:${input.creditNoteId}`,
+      journalCode: map.salesJournal,
+      lines: [
+        {
+          accountId: accounts[map.ar]!,
+          debit: 0,
+          credit: amountTtc,
+          lineNo: 1,
+          memo: 'AR credit',
+        },
+        {
+          accountId: accounts[map.revenue]!,
+          debit: amountTtc,
+          credit: 0,
+          lineNo: 2,
+          memo: 'Revenue reverse',
+        },
+      ],
+    });
+  }
+
   /**
    * Décomptabilisation facture — reverse all POSTED fin_invoice GL rows for invoice.
    * Idempotent on reverseSourceId.

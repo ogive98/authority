@@ -67,6 +67,7 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       features: [
         { id: "open-items", label: "Créances", href: "/finance" },
         { id: "invoices", label: "Factures", href: "/finance/invoices" },
+        { id: "credit-notes", label: "Avoirs", href: "/finance/credit-notes" },
         { id: "payments", label: "Encaissements", href: "/finance/payments" },
         { id: "instruments", label: "Instruments", href: "/finance/instruments" },
         { id: "promises", label: "Promesses", href: "/finance/promises" },

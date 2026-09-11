@@ -1393,6 +1393,12 @@ enum FinInvoiceStatus {
   CANCELLED
 }
 
+enum FinCreditNoteStatus {
+  DRAFT
+  ISSUED
+  CANCELLED
+}
+
 enum FinPaymentMethod {
   CASH
   BANK_TRANSFER
@@ -1466,8 +1472,9 @@ model FinInvoice {
   updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt    DateTime?       @map("deleted_at") @db.Timestamptz(6)
 
-  openItems FinOpenItem[]
-  lines     FinInvoiceLine[]
+  openItems   FinOpenItem[]
+  lines       FinInvoiceLine[]
+  creditNotes FinCreditNote[]
 
   @@unique([companyId, number])
   @@index([companyId, createdAt(sort: Desc)])
@@ -1497,6 +1504,65 @@ model FinInvoiceLine {
   @@unique([invoiceId, lineNo])
   @@index([companyId, invoiceId])
   @@map("fin_invoice_line")
+}
+
+/** Credit note / avoir V0 (D192) — invoice-linked only; no stock restore. */
+model FinCreditNote {
+  id                String              @id @default(uuid()) @db.Uuid
+  companyId         String              @map("company_id") @db.Uuid
+  number            String
+  invoiceId         String              @map("invoice_id") @db.Uuid
+  customerId        String              @map("customer_id") @db.Uuid
+  status            FinCreditNoteStatus @default(DRAFT)
+  currency          String              @default("TND")
+  amountHt          Decimal             @default(0) @map("amount_ht") @db.Decimal(18, 3)
+  amountTax         Decimal             @default(0) @map("amount_tax") @db.Decimal(18, 3)
+  amountFodec       Decimal             @default(0) @map("amount_fodec") @db.Decimal(18, 3)
+  amountTimbre      Decimal             @default(0) @map("amount_timbre") @db.Decimal(18, 3)
+  amountTotal       Decimal             @map("amount_total") @db.Decimal(18, 3)
+  /** Portion applied to linked AR on issue — min(CN TTC, amountOpen). */
+  amountAppliedToAr Decimal             @default(0) @map("amount_applied_to_ar") @db.Decimal(18, 3)
+  /** Remainder after AR reduction — customer credit, no auto-refund. */
+  amountUnapplied   Decimal             @default(0) @map("amount_unapplied") @db.Decimal(18, 3)
+  reason            String?
+  notes             String?
+  issuedAt          DateTime?           @map("issued_at") @db.Timestamptz(6)
+  version           Int                 @default(0)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?           @map("deleted_at") @db.Timestamptz(6)
+
+  invoice FinInvoice          @relation(fields: [invoiceId], references: [id])
+  lines   FinCreditNoteLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, invoiceId, status])
+  @@index([companyId, customerId, status])
+  @@map("fin_credit_note")
+}
+
+model FinCreditNoteLine {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  creditNoteId String   @map("credit_note_id") @db.Uuid
+  lineNo       Int      @map("line_no")
+  description  String
+  qty          Decimal  @db.Decimal(18, 3)
+  unitPriceHt  Decimal  @map("unit_price_ht") @db.Decimal(18, 3)
+  taxCodeId    String   @map("tax_code_id") @db.Uuid
+  amountHt     Decimal  @map("amount_ht") @db.Decimal(18, 3)
+  amountTax    Decimal  @map("amount_tax") @db.Decimal(18, 3)
+  amountTtc    Decimal  @map("amount_ttc") @db.Decimal(18, 3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  creditNote FinCreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  taxCode    TaxCode       @relation(fields: [taxCodeId], references: [id])
+
+  @@unique([creditNoteId, lineNo])
+  @@index([companyId, creditNoteId])
+  @@map("fin_credit_note_line")
 }
 
 model FinOpenItem {
@@ -1789,8 +1855,9 @@ model TaxCode {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  rates         TaxRate[]
-  invoiceLines  FinInvoiceLine[]
+  rates           TaxRate[]
+  invoiceLines    FinInvoiceLine[]
+  creditNoteLines FinCreditNoteLine[]
 
   @@unique([companyId, code])
   @@index([companyId, kind, active])

@@ -24,6 +24,7 @@ import {
   ConfirmAllocationDto,
   CreateBankAccountDto,
   CreateBankStatementLinesDto,
+  CreateCreditNoteDto,
   CreateInvoiceDto,
   CreateOpenItemDto,
   CreatePaymentDto,
@@ -37,6 +38,7 @@ import {
   UpdateBankAccountDto,
 } from './finance.dto';
 import { BankingService } from './banking.service';
+import { CreditNoteService } from './credit-note.service';
 import { DunningService } from './dunning.service';
 import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
@@ -51,6 +53,7 @@ export class FinanceController {
   constructor(
     private readonly financeService: FinanceService,
     private readonly invoiceService: InvoiceService,
+    private readonly creditNoteService: CreditNoteService,
     private readonly paymentService: PaymentService,
     private readonly promiseService: PromiseService,
     private readonly bankingService: BankingService,
@@ -229,6 +232,67 @@ export class FinanceController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.invoiceService.cancel(tenancy.companyId, id);
+  }
+
+  @Get('credit-notes')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  listCreditNotes(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('invoiceId') invoiceId?: string,
+    @Query('customerId') customerId?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.creditNoteService.list(tenancy.companyId, {
+      q,
+      status,
+      invoiceId,
+      customerId,
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor,
+    });
+  }
+
+  @Get('credit-notes/:id')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  getCreditNote(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.creditNoteService.get(tenancy.companyId, id);
+  }
+
+  @Post('credit-notes')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  createCreditNote(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateCreditNoteDto,
+  ) {
+    return this.creditNoteService.create(tenancy.companyId, dto);
+  }
+
+  @Post('credit-notes/:id/issue')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  issueCreditNote(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.creditNoteService.issue(tenancy.companyId, id);
+  }
+
+  @Post('credit-notes/:id/cancel')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  cancelCreditNote(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.creditNoteService.cancel(tenancy.companyId, id);
   }
 
   @Get('payments')
