@@ -116,7 +116,14 @@ export class HrController {
     @CurrentTenancy() tenancy: TenancyContext,
     @Body() dto: ReplaceIrppBracketsDto,
   ) {
-    return this.irpp.replaceBrackets(tenancy.companyId, dto.brackets);
+    return this.irpp.replaceBrackets(
+      tenancy.companyId,
+      dto.brackets.map((b) => ({
+        upToMilli: b.upToMilli ?? null,
+        rateBps: b.rateBps,
+        lawRef: b.lawRef ?? null,
+      })),
+    );
   }
 
   @Get('irpp/preview')
