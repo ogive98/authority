@@ -60,12 +60,13 @@ export type AccJournalEntry = {
   lines: AccJournalEntryLine[];
 };
 
-/** Pref keys for Finance→GL mapping (D179). */
+/** Pref keys for Finance→GL mapping (D179/D193). */
 export const GL_MAPPING_KEYS = {
   ar: "accounting.gl.ar",
   bank: "accounting.gl.bank",
   revenue: "accounting.gl.revenue",
   vat: "accounting.gl.vat",
+  bankFee: "accounting.gl.bank_fee",
   salesJournal: "accounting.gl.sales_journal",
   bankJournal: "accounting.gl.bank_journal",
 } as const;
@@ -75,6 +76,8 @@ export const GL_MAPPING_DEFAULTS = {
   bank: "512",
   revenue: "701",
   vat: "4367",
+  /** Empty until human Prefs — never invent fee CoA. */
+  bankFee: "",
   salesJournal: "VEN",
   bankJournal: "BQ",
 } as const;
@@ -210,6 +213,7 @@ export async function fetchGlMapping(): Promise<
         bank: string;
         revenue: string;
         vat: string;
+        bankFee: string;
         salesJournal: string;
         bankJournal: string;
       };
@@ -231,6 +235,7 @@ export async function fetchGlMapping(): Promise<
           bank: string;
           revenue: string;
           vat: string;
+          bankFee: string;
           salesJournal: string;
           bankJournal: string;
         };

@@ -5,6 +5,7 @@ import {
   FinPaymentStatus,
   Prisma,
 } from '@prisma/client';
+import { AccountingGlMappingResolver } from '../accounting/accounting-gl-mapping.resolver';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -17,11 +18,13 @@ import type {
   CreateBankStatementLinesDto,
   IgnoreBankLineDto,
   ImportBankCsvDto,
+  ImportBankOfxDto,
   MatchBankLineDto,
   UpdateBankAccountDto,
 } from './finance.dto';
 import { FinanceException } from './finance.exception';
 import { parseBankStatementCsv } from './bank-csv';
+import { parseBankStatementOfx } from './bank-ofx';
 
 /** Pure guard — payment XOR instrument. */
 export function assertXorMatchTarget(input: {
@@ -93,6 +96,24 @@ export type BankCsvPreviewDto = {
   errors: { row: number; message: string }[];
 };
 
+export type BankOfxPreviewDto = {
+  dialect: 'OFX1';
+  lineCount: number;
+  errorCount: number;
+  duplicateFitIdCount: number;
+  lines: {
+    row: number;
+    lineDate: string;
+    amount: number;
+    fitId: string;
+    reference?: string;
+    counterparty?: string;
+    memo?: string;
+    duplicate?: boolean;
+  }[];
+  errors: { row: number; message: string }[];
+};
+
 export type BankMatchDto = {
   id: string;
   paymentId: string | null;
@@ -113,6 +134,8 @@ export type BankStatementLineDto = {
   reference: string | null;
   counterparty: string | null;
   memo: string | null;
+  fitId: string | null;
+  feePostedAt: string | null;
   status: FinBankLineStatus;
   version: number;
   createdAt: string;
@@ -125,6 +148,7 @@ export class BankingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly glMapping: AccountingGlMappingResolver,
   ) {}
 
   async listAccounts(companyId: string): Promise<{ items: BankAccountDto[] }> {
@@ -385,6 +409,186 @@ export class BankingService {
     };
   }
 
+  async previewOfx(
+    companyId: string,
+    bankAccountId: string,
+    dto: ImportBankOfxDto,
+  ): Promise<BankOfxPreviewDto> {
+    await this.requireAccount(companyId, bankAccountId);
+    const parsed = parseBankStatementOfx(dto.ofx ?? '');
+    if (parsed.lines.length === 0 && parsed.errors.length > 0) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_OFX_INVALID,
+        parsed.errors[0]!.message,
+        HttpStatus.BAD_REQUEST,
+        { errors: parsed.errors },
+      );
+    }
+    const existingFit = await this.existingFitIds(
+      companyId,
+      bankAccountId,
+      parsed.lines.map((l) => l.fitId),
+    );
+    const lines = parsed.lines.map((l) => ({
+      ...l,
+      duplicate: existingFit.has(l.fitId),
+    }));
+    return {
+      dialect: parsed.dialect,
+      lineCount: lines.length,
+      errorCount: parsed.errors.length,
+      duplicateFitIdCount: lines.filter((l) => l.duplicate).length,
+      lines,
+      errors: parsed.errors,
+    };
+  }
+
+  async importOfx(
+    companyId: string,
+    bankAccountId: string,
+    dto: ImportBankOfxDto,
+  ): Promise<{
+    items: BankStatementLineDto[];
+    skippedDuplicates: number;
+    skippedErrors: number;
+  }> {
+    await this.requireAccount(companyId, bankAccountId);
+    const parsed = parseBankStatementOfx(dto.ofx ?? '');
+    if (parsed.lines.length === 0) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_OFX_INVALID,
+        parsed.errors[0]?.message ?? 'No valid OFX transactions to import.',
+        HttpStatus.BAD_REQUEST,
+        { errors: parsed.errors },
+      );
+    }
+    const existingFit = await this.existingFitIds(
+      companyId,
+      bankAccountId,
+      parsed.lines.map((l) => l.fitId),
+    );
+    const toImport = parsed.lines.filter((l) => !existingFit.has(l.fitId));
+    if (toImport.length === 0) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_OFX_INVALID,
+        'All FITID already imported for this account.',
+        HttpStatus.CONFLICT,
+        { duplicateFitIdCount: parsed.lines.length },
+      );
+    }
+    const created = await this.prisma.$transaction(async (tx) => {
+      const out = [];
+      for (const line of toImport) {
+        out.push(
+          await this.createLineTx(tx, companyId, bankAccountId, {
+            lineDate: line.lineDate,
+            amount: line.amount,
+            reference: line.reference,
+            counterparty: line.counterparty,
+            memo: line.memo,
+            fitId: line.fitId,
+          }),
+        );
+      }
+      return out;
+    });
+    return {
+      items: created.map((r) => serializeLine({ ...r, match: null })),
+      skippedDuplicates: parsed.lines.length - toImport.length,
+      skippedErrors: parsed.errors.length,
+    };
+  }
+
+  /**
+   * Explicit fee GL (D193) — ignore alone stays GL-free.
+   * Debit lines only; requires Prefs accounting.gl.bank_fee.
+   */
+  async postFee(
+    companyId: string,
+    lineId: string,
+  ): Promise<BankStatementLineDto> {
+    const line = await this.prisma.finBankStatementLine.findFirst({
+      where: { id: lineId, companyId, deletedAt: null },
+      include: {
+        match: {
+          include: {
+            payment: { select: { number: true } },
+            instrument: { select: { number: true } },
+          },
+        },
+      },
+    });
+    if (!line) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_LINE_NOT_FOUND,
+        'Statement line not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (line.status !== FinBankLineStatus.IGNORED) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_FEE_NOT_ELIGIBLE,
+        'Only ignored debit lines can post bank fees.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (line.amount.gte(0)) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_FEE_NOT_ELIGIBLE,
+        'Bank fee posting requires a debit (−) amount.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (line.feePostedAt) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_FEE_ALREADY_POSTED,
+        'Bank fee already posted for this line.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    const map = await this.glMapping.resolve(companyId);
+    if (!map.bankFee.trim()) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_FEE_GL_MISSING,
+        'Configure accounting.gl.bank_fee in Préférences / Comptabilité before posting fees.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    const feeAmount = line.amount.abs();
+    const entryDate = line.lineDate.toISOString().slice(0, 10);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.finBankStatementLine.update({
+        where: { id: line.id },
+        data: {
+          feePostedAt: new Date(),
+          version: { increment: 1 },
+        },
+        include: {
+          match: {
+            include: {
+              payment: { select: { number: true } },
+              instrument: { select: { number: true } },
+            },
+          },
+        },
+      });
+      await this.outbox.enqueue(tx, {
+        companyId,
+        eventType: FINANCE_EVENT_TYPES.BANK_FEE_POSTED,
+        aggregateType: 'fin_bank_statement_line',
+        aggregateId: line.id,
+        payloadJson: {
+          statementLineId: line.id,
+          bankAccountId: line.bankAccountId,
+          amount: Number(feeAmount.toFixed(3)),
+          entryDate,
+        },
+      });
+      return row;
+    });
+    return serializeLine(updated);
+  }
+
   async ignoreLine(
     companyId: string,
     lineId: string,
@@ -477,6 +681,13 @@ export class BankingService {
       throw new FinanceException(
         FINANCE_ERROR_CODES.INVALID_STATUS,
         'Line is not ignored.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (line.feePostedAt) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.BANK_FEE_ALREADY_POSTED,
+        'Cannot re-open a line after bank fee GL was posted.',
         HttpStatus.CONFLICT,
       );
     }
@@ -859,6 +1070,25 @@ export class BankingService {
     };
   }
 
+  private async existingFitIds(
+    companyId: string,
+    bankAccountId: string,
+    fitIds: string[],
+  ): Promise<Set<string>> {
+    const uniq = [...new Set(fitIds.filter(Boolean))];
+    if (uniq.length === 0) return new Set();
+    const rows = await this.prisma.finBankStatementLine.findMany({
+      where: {
+        companyId,
+        bankAccountId,
+        deletedAt: null,
+        fitId: { in: uniq },
+      },
+      select: { fitId: true },
+    });
+    return new Set(rows.map((r) => r.fitId!).filter(Boolean));
+  }
+
   private async createLineTx(
     tx: Prisma.TransactionClient,
     companyId: string,
@@ -872,6 +1102,25 @@ export class BankingService {
         HttpStatus.BAD_REQUEST,
       );
     }
+    const fitId = dto.fitId?.trim() || null;
+    if (fitId) {
+      const dup = await tx.finBankStatementLine.findFirst({
+        where: {
+          companyId,
+          bankAccountId,
+          fitId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (dup) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.BANK_OFX_INVALID,
+          `FITID already imported: ${fitId}`,
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
     return tx.finBankStatementLine.create({
       data: {
         companyId,
@@ -881,6 +1130,7 @@ export class BankingService {
         reference: dto.reference?.trim() || null,
         counterparty: dto.counterparty?.trim() || null,
         memo: dto.memo?.trim() || null,
+        fitId,
       },
     });
   }
@@ -998,6 +1248,8 @@ function serializeLine(row: {
   reference: string | null;
   counterparty: string | null;
   memo: string | null;
+  fitId: string | null;
+  feePostedAt: Date | null;
   status: FinBankLineStatus;
   version: number;
   createdAt: Date;
@@ -1024,6 +1276,8 @@ function serializeLine(row: {
     reference: row.reference,
     counterparty: row.counterparty,
     memo: row.memo,
+    fitId: row.fitId,
+    feePostedAt: row.feePostedAt?.toISOString() ?? null,
     status: row.status,
     version: row.version,
     createdAt: row.createdAt.toISOString(),

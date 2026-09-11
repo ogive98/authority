@@ -31,6 +31,7 @@ import {
   CreatePromiseDto,
   IgnoreBankLineDto,
   ImportBankCsvDto,
+  ImportBankOfxDto,
   MatchBankLineDto,
   PrepareDunningDto,
   SimulateAllocationDto,
@@ -534,6 +535,28 @@ export class FinanceController {
     return this.bankingService.importCsv(tenancy.companyId, id, dto);
   }
 
+  @Post('bank-accounts/:id/lines/ofx/preview')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  previewBankOfx(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ImportBankOfxDto,
+  ) {
+    return this.bankingService.previewOfx(tenancy.companyId, id, dto);
+  }
+
+  @Post('bank-accounts/:id/lines/ofx')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  importBankOfx(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ImportBankOfxDto,
+  ) {
+    return this.bankingService.importOfx(tenancy.companyId, id, dto);
+  }
+
   @Post('bank-lines/:id/ignore')
   @HttpCode(200)
   @RequirePermission(PERMISSION_KEYS.financeAllocate)
@@ -553,6 +576,16 @@ export class FinanceController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.bankingService.unignoreLine(tenancy.companyId, id);
+  }
+
+  @Post('bank-lines/:id/post-fee')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeAllocate)
+  postBankFee(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.bankingService.postFee(tenancy.companyId, id);
   }
 
   @Get('bank-lines/:id/candidates')

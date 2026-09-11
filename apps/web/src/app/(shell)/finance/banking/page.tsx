@@ -23,12 +23,16 @@ import {
   fetchBankTreasury,
   ignoreBankLine,
   importBankCsv,
+  importBankOfx,
   matchBankLine,
+  postBankFee,
   previewBankCsv,
+  previewBankOfx,
   unignoreBankLine,
   unmatchBankLine,
   type BankCsvPreview,
   type BankMatchCandidates,
+  type BankOfxPreview,
   type BankTreasury,
   type FinBankAccount,
   type FinBankStatementLine,
@@ -85,6 +89,10 @@ export default function FinanceBankingPage() {
   const [csvOpen, setCsvOpen] = useState(false);
   const [csvText, setCsvText] = useState("");
   const [csvPreview, setCsvPreview] = useState<BankCsvPreview | null>(null);
+
+  const [ofxOpen, setOfxOpen] = useState(false);
+  const [ofxText, setOfxText] = useState("");
+  const [ofxPreview, setOfxPreview] = useState<BankOfxPreview | null>(null);
 
   const loadAccounts = useCallback(async () => {
     setState({ kind: "loading" });
@@ -290,6 +298,48 @@ export default function FinanceBankingPage() {
     await refresh();
   }
 
+  async function onOfxPreview() {
+    if (!selectedId || !ofxText.trim()) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await previewBankOfx(selectedId, ofxText);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      setOfxPreview(null);
+      return;
+    }
+    setOfxPreview(res.data);
+  }
+
+  async function onOfxImport() {
+    if (!selectedId || !ofxText.trim()) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await importBankOfx(selectedId, ofxText);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setOfxOpen(false);
+    setOfxText("");
+    setOfxPreview(null);
+    await refresh();
+  }
+
+  async function onPostFee(lineId: string) {
+    setBusy(true);
+    setFormError(null);
+    const res = await postBankFee(lineId);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    await refresh();
+  }
+
   const selected =
     state.kind === "ok"
       ? (state.accounts.find((a) => a.id === selectedId) ?? null)
@@ -305,12 +355,43 @@ export default function FinanceBankingPage() {
     [],
   );
 
+  const ofxSample = useMemo(
+    () =>
+      [
+        "OFXHEADER:100",
+        "DATA:OFXSGML",
+        "VERSION:102",
+        "",
+        "<OFX>",
+        "<BANKMSGSRSV1><STMTTRNRS><STMTRS><BANKTRANLIST>",
+        "<STMTTRN>",
+        "<TRNTYPE>CREDIT",
+        "<DTPOSTED>20260901",
+        "<TRNAMT>150.000",
+        "<FITID>FIT-001",
+        "<NAME>Client A",
+        "<MEMO>Virement",
+        "</STMTTRN>",
+        "<STMTTRN>",
+        "<TRNTYPE>DEBIT",
+        "<DTPOSTED>20260902",
+        "<TRNAMT>-5.250",
+        "<FITID>FIT-002",
+        "<NAME>FRAIS",
+        "<MEMO>Frais bancaires",
+        "</STMTTRN>",
+        "</BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1>",
+        "</OFX>",
+      ].join("\n"),
+    [],
+  );
+
   return (
     <>
       <AScreenHeader
         kicker="Finance"
         title="Banque"
-        description="Rapprochement soft + CSV (+/−) + ignore frais — GL banque reste à l’affectation. Pas d’OFX."
+        description="Rapprochement soft · CSV/OFX · ignore sans GL · Comptabiliser frais (Prefs bank_fee)."
         actions={
           <div className="flex items-center gap-2">
             <Link
@@ -470,6 +551,20 @@ export default function FinanceBankingPage() {
               <AButton
                 type="button"
                 size="sm"
+                variant="secondary"
+                disabled={!selectedId}
+                onClick={() => {
+                  setOfxText(ofxSample);
+                  setOfxPreview(null);
+                  setFormError(null);
+                  setOfxOpen(true);
+                }}
+              >
+                Import OFX
+              </AButton>
+              <AButton
+                type="button"
+                size="sm"
                 disabled={!selectedId}
                 onClick={() => {
                   setLineForm({
@@ -498,7 +593,7 @@ export default function FinanceBankingPage() {
             {!linesLoading && lines.length === 0 ? (
               <AEmptyState
                 title="Aucune ligne"
-                description="Saisie manuelle ou import CSV (date,amount,…). + crédit / − débit."
+                description="Saisie manuelle, CSV ou OFX (FITID). + crédit / − débit."
               />
             ) : null}
 
@@ -531,12 +626,15 @@ export default function FinanceBankingPage() {
                               ? "Rapproché"
                               : line.status === "UNMATCHED"
                                 ? "Ouvert"
-                                : "Ignoré"}
+                                : line.feePostedAt
+                                  ? "Ignoré · GL frais"
+                                  : "Ignoré"}
                           </ABadge>
                         </td>
                         <td className="px-3 py-2 a-mono text-a-fg-muted">
                           {line.match?.paymentNumber ||
                             line.match?.instrumentNumber ||
+                            line.fitId ||
                             "—"}
                         </td>
                         <td className="px-3 py-2">
@@ -575,15 +673,31 @@ export default function FinanceBankingPage() {
                               </AButton>
                             ) : null}
                             {line.status === "IGNORED" ? (
-                              <AButton
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                disabled={busy}
-                                onClick={() => void onUnignore(line.id)}
-                              >
-                                Réouvrir
-                              </AButton>
+                              <>
+                                {!line.feePostedAt &&
+                                Number(line.amount) < 0 ? (
+                                  <AButton
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={busy}
+                                    onClick={() => void onPostFee(line.id)}
+                                  >
+                                    Comptabiliser frais
+                                  </AButton>
+                                ) : null}
+                                {!line.feePostedAt ? (
+                                  <AButton
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={busy}
+                                    onClick={() => void onUnignore(line.id)}
+                                  >
+                                    Réouvrir
+                                  </AButton>
+                                ) : null}
+                              </>
                             ) : null}
                           </div>
                         </td>
@@ -700,7 +814,7 @@ export default function FinanceBankingPage() {
         open={csvOpen}
         onOpenChange={setCsvOpen}
         title="Import CSV"
-        description="Colonnes date,amount,reference,counterparty,memo — + crédit / − débit. Pas d’OFX."
+        description="Colonnes date,amount,reference,counterparty,memo — + crédit / − débit."
       >
         <div className="space-y-3">
           <textarea
@@ -747,6 +861,64 @@ export default function FinanceBankingPage() {
               size="sm"
               disabled={busy || !csvText.trim()}
               onClick={() => void onCsvImport()}
+            >
+              Importer
+            </AButton>
+          </div>
+        </div>
+      </ADrawer>
+
+      <ADrawer
+        open={ofxOpen}
+        onOpenChange={setOfxOpen}
+        title="Import OFX"
+        description="OFX 1.x SGML — STMTTRN + FITID obligatoire (dédup par compte)."
+      >
+        <div className="space-y-3">
+          <textarea
+            className="a-underlay a-mono min-h-[12rem] w-full rounded-md p-3 text-[length:var(--a-text-xs)] text-a-fg"
+            value={ofxText}
+            onChange={(e) => {
+              setOfxText(e.target.value);
+              setOfxPreview(null);
+            }}
+            spellCheck={false}
+          />
+          {ofxPreview ? (
+            <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+              {ofxPreview.lineCount} txn · {ofxPreview.duplicateFitIdCount}{" "}
+              FITID déjà connus · {ofxPreview.errorCount} erreur(s)
+            </p>
+          ) : null}
+          {ofxPreview && ofxPreview.errors.length > 0 ? (
+            <ul className="text-[length:var(--a-text-xs)] text-a-warning space-y-1">
+              {ofxPreview.errors.slice(0, 5).map((e) => (
+                <li key={`${e.row}-${e.message}`}>
+                  T{e.row}: {e.message}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {formError ? (
+            <p className="text-[length:var(--a-text-sm)] text-a-danger">
+              {formError}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={busy || !ofxText.trim()}
+              onClick={() => void onOfxPreview()}
+            >
+              Prévisualiser
+            </AButton>
+            <AButton
+              type="button"
+              size="sm"
+              disabled={busy || !ofxText.trim()}
+              onClick={() => void onOfxImport()}
             >
               Importer
             </AButton>

@@ -11,6 +11,7 @@ describe('ThunderDomainRegistrar', () => {
     postInvoiceIssued: jest.fn(),
     postCreditNoteIssued: jest.fn(),
     postPaymentAllocated: jest.fn(),
+    postBankFee: jest.fn(),
     reversePaymentOnInstrumentReject: jest.fn(),
     reverseInvoiceIssued: jest.fn(),
   };
@@ -51,6 +52,7 @@ describe('ThunderDomainRegistrar', () => {
           'finance.payment.allocated.v1',
           'finance.payment.reversed.v1',
           'finance.instrument.rejected.v1',
+          'finance.bank.fee_posted.v1',
         ],
       },
     );

@@ -978,6 +978,24 @@ export type BankCsvPreview = {
   errors: { row: number; message: string }[];
 };
 
+export type BankOfxPreview = {
+  dialect: "OFX1";
+  lineCount: number;
+  errorCount: number;
+  duplicateFitIdCount: number;
+  lines: {
+    row: number;
+    lineDate: string;
+    amount: number;
+    fitId: string;
+    reference?: string;
+    counterparty?: string;
+    memo?: string;
+    duplicate?: boolean;
+  }[];
+  errors: { row: number; message: string }[];
+};
+
 export type FinBankMatch = {
   id: string;
   paymentId: string | null;
@@ -998,6 +1016,8 @@ export type FinBankStatementLine = {
   reference: string | null;
   counterparty: string | null;
   memo: string | null;
+  fitId: string | null;
+  feePostedAt: string | null;
   status: BankLineStatus;
   version: number;
   createdAt: string;
@@ -1253,6 +1273,87 @@ export async function importBankCsv(
         skippedErrors: number;
       },
     };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function previewBankOfx(
+  accountId: string,
+  ofx: string,
+): Promise<{ ok: true; data: BankOfxPreview } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/bank-accounts/${accountId}/lines/ofx/preview`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ofx }),
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as BankOfxPreview };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function importBankOfx(
+  accountId: string,
+  ofx: string,
+): Promise<
+  | {
+      ok: true;
+      data: {
+        items: FinBankStatementLine[];
+        skippedDuplicates: number;
+        skippedErrors: number;
+      };
+    }
+  | ApiFail
+> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/bank-accounts/${accountId}/lines/ofx`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ofx }),
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as {
+        items: FinBankStatementLine[];
+        skippedDuplicates: number;
+        skippedErrors: number;
+      },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function postBankFee(
+  lineId: string,
+): Promise<{ ok: true; data: FinBankStatementLine } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/bank-lines/${lineId}/post-fee`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinBankStatementLine };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }

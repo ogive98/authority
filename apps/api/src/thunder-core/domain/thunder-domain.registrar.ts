@@ -52,6 +52,7 @@ export class ThunderDomainRegistrar implements OnModuleInit {
           THUNDER_DOMAIN_EVENT_TYPES.financePaymentAllocated,
           THUNDER_DOMAIN_EVENT_TYPES.financePaymentReversed,
           THUNDER_DOMAIN_EVENT_TYPES.financeInstrumentRejected,
+          THUNDER_DOMAIN_EVENT_TYPES.financeBankFeePosted,
         ],
       },
     );
@@ -320,6 +321,35 @@ export class ThunderDomainRegistrar implements OnModuleInit {
       );
       this.logger.log(
         `accounting.postFromFinance ${sourceType} ${result.outcome} ${
+          'number' in result ? result.number : result.reason
+        }`,
+      );
+      return;
+    }
+
+    if (
+      envelope.eventType === THUNDER_DOMAIN_EVENT_TYPES.financeBankFeePosted
+    ) {
+      const statementLineId =
+        stringPayload(envelope.payload, 'statementLineId') ||
+        envelope.aggregateId;
+      const amount = numberPayload(envelope.payload, 'amount');
+      const entryDate =
+        stringPayload(envelope.payload, 'entryDate') || today;
+      if (!statementLineId || amount == null) {
+        this.logger.warn(
+          'accounting.postFromFinance bank_fee: missing fields',
+        );
+        return;
+      }
+      const result = await this.financeGl.postBankFee(companyId, {
+        sourceId: envelope.eventId,
+        statementLineId,
+        amount,
+        entryDate,
+      });
+      this.logger.log(
+        `accounting.postFromFinance bank_fee ${result.outcome} ${
           'number' in result ? result.number : result.reason
         }`,
       );

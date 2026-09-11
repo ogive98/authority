@@ -6,6 +6,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { TaxModule } from '../tax/tax.module';
 import { SettingsModule } from '../settings/settings.module';
+import { AccountingModule } from '../accounting/accounting.module';
 import { AllocationEngineService } from './allocation-engine.service';
 import { BankingService } from './banking.service';
 import { CollectionScheduleResolver } from './collection-schedule.resolver';
@@ -27,6 +28,7 @@ import { PromiseService } from './promise.service';
     AuditModule,
     TaxModule,
     SettingsModule,
+    AccountingModule,
   ],
   controllers: [FinanceController],
   providers: [

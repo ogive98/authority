@@ -1713,7 +1713,7 @@ model FinBankAccount {
   @@map("fin_bank_account")
 }
 
-/** Manual bank statement line (AR receipts V0 — no OFX/CSV). */
+/** Bank statement line — manual / CSV / OFX (D189–D193). Soft recon; fee GL only via explicit post. */
 model FinBankStatementLine {
   id            String            @id @default(uuid()) @db.Uuid
   companyId     String            @map("company_id") @db.Uuid
@@ -1725,6 +1725,10 @@ model FinBankStatementLine {
   reference     String?
   counterparty  String?
   memo          String?
+  /** OFX FITID — unique per account when set (D193 dedup). */
+  fitId         String?           @map("fit_id")
+  /** Set when explicit « Comptabiliser frais » posted (ignore alone has no GL). */
+  feePostedAt   DateTime?         @map("fee_posted_at") @db.Timestamptz(6)
   status        FinBankLineStatus @default(UNMATCHED)
   version       Int               @default(0)
   createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1734,8 +1738,10 @@ model FinBankStatementLine {
   bankAccount FinBankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
   match       FinBankMatch?
 
+  @@unique([bankAccountId, fitId])
   @@index([companyId, bankAccountId, lineDate(sort: Desc)])
   @@index([companyId, status])
+  @@index([companyId, feePostedAt])
   @@map("fin_bank_statement_line")
 }
 

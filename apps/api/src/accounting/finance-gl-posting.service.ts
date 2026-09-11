@@ -413,6 +413,80 @@ export class FinanceGlPostingService {
     });
   }
 
+  /**
+   * Explicit bank fee (D193) — Dr Frais bancaires / Cr Banque.
+   * Requires Prefs `accounting.gl.bank_fee` (empty = skip). Journal = bank_journal.
+   */
+  async postBankFee(
+    companyId: string,
+    input: {
+      sourceId: string;
+      statementLineId: string;
+      amount: number;
+      entryDate: string;
+    },
+  ): Promise<FinanceGlPostResult> {
+    const amount = round3(Math.abs(input.amount));
+    if (amount <= 0) {
+      return { outcome: 'skipped', reason: 'non-positive amount' };
+    }
+
+    const existing = await this.findBySource(
+      companyId,
+      'fin_bank_fee',
+      input.sourceId,
+    );
+    if (existing) {
+      return {
+        outcome: 'existing',
+        entryId: existing.id,
+        number: existing.number,
+      };
+    }
+
+    const map = await this.glMapping.resolve(companyId);
+    if (!map.bankFee.trim()) {
+      return {
+        outcome: 'skipped',
+        reason: 'accounting.gl.bank_fee not configured',
+      };
+    }
+    const accounts = await this.resolveAccounts(companyId, [
+      map.bankFee,
+      map.bank,
+    ]);
+    if (!accounts) {
+      return {
+        outcome: 'skipped',
+        reason: `missing CoA ${map.bankFee}/${map.bank}`,
+      };
+    }
+
+    return this.createAndPost(companyId, {
+      sourceType: 'fin_bank_fee',
+      sourceId: input.sourceId,
+      entryDate: input.entryDate,
+      description: `bank_fee:${input.statementLineId}`,
+      journalCode: map.bankJournal,
+      lines: [
+        {
+          accountId: accounts[map.bankFee]!,
+          debit: amount,
+          credit: 0,
+          lineNo: 1,
+          memo: 'Bank fee',
+        },
+        {
+          accountId: accounts[map.bank]!,
+          debit: 0,
+          credit: amount,
+          lineNo: 2,
+          memo: 'Bank',
+        },
+      ],
+    });
+  }
+
   /** Reverse posted payment allocation GL (instrument reject or payment.reverse). */
   async reversePaymentOnInstrumentReject(
     companyId: string,

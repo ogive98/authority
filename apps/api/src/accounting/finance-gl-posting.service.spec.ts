@@ -9,6 +9,7 @@ describe('FinanceGlPostingService', () => {
       bank: DEFAULT_GL_CODES.bank,
       revenue: DEFAULT_GL_CODES.revenue,
       vat: DEFAULT_GL_CODES.vat,
+      bankFee: '',
       salesJournal: DEFAULT_GL_CODES.salesJournal,
       bankJournal: DEFAULT_GL_CODES.bankJournal,
     }),
@@ -171,6 +172,98 @@ describe('FinanceGlPostingService', () => {
             memo: 'VAT reverse as-recorded',
           }),
         ]),
+      }),
+    );
+  });
+
+  it('skips bank fee when Prefs bank_fee empty', async () => {
+    const prisma = {
+      accJournalEntry: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
+    const accounting = {
+      createEntry: jest.fn(),
+      postEntry: jest.fn(),
+      reverseEntry: jest.fn(),
+    };
+    const svc = new FinanceGlPostingService(
+      prisma as never,
+      accounting as never,
+      glMapping as never,
+    );
+    const result = await svc.postBankFee(companyId, {
+      sourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      statementLineId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+      amount: 5.25,
+      entryDate: '2026-09-11',
+    });
+    expect(result).toEqual({
+      outcome: 'skipped',
+      reason: 'accounting.gl.bank_fee not configured',
+    });
+    expect(accounting.createEntry).not.toHaveBeenCalled();
+  });
+
+  it('posts bank fee Dr fee / Cr bank when mapped', async () => {
+    glMapping.resolve.mockResolvedValueOnce({
+      ar: DEFAULT_GL_CODES.ar,
+      bank: DEFAULT_GL_CODES.bank,
+      revenue: DEFAULT_GL_CODES.revenue,
+      vat: DEFAULT_GL_CODES.vat,
+      bankFee: '627',
+      salesJournal: DEFAULT_GL_CODES.salesJournal,
+      bankJournal: DEFAULT_GL_CODES.bankJournal,
+    });
+    const prisma = {
+      accJournalEntry: { findFirst: jest.fn().mockResolvedValue(null) },
+      accAccount: {
+        findMany: jest.fn().mockResolvedValue([
+          { code: '627', id: 'a-fee' },
+          { code: '512', id: 'a-bank' },
+        ]),
+      },
+      accJournal: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'j-bq' }),
+      },
+      accFiscalPeriod: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'p-open' }),
+      },
+    };
+    const accounting = {
+      createEntry: jest.fn().mockResolvedValue({ id: 'draft-fee' }),
+      postEntry: jest
+        .fn()
+        .mockResolvedValue({ id: 'posted-fee', number: 'JE-FEE' }),
+      reverseEntry: jest.fn(),
+    };
+    const svc = new FinanceGlPostingService(
+      prisma as never,
+      accounting as never,
+      glMapping as never,
+    );
+    const result = await svc.postBankFee(companyId, {
+      sourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      statementLineId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+      amount: -5.25,
+      entryDate: '2026-09-11',
+    });
+    expect(result.outcome).toBe('posted');
+    expect(accounting.createEntry).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        sourceType: 'fin_bank_fee',
+        journalId: 'j-bq',
+        lines: [
+          expect.objectContaining({
+            accountId: 'a-fee',
+            debit: 5.25,
+            credit: 0,
+          }),
+          expect.objectContaining({
+            accountId: 'a-bank',
+            debit: 0,
+            credit: 5.25,
+          }),
+        ],
       }),
     );
   });

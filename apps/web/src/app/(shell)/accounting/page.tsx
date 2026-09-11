@@ -59,6 +59,7 @@ type GlMapForm = {
   bank: string;
   revenue: string;
   vat: string;
+  bankFee: string;
   salesJournal: string;
   bankJournal: string;
 };
@@ -132,7 +133,11 @@ export default function AccountingPage() {
       "";
 
     const mapping: GlMapForm = mapRes.ok
-      ? { ...mapRes.data.codes }
+      ? {
+          ...GL_MAPPING_DEFAULTS,
+          ...mapRes.data.codes,
+          bankFee: mapRes.data.codes.bankFee ?? "",
+        }
       : { ...GL_MAPPING_DEFAULTS };
 
     let trial: TrialBalanceRow[] = [];
@@ -185,6 +190,7 @@ export default function AccountingPage() {
       [GL_MAPPING_KEYS.bank, mapDraft.bank],
       [GL_MAPPING_KEYS.revenue, mapDraft.revenue],
       [GL_MAPPING_KEYS.vat, mapDraft.vat],
+      [GL_MAPPING_KEYS.bankFee, mapDraft.bankFee],
       [GL_MAPPING_KEYS.salesJournal, mapDraft.salesJournal],
       [GL_MAPPING_KEYS.bankJournal, mapDraft.bankJournal],
     ];
@@ -513,6 +519,7 @@ export default function AccountingPage() {
                       ["bank", "Banque", "account"],
                       ["revenue", "Ventes / produits", "account"],
                       ["vat", "TVA collectée (as-recorded)", "account"],
+                      ["bankFee", "Frais bancaires", "account"],
                       ["salesJournal", "Journal ventes", "journal"],
                       ["bankJournal", "Journal banque", "journal"],
                     ] as const
@@ -531,6 +538,9 @@ export default function AccountingPage() {
                           )
                         }
                       >
+                        {field === "bankFee" ? (
+                          <option value="">— non configuré</option>
+                        ) : null}
                         {kind === "account"
                           ? accountOptions.map((a) => (
                               <option key={a.id} value={a.code}>
@@ -542,15 +552,17 @@ export default function AccountingPage() {
                                 {j.code} — {j.name}
                               </option>
                             ))}
-                        {!accountOptions.some(
+                        {mapDraft[field] &&
+                        kind === "account" &&
+                        !accountOptions.some(
                           (a) => a.code === mapDraft[field],
-                        ) &&
-                        kind === "account" ? (
+                        ) ? (
                           <option value={mapDraft[field]}>
                             {mapDraft[field]} (non trouvé)
                           </option>
                         ) : null}
                         {kind === "journal" &&
+                        mapDraft[field] &&
                         !journalOptions.some(
                           (j) => j.code === mapDraft[field],
                         ) ? (

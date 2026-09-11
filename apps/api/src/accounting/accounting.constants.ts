@@ -31,14 +31,21 @@ export const DEFAULT_GL_CODES = {
   vat: '4367',
   salesJournal: 'VEN',
   bankJournal: 'BQ',
+  /**
+   * Bank fee expense — empty until human Prefs (D193).
+   * Never invent a Tunisian fee CoA code.
+   */
+  bankFee: '',
 } as const;
 
-/** Company prefs — CoA / journal codes for Finance→GL (D179/D180). */
+/** Company prefs — CoA / journal codes for Finance→GL (D179/D180/D193). */
 export const ACCOUNTING_SETTING_KEYS = {
   AR: 'accounting.gl.ar',
   BANK: 'accounting.gl.bank',
   REVENUE: 'accounting.gl.revenue',
   VAT: 'accounting.gl.vat',
+  /** Bank charges / frais — empty until human (D193). */
+  BANK_FEE: 'accounting.gl.bank_fee',
   SALES_JOURNAL: 'accounting.gl.sales_journal',
   BANK_JOURNAL: 'accounting.gl.bank_journal',
 } as const;
@@ -51,6 +58,7 @@ export const ACCOUNTING_SETTING_DEFAULTS: Record<
   [ACCOUNTING_SETTING_KEYS.BANK]: DEFAULT_GL_CODES.bank,
   [ACCOUNTING_SETTING_KEYS.REVENUE]: DEFAULT_GL_CODES.revenue,
   [ACCOUNTING_SETTING_KEYS.VAT]: DEFAULT_GL_CODES.vat,
+  [ACCOUNTING_SETTING_KEYS.BANK_FEE]: DEFAULT_GL_CODES.bankFee,
   [ACCOUNTING_SETTING_KEYS.SALES_JOURNAL]: DEFAULT_GL_CODES.salesJournal,
   [ACCOUNTING_SETTING_KEYS.BANK_JOURNAL]: DEFAULT_GL_CODES.bankJournal,
 };
@@ -60,6 +68,8 @@ export type GlMappingCodes = {
   bank: string;
   revenue: string;
   vat: string;
+  /** Empty string until Prefs seat filled. */
+  bankFee: string;
   salesJournal: string;
   bankJournal: string;
 };

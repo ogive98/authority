@@ -1559,6 +1559,14 @@ async function seedSettingsDefinitions(
       isPrefOnly: true,
     },
     {
+      key: 'accounting.gl.bank_fee',
+      valueType: 'string',
+      defaultJson: '',
+      description:
+        'GL account code for bank fees — empty until human Prefs (D193). Not a tax rate.',
+      isPrefOnly: true,
+    },
+    {
       key: 'ops.ghost.hide_delivery',
       valueType: 'boolean',
       defaultJson: true,

@@ -434,6 +434,12 @@ export class CreateBankStatementLineDto {
   @IsString()
   @MaxLength(500)
   memo?: string;
+
+  /** OFX FITID — optional on manual/CSV; required on OFX import. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  fitId?: string;
 }
 
 export class CreateBankStatementLinesDto {
@@ -471,6 +477,13 @@ export class ImportBankCsvDto {
   @IsString()
   @MaxLength(2_000_000)
   csv!: string;
+}
+
+/** D193 — OFX body for preview/import. */
+export class ImportBankOfxDto {
+  @IsString()
+  @MaxLength(4_000_000)
+  ofx!: string;
 }
 
 /** D190 — human-gated dunning draft. */
