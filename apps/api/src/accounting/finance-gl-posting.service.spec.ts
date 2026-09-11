@@ -86,7 +86,11 @@ describe('FinanceGlPostingService', () => {
         findFirst: jest.fn().mockResolvedValue({ id: 'j-ven' }),
       },
       accFiscalPeriod: {
-        findFirst: jest.fn().mockResolvedValue({ id: 'p-1' }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'p-1',
+          code: '2026-09',
+          status: 'OPEN',
+        }),
       },
     };
     const accounting = {
@@ -136,7 +140,11 @@ describe('FinanceGlPostingService', () => {
         findFirst: jest.fn().mockResolvedValue({ id: 'j-ven' }),
       },
       accFiscalPeriod: {
-        findFirst: jest.fn().mockResolvedValue({ id: 'p-1' }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'p-1',
+          code: '2026-09',
+          status: 'OPEN',
+        }),
       },
     };
     const accounting = {
@@ -225,7 +233,11 @@ describe('FinanceGlPostingService', () => {
         findFirst: jest.fn().mockResolvedValue({ id: 'j-bq' }),
       },
       accFiscalPeriod: {
-        findFirst: jest.fn().mockResolvedValue({ id: 'p-open' }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'p-open',
+          code: '2026-09',
+          status: 'OPEN',
+        }),
       },
     };
     const accounting = {
@@ -301,5 +313,48 @@ describe('FinanceGlPostingService', () => {
       number: 'JE-2',
     });
     expect(accounting.reverseEntry).toHaveBeenCalledWith(companyId, 'je-1');
+  });
+
+  it('skips Finance→GL when covering fiscal period is CLOSED (D198)', async () => {
+    const prisma = {
+      accJournalEntry: { findFirst: jest.fn().mockResolvedValue(null) },
+      accAccount: {
+        findMany: jest.fn().mockResolvedValue([
+          { code: '411', id: 'a-ar' },
+          { code: '701', id: 'a-rev' },
+        ]),
+      },
+      accJournal: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'j-ven' }),
+      },
+      accFiscalPeriod: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'p-closed',
+          code: '2026-09',
+          status: 'CLOSED',
+        }),
+      },
+    };
+    const accounting = {
+      createEntry: jest.fn(),
+      postEntry: jest.fn(),
+      reverseEntry: jest.fn(),
+    };
+    const svc = new FinanceGlPostingService(
+      prisma as never,
+      accounting as never,
+      glMapping as never,
+    );
+    const result = await svc.postPaymentAllocated(companyId, {
+      sourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      paymentId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      amount: 40,
+      entryDate: '2026-09-07',
+    });
+    expect(result).toEqual({
+      outcome: 'skipped',
+      reason: 'ACC.PERIOD_CLOSED: period 2026-09 is CLOSED',
+    });
+    expect(accounting.createEntry).not.toHaveBeenCalled();
   });
 });

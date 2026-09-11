@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
+  CalendarRange,
   FileText,
   GitBranch,
   Scale,
@@ -29,6 +30,7 @@ import {
   GL_MAPPING_KEYS,
   postEntry,
   reverseEntry,
+  updatePeriodStatus,
   type AccAccount,
   type AccJournal,
   type AccJournalEntry,
@@ -52,7 +54,7 @@ import {
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 
-type Tab = "coa" | "trial" | "entries" | "mapping";
+type Tab = "coa" | "trial" | "entries" | "periods" | "mapping";
 
 type GlMapForm = {
   ar: string;
@@ -88,6 +90,15 @@ function entryTone(
   return "neutral";
 }
 
+function periodTone(
+  status: string,
+): "success" | "warning" | "neutral" | "danger" {
+  if (status === "OPEN") return "success";
+  if (status === "SOFT_CLOSED") return "warning";
+  if (status === "CLOSED" || status === "LOCKED") return "danger";
+  return "neutral";
+}
+
 export default function AccountingPage() {
   const locale = useLocaleStore((s) => s.locale);
   const [state, setState] = useState<LoadState>({ kind: "loading" });
@@ -96,6 +107,7 @@ export default function AccountingPage() {
   const [mapBusy, setMapBusy] = useState(false);
   const [mapMsg, setMapMsg] = useState<string | null>(null);
   const [postBusy, setPostBusy] = useState<string | null>(null);
+  const [periodBusy, setPeriodBusy] = useState<string | null>(null);
   const ghostEnabled = useShellStore((s) => s.ghostEnabled);
   const patchEnabled = useShellStore((s) => s.patchEnabled);
   const opsVisibility = usePrefsStore((s) => s.opsVisibility);
@@ -230,6 +242,22 @@ export default function AccountingPage() {
     void load(state.kind === "ok" ? state.periodId : undefined);
   }
 
+  async function onPeriodStatus(
+    periodId: string,
+    status: "OPEN" | "SOFT_CLOSED" | "CLOSED",
+  ) {
+    setPeriodBusy(periodId);
+    setMapMsg(null);
+    const r = await updatePeriodStatus(periodId, status);
+    setPeriodBusy(null);
+    if (!r.ok) {
+      setMapMsg(r.message);
+      return;
+    }
+    setMapMsg(`Période ${r.data.code} → ${r.data.status}`);
+    void load(state.kind === "ok" ? state.periodId : undefined);
+  }
+
   useEffect(() => {
     if (partial && tab !== "coa") setTab("coa");
   }, [partial, tab]);
@@ -242,7 +270,7 @@ export default function AccountingPage() {
         description={
           partial
             ? "Mode ops — vue partielle (plan comptable seul). Préférences Admin : ops.*.accounting_partial."
-            : "Plan comptable, écritures, décomptabilisation, TVA as-recorded, mapping Finance→GL."
+            : "Plan comptable, périodes (clôture), écritures, mapping Finance→GL. Période CLOSED bloque le pont Finance→GL."
         }
       />
       <div className={softPageBody}>
@@ -282,6 +310,7 @@ export default function AccountingPage() {
                     ["coa", "Plan comptable", BookOpen],
                     ["trial", "Balance", Scale],
                     ["entries", "Écritures", FileText],
+                    ["periods", "Périodes", CalendarRange],
                     ["mapping", "Mapping GL", GitBranch],
                   ] as const satisfies ReadonlyArray<
                     readonly [Tab, string, LucideIcon]
@@ -494,6 +523,100 @@ export default function AccountingPage() {
                                       ? "…"
                                       : "Décomptabiliser"}
                                   </AButton>
+                                ) : null}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            ) : null}
+
+            {tab === "periods" ? (
+              <section className="space-y-3">
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Clôturer une période bloque le pont Finance→GL pour les dates
+                  couvertes (et le post manuel). Rouvrir = statut OPEN. LOCKED
+                  est immutable.
+                </p>
+                {state.periods.length === 0 ? (
+                  <AEmptyState
+                    title="Aucune période"
+                    description="Créez des périodes fiscales (API / seed)."
+                  />
+                ) : (
+                  <div className={softTableWrap}>
+                    <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
+                      <thead className={softThead}>
+                        <tr>
+                          <th className="a-table-cell font-medium">Code</th>
+                          <th className="a-table-cell font-medium">Début</th>
+                          <th className="a-table-cell font-medium">Fin</th>
+                          <th className="a-table-cell font-medium">Statut</th>
+                          <th className="a-table-cell font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {state.periods.map((p) => (
+                          <tr key={p.id} className={softTr}>
+                            <td className="a-mono a-table-cell">{p.code}</td>
+                            <td className="a-mono a-table-cell">
+                              {p.startDate}
+                            </td>
+                            <td className="a-mono a-table-cell">{p.endDate}</td>
+                            <td className="a-table-cell">
+                              <ABadge tone={periodTone(p.status)}>
+                                {p.status}
+                              </ABadge>
+                            </td>
+                            <td className="a-table-cell">
+                              <div className="flex flex-wrap gap-2">
+                                {p.status === "OPEN" ? (
+                                  <>
+                                    <AButton
+                                      type="button"
+                                      size="sm"
+                                      variant="secondary"
+                                      disabled={periodBusy === p.id}
+                                      onClick={() =>
+                                        void onPeriodStatus(p.id, "SOFT_CLOSED")
+                                      }
+                                    >
+                                      Soft close
+                                    </AButton>
+                                    <AButton
+                                      type="button"
+                                      size="sm"
+                                      disabled={periodBusy === p.id}
+                                      onClick={() =>
+                                        void onPeriodStatus(p.id, "CLOSED")
+                                      }
+                                    >
+                                      Clôturer
+                                    </AButton>
+                                  </>
+                                ) : null}
+                                {p.status === "SOFT_CLOSED" ||
+                                p.status === "CLOSED" ? (
+                                  <AButton
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    disabled={periodBusy === p.id}
+                                    onClick={() =>
+                                      void onPeriodStatus(p.id, "OPEN")
+                                    }
+                                  >
+                                    Rouvrir
+                                  </AButton>
+                                ) : null}
+                                {p.status === "LOCKED" ? (
+                                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                    Immutable
+                                  </span>
                                 ) : null}
                               </div>
                             </td>

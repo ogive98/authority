@@ -13,14 +13,17 @@ import {
   ASkeleton,
 } from "@/components/a";
 import {
+  createBulletin,
   createCnssSnapshot,
   createContract,
   createEmployee,
   createIrppSnapshot,
   endContract,
+  fetchBulletinPreview,
   fetchCnssPreview,
   fetchEmployees,
   fetchIrppPreview,
+  type BulletinPreview,
   type CnssPreview,
   type HrContract,
   type HrEmployee,
@@ -41,7 +44,7 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-type DrawerMode = "employee" | "contract" | "cnss" | "irpp";
+type DrawerMode = "employee" | "contract" | "cnss" | "irpp" | "bulletin";
 
 function statusTone(
   status: string,
@@ -82,6 +85,8 @@ export default function HrEmployeesPage() {
   const [cnssContract, setCnssContract] = useState<HrContract | null>(null);
   const [cnssPreview, setCnssPreview] = useState<CnssPreview | null>(null);
   const [irppPreview, setIrppPreview] = useState<IrppPreview | null>(null);
+  const [bulletinPreview, setBulletinPreview] =
+    useState<BulletinPreview | null>(null);
   const [periodYm, setPeriodYm] = useState(
     new Date().toISOString().slice(0, 7),
   );
@@ -133,6 +138,7 @@ export default function HrEmployeesPage() {
     setCnssContract(contract);
     setCnssPreview(null);
     setIrppPreview(null);
+    setBulletinPreview(null);
     setFormError(null);
     const ym = new Date().toISOString().slice(0, 7);
     setPeriodYm(ym);
@@ -152,6 +158,7 @@ export default function HrEmployeesPage() {
     setCnssContract(contract);
     setCnssPreview(null);
     setIrppPreview(null);
+    setBulletinPreview(null);
     setFormError(null);
     const ym = new Date().toISOString().slice(0, 7);
     setPeriodYm(ym);
@@ -164,6 +171,26 @@ export default function HrEmployeesPage() {
       return;
     }
     setIrppPreview(res.data);
+  }
+
+  async function openBulletin(contract: HrContract) {
+    setDrawerMode("bulletin");
+    setCnssContract(contract);
+    setCnssPreview(null);
+    setIrppPreview(null);
+    setBulletinPreview(null);
+    setFormError(null);
+    const ym = new Date().toISOString().slice(0, 7);
+    setPeriodYm(ym);
+    setDrawerOpen(true);
+    setBusy(true);
+    const res = await fetchBulletinPreview(contract.id, ym);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setBulletinPreview(res.data);
   }
 
   async function refreshCnssPreview() {
@@ -192,6 +219,19 @@ export default function HrEmployeesPage() {
     setIrppPreview(res.data);
   }
 
+  async function refreshBulletinPreview() {
+    if (!cnssContract) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await fetchBulletinPreview(cnssContract.id, periodYm);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setBulletinPreview(res.data);
+  }
+
   async function onSnapshot() {
     if (!cnssContract) return;
     setBusy(true);
@@ -214,6 +254,23 @@ export default function HrEmployeesPage() {
     setBusy(true);
     setFormError(null);
     const res = await createIrppSnapshot({
+      contractId: cnssContract.id,
+      periodYm,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setDrawerOpen(false);
+    await load(q);
+  }
+
+  async function onCreateBulletin() {
+    if (!cnssContract) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await createBulletin({
       contractId: cnssContract.id,
       periodYm,
     });
@@ -284,7 +341,7 @@ export default function HrEmployeesPage() {
       <AScreenHeader
         kicker="Ressources humaines"
         title="Employés"
-        description="RH — wageBase, CNSS & IRPP preview/snapshot si expertise VALIDATED (+ barème annuel saisi)."
+        description="RH — wageBase, CNSS, IRPP, bulletin (compose snapshots). Aucun taux inventé."
         actions={
           <AButton type="button" onClick={openCreateEmployee}>
             Nouvel employé
@@ -397,6 +454,14 @@ export default function HrEmployeesPage() {
                                 type="button"
                                 variant="ghost"
                                 disabled={busy}
+                                onClick={() => void openBulletin(c)}
+                              >
+                                Bulletin
+                              </AButton>
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                disabled={busy}
                                 onClick={() => void onEndContract(c.id)}
                               >
                                 Clôturer
@@ -436,7 +501,9 @@ export default function HrEmployeesPage() {
               ? "Nouveau contrat"
               : drawerMode === "irpp"
                 ? "IRPP — preview"
-                : "CNSS — preview"
+                : drawerMode === "bulletin"
+                  ? "Bulletin — preview"
+                  : "CNSS — preview"
         }
       >
         <div className="space-y-4 p-1">
@@ -744,6 +811,84 @@ export default function HrEmployeesPage() {
                 onClick={() => void onIrppSnapshot()}
               >
                 Enregistrer snapshot
+              </AButton>
+            </>
+          ) : null}
+
+          {drawerMode === "bulletin" ? (
+            <>
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Compose CNSS + IRPP snapshots pour la période. Net = wageBase −
+                CNSS salarié − IRPP mensuel. Pas de PDF V0.
+              </p>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Période (YYYY-MM)
+                </span>
+                <AInput
+                  value={periodYm}
+                  onChange={(e) => setPeriodYm(e.target.value)}
+                  className="a-mono"
+                />
+              </label>
+              <AButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={busy}
+                onClick={() => void refreshBulletinPreview()}
+              >
+                Recalculer
+              </AButton>
+              {bulletinPreview ? (
+                <div className="a-underlay space-y-2 rounded-md p-3 text-[length:var(--a-text-sm)]">
+                  <p>
+                    {bulletinPreview.matricule} · {bulletinPreview.employeeName}
+                  </p>
+                  <p>
+                    Base{" "}
+                    <span className="a-mono tabular-nums">
+                      {bulletinPreview.wageBase?.toFixed(3) ?? "—"}
+                    </span>
+                  </p>
+                  <p>
+                    CNSS salarié{" "}
+                    <span className="a-mono tabular-nums">
+                      {bulletinPreview.cnssEmployeeAmount?.toFixed(3) ?? "—"}
+                    </span>
+                  </p>
+                  <p>
+                    CNSS employeur{" "}
+                    <span className="a-mono tabular-nums">
+                      {bulletinPreview.cnssEmployerAmount?.toFixed(3) ?? "—"}
+                    </span>
+                  </p>
+                  <p>
+                    IRPP mensuel{" "}
+                    <span className="a-mono tabular-nums">
+                      {bulletinPreview.irppMonthly?.toFixed(3) ?? "—"}
+                    </span>
+                  </p>
+                  <p>
+                    Net{" "}
+                    <span className="a-mono tabular-nums font-medium">
+                      {bulletinPreview.netPay?.toFixed(3) ?? "—"}
+                    </span>{" "}
+                    {bulletinPreview.currency}
+                  </p>
+                  {!bulletinPreview.ready ? (
+                    <p className="text-a-warning">
+                      Snapshots requis : {bulletinPreview.pending.join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              <AButton
+                type="button"
+                disabled={busy || !bulletinPreview?.ready}
+                onClick={() => void onCreateBulletin()}
+              >
+                Enregistrer bulletin
               </AButton>
             </>
           ) : null}

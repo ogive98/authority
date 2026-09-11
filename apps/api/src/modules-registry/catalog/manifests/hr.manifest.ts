@@ -47,6 +47,7 @@ export const hrManifest: ModuleManifest = {
     'hr.cnss.snapshot.create',
     'hr.irpp.brackets.replace',
     'hr.irpp.snapshot.create',
+    'hr.bulletin.create',
   ],
   queries: [
     'hr.employees.list',
@@ -56,6 +57,8 @@ export const hrManifest: ModuleManifest = {
     'hr.irpp.brackets.list',
     'hr.irpp.preview',
     'hr.irpp.snapshots.list',
+    'hr.bulletin.preview',
+    'hr.bulletins.list',
   ],
   permissions: ['hr.employee.read', 'hr.employee.write', 'hr.wage.read'],
   dependencies: ['platform', 'organization', 'identity'],
@@ -67,6 +70,7 @@ export const hrManifest: ModuleManifest = {
     'hr.cnss_snapshot.created.v1',
     'hr.irpp_brackets.replaced.v1',
     'hr.irpp_snapshot.created.v1',
+    'hr.bulletin.created.v1',
   ],
   navigationEntries: [
     { id: 'hr-employees', label: 'Employés', href: '/hr' },

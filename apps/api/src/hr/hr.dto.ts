@@ -171,6 +171,16 @@ export class CreateIrppSnapshotDto {
   periodYm?: string;
 }
 
+export class CreateBulletinDto {
+  @IsUUID()
+  contractId!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(7)
+  periodYm?: string;
+}
+
 export class IrppBracketRowDto {
   /** Annual ceiling in millimes; omit/null for open-ended last band. */
   @IsOptional()

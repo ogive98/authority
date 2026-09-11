@@ -294,3 +294,59 @@ export async function replaceIrppBrackets(
   }
   return { ok: true, data: (await res.json()) as { items: IrppBracket[] } };
 }
+
+export type BulletinPreview = {
+  contractId: string;
+  employeeId: string;
+  employeeName: string;
+  matricule: string;
+  contractNumber: string;
+  periodYm: string;
+  wageBase: number | null;
+  cnssEmployeeAmount: number | null;
+  cnssEmployerAmount: number | null;
+  irppMonthly: number | null;
+  netPay: number | null;
+  ready: boolean;
+  pending: string[];
+  currency: string;
+};
+
+export type Bulletin = {
+  id: string;
+  number: string;
+  periodYm: string;
+  netPay: string;
+  wageBase: string;
+};
+
+export async function fetchBulletinPreview(
+  contractId: string,
+  periodYm?: string,
+): Promise<ApiOk<BulletinPreview> | ApiFail> {
+  const params = new URLSearchParams({ contractId });
+  if (periodYm) params.set("periodYm", periodYm);
+  const res = await fetch(`/api/v1/hr/bulletins/preview?${params}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as BulletinPreview };
+}
+
+export async function createBulletin(input: {
+  contractId: string;
+  periodYm?: string;
+}): Promise<ApiOk<Bulletin> | ApiFail> {
+  const res = await fetch("/api/v1/hr/bulletins", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as Bulletin };
+}

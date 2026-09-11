@@ -2377,6 +2377,7 @@ model HrEmployee {
   contracts HrContract[]
   cnssSnapshots HrCnssSnapshot[]
   irppSnapshots HrIrppSnapshot[]
+  bulletins HrBulletin[]
 
   @@unique([companyId, matricule])
   @@index([companyId, status])
@@ -2406,6 +2407,7 @@ model HrContract {
   employee      HrEmployee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   cnssSnapshots HrCnssSnapshot[]
   irppSnapshots HrIrppSnapshot[]
+  bulletins     HrBulletin[]
 
   @@unique([companyId, number])
   @@index([companyId, employeeId])
@@ -2505,4 +2507,40 @@ model HrIrppSnapshot {
   @@index([companyId, periodYm])
   @@index([companyId, employeeId])
   @@map("hr_irpp_snapshot")
+}
+
+/**
+ * Period payslip compose (D199) — freezes CNSS+IRPP snapshot amounts.
+ * No invented rates; both snapshots required.
+ */
+model HrBulletin {
+  id                   String    @id @default(uuid()) @db.Uuid
+  companyId            String    @map("company_id") @db.Uuid
+  /** YYYY-MM */
+  periodYm             String    @map("period_ym")
+  employeeId           String    @map("employee_id") @db.Uuid
+  contractId           String    @map("contract_id") @db.Uuid
+  number               String
+  wageBase             Decimal   @map("wage_base") @db.Decimal(18, 3)
+  cnssEmployeeAmount   Decimal   @map("cnss_employee_amount") @db.Decimal(18, 3)
+  cnssEmployerAmount   Decimal   @map("cnss_employer_amount") @db.Decimal(18, 3)
+  irppMonthly          Decimal   @map("irpp_monthly") @db.Decimal(18, 3)
+  /** wageBase − CNSS salarié − IRPP mensuel (display net V0). */
+  netPay               Decimal   @map("net_pay") @db.Decimal(18, 3)
+  cnssSnapshotId       String?   @map("cnss_snapshot_id") @db.Uuid
+  irppSnapshotId       String?   @map("irpp_snapshot_id") @db.Uuid
+  currency             String    @default("TND")
+  version              Int       @default(0)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt            DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  contract HrContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, periodYm, contractId])
+  @@unique([companyId, number])
+  @@index([companyId, periodYm])
+  @@index([companyId, employeeId])
+  @@map("hr_bulletin")
 }

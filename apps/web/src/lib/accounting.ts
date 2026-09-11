@@ -154,6 +154,30 @@ export async function fetchPeriods(): Promise<
   }
 }
 
+export async function updatePeriodStatus(
+  periodId: string,
+  status: "OPEN" | "SOFT_CLOSED" | "CLOSED" | "LOCKED",
+): Promise<{ ok: true; data: AccPeriod } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/accounting/periods/${encodeURIComponent(periodId)}/status`,
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as AccPeriod };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function fetchTrialBalance(
   periodId: string,
 ): Promise<{ ok: true; data: { items: TrialBalanceRow[] } } | ApiFail> {

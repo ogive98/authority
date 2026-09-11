@@ -612,30 +612,33 @@ export class FinanceGlPostingService {
     return any?.id ?? null;
   }
 
-  private async resolveOpenPeriodId(
+  /**
+   * Period for Finance→GL (D198): must cover entryDate and be OPEN.
+   * No fallback to another month — closed covering period blocks posting.
+   */
+  private async resolvePeriodForPost(
     companyId: string,
     entryDate: string,
-  ): Promise<string | null> {
+  ): Promise<{ ok: true; periodId: string } | { ok: false; reason: string }> {
     const d = new Date(`${entryDate}T00:00:00.000Z`);
     const covering = await this.prisma.accFiscalPeriod.findFirst({
       where: {
         companyId,
         deletedAt: null,
-        status: AccPeriodStatus.OPEN,
         startDate: { lte: d },
         endDate: { gte: d },
       },
     });
-    if (covering) return covering.id;
-    const open = await this.prisma.accFiscalPeriod.findFirst({
-      where: {
-        companyId,
-        deletedAt: null,
-        status: AccPeriodStatus.OPEN,
-      },
-      orderBy: { startDate: 'desc' },
-    });
-    return open?.id ?? null;
+    if (!covering) {
+      return { ok: false, reason: 'no fiscal period covering entry date' };
+    }
+    if (covering.status !== AccPeriodStatus.OPEN) {
+      return {
+        ok: false,
+        reason: `ACC.PERIOD_CLOSED: period ${covering.code} is ${covering.status}`,
+      };
+    }
+    return { ok: true, periodId: covering.id };
   }
 
   private async createAndPost(
@@ -659,18 +662,18 @@ export class FinanceGlPostingService {
     if (!journalId) {
       return { outcome: 'skipped', reason: 'no active journal' };
     }
-    const periodId = await this.resolveOpenPeriodId(
+    const period = await this.resolvePeriodForPost(
       companyId,
       input.entryDate,
     );
-    if (!periodId) {
-      return { outcome: 'skipped', reason: 'no OPEN fiscal period' };
+    if (!period.ok) {
+      return { outcome: 'skipped', reason: period.reason };
     }
 
     try {
       const draft = await this.accounting.createEntry(companyId, {
         journalId,
-        periodId,
+        periodId: period.periodId,
         entryDate: input.entryDate,
         description: input.description,
         sourceType: input.sourceType,

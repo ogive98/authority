@@ -24,6 +24,7 @@ import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import { PermissionService } from '../permissions/permission.service';
 import {
+  CreateBulletinDto,
   CreateCnssSnapshotDto,
   CreateContractDto,
   CreateEmployeeDto,
@@ -36,6 +37,7 @@ import {
 import { HrService } from './hr.service';
 import { CnssService } from './cnss.service';
 import { IrppService } from './irpp.service';
+import { BulletinService } from './bulletin.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
 
 @Controller('api/v1/hr')
@@ -46,6 +48,7 @@ export class HrController {
     private readonly hr: HrService,
     private readonly cnss: CnssService,
     private readonly irpp: IrppService,
+    private readonly bulletin: BulletinService,
     private readonly permissions: PermissionService,
     private readonly expertise: ExpertiseResolverService,
   ) {}
@@ -160,6 +163,42 @@ export class HrController {
     @Body() dto: CreateIrppSnapshotDto,
   ) {
     return this.irpp.createSnapshot(tenancy.companyId, dto);
+  }
+
+  @Get('bulletins/preview')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  bulletinPreview(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('contractId', ParseUUIDPipe) contractId: string,
+    @Query('periodYm') periodYm?: string,
+  ) {
+    return this.bulletin.preview(tenancy.companyId, contractId, periodYm);
+  }
+
+  @Get('bulletins')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  listBulletins(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('periodYm') periodYm?: string,
+    @Query('employeeId') employeeId?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.bulletin.list(tenancy.companyId, {
+      periodYm,
+      employeeId,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Post('bulletins')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  createBulletin(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateBulletinDto,
+  ) {
+    return this.bulletin.create(tenancy.companyId, dto);
   }
 
   @Get('employees')
