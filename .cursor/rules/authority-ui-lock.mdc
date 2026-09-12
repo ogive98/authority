@@ -1,5 +1,5 @@
 ---
-description: AUTHORITY visual identity — Soft Glass Enterprise OS (D161)
+description: AUTHORITY visual identity — Soft Glass Enterprise OS (D161) + Layout Constitution (D225)
 alwaysApply: true
 ---
 
@@ -10,13 +10,17 @@ No parallel design system.
 
 **Supersedes** Contiental Apple D095 · Utility Cube · Wick.
 
+**Spatial composition** (placement, patterns, button grammar): documentation
+`04_UI_UX/LAYOUT_CONSTITUTION.md` (**D225**). Soft Glass materials/chrome win on conflict.
+
 ## Before any UI work
 
 1. Read `apps/web/src/app/globals.css` (`--a-*` tokens only).
 2. Reuse `AppShell` + `MissionControl` / `ModuleFeatureList` + `SmartActionDock` + `A*`.
 3. Match reference: `/` (Mission Control) · dock · `/settings`.
-4. If a screen diverges → **fix that screen**, never invent a second look.
-5. **Registry-driven** — never hardcode sidebar, dashboard widgets, or actions.
+4. Identify page pattern (List / Detail / Form / Workflow / ModuleDashboard / Settings) + one primary action.
+5. If a screen diverges → **fix that screen**, never invent a second look.
+6. **Registry-driven** — never hardcode sidebar, dashboard widgets, or actions.
 
 ## Locked identity (D161 — 2026-09-10)
 
@@ -38,11 +42,13 @@ No parallel design system.
 - Sidebar Finder + Smart Action Dock sit **under** the topbar (collapse does not move the bar)
 - Features **never** in sidebar → Mission Control + embedded feature list
 - Ops modes exit **only** via calculator unlock code (Admin-configurable)
-- Right rail: Smart Action Dock (color shortcuts · system · resources · surface)
-- Pages: no `border-a-*` boxes · soft underlays only · width = remaining main column
+- Right rail chrome: **Smart Action Dock only** (color shortcuts · system · resources · surface) — never replace with page-context rail
+- Record/workflow context: optional **in-page** ContextPanel (underlay column or drawer), not the dock
+- Pages: no `border-a-*` boxes · soft underlays only · width = remaining main column (no hard 1600px page lock; tables full remaining width)
 - Status = pastel `ABadge` only
 - Montants TND / stock = solid tabular
 - AI panels: `DISABLED` / `UNAVAILABLE` — no crash if off
+- Page header: one primary action right · secondary in `•••` when >2 · canonical FR labels (see LAYOUT_CONSTITUTION)
 
 ## Forbidden
 
@@ -52,6 +58,8 @@ No parallel design system.
 - Contiental Apple soft empty Launchpad icons
 - Purple-on-white cliché theme
 - Second design system
+- Inventing layout per module (must reuse Soft Glass + D225 patterns)
+- Swapping Smart Action Dock for a module ContextRail
 
 ## New modules
 
