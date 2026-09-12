@@ -1,132 +1,145 @@
 "use client";
 
 import Link from "next/link";
-import { APageBody, AScreenHeader } from "@/components/a";
-import { USAGE_TIPS } from "@/lib/tips-catalog";
-
-const CATEGORIES = [
-  { id: "navigation", label: "Navigation" },
-  { id: "finance", label: "Finance" },
-  { id: "stock", label: "Stock & flux" },
-  { id: "legal", label: "Légal / Expertise" },
-  { id: "ops", label: "Ops (SPECTRE / PATCH)" },
-  { id: "a11y", label: "Accessibilité" },
-  { id: "guide", label: "Guide" },
-] as const;
+import { APageBody, APageSection, AScreenHeader } from "@/components/a";
+import {
+  HELP_INTRO,
+  HELP_MODULES,
+  HELP_SHORTCUTS,
+  helpText,
+} from "@/lib/help-guide-catalog";
+import { useLocaleStore } from "@/stores/locale-store";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 
 export default function HelpPage() {
+  const locale = useLocaleStore((s) => s.locale);
+  const intro = HELP_INTRO[locale];
+
   return (
     <>
       <AScreenHeader
-        kicker="Aide"
-        title="Centre d’aide"
-        description="Astuces documentées, raccourcis et liens vers le User Guide."
+        kicker={intro.kicker}
+        title={intro.title}
+        description={intro.description}
         primary={
           <Link
             href="/help/guide"
-            className="inline-flex h-8 items-center rounded-[var(--a-radius-md)] bg-a-accent px-3 text-[length:var(--a-text-xs)] font-medium text-a-accent-fg hover:opacity-90"
+            className="a-action-primary inline-flex h-8 items-center px-3 text-[length:var(--a-text-xs)] font-medium"
           >
-            User Guide →
+            {intro.guideCta}
           </Link>
         }
       />
 
-      <APageBody className="mx-auto max-w-3xl space-y-10">
-        <section id="shortcuts" className="text-center">
-          <h2 className="text-[15px] font-semibold text-a-fg">Raccourcis</h2>
-          <ul className="mt-3 space-y-2 text-[13px] text-a-fg-muted">
-            <li>
-              <kbd className="a-mono text-a-fg">⌘K</kbd> — palette de commandes
-            </li>
-            <li>Clic module sidebar — liste dense sur l’accueil</li>
-            <li>Toolbar — SPECTRE / PATCH / thème</li>
+      <APageBody className="mx-auto max-w-3xl space-y-8">
+        <APageSection title={intro.shortcutsTitle} bare>
+          <ul className="space-y-2 text-[13px] text-a-fg-muted">
+            {HELP_SHORTCUTS.map((row) => (
+              <li key={row.fr}>
+                <kbd className="a-mono text-a-fg">·</kbd> {helpText(locale, row)}
+              </li>
+            ))}
           </ul>
-        </section>
+        </APageSection>
 
-        <section id="modules" className="text-center">
-          <h2 className="text-[15px] font-semibold text-a-fg">Modules</h2>
-          <p className="mx-auto mt-2 max-w-lg text-[13px] text-a-fg-muted">
-            Sidebar Finder : icône outline animée + nom. Un clic ouvre les
-            fonctionnalités en liste Soft Glass sur{" "}
-            <Link href="/" className="text-a-accent hover:underline">
-              Mission Control
-            </Link>
-            .
-          </p>
-        </section>
+        <APageSection title={intro.toc} bare>
+          <nav className="flex flex-col gap-1.5">
+            {HELP_MODULES.map((mod) => (
+              <a
+                key={mod.id}
+                href={`#${mod.id}`}
+                className="a-action-quiet w-fit px-1 py-1 text-[13px] font-medium"
+              >
+                {helpText(locale, mod.title)}
+              </a>
+            ))}
+          </nav>
+        </APageSection>
 
-        <section id="brand" className="text-center">
-          <h2 className="text-[15px] font-semibold text-a-fg">Identité</h2>
-          <p className="mx-auto mt-2 max-w-lg text-[13px] text-a-fg-muted">
-            Barre du haut : logo société (Fattorie Covelli), trait élégant, puis
-            « Powered by AUTHORITY ». Indépendant de la réduction sidebar.
-          </p>
-        </section>
+        {HELP_MODULES.map((mod) => (
+          <section
+            key={mod.id}
+            id={mod.id}
+            className="a-underlay scroll-mt-24 space-y-4 rounded-[var(--a-radius-md)] p-5"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-a-fg">
+                  {helpText(locale, mod.title)}
+                </h2>
+                <p className="mt-1 text-[13px] leading-relaxed text-a-fg-muted">
+                  {helpText(locale, mod.summary)}
+                </p>
+              </div>
+              {mod.href ? (
+                <Link
+                  href={mod.href}
+                  className="a-action-quiet shrink-0 px-2 py-1 text-[12px] font-medium"
+                >
+                  {locale === "it" ? "Apri" : "Ouvrir"} →
+                </Link>
+              ) : null}
+            </div>
 
-        <section id="sidebar" className="text-center">
-          <h2 className="text-[15px] font-semibold text-a-fg">Sidebar</h2>
-          <p className="mx-auto mt-2 max-w-lg text-[13px] text-a-fg-muted">
-            Réduction via le bouton panneau : rail d’icônes uniquement. Pas de
-            sous-menus encadrés.
-          </p>
-        </section>
+            <div>
+              <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-a-orange">
+                {intro.whenLabel}
+              </h3>
+              <p className="mt-1 text-[13px] text-a-fg-muted">
+                {helpText(locale, mod.when)}
+              </p>
+            </div>
 
-        <section id="theme" className="text-center">
-          <h2 className="text-[15px] font-semibold text-a-fg">Thème</h2>
-          <p className="mx-auto mt-2 max-w-lg text-[13px] text-a-fg-muted">
-            Clair `#e8eef7` / sombre `#0a1628` — Soft Glass (teal), sous-couches
-            sans cadres.
-          </p>
-        </section>
+            <div className="space-y-5">
+              <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-a-orange">
+                {intro.featuresLabel}
+              </h3>
+              {mod.features.map((feat) => (
+                <div key={feat.name.fr} className="space-y-2">
+                  <h4 className="text-[14px] font-semibold text-a-fg">
+                    {helpText(locale, feat.name)}
+                  </h4>
+                  <p className="text-[12px] text-a-fg-muted">
+                    <span className="font-medium text-a-fg-subtle">
+                      {intro.whenLabel} —{" "}
+                    </span>
+                    {helpText(locale, feat.when)}
+                  </p>
+                  <p className="text-[12px] font-medium text-a-fg-subtle">
+                    {intro.stepsLabel}
+                  </p>
+                  <ol className="list-decimal space-y-1.5 pl-5 text-[13px] leading-relaxed text-a-fg-muted">
+                    {(locale === "it" ? feat.steps.it : feat.steps.fr).map(
+                      (step) => (
+                        <li key={step}>{step}</li>
+                      ),
+                    )}
+                  </ol>
+                </div>
+              ))}
+            </div>
 
-        <section id="a11y" className="text-center">
-          <h2 className="text-[15px] font-semibold text-a-fg">Accessibilité</h2>
-          <p className="mx-auto mt-2 max-w-lg text-[13px] text-a-fg-muted">
-            Le lien « Aller au contenu » n’apparaît qu’au focus clavier (Tab) —
-            il n’encombre pas le chrome Soft Glass.
-          </p>
-        </section>
+            {mod.locks ? (
+              <div>
+                <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-a-orange">
+                  {intro.locksLabel}
+                </h3>
+                <ul className="mt-1 list-disc space-y-1 pl-5 text-[13px] text-a-fg-muted">
+                  {(locale === "it" ? mod.locks.it : mod.locks.fr).map((l) => (
+                    <li key={l}>{l}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </section>
+        ))}
 
-        {CATEGORIES.map((cat) => {
-          const tips = USAGE_TIPS.filter((t) => t.category === cat.id);
-          if (tips.length === 0) return null;
-          return (
-            <section key={cat.id} className="text-left">
-              <h2 className="mb-4 text-center text-[15px] font-semibold text-a-fg">
-                {cat.label}
-              </h2>
-              <ul className="space-y-4">
-                {tips.map((tip) => (
-                  <li
-                    key={tip.id}
-                    id={`tip-${tip.id}`}
-                    className="scroll-mt-24 text-center"
-                  >
-                    <p className="text-[13px] font-semibold text-a-fg">
-                      {tip.title}
-                      {tip.shortcut ? (
-                        <kbd className="a-mono ml-2 text-[11px] font-normal text-a-fg-subtle">
-                          {tip.shortcut}
-                        </kbd>
-                      ) : null}
-                    </p>
-                    <p className="mx-auto mt-1 max-w-xl text-[12px] leading-relaxed text-a-fg-muted">
-                      {tip.body}
-                    </p>
-                    {tip.action.kind === "link" ? (
-                      <Link
-                        href={tip.action.href}
-                        className="mt-1 inline-block text-[12px] font-medium text-a-accent hover:underline"
-                      >
-                        {tip.action.label}
-                      </Link>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          );
-        })}
+        <p className="pb-8 text-center text-[12px] text-a-fg-subtle">
+          Soft Glass · {LAYOUT_ACTIONS.save} ·{" "}
+          {locale === "it"
+            ? "Mai inventare aliquote tunisine"
+            : "Jamais inventer de taux tunisiens"}
+        </p>
       </APageBody>
     </>
   );

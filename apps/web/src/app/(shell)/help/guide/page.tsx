@@ -1,75 +1,92 @@
+"use client";
+
 import Link from "next/link";
-import { APageBody, AScreenHeader } from "@/components/a";
+import { APageBody, APageSection, AScreenHeader } from "@/components/a";
+import {
+  HELP_INTRO,
+  HELP_MODULES,
+  helpText,
+} from "@/lib/help-guide-catalog";
+import { useLocaleStore } from "@/stores/locale-store";
 
-const CHAPTERS = [
-  {
-    id: "context",
-    title: "1. Contexte société",
-    body: "Connectez-vous avec un utilisateur métier et un cookie `authority_company_id`. Sans contexte, les APIs renvoient 403 — le shell peut rester visible.",
-  },
-  {
-    id: "modules",
-    title: "2. Modules & liste d’accueil",
-    body: "Activez un module par clic dans la sidebar. Les fonctionnalités s’affichent en liste Soft Glass sur Mission Control (accueil).",
-  },
-  {
-    id: "stock",
-    title: "3. Stock & lots",
-    body: "Lots et inventaire : quantités tabulaires. Ajustements uniquement via Inventory (y compris depuis la production).",
-  },
-  {
-    id: "finance",
-    title: "4. Finance",
-    body: "Créances → factures (HT/TVA/TTC) → encaissements / instruments / promesses. FODEC & timbre seulement si Expertise VALIDATED.",
-  },
-  {
-    id: "legal",
-    title: "5. Légal Tunisie",
-    body: "TVA = Tax Engine (`/tax`). FODEC, timbre, CNSS, IRPP, TFP = Préférences › Expertise. Jamais de taux inventés.",
-  },
-  {
-    id: "repair",
-    title: "6. Repair",
-    body: "Scénarios SAFE/LOW allowlistés uniquement. Mission rail + audit local — pas de fake rollback.",
-  },
-  {
-    id: "amounts",
-    title: "7. Montants & SPECTRE",
-    body: "TND / stock restent lisibles. SPECTRE masque le sensible à l’écran pendant démos et audits.",
-  },
-] as const;
-
+/** Parcours bout-en-bout — renvoie vers les sections exhaustives du Centre d’aide. */
 export default function UserGuidePage() {
+  const locale = useLocaleStore((s) => s.locale);
+  const intro = HELP_INTRO[locale];
+
+  const journey = HELP_MODULES.filter((m) =>
+    [
+      "shell",
+      "customers",
+      "products",
+      "sales",
+      "inventory",
+      "delivery",
+      "finance",
+      "accounting",
+      "tax",
+      "hr",
+      "settings",
+    ].includes(m.id),
+  );
+
   return (
     <>
       <AScreenHeader
-        kicker="Documentation"
+        kicker={locale === "it" ? "Documentazione" : "Documentation"}
         title="User Guide"
-        description="Parcours AUTHORITY — fromagerie B2B Tunisie."
+        description={
+          locale === "it"
+            ? "Percorso AUTHORITY — caseificio B2B Tunisia — Soft Glass."
+            : "Parcours AUTHORITY — fromagerie B2B Tunisie — Soft Glass."
+        }
         primary={
           <Link
             href="/help"
-            className="inline-flex h-8 items-center rounded-[var(--a-radius-md)] bg-a-surface-3 px-3 text-[length:var(--a-text-xs)] font-medium text-a-fg hover:bg-a-surface-4"
+            className="a-action-quiet inline-flex h-8 items-center px-3 text-[length:var(--a-text-xs)] font-medium"
           >
-            ← Centre d’aide
+            {intro.backHelp}
           </Link>
         }
       />
-      <APageBody className="mx-auto max-w-2xl space-y-8">
-        {CHAPTERS.map((ch) => (
-          <section key={ch.id} id={ch.id} className="text-center">
-            <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-a-fg">
-              {ch.title}
-            </h2>
-            <p className="mt-2 text-[13px] leading-relaxed text-a-fg-muted">
-              {ch.body}
-            </p>
-          </section>
-        ))}
-        <p className="pt-4 text-center text-[12px] text-a-fg-subtle">
-          Raccourcis :{" "}
-          <Link href="/help#shortcuts" className="text-a-accent hover:underline">
-            Centre d’aide
+      <APageBody className="mx-auto max-w-2xl space-y-6">
+        <APageSection
+          title={
+            locale === "it"
+              ? "Ordine consigliato"
+              : "Ordre recommandé"
+          }
+          description={
+            locale === "it"
+              ? "Segui i moduli nell’ordine operativo tipico. Ogni voce apre la scheda dettagliata nel Centro assistenza."
+              : "Suivez les modules dans l’ordre opérationnel typique. Chaque entrée ouvre la fiche détaillée du Centre d’aide."
+          }
+          bare
+        >
+          <ol className="mt-4 list-decimal space-y-4 pl-5">
+            {journey.map((mod, i) => (
+              <li key={mod.id} className="text-[13px] leading-relaxed">
+                <Link
+                  href={`/help#${mod.id}`}
+                  className="font-semibold text-a-accent hover:underline"
+                >
+                  {i + 1}. {helpText(locale, mod.title)}
+                </Link>
+                <p className="mt-1 text-a-fg-muted">
+                  {helpText(locale, mod.summary)}
+                </p>
+                <p className="mt-1 text-[12px] text-a-fg-subtle">
+                  <span className="font-medium">{intro.whenLabel} — </span>
+                  {helpText(locale, mod.when)}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </APageSection>
+
+        <p className="text-center text-[12px] text-a-fg-subtle">
+          <Link href="/help#shell" className="text-a-accent hover:underline">
+            {intro.toc}
           </Link>
         </p>
       </APageBody>

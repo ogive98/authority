@@ -24,6 +24,7 @@ export const MODULE_LABELS_IT: Record<string, string> = {
   production: "Produzione",
   platform: "Piattaforma",
   portals: "Portali",
+  attendance: "Presenze",
   payroll: "Paghe",
   monitoring: "Monitoraggio",
 };
@@ -61,6 +62,13 @@ export const FEATURE_LABELS_IT: Record<string, string> = {
   preferences: "Preferenze",
   expertise: "Expertise legale",
   of: "Ordini di produzione",
+  banking: "Banca",
+  "credit-notes": "Note di credito",
+  attendance: "Presenze",
+  bulletins: "Buste paga",
+  conges: "Congedi",
+  "hr-kinds": "Tipi documento",
+  templates: "Modelli",
 };
 
 /** Overlay IT names/labels; FR passthrough. Structure unchanged (registry-driven). */

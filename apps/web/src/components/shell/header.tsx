@@ -5,6 +5,7 @@ import {
   Bell,
   Eye,
   Ghost,
+  Languages,
   Menu,
   Search,
   Wrench,
@@ -90,7 +91,6 @@ function OpsModeIcon({
  */
 export function ShellHeader() {
   const { t, unread: unreadLabel } = useShellT();
-  const locale = useLocaleStore((s) => s.locale);
   const toggleLocale = useLocaleStore((s) => s.toggleLocale);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
@@ -238,10 +238,9 @@ export function ShellHeader() {
           onClick={toggleLocale}
           title={t("langToggle")}
           aria-label={t("langToggle")}
-          className="a-action-quiet inline-flex h-9 items-center gap-1 rounded-[var(--a-radius-sm)] px-2.5 text-[11px] font-semibold tracking-wide text-a-fg"
+          className="a-action-quiet inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted"
         >
-          <span aria-hidden>{locale === "fr" ? "🇫🇷" : "🇮🇹"}</span>
-          <span className="a-mono uppercase">{locale}</span>
+          <Languages className="h-4 w-4" strokeWidth={1.5} aria-hidden />
         </button>
 
         <UserMenu />

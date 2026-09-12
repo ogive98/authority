@@ -1,0 +1,30 @@
+---
+description: Every new feature must ship with Help FR/IT + UI string overlays
+alwaysApply: true
+---
+
+# Help & i18n lock (D230)
+
+Whenever you **add or deepen a user-facing feature** (module, screen, action, portal flow):
+
+## Mandatory before marking the lot done
+
+1. **Help catalog** — update [`apps/web/src/lib/help-guide-catalog.ts`](apps/web/src/lib/help-guide-catalog.ts):
+   - Add or extend the relevant `HELP_MODULES` entry
+   - Include: summary · when · feature name · when · **step-by-step** (FR + IT)
+   - Add `locks` if Prefs / legal / Soft Glass constraints apply
+2. **Italian overlays** (FR is source of truth):
+   - New chrome / button / empty-state strings → `UI_STRINGS_IT` in `apps/web/src/lib/i18n/route-labels.ts`
+   - New module / feature registry labels → `MODULE_LABELS_IT` / `FEATURE_LABELS_IT` in `registry-labels.ts`
+   - Status labels → `status-labels.ts` if applicable
+3. **Do not** leave Help stale for “later” — same lot as the feature.
+
+## Out of scope for Help
+
+- Pure refactors with no UX change
+- Internal API-only changes with zero UI surface
+- Super Admin control-plane unless it gains an operator-facing screen
+
+## Language chrome
+
+- Locale toggle = **Languages** icon (globe) — never hardcode `IT | FR` text in the topbar.
