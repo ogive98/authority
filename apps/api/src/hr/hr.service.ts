@@ -5,14 +5,17 @@ import {
   HrContractStatus,
   HrContractType,
   HrEmployeeStatus,
+  IamUserStatus,
   Prisma,
   type HrContract,
   type HrEmployee,
   type HrJobTitle,
+  type IamUser,
 } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HR_ERROR_CODES, HR_EVENT_TYPES, isHrImageMime } from './hr.constants';
+import { assertTunisianCin } from './hr-print-merge';
 import type {
   CreateContractDto,
   CreateEmployeeDto,
@@ -37,9 +40,34 @@ export type HrContractDto = {
   /** Human wage base TND — omitted without hr.wage.read. */
   wageBase: string | null;
   notes: string | null;
+  pdfDocumentId: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type HrLinkedUserDto = {
+  id: string;
+  email: string;
+  displayName: string;
+  status: IamUserStatus;
+};
+
+export type HrLinkableUserDto = {
+  id: string;
+  email: string;
+  displayName: string;
+  status: IamUserStatus;
+  roleCode: string | null;
+  /** True if already linked to another employee in this company. */
+  linkedEmployeeId: string | null;
+};
+
+export type HrSiteDto = {
+  id: string;
+  code: string;
+  type: string;
+  status: string;
 };
 
 export type HrEmployeeDto = {
@@ -48,12 +76,20 @@ export type HrEmployeeDto = {
   matricule: string;
   displayName: string;
   siteId: string | null;
+  site: HrSiteDto | null;
   department: string | null;
   jobTitleId: string | null;
   /** Resolved catalog name — not free text. */
   jobTitle: string | null;
   cnssNo: string | null;
+  cinNo: string | null;
+  address: string | null;
+  bankName: string | null;
+  bankAgency: string | null;
+  bankAccount: string | null;
   email: string | null;
+  userId: string | null;
+  linkedUser: HrLinkedUserDto | null;
   status: HrEmployeeStatus;
   hiredAt: string | null;
   leftAt: string | null;
@@ -61,6 +97,7 @@ export type HrEmployeeDto = {
   taxChefDeFamille: boolean | null;
   taxEnfantCount: number | null;
   photoDocumentId: string | null;
+  attestationPdfDocumentId: string | null;
   version: number;
   contracts: HrContractDto[];
   createdAt: string;
@@ -103,6 +140,7 @@ export class HrService {
               { displayName: { contains: q, mode: 'insensitive' } },
               { department: { contains: q, mode: 'insensitive' } },
               { cnssNo: { contains: q, mode: 'insensitive' } },
+              { cinNo: { contains: q, mode: 'insensitive' } },
               { jobTitle: { name: { contains: q, mode: 'insensitive' } } },
             ],
           }
@@ -156,6 +194,21 @@ export class HrService {
       dto.jobTitleId ?? null,
     );
 
+    if (dto.siteId) {
+      await this.assertSiteInCompany(companyId, dto.siteId);
+    }
+
+    let cinNo: string | null = null;
+    try {
+      cinNo = assertTunisianCin(dto.cinNo);
+    } catch {
+      throw new HrException(
+        HR_ERROR_CODES.CIN_INVALID,
+        'CIN must be exactly 8 digits when set.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const created = await this.prisma.$transaction(async (tx) => {
       const row = await tx.hrEmployee.create({
         data: {
@@ -166,6 +219,11 @@ export class HrService {
           department: dto.department?.trim() || null,
           jobTitleId: jobTitleId ?? null,
           cnssNo: dto.cnssNo?.trim() || null,
+          cinNo,
+          address: dto.address?.trim() || null,
+          bankName: dto.bankName?.trim() || null,
+          bankAgency: dto.bankAgency?.trim() || null,
+          bankAccount: dto.bankAccount?.trim() || null,
           email: dto.email?.trim() || null,
           hiredAt: dto.hiredAt ? startOfUtcDay(new Date(dto.hiredAt)) : null,
           notes: dto.notes?.trim() || null,
@@ -201,7 +259,14 @@ export class HrService {
     if (dto.displayName !== undefined) {
       data.displayName = dto.displayName.trim();
     }
-    if (dto.siteId !== undefined) data.siteId = dto.siteId;
+    if (dto.siteId !== undefined) {
+      if (dto.siteId === null) {
+        data.site = { disconnect: true };
+      } else {
+        await this.assertSiteInCompany(companyId, dto.siteId);
+        data.site = { connect: { id: dto.siteId } };
+      }
+    }
     if (dto.department !== undefined) {
       data.department = dto.department?.trim() || null;
     }
@@ -215,6 +280,25 @@ export class HrService {
         nextId === null ? { disconnect: true } : { connect: { id: nextId } };
     }
     if (dto.cnssNo !== undefined) data.cnssNo = dto.cnssNo?.trim() || null;
+    if (dto.cinNo !== undefined) {
+      try {
+        data.cinNo = assertTunisianCin(dto.cinNo);
+      } catch {
+        throw new HrException(
+          HR_ERROR_CODES.CIN_INVALID,
+          'CIN must be exactly 8 digits when set.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
+    if (dto.address !== undefined) data.address = dto.address?.trim() || null;
+    if (dto.bankName !== undefined) data.bankName = dto.bankName?.trim() || null;
+    if (dto.bankAgency !== undefined) {
+      data.bankAgency = dto.bankAgency?.trim() || null;
+    }
+    if (dto.bankAccount !== undefined) {
+      data.bankAccount = dto.bankAccount?.trim() || null;
+    }
     if (dto.email !== undefined) data.email = dto.email?.trim() || null;
     if (dto.notes !== undefined) data.notes = dto.notes?.trim() || null;
     if (dto.hiredAt !== undefined) {
@@ -261,6 +345,14 @@ export class HrService {
           );
         }
         data.photoDocument = { connect: { id: doc.id } };
+      }
+    }
+    if (dto.userId !== undefined) {
+      if (dto.userId === null) {
+        data.user = { disconnect: true };
+      } else {
+        await this.assertLinkableUser(companyId, dto.userId, id);
+        data.user = { connect: { id: dto.userId } };
       }
     }
 
@@ -362,9 +454,25 @@ export class HrService {
         HttpStatus.NOT_FOUND,
       );
     }
+    if (row.status !== HrContractStatus.ACTIVE) {
+      throw new HrException(
+        HR_ERROR_CODES.INVALID_STATUS,
+        'Only ACTIVE contracts can be edited.',
+        HttpStatus.CONFLICT,
+      );
+    }
     const data: Prisma.HrContractUpdateInput = {
       version: { increment: 1 },
     };
+    if (dto.type !== undefined) data.type = dto.type;
+    if (dto.startDate !== undefined) {
+      data.startDate = startOfUtcDay(new Date(dto.startDate));
+    }
+    if (dto.endDate !== undefined) {
+      data.endDate = dto.endDate
+        ? startOfUtcDay(new Date(dto.endDate))
+        : null;
+    }
     if (dto.wageRef !== undefined) {
       data.wageRef = dto.wageRef?.trim() || null;
     }
@@ -377,6 +485,25 @@ export class HrService {
     if (dto.notes !== undefined) {
       data.notes = dto.notes?.trim() || null;
     }
+
+    const nextStart =
+      dto.startDate !== undefined
+        ? startOfUtcDay(new Date(dto.startDate))
+        : row.startDate;
+    const nextEnd =
+      dto.endDate !== undefined
+        ? dto.endDate
+          ? startOfUtcDay(new Date(dto.endDate))
+          : null
+        : row.endDate;
+    if (nextEnd && nextEnd < nextStart) {
+      throw new HrException(
+        HR_ERROR_CODES.INVALID_DATES,
+        'Contract endDate must be on or after startDate.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const updated = await this.prisma.hrContract.update({
       where: { id },
       data,
@@ -479,11 +606,33 @@ export class HrService {
       matricule: row.matricule,
       displayName: row.displayName,
       siteId: row.siteId,
+      site: row.site
+        ? {
+            id: row.site.id,
+            code: row.site.code,
+            type: row.site.type,
+            status: row.site.status,
+          }
+        : null,
       department: row.department,
       jobTitleId: row.jobTitleId,
       jobTitle: row.jobTitle?.name ?? null,
       cnssNo: row.cnssNo,
+      cinNo: row.cinNo,
+      address: row.address,
+      bankName: row.bankName,
+      bankAgency: row.bankAgency,
+      bankAccount: row.bankAccount,
       email: row.email,
+      userId: row.userId,
+      linkedUser: row.user
+        ? {
+            id: row.user.id,
+            email: row.user.email,
+            displayName: row.user.displayName,
+            status: row.user.status,
+          }
+        : null,
       status: row.status,
       hiredAt: row.hiredAt ? toDateOnly(row.hiredAt) : null,
       leftAt: row.leftAt ? toDateOnly(row.leftAt) : null,
@@ -491,11 +640,129 @@ export class HrService {
       taxChefDeFamille: row.taxChefDeFamille,
       taxEnfantCount: row.taxEnfantCount,
       photoDocumentId: row.photoDocumentId,
+      attestationPdfDocumentId: row.attestationPdfDocumentId,
       version: row.version,
       contracts: row.contracts.map((c) => this.toContractDto(c, includeWage)),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
+  }
+
+  /**
+   * Company Identity users that HR can link — gated by hr.employee.write,
+   * not identity.user.manage (D213).
+   */
+  async listLinkableUsers(
+    companyId: string,
+    opts: { q?: string; limit?: number } = {},
+  ): Promise<{ items: HrLinkableUserDto[] }> {
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 100);
+    const q = opts.q?.trim();
+    const assignments = await this.prisma.orgUserAssignment.findMany({
+      where: {
+        companyId,
+        user: {
+          deletedAt: null,
+          ...(q
+            ? {
+                OR: [
+                  { email: { contains: q, mode: 'insensitive' } },
+                  { displayName: { contains: q, mode: 'insensitive' } },
+                ],
+              }
+            : {}),
+        },
+      },
+      take: limit,
+      orderBy: { user: { displayName: 'asc' } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            status: true,
+          },
+        },
+      },
+    });
+    const userIds = assignments.map((a) => a.userId);
+    const linked = userIds.length
+      ? await this.prisma.hrEmployee.findMany({
+          where: {
+            companyId,
+            deletedAt: null,
+            userId: { in: userIds },
+          },
+          select: { id: true, userId: true },
+        })
+      : [];
+    const linkedByUser = new Map(
+      linked
+        .filter((e): e is { id: string; userId: string } => e.userId != null)
+        .map((e) => [e.userId, e.id]),
+    );
+    return {
+      items: assignments.map((a) => ({
+        id: a.user.id,
+        email: a.user.email,
+        displayName: a.user.displayName,
+        status: a.user.status,
+        roleCode: a.roleCode,
+        linkedEmployeeId: linkedByUser.get(a.userId) ?? null,
+      })),
+    };
+  }
+
+  private async assertLinkableUser(
+    companyId: string,
+    userId: string,
+    employeeId: string,
+  ) {
+    const assignment = await this.prisma.orgUserAssignment.findFirst({
+      where: { companyId, userId },
+      include: {
+        user: { select: { id: true, deletedAt: true } },
+      },
+    });
+    if (!assignment?.user || assignment.user.deletedAt) {
+      throw new HrException(
+        HR_ERROR_CODES.USER_INVALID,
+        'User must be an Identity account assigned to this company.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const other = await this.prisma.hrEmployee.findFirst({
+      where: {
+        companyId,
+        userId,
+        deletedAt: null,
+        NOT: { id: employeeId },
+      },
+      select: { id: true, matricule: true },
+    });
+    if (other) {
+      throw new HrException(
+        HR_ERROR_CODES.USER_ALREADY_LINKED,
+        `User already linked to employee ${other.matricule}.`,
+        HttpStatus.CONFLICT,
+      );
+    }
+  }
+
+  /** Site must belong to the same company and not be soft-deleted (D214). */
+  private async assertSiteInCompany(companyId: string, siteId: string) {
+    const site = await this.prisma.orgSite.findFirst({
+      where: { id: siteId, companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!site) {
+      throw new HrException(
+        HR_ERROR_CODES.SITE_INVALID,
+        'Site must belong to this company.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
   private toContractDto(row: HrContract, includeWage: boolean): HrContractDto {
@@ -514,6 +781,7 @@ export class HrService {
           ? row.wageBase.toFixed(3)
           : null,
       notes: row.notes,
+      pdfDocumentId: row.pdfDocumentId,
       version: row.version,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
@@ -537,6 +805,22 @@ function toDateOnly(d: Date): string {
 
 const employeeInclude = {
   jobTitle: true,
+  site: {
+    select: {
+      id: true,
+      code: true,
+      type: true,
+      status: true,
+    },
+  },
+  user: {
+    select: {
+      id: true,
+      email: true,
+      displayName: true,
+      status: true,
+    },
+  },
   contracts: {
     where: { deletedAt: null },
     orderBy: { startDate: 'desc' as const },
@@ -545,5 +829,12 @@ const employeeInclude = {
 
 type EmployeeRow = HrEmployee & {
   jobTitle: HrJobTitle | null;
+  site: {
+    id: string;
+    code: string;
+    type: string;
+    status: string;
+  } | null;
+  user: Pick<IamUser, 'id' | 'email' | 'displayName' | 'status'> | null;
   contracts: HrContract[];
 };

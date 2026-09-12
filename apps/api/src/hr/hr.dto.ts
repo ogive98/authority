@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -17,7 +18,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { HrContractType, HrEmployeeStatus } from '@prisma/client';
+import { HrContractType, HrEmployeeStatus, HrPrintDocKind } from '@prisma/client';
 
 export class CreateEmployeeDto {
   @IsString()
@@ -46,6 +47,33 @@ export class CreateEmployeeDto {
   @MaxLength(32)
   cnssNo?: string;
 
+  /** Tunisian CIN — 8 digits when set (D217). */
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined && String(v).trim() !== '')
+  @Matches(/^\d{8}$/)
+  @MaxLength(8)
+  cinNo?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  bankName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  bankAgency?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  bankAccount?: string;
+
   @IsOptional()
   @IsEmail()
   email?: string;
@@ -67,6 +95,7 @@ export class PatchEmployeeDto {
   displayName?: string;
 
   @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
   @IsUUID()
   siteId?: string | null;
 
@@ -84,6 +113,32 @@ export class PatchEmployeeDto {
   @IsString()
   @MaxLength(32)
   cnssNo?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined && String(v).trim() !== '')
+  @Matches(/^\d{8}$/)
+  @MaxLength(8)
+  cinNo?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  address?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  bankName?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  bankAgency?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  bankAccount?: string | null;
 
   @IsOptional()
   @IsEmail()
@@ -112,6 +167,12 @@ export class PatchEmployeeDto {
   @ValidateIf((_, v) => v !== null && v !== undefined)
   @IsUUID()
   photoDocumentId?: string | null;
+
+  /** Link / unlink Identity account (same company). */
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsUUID()
+  userId?: string | null;
 
   @IsOptional()
   @ValidateIf((_, v) => v !== null && v !== undefined)
@@ -159,6 +220,20 @@ export class CreateContractDto {
 }
 
 export class PatchContractDto {
+  @IsOptional()
+  @IsEnum(HrContractType)
+  type?: HrContractType;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsDateString()
+  startDate?: string;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsDateString()
+  endDate?: string | null;
+
   @IsOptional()
   @IsString()
   @MaxLength(80)
@@ -260,6 +335,147 @@ export class PatchJobTitleDto {
   @IsString()
   @MaxLength(80)
   name?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class CreateDocKindDto {
+  @IsString()
+  @MaxLength(32)
+  code!: string;
+
+  @IsString()
+  @MaxLength(80)
+  name!: string;
+}
+
+export class PatchDocKindDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  code?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  name?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class PutContractPrintTemplateDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  letterhead?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50000)
+  bodyHtml?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  footer?: string;
+}
+
+/** One-shot PDF body overrides — does not persist Prefs (D217 UX). */
+export class GeneratePrintPdfDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  letterhead?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50000)
+  bodyHtml?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  footer?: string;
+
+  @IsOptional()
+  @IsUUID()
+  templateId?: string;
+}
+
+export class PutAttestationPrintTemplateDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  letterhead?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50000)
+  bodyHtml?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  footer?: string;
+}
+
+export class CreatePrintTemplateDto {
+  @IsEnum(HrPrintDocKind)
+  kind!: HrPrintDocKind;
+
+  @IsString()
+  @MaxLength(32)
+  code!: string;
+
+  @IsString()
+  @MaxLength(80)
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  letterhead?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50000)
+  bodyHtml?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  footer?: string;
+}
+
+export class PatchPrintTemplateDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  code?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  letterhead?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50000)
+  bodyHtml?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  footer?: string;
 
   @IsOptional()
   @IsBoolean()

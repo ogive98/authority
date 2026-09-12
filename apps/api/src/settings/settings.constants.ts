@@ -75,6 +75,12 @@ export const COMPANY_ONLY_SETTING_KEYS = [
   'sales.default_currency',
   'inventory.daily_lot_gen.hour_tunis',
   'inventory.daily_lot_gen.tz',
+  'hr.contract.letterhead',
+  'hr.contract.body_html',
+  'hr.contract.footer',
+  'hr.attestation.letterhead',
+  'hr.attestation.body_html',
+  'hr.attestation.footer',
 ] as const;
 
 export function isCompanyOnlySettingKey(key: string): boolean {

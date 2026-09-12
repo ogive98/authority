@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import {
   Briefcase,
+  FileStack,
   FileText,
+  ScrollText,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -25,21 +27,36 @@ import { localizeUiString } from "@/lib/i18n/route-labels";
 import { useLocaleStore } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
 import {
+  createDocKind,
   createEmployee,
   createJobTitle,
+  createPrintTemplate,
   downloadBulletinPdf,
+  fetchAttestationPrintTemplate,
   fetchBulletins,
+  fetchContractPrintTemplate,
+  fetchDocKinds,
   fetchEmployees,
   fetchJobTitles,
+  fetchPrintTemplates,
   hrEmployeeDocumentContentHref,
+  patchDocKind,
   patchJobTitle,
+  putAttestationPrintTemplate,
+  putContractPrintTemplate,
   type Bulletin,
+  type HrAttestationPrintTemplate,
+  type HrContractPrintTemplate,
+  type HrDocKind,
   type HrEmployee,
   type HrJobTitle,
+  type HrPrintDocKind,
+  type HrPrintTemplate,
 } from "@/lib/hr";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
   softPageBody,
+  softPanel,
   softSelect,
   softTableWrap,
   softThead,
@@ -53,7 +70,7 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-type DrawerMode = "employee" | "jobTitle";
+type DrawerMode = "employee" | "jobTitle" | "docKind";
 
 function statusTone(
   status: string,
@@ -104,18 +121,48 @@ function HrWorkspace() {
   const [jobTitles, setJobTitles] = useState<HrJobTitle[]>([]);
   const [jobCode, setJobCode] = useState("");
   const [jobName, setJobName] = useState("");
+  const [docKinds, setDocKinds] = useState<HrDocKind[]>([]);
+  const [kindCode, setKindCode] = useState("");
+  const [kindName, setKindName] = useState("");
+  const [printTpl, setPrintTpl] = useState<HrContractPrintTemplate>({
+    letterhead: "",
+    bodyHtml: "",
+    footer: "",
+  });
+  const [attestTpl, setAttestTpl] = useState<HrAttestationPrintTemplate>({
+    letterhead: "",
+    bodyHtml: "",
+    footer: "",
+  });
+  const [catalogue, setCatalogue] = useState<HrPrintTemplate[]>([]);
+  const [catKind, setCatKind] = useState<HrPrintDocKind>("CONTRACT");
+  const [catCode, setCatCode] = useState("");
+  const [catName, setCatName] = useState("");
   const [cnssNo, setCnssNo] = useState("");
+  const [cinNo, setCinNo] = useState("");
+  const [address, setAddress] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankAgency, setBankAgency] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
   const [hiredAt, setHiredAt] = useState("");
   const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
 
   const load = useCallback(async (query?: string) => {
     setState({ kind: "loading" });
-    const [res, bul, titles] = await Promise.all([
+    const [res, bul, titles, kinds, tpl, att, cats] = await Promise.all([
       fetchEmployees(query),
       fetchBulletins({ limit: 30 }),
       fetchJobTitles(),
+      fetchDocKinds(),
+      fetchContractPrintTemplate(),
+      fetchAttestationPrintTemplate(),
+      fetchPrintTemplates(),
     ]);
     if (titles.ok) setJobTitles(titles.data.items);
+    if (kinds.ok) setDocKinds(kinds.data.items);
+    if (tpl.ok) setPrintTpl(tpl.data);
+    if (att.ok) setAttestTpl(att.data);
+    if (cats.ok) setCatalogue(cats.data.items);
     if (bul.ok) setBulletins(bul.data.items);
     if (!res.ok) {
       if (res.status === 403) {
@@ -159,6 +206,11 @@ function HrWorkspace() {
     setDepartment("");
     setJobTitleId("");
     setCnssNo("");
+    setCinNo("");
+    setAddress("");
+    setBankName("");
+    setBankAgency("");
+    setBankAccount("");
     setHiredAt("");
     setDrawerOpen(true);
   }
@@ -168,6 +220,14 @@ function HrWorkspace() {
     setFormError(null);
     setJobCode("");
     setJobName("");
+    setDrawerOpen(true);
+  }
+
+  function openCreateDocKind() {
+    setDrawerMode("docKind");
+    setFormError(null);
+    setKindCode("");
+    setKindName("");
     setDrawerOpen(true);
   }
 
@@ -190,6 +250,11 @@ function HrWorkspace() {
       department: department.trim() || undefined,
       jobTitleId: jobTitleId || undefined,
       cnssNo: cnssNo.trim() || undefined,
+      cinNo: cinNo.trim() || undefined,
+      address: address.trim() || undefined,
+      bankName: bankName.trim() || undefined,
+      bankAgency: bankAgency.trim() || undefined,
+      bankAccount: bankAccount.trim() || undefined,
       hiredAt: hiredAt || undefined,
     });
     setBusy(false);
@@ -229,6 +294,77 @@ function HrWorkspace() {
     await load(q);
   }
 
+  async function onCreateDocKind() {
+    setBusy(true);
+    setFormError(null);
+    const res = await createDocKind({
+      code: kindCode.trim(),
+      name: kindName.trim(),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setDrawerOpen(false);
+    goTab("kinds");
+    await load(q);
+  }
+
+  async function onArchiveDocKind(id: string, active: boolean) {
+    setBusy(true);
+    const res = await patchDocKind(id, { active });
+    setBusy(false);
+    if (!res.ok) {
+      setState({ kind: "error", message: res.message });
+      return;
+    }
+    await load(q);
+  }
+
+  async function onSavePrintTemplate() {
+    setBusy(true);
+    setFormError(null);
+    const res = await putContractPrintTemplate(printTpl);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setPrintTpl(res.data);
+  }
+
+  async function onSaveAttestTemplate() {
+    setBusy(true);
+    setFormError(null);
+    const res = await putAttestationPrintTemplate(attestTpl);
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setAttestTpl(res.data);
+  }
+
+  async function onCreateCatalogueTemplate() {
+    setBusy(true);
+    setFormError(null);
+    const res = await createPrintTemplate({
+      kind: catKind,
+      code: catCode.trim(),
+      name: catName.trim(),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setCatCode("");
+    setCatName("");
+    const cats = await fetchPrintTemplates();
+    if (cats.ok) setCatalogue(cats.data.items);
+  }
+
   return (
     <>
       <AScreenHeader
@@ -236,23 +372,35 @@ function HrWorkspace() {
         title={
           tab === "postes"
             ? "Postes"
-            : tab === "bulletins"
-              ? "Bulletins"
-              : "Employés"
+            : tab === "kinds"
+              ? "Kinds documents"
+              : tab === "templates"
+                ? "Templates impression"
+                : tab === "bulletins"
+                  ? "Bulletins"
+                  : "Employés"
         }
         description={
           tab === "postes"
             ? "Catalogue société — code + libellé, vide jusqu’à saisie. Pas de texte libre sur l’employé."
-            : tab === "bulletins"
-              ? "Bulletins persistés (CNSS + IRPP). Création depuis la fiche salarié."
-              : "Liste des salariés. Ouvrir la fiche pour contrats, fiscal, dossier."
+            : tab === "kinds"
+              ? "Catalogue dossier (CIN, contrat…) — vide jusqu’à saisie. Jamais seedé."
+              : tab === "templates"
+                ? "Squelettes Prefs (A) + catalogue société (B). Aucune clause légale inventée."
+                : tab === "bulletins"
+                  ? "Bulletins persistés (CNSS + IRPP). Création depuis la fiche salarié."
+                  : "Liste des salariés. Ouvrir la fiche pour contrats, fiscal, dossier."
         }
         actions={
           tab === "postes" ? (
             <AButton type="button" onClick={openCreateJobTitle}>
               Nouveau poste
             </AButton>
-          ) : tab === "employees" ? (
+          ) : tab === "kinds" ? (
+            <AButton type="button" onClick={openCreateDocKind}>
+              Nouveau kind
+            </AButton>
+          ) : tab === "templates" ? undefined : tab === "employees" ? (
             <AButton type="button" onClick={openCreateEmployee}>
               Nouvel employé
             </AButton>
@@ -261,7 +409,7 @@ function HrWorkspace() {
       />
 
       <div className={softPageBody}>
-        {tab !== "postes" ? (
+        {tab !== "postes" && tab !== "kinds" && tab !== "templates" ? (
           <ExpertiseHintsStrip
             keys={[
               "hr.cnss.employee",
@@ -279,6 +427,8 @@ function HrWorkspace() {
             [
               ["employees", "Employés", Users],
               ["postes", "Postes", Briefcase],
+              ["kinds", "Kinds", FileStack],
+              ["templates", "Templates", ScrollText],
               ["bulletins", "Bulletins", FileText],
             ] as const satisfies ReadonlyArray<
               readonly [HrTab, string, LucideIcon]
@@ -478,6 +628,276 @@ function HrWorkspace() {
           )
         ) : null}
 
+        {tab === "kinds" && state.kind === "ok" ? (
+          docKinds.length === 0 ? (
+            <AEmptyState
+              title="Aucun kind"
+              description="Catalogue dossier vide — saisissez CIN / contrat scanné si besoin. Jamais seedé."
+              actionLabel="Nouveau kind"
+              onAction={openCreateDocKind}
+            />
+          ) : (
+            <div className={softTableWrap}>
+              <table className="w-full min-w-[480px] text-left text-[length:var(--a-text-sm)]">
+                <thead className={softThead}>
+                  <tr>
+                    <th className="a-table-cell font-medium">Code</th>
+                    <th className="a-table-cell font-medium">Libellé</th>
+                    <th className="a-table-cell font-medium">Statut</th>
+                    <th className="a-table-cell font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {docKinds.map((k) => (
+                    <tr key={k.id} className={softTr}>
+                      <td className="a-mono a-table-cell">{k.code}</td>
+                      <td className="a-table-cell">{k.name}</td>
+                      <td className="a-table-cell">
+                        <ABadge tone={k.active ? "success" : "neutral"}>
+                          {k.active ? "ACTIF" : "ARCHIVÉ"}
+                        </ABadge>
+                      </td>
+                      <td className="a-table-cell">
+                        <AButton
+                          type="button"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => void onArchiveDocKind(k.id, !k.active)}
+                        >
+                          {k.active ? "Archiver" : "Réactiver"}
+                        </AButton>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : null}
+
+        {tab === "templates" && state.kind === "ok" ? (
+          <div className="space-y-6">
+            <section className={softPanel} aria-labelledby="hr-tpl-title">
+              <h2
+                id="hr-tpl-title"
+                className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
+              >
+                Prefs contrat (squelette A)
+              </h2>
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Placeholders :{" "}
+                <span className="a-mono text-[length:var(--a-text-xs)]">
+                  {
+                    "{{employeeName}} {{matricule}} {{cinNo}} {{cnssNo}} {{address}} {{bankName}} {{bankAgency}} {{bankAccount}} {{contractNumber}} {{contractType}} {{startDate}} {{endDate}} {{wageRef}} {{wageBase}} {{companyName}}"
+                  }
+                </span>
+                . Défaut = squelette structurel — aucune clause légale inventée.
+              </p>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  En-tête
+                </span>
+                <textarea
+                  value={printTpl.letterhead}
+                  onChange={(e) =>
+                    setPrintTpl((t) => ({ ...t, letterhead: e.target.value }))
+                  }
+                  rows={2}
+                  className="w-full rounded-md bg-a-surface-3 px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Corps (HTML)
+                </span>
+                <textarea
+                  value={printTpl.bodyHtml}
+                  onChange={(e) =>
+                    setPrintTpl((t) => ({ ...t, bodyHtml: e.target.value }))
+                  }
+                  rows={6}
+                  className="w-full rounded-md bg-a-surface-3 px-3 py-2 font-mono text-[length:var(--a-text-xs)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Pied
+                </span>
+                <textarea
+                  value={printTpl.footer}
+                  onChange={(e) =>
+                    setPrintTpl((t) => ({ ...t, footer: e.target.value }))
+                  }
+                  rows={2}
+                  className="w-full rounded-md bg-a-surface-3 px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                />
+              </label>
+              <AButton
+                type="button"
+                disabled={busy}
+                onClick={() => void onSavePrintTemplate()}
+              >
+                Enregistrer Prefs contrat
+              </AButton>
+            </section>
+
+            <section className={softPanel} aria-labelledby="hr-att-tpl-title">
+              <h2
+                id="hr-att-tpl-title"
+                className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
+              >
+                Prefs attestation (squelette A)
+              </h2>
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Placeholders :{" "}
+                <span className="a-mono text-[length:var(--a-text-xs)]">
+                  {
+                    "{{employeeName}} {{matricule}} {{cinNo}} {{cnssNo}} {{address}} {{jobTitle}} {{department}} {{contractNumber}} {{contractType}} {{startDate}} {{hiredAt}} {{companyName}}"
+                  }
+                </span>
+              </p>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  En-tête
+                </span>
+                <textarea
+                  value={attestTpl.letterhead}
+                  onChange={(e) =>
+                    setAttestTpl((t) => ({ ...t, letterhead: e.target.value }))
+                  }
+                  rows={2}
+                  className="w-full rounded-md bg-a-surface-3 px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Corps (HTML)
+                </span>
+                <textarea
+                  value={attestTpl.bodyHtml}
+                  onChange={(e) =>
+                    setAttestTpl((t) => ({ ...t, bodyHtml: e.target.value }))
+                  }
+                  rows={6}
+                  className="w-full rounded-md bg-a-surface-3 px-3 py-2 font-mono text-[length:var(--a-text-xs)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Pied
+                </span>
+                <textarea
+                  value={attestTpl.footer}
+                  onChange={(e) =>
+                    setAttestTpl((t) => ({ ...t, footer: e.target.value }))
+                  }
+                  rows={2}
+                  className="w-full rounded-md bg-a-surface-3 px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                />
+              </label>
+              <AButton
+                type="button"
+                disabled={busy}
+                onClick={() => void onSaveAttestTemplate()}
+              >
+                Enregistrer Prefs attestation
+              </AButton>
+            </section>
+
+            <section className={softPanel} aria-labelledby="hr-cat-tpl-title">
+              <h2
+                id="hr-cat-tpl-title"
+                className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
+              >
+                Catalogue société (B)
+              </h2>
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Templates nommés — vides jusqu’à saisie. Sélectionnables sur la
+                fiche à la génération PDF.
+              </p>
+              <div className="grid gap-3 md:grid-cols-3">
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Kind
+                  </span>
+                  <select
+                    className={softSelect}
+                    value={catKind}
+                    onChange={(e) =>
+                      setCatKind(e.target.value as HrPrintDocKind)
+                    }
+                  >
+                    <option value="CONTRACT">CONTRACT</option>
+                    <option value="ATTESTATION">ATTESTATION</option>
+                  </select>
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Code
+                  </span>
+                  <AInput
+                    value={catCode}
+                    onChange={(e) => setCatCode(e.target.value)}
+                    className="a-mono"
+                    placeholder="STD"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Libellé
+                  </span>
+                  <AInput
+                    value={catName}
+                    onChange={(e) => setCatName(e.target.value)}
+                    placeholder="Contrat standard"
+                  />
+                </label>
+              </div>
+              <AButton
+                type="button"
+                disabled={busy || !catCode.trim() || !catName.trim()}
+                onClick={() => void onCreateCatalogueTemplate()}
+              >
+                Ajouter au catalogue
+              </AButton>
+              {catalogue.length === 0 ? (
+                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  Catalogue vide.
+                </p>
+              ) : (
+                <div className={softTableWrap}>
+                  <table className="w-full min-w-[480px] text-left text-[length:var(--a-text-sm)]">
+                    <thead className={softThead}>
+                      <tr>
+                        <th className="a-table-cell font-medium">Kind</th>
+                        <th className="a-table-cell font-medium">Code</th>
+                        <th className="a-table-cell font-medium">Libellé</th>
+                        <th className="a-table-cell font-medium">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {catalogue.map((t) => (
+                        <tr key={t.id} className={softTr}>
+                          <td className="a-table-cell">
+                            <ABadge tone="accent">{t.kind}</ABadge>
+                          </td>
+                          <td className="a-mono a-table-cell">{t.code}</td>
+                          <td className="a-table-cell">{t.name}</td>
+                          <td className="a-table-cell">
+                            <ABadge tone={t.active ? "success" : "neutral"}>
+                              {t.active ? "ACTIF" : "ARCHIVÉ"}
+                            </ABadge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </div>
+        ) : null}
+
         {tab === "bulletins" && state.kind === "ok" ? (
           bulletins.length === 0 ? (
             <AEmptyState
@@ -541,7 +961,11 @@ function HrWorkspace() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title={
-          drawerMode === "jobTitle" ? "Nouveau poste" : "Nouvel employé"
+          drawerMode === "jobTitle"
+            ? "Nouveau poste"
+            : drawerMode === "docKind"
+              ? "Nouveau kind"
+              : "Nouvel employé"
         }
       >
         <div className="space-y-4 p-1">
@@ -612,6 +1036,55 @@ function HrWorkspace() {
               </label>
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  CIN (8 chiffres)
+                </span>
+                <AInput
+                  value={cinNo}
+                  onChange={(e) => setCinNo(e.target.value)}
+                  placeholder="12345678"
+                  className="a-mono"
+                  maxLength={8}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Adresse
+                </span>
+                <AInput
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Banque
+                </span>
+                <AInput
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Agence
+                </span>
+                <AInput
+                  value={bankAgency}
+                  onChange={(e) => setBankAgency(e.target.value)}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  N° compte / RIB
+                </span>
+                <AInput
+                  value={bankAccount}
+                  onChange={(e) => setBankAccount(e.target.value)}
+                  className="a-mono"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Date d’embauche
                 </span>
                 <AInput
@@ -663,6 +1136,43 @@ function HrWorkspace() {
                 onClick={() => void onCreateJobTitle()}
               >
                 Créer le poste
+              </AButton>
+            </>
+          ) : null}
+
+          {drawerMode === "docKind" ? (
+            <>
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Catalogue dossier — CIN / contrat uniquement si vous les
+                saisissez. Jamais seedé.
+              </p>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Code
+                </span>
+                <AInput
+                  value={kindCode}
+                  onChange={(e) => setKindCode(e.target.value)}
+                  placeholder="CIN"
+                  className="a-mono"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Libellé
+                </span>
+                <AInput
+                  value={kindName}
+                  onChange={(e) => setKindName(e.target.value)}
+                  placeholder="Carte d’identité"
+                />
+              </label>
+              <AButton
+                type="button"
+                disabled={busy || !kindCode.trim() || !kindName.trim()}
+                onClick={() => void onCreateDocKind()}
+              >
+                Créer le kind
               </AButton>
             </>
           ) : null}

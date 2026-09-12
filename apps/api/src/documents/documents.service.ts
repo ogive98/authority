@@ -27,6 +27,8 @@ export type DocumentDto = {
   linkType: DocLinkType;
   linkId: string | null;
   customerId: string | null;
+  hrDocKindId: string | null;
+  hrDocKind: { id: string; code: string; name: string } | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -91,6 +93,7 @@ export class DocumentsService {
 
     const rows = await this.prisma.docDocument.findMany({
       where,
+      include: docKindInclude,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
     });
@@ -195,7 +198,9 @@ export class DocumentsService {
           linkId,
           customerId,
           createdByUserId: actorUserId,
+          hrDocKindId: meta.hrDocKindId ?? null,
         },
+        include: docKindInclude,
       });
 
       await this.outbox.enqueue(tx, {
@@ -211,6 +216,7 @@ export class DocumentsService {
           linkType: doc.linkType,
           linkId: doc.linkId,
           customerId: doc.customerId,
+          hrDocKindId: doc.hrDocKindId,
         },
       });
 
@@ -280,7 +286,7 @@ export class DocumentsService {
     ) {
       throw new DocumentsException(
         DOCUMENTS_ERROR_CODES.INVALID_META,
-        'linkType must be CLAIM, ORDER, SHIPMENT, HR_BULLETIN, or HR_EMPLOYEE.',
+        'linkType must be CLAIM, ORDER, SHIPMENT, HR_BULLETIN, HR_EMPLOYEE, HR_CONTRACT, or HR_ATTESTATION.',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -384,10 +390,57 @@ export class DocumentsService {
       };
     }
 
+    if (linkType === DocLinkType.HR_CONTRACT) {
+      const rows = await this.prisma.hrContract.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          ...(q ? { number: { contains: q, mode: 'insensitive' } } : {}),
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: limit,
+        select: { id: true, number: true, type: true },
+      });
+      return {
+        items: rows.map((r) => ({
+          id: r.id,
+          number: r.number,
+          label: `${r.number} · ${r.type}`,
+        })),
+      };
+    }
+
+    if (linkType === DocLinkType.HR_ATTESTATION) {
+      const rows = await this.prisma.hrEmployee.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          ...(q
+            ? {
+                OR: [
+                  { matricule: { contains: q, mode: 'insensitive' } },
+                  { displayName: { contains: q, mode: 'insensitive' } },
+                ],
+              }
+            : {}),
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: limit,
+        select: { id: true, matricule: true, displayName: true },
+      });
+      return {
+        items: rows.map((r) => ({
+          id: r.id,
+          number: r.matricule,
+          label: `${r.matricule} · ${r.displayName}`,
+        })),
+      };
+    }
+
     if (linkType !== DocLinkType.SHIPMENT) {
       throw new DocumentsException(
         DOCUMENTS_ERROR_CODES.INVALID_META,
-        'linkType must be CLAIM, ORDER, SHIPMENT, HR_BULLETIN, or HR_EMPLOYEE.',
+        'linkType must be CLAIM, ORDER, SHIPMENT, HR_BULLETIN, HR_EMPLOYEE, HR_CONTRACT, or HR_ATTESTATION.',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -637,6 +690,36 @@ export class DocumentsService {
       return null;
     }
 
+    if (linkType === DocLinkType.HR_CONTRACT) {
+      const contract = await this.prisma.hrContract.findFirst({
+        where: { id: linkId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!contract) {
+        throw new DocumentsException(
+          DOCUMENTS_ERROR_CODES.LINK_NOT_FOUND,
+          'Contract not found for link.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      return null;
+    }
+
+    if (linkType === DocLinkType.HR_ATTESTATION) {
+      const employee = await this.prisma.hrEmployee.findFirst({
+        where: { id: linkId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!employee) {
+        throw new DocumentsException(
+          DOCUMENTS_ERROR_CODES.LINK_NOT_FOUND,
+          'Employee not found for attestation link.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      return null;
+    }
+
     throw new DocumentsException(
       DOCUMENTS_ERROR_CODES.INVALID_LINK,
       'Invalid document link type.',
@@ -647,9 +730,10 @@ export class DocumentsService {
   private async findActive(
     companyId: string,
     id: string,
-  ): Promise<DocDocument> {
+  ): Promise<DocRow> {
     const row = await this.prisma.docDocument.findFirst({
       where: { id, companyId, deletedAt: null },
+      include: docKindInclude,
     });
     if (!row) {
       throw new DocumentsException(
@@ -671,7 +755,25 @@ export class DocumentsService {
   }
 }
 
-function serialize(row: DocDocument): DocumentDto {
+const docKindInclude = {
+  hrDocKind: {
+    select: { id: true, code: true, name: true },
+  },
+} satisfies Prisma.DocDocumentInclude;
+
+type DocRow = DocDocument & {
+  hrDocKind: { id: string; code: string; name: string } | null;
+};
+
+function serialize(row: DocDocument | DocRow): DocumentDto {
+  const kind =
+    'hrDocKind' in row && row.hrDocKind
+      ? {
+          id: row.hrDocKind.id,
+          code: row.hrDocKind.code,
+          name: row.hrDocKind.name,
+        }
+      : null;
   return {
     id: row.id,
     companyId: row.companyId,
@@ -684,6 +786,8 @@ function serialize(row: DocDocument): DocumentDto {
     linkType: row.linkType,
     linkId: row.linkId,
     customerId: row.customerId,
+    hrDocKindId: row.hrDocKindId ?? null,
+    hrDocKind: kind,
     version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

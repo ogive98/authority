@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
-import type { IamUser } from '@prisma/client';
+import { HrPrintDocKind, type IamUser } from '@prisma/client';
 import { SessionGuard } from '../identity/session.guard';
 import { CurrentUser } from '../identity/identity.decorators';
 import { CurrentTenancy } from '../organization/organization.decorators';
@@ -38,10 +38,17 @@ import {
   CreateEmployeeDto,
   CreateIrppSnapshotDto,
   CreateJobTitleDto,
+  CreateDocKindDto,
+  CreatePrintTemplateDto,
   EndContractDto,
+  GeneratePrintPdfDto,
   PatchContractDto,
   PatchEmployeeDto,
   PatchJobTitleDto,
+  PatchDocKindDto,
+  PatchPrintTemplateDto,
+  PutAttestationPrintTemplateDto,
+  PutContractPrintTemplateDto,
   ReplaceIrppBracketsDto,
 } from './hr.dto';
 import { HrService } from './hr.service';
@@ -52,9 +59,15 @@ import { BulletinPdfService } from './bulletin-pdf.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
 import { LevyService } from './levy.service';
 import { JobTitleService } from './job-title.service';
+import { DocKindService } from './doc-kind.service';
 import { HR_ERROR_CODES, isHrImageMime } from './hr.constants';
 import { HrException } from './hr.exception';
 import { HrDocumentService } from './hr-document.service';
+import { ContractPdfService } from './contract-pdf.service';
+import { ContractPrintSettingsResolver } from './contract-print-settings.resolver';
+import { AttestationPdfService } from './attestation-pdf.service';
+import { AttestationPrintSettingsResolver } from './attestation-print-settings.resolver';
+import { PrintTemplateService } from './print-template.service';
 
 const maxUploadBytes =
   Number(process.env.MAX_UPLOAD_MB ?? DEFAULT_MAX_UPLOAD_MB) * 1024 * 1024;
@@ -73,7 +86,13 @@ export class HrController {
     private readonly permissions: PermissionService,
     private readonly levies: LevyService,
     private readonly jobTitles: JobTitleService,
+    private readonly docKinds: DocKindService,
     private readonly hrDocuments: HrDocumentService,
+    private readonly contractPdf: ContractPdfService,
+    private readonly contractPrint: ContractPrintSettingsResolver,
+    private readonly attestationPdf: AttestationPdfService,
+    private readonly attestationPrint: AttestationPrintSettingsResolver,
+    private readonly printTemplates: PrintTemplateService,
   ) {}
 
   /**
@@ -113,6 +132,16 @@ export class HrController {
     return this.jobTitles.list(tenancy.companyId, { activeOnly });
   }
 
+  /** Identity accounts assigned to this company — for employee link picker (D213). */
+  @Get('linkable-users')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  listLinkableUsers(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('q') q?: string,
+  ) {
+    return this.hr.listLinkableUsers(tenancy.companyId, { q });
+  }
+
   @Post('job-titles')
   @HttpCode(201)
   @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
@@ -132,6 +161,38 @@ export class HrController {
     @Body() dto: PatchJobTitleDto,
   ) {
     return this.jobTitles.patch(tenancy.companyId, id, dto);
+  }
+
+  @Get('doc-kinds')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
+  listDocKinds(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('activeOnly') activeOnlyRaw?: string,
+  ) {
+    const activeOnly =
+      activeOnlyRaw === '1' || activeOnlyRaw === 'true';
+    return this.docKinds.list(tenancy.companyId, { activeOnly });
+  }
+
+  @Post('doc-kinds')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  createDocKind(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateDocKindDto,
+  ) {
+    return this.docKinds.create(tenancy.companyId, dto);
+  }
+
+  @Patch('doc-kinds/:id')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  patchDocKind(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: PatchDocKindDto,
+  ) {
+    return this.docKinds.patch(tenancy.companyId, id, dto);
   }
 
   @Get('cnss/preview')
@@ -358,14 +419,14 @@ export class HrController {
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile()
     file: { buffer: Buffer; mimetype: string; originalname?: string },
-    @Body() body: { title?: string },
+    @Body() body: { title?: string; kindId?: string },
   ) {
     return this.hrDocuments.upload(
       tenancy.companyId,
       user.id,
       id,
       file,
-      body.title,
+      { title: body.title, kindId: body.kindId },
     );
   }
 
@@ -432,7 +493,7 @@ export class HrController {
       user.id,
       id,
       file,
-      'Photo',
+      { title: 'Photo' },
     );
     return this.hr.patchEmployee(
       tenancy.companyId,
@@ -506,6 +567,187 @@ export class HrController {
       { companyId: tenancy.companyId },
     );
     return this.hr.patchContract(tenancy.companyId, id, dto, includeWage);
+  }
+
+  /** D216/D217 — HTML→PDF stream + persist Documents (link HR_CONTRACT). */
+  @Get('contracts/:id/pdf')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  async getContractPdf(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('templateId') templateId: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const result = await this.contractPdf.generateAndPersist(
+      tenancy.companyId,
+      user.id,
+      id,
+      templateId,
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.filename}"`,
+    );
+    res.setHeader('X-Authority-Document-Id', result.documentId);
+    return new StreamableFile(result.buffer);
+  }
+
+  /** One-shot PDF with free-text overrides (not persisted to Prefs). */
+  @Post('contracts/:id/pdf')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  async postContractPdf(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: GeneratePrintPdfDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const result = await this.contractPdf.generateAndPersist(
+      tenancy.companyId,
+      user.id,
+      id,
+      dto.templateId,
+      {
+        letterhead: dto.letterhead,
+        bodyHtml: dto.bodyHtml,
+        footer: dto.footer,
+      },
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.filename}"`,
+    );
+    res.setHeader('X-Authority-Document-Id', result.documentId);
+    return new StreamableFile(result.buffer);
+  }
+
+  @Get('contract-print-template')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
+  getContractPrintTemplate(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.contractPrint.getTemplate(tenancy.companyId);
+  }
+
+  @Put('contract-print-template')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  putContractPrintTemplate(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: PutContractPrintTemplateDto,
+  ) {
+    return this.contractPrint.putTemplate(tenancy.companyId, dto);
+  }
+
+  @Get('attestation-print-template')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
+  getAttestationPrintTemplate(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.attestationPrint.getTemplate(tenancy.companyId);
+  }
+
+  @Put('attestation-print-template')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  putAttestationPrintTemplate(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: PutAttestationPrintTemplateDto,
+  ) {
+    return this.attestationPrint.putTemplate(tenancy.companyId, dto);
+  }
+
+  @Get('print-templates')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
+  listPrintTemplates(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('kind') kind?: string,
+    @Query('activeOnly') activeOnly?: string,
+  ) {
+    const kindNorm = kind?.trim().toUpperCase();
+    const kindEnum =
+      kindNorm &&
+      Object.values(HrPrintDocKind).includes(kindNorm as HrPrintDocKind)
+        ? (kindNorm as HrPrintDocKind)
+        : undefined;
+    return this.printTemplates.list(tenancy.companyId, {
+      kind: kindEnum,
+      activeOnly: activeOnly === '1' || activeOnly === 'true',
+    });
+  }
+
+  @Post('print-templates')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  createPrintTemplate(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreatePrintTemplateDto,
+  ) {
+    return this.printTemplates.create(tenancy.companyId, dto);
+  }
+
+  @Patch('print-templates/:id')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  patchPrintTemplate(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: PatchPrintTemplateDto,
+  ) {
+    return this.printTemplates.patch(tenancy.companyId, id, dto);
+  }
+
+  /** D217 — attestation PDF; requires ACTIVE contract. */
+  @Get('employees/:id/attestation/pdf')
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  async getAttestationPdf(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('templateId') templateId: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const result = await this.attestationPdf.generateAndPersist(
+      tenancy.companyId,
+      user.id,
+      id,
+      templateId,
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.filename}"`,
+    );
+    res.setHeader('X-Authority-Document-Id', result.documentId);
+    return new StreamableFile(result.buffer);
+  }
+
+  @Post('employees/:id/attestation/pdf')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  async postAttestationPdf(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: GeneratePrintPdfDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const result = await this.attestationPdf.generateAndPersist(
+      tenancy.companyId,
+      user.id,
+      id,
+      dto.templateId,
+      {
+        letterhead: dto.letterhead,
+        bodyHtml: dto.bodyHtml,
+        footer: dto.footer,
+      },
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.filename}"`,
+    );
+    res.setHeader('X-Authority-Document-Id', result.documentId);
+    return new StreamableFile(result.buffer);
   }
 
   @Post('contracts/:id/end')

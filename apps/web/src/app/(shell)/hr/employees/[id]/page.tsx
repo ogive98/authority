@@ -17,31 +17,45 @@ import {
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import { HrUpcomingLots } from "@/components/hr/hr-upcoming-lots";
 import {
+  fetchBusinessContext,
+  listCompanySites,
+} from "@/lib/business-auth";
+import {
   createBulletin,
   createCnssSnapshot,
   createContract,
   createIrppSnapshot,
+  downloadAttestationPdf,
+  downloadContractPdf,
   downloadEmployeeDocument,
   endContract,
+  applyHrPrintPlaceholders,
+  fetchAttestationPrintTemplate,
   fetchBulletinPreview,
   fetchCnssPreview,
+  fetchContractPrintTemplate,
   fetchEmployee,
   fetchEmployeeDocuments,
   fetchIrppPreview,
   fetchJobTitles,
   fetchLevyPreview,
+  fetchLinkableUsers,
+  fetchDocKinds,
   hrEmployeeDocumentContentHref,
   isHrImageMime,
   isHrPreviewableMime,
+  patchContract,
   patchEmployee,
   uploadEmployeeDocument,
   uploadEmployeePhoto,
   type BulletinPreview,
   type CnssPreview,
   type HrContract,
+  type HrDocKind,
   type HrEmployee,
   type HrEmployeeDocument,
   type HrJobTitle,
+  type HrLinkableUser,
   type IrppPreview,
   type LevyPreview,
 } from "@/lib/hr";
@@ -60,7 +74,15 @@ type Load =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-type DrawerMode = "contract" | "cnss" | "irpp" | "bulletin" | "docPreview";
+type DrawerMode =
+  | "contract"
+  | "contractEdit"
+  | "genContract"
+  | "genAttestation"
+  | "cnss"
+  | "irpp"
+  | "bulletin"
+  | "docPreview";
 
 function statusTone(
   status: string,
@@ -123,8 +145,21 @@ export default function HrEmployeeFichePage() {
   const [displayName, setDisplayName] = useState("");
   const [department, setDepartment] = useState("");
   const [jobTitleId, setJobTitleId] = useState("");
+  const [siteId, setSiteId] = useState("");
+  const [sites, setSites] = useState<
+    Array<{ id: string; code: string; type: string; status: string }>
+  >([]);
   const [cnssNo, setCnssNo] = useState("");
+  const [cinNo, setCinNo] = useState("");
+  const [address, setAddress] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankAgency, setBankAgency] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
   const [email, setEmail] = useState("");
+  const [genLetterhead, setGenLetterhead] = useState("");
+  const [genBody, setGenBody] = useState("");
+  const [genFooter, setGenFooter] = useState("");
+  const [genContractId, setGenContractId] = useState<string | null>(null);
   const [hiredAt, setHiredAt] = useState("");
   const [status, setStatus] = useState("ACTIVE");
   const [leftAt, setLeftAt] = useState("");
@@ -132,8 +167,12 @@ export default function HrEmployeeFichePage() {
   const [taxChef, setTaxChef] = useState(false);
   const [taxEnfantCount, setTaxEnfantCount] = useState("0");
   const [docTitle, setDocTitle] = useState("");
+  const [docKindId, setDocKindId] = useState("");
+  const [docKinds, setDocKinds] = useState<HrDocKind[]>([]);
   const [docFile, setDocFile] = useState<File | null>(null);
   const [previewDoc, setPreviewDoc] = useState<HrEmployeeDocument | null>(null);
+  const [linkableUsers, setLinkableUsers] = useState<HrLinkableUser[]>([]);
+  const [linkUserId, setLinkUserId] = useState("");
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -145,6 +184,8 @@ export default function HrEmployeeFichePage() {
   const [endDate, setEndDate] = useState("");
   const [wageRef, setWageRef] = useState("");
   const [wageBase, setWageBase] = useState("");
+  const [contractNotes, setContractNotes] = useState("");
+  const [editContractId, setEditContractId] = useState<string | null>(null);
   const [cnssContract, setCnssContract] = useState<HrContract | null>(null);
   const [cnssPreview, setCnssPreview] = useState<CnssPreview | null>(null);
   const [irppPreview, setIrppPreview] = useState<IrppPreview | null>(null);
@@ -159,7 +200,13 @@ export default function HrEmployeeFichePage() {
     setDisplayName(row.displayName);
     setDepartment(row.department ?? "");
     setJobTitleId(row.jobTitleId ?? "");
+    setSiteId(row.siteId ?? "");
     setCnssNo(row.cnssNo ?? "");
+    setCinNo(row.cinNo ?? "");
+    setAddress(row.address ?? "");
+    setBankName(row.bankName ?? "");
+    setBankAgency(row.bankAgency ?? "");
+    setBankAccount(row.bankAccount ?? "");
     setEmail(row.email ?? "");
     setHiredAt(dateInput(row.hiredAt));
     setStatus(row.status);
@@ -169,6 +216,7 @@ export default function HrEmployeeFichePage() {
     setTaxEnfantCount(
       row.taxEnfantCount != null ? String(row.taxEnfantCount) : "0",
     );
+    setLinkUserId(row.userId ?? "");
   }, []);
 
   const load = useCallback(async () => {
@@ -177,13 +225,28 @@ export default function HrEmployeeFichePage() {
       return;
     }
     setState({ kind: "loading" });
-    const [res, titles, files] = await Promise.all([
+    const ctx = await fetchBusinessContext();
+    const companyId = ctx.ok ? ctx.data.companyId : null;
+    const sitesPromise = companyId
+      ? listCompanySites(companyId)
+      : Promise.resolve({
+          ok: false as const,
+          status: 0,
+          message: "Contexte société manquant.",
+        });
+    const [res, titles, files, users, sitesRes, kinds] = await Promise.all([
       fetchEmployee(id),
       fetchJobTitles(),
       fetchEmployeeDocuments(id),
+      fetchLinkableUsers(),
+      sitesPromise,
+      fetchDocKinds(),
     ]);
     if (titles.ok) setJobTitles(titles.data.items);
     if (files.ok) setDocs(files.data.items);
+    if (users.ok) setLinkableUsers(users.data.items);
+    if (sitesRes.ok) setSites(sitesRes.data);
+    if (kinds.ok) setDocKinds(kinds.data.items);
     if (!res.ok) {
       if (res.status === 403) {
         setState({ kind: "forbidden", message: res.message });
@@ -208,7 +271,13 @@ export default function HrEmployeeFichePage() {
       displayName: displayName.trim(),
       department: department.trim() || null,
       jobTitleId: jobTitleId || null,
+      siteId: siteId || null,
       cnssNo: cnssNo.trim() || null,
+      cinNo: cinNo.trim() || null,
+      address: address.trim() || null,
+      bankName: bankName.trim() || null,
+      bankAgency: bankAgency.trim() || null,
+      bankAccount: bankAccount.trim() || null,
       email: email.trim() || null,
       hiredAt: hiredAt || null,
       status,
@@ -222,6 +291,38 @@ export default function HrEmployeeFichePage() {
     }
     applyEmployee(res.data);
     setState({ kind: "ok", employee: res.data });
+  }
+
+  async function onLinkIdentity() {
+    if (!id || !linkUserId) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await patchEmployee(id, { userId: linkUserId });
+    if (res.ok) {
+      const users = await fetchLinkableUsers();
+      if (users.ok) setLinkableUsers(users.data.items);
+      applyEmployee(res.data);
+      setState({ kind: "ok", employee: res.data });
+    } else {
+      setFormError(res.message);
+    }
+    setBusy(false);
+  }
+
+  async function onUnlinkIdentity() {
+    if (!id) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await patchEmployee(id, { userId: null });
+    if (res.ok) {
+      const users = await fetchLinkableUsers();
+      if (users.ok) setLinkableUsers(users.data.items);
+      applyEmployee(res.data);
+      setState({ kind: "ok", employee: res.data });
+    } else {
+      setFormError(res.message);
+    }
+    setBusy(false);
   }
 
   async function onSaveFiscal() {
@@ -242,14 +343,16 @@ export default function HrEmployeeFichePage() {
     setState({ kind: "ok", employee: res.data });
   }
 
-  function openCreateContract() {
-    setDrawerMode("contract");
+  function openEditContract(c: HrContract) {
+    setDrawerMode("contractEdit");
     setFormError(null);
-    setContractType("CDI");
-    setStartDate(new Date().toISOString().slice(0, 10));
-    setEndDate("");
-    setWageRef("");
-    setWageBase("");
+    setEditContractId(c.id);
+    setContractType(c.type);
+    setStartDate(dateInput(c.startDate));
+    setEndDate(dateInput(c.endDate));
+    setWageRef(c.wageRef ?? "");
+    setWageBase(c.wageBase ?? "");
+    setContractNotes(c.notes ?? "");
     setDrawerOpen(true);
   }
 
@@ -272,6 +375,185 @@ export default function HrEmployeeFichePage() {
     }
     setDrawerOpen(false);
     await load();
+  }
+
+  async function onPatchContract() {
+    if (!editContractId) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await patchContract(editContractId, {
+      type: contractType,
+      startDate,
+      endDate: endDate || null,
+      wageRef: wageRef.trim() || null,
+      wageBase: wageBase.trim() ? Number(wageBase) : null,
+      notes: contractNotes.trim() || null,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setDrawerOpen(false);
+    await load();
+  }
+
+  function mergeFieldsFor(
+    emp: HrEmployee,
+    contract: HrContract | null,
+  ): Record<string, string> {
+    return {
+      companyName: "FATTORIE COVELLI GROUP sarl",
+      vatNumber: "1327082/N/A/M000",
+      employeeName: emp.displayName,
+      matricule: emp.matricule,
+      cnssNo: emp.cnssNo ?? "",
+      cinNo: emp.cinNo ?? "",
+      address: emp.address ?? "",
+      bankName: emp.bankName ?? "",
+      bankAgency: emp.bankAgency ?? "",
+      bankAccount: emp.bankAccount ?? "",
+      jobTitle: emp.jobTitle ?? "",
+      department: emp.department ?? "",
+      contractNumber: contract?.number ?? "",
+      contractType: contract?.type ?? contractType,
+      startDate: contract?.startDate?.slice(0, 10) ?? startDate,
+      endDate: contract?.endDate?.slice(0, 10) ?? endDate,
+      wageRef: contract?.wageRef ?? wageRef,
+      wageBase: contract?.wageBase ?? wageBase,
+      notes: contract?.notes ?? "",
+      hiredAt: emp.hiredAt?.slice(0, 10) ?? "",
+    };
+  }
+
+  async function openGenContract() {
+    if (state.kind !== "ok") return;
+    const emp = state.employee;
+    const activeCtr =
+      emp.contracts.find((c) => c.status === "ACTIVE") ?? null;
+    setDrawerMode("genContract");
+    setFormError(null);
+    setGenContractId(activeCtr?.id ?? null);
+    if (activeCtr) {
+      setContractType(activeCtr.type);
+      setStartDate(dateInput(activeCtr.startDate));
+      setEndDate(dateInput(activeCtr.endDate));
+      setWageRef(activeCtr.wageRef ?? "");
+      setWageBase(activeCtr.wageBase ?? "");
+      setContractNotes(activeCtr.notes ?? "");
+    } else {
+      setContractType("CDI");
+      setStartDate(new Date().toISOString().slice(0, 10));
+      setEndDate("");
+      setWageRef("");
+      setWageBase("");
+      setContractNotes("");
+    }
+    const tpl = await fetchContractPrintTemplate();
+    const fields = mergeFieldsFor(emp, activeCtr);
+    if (tpl.ok) {
+      setGenLetterhead(applyHrPrintPlaceholders(tpl.data.letterhead, fields));
+      setGenBody(applyHrPrintPlaceholders(tpl.data.bodyHtml, fields));
+      setGenFooter(applyHrPrintPlaceholders(tpl.data.footer, fields));
+    } else {
+      setGenLetterhead("");
+      setGenBody(
+        `Contrat ${fields.contractType} — ${fields.employeeName} (${fields.matricule})\nCIN ${fields.cinNo} · CNSS ${fields.cnssNo}\nAdresse ${fields.address}`,
+      );
+      setGenFooter("");
+    }
+    setDrawerOpen(true);
+  }
+
+  async function openGenAttestation() {
+    if (state.kind !== "ok") return;
+    const emp = state.employee;
+    const activeCtr = emp.contracts.find((c) => c.status === "ACTIVE");
+    if (!activeCtr) {
+      setFormError(
+        "Créez d’abord un contrat ACTIVE (ou utilisez Générer contrat).",
+      );
+      return;
+    }
+    setDrawerMode("genAttestation");
+    setFormError(null);
+    setGenContractId(activeCtr.id);
+    const tpl = await fetchAttestationPrintTemplate();
+    const fields = mergeFieldsFor(emp, activeCtr);
+    if (tpl.ok) {
+      setGenLetterhead(applyHrPrintPlaceholders(tpl.data.letterhead, fields));
+      setGenBody(applyHrPrintPlaceholders(tpl.data.bodyHtml, fields));
+      setGenFooter(applyHrPrintPlaceholders(tpl.data.footer, fields));
+    } else {
+      setGenLetterhead("");
+      setGenBody(
+        `Attestation — ${fields.employeeName} (${fields.matricule})\nContrat ${fields.contractType} ${fields.contractNumber} depuis ${fields.startDate}`,
+      );
+      setGenFooter("");
+    }
+    setDrawerOpen(true);
+  }
+
+  async function onConfirmGenContract() {
+    if (!id || state.kind !== "ok") return;
+    setBusy(true);
+    setFormError(null);
+    let contractId = genContractId;
+    if (!contractId) {
+      const created = await createContract({
+        employeeId: id,
+        type: contractType,
+        startDate,
+        endDate: endDate || undefined,
+        wageRef: wageRef.trim() || undefined,
+        wageBase: wageBase.trim() ? Number(wageBase) : undefined,
+      });
+      if (!created.ok) {
+        setBusy(false);
+        setFormError(created.message);
+        return;
+      }
+      contractId = created.data.id;
+    } else {
+      const patched = await patchContract(contractId, {
+        type: contractType,
+        startDate,
+        endDate: endDate || null,
+        wageRef: wageRef.trim() || null,
+        wageBase: wageBase.trim() ? Number(wageBase) : null,
+        notes: contractNotes.trim() || null,
+      });
+      if (!patched.ok) {
+        setBusy(false);
+        setFormError(patched.message);
+        return;
+      }
+    }
+    const res = await downloadContractPdf(contractId, {
+      bodyHtml: genBody,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setDrawerOpen(false);
+    await load();
+  }
+
+  async function onConfirmGenAttestation() {
+    if (!id) return;
+    setBusy(true);
+    setFormError(null);
+    const res = await downloadAttestationPdf(id, {
+      bodyHtml: genBody,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setFormError(res.message);
+      return;
+    }
+    setDrawerOpen(false);
   }
 
   async function onEndContract(contractId: string) {
@@ -451,11 +733,10 @@ export default function HrEmployeeFichePage() {
     if (!id || !docFile) return;
     setBusy(true);
     setFormError(null);
-    const res = await uploadEmployeeDocument(
-      id,
-      docFile,
-      docTitle.trim() || undefined,
-    );
+    const res = await uploadEmployeeDocument(id, docFile, {
+      title: docTitle.trim() || undefined,
+      kindId: docKindId || undefined,
+    });
     setBusy(false);
     if (!res.ok) {
       setFormError(res.message);
@@ -463,6 +744,7 @@ export default function HrEmployeeFichePage() {
     }
     setDocFile(null);
     setDocTitle("");
+    setDocKindId("");
     const list = await fetchEmployeeDocuments(id);
     if (list.ok) setDocs(list.data.items);
   }
@@ -683,6 +965,24 @@ export default function HrEmployeeFichePage() {
                 </label>
                 <label className="block space-y-1">
                   <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Site / établissement
+                  </span>
+                  <select
+                    className={softSelect}
+                    value={siteId}
+                    onChange={(e) => setSiteId(e.target.value)}
+                  >
+                    <option value="">— Aucun —</option>
+                    {sites.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.code} · {s.type}
+                        {s.status !== "ACTIVE" ? ` (${s.status})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                     Département
                   </span>
                   <AInput
@@ -708,6 +1008,56 @@ export default function HrEmployeeFichePage() {
                     value={cnssNo}
                     onChange={(e) => setCnssNo(e.target.value)}
                     placeholder="Identifiant seulement — pas de taux"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    CIN (8 chiffres)
+                  </span>
+                  <AInput
+                    value={cinNo}
+                    onChange={(e) => setCinNo(e.target.value)}
+                    placeholder="12345678"
+                    className="a-mono"
+                    maxLength={8}
+                  />
+                </label>
+                <label className="block space-y-1 md:col-span-2">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Adresse
+                  </span>
+                  <AInput
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Banque
+                  </span>
+                  <AInput
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Agence
+                  </span>
+                  <AInput
+                    value={bankAgency}
+                    onChange={(e) => setBankAgency(e.target.value)}
+                  />
+                </label>
+                <label className="block space-y-1 md:col-span-2">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    N° compte / RIB
+                  </span>
+                  <AInput
+                    value={bankAccount}
+                    onChange={(e) => setBankAccount(e.target.value)}
+                    className="a-mono"
+                    placeholder="Texte libre"
                   />
                 </label>
                 <label className="block space-y-1">
@@ -766,6 +1116,86 @@ export default function HrEmployeeFichePage() {
               </AButton>
             </section>
 
+            <section className={softPanel} aria-labelledby="hr-iam-title">
+              <h2
+                id="hr-iam-title"
+                className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
+              >
+                Compte Identity
+              </h2>
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Lien optionnel vers un compte ERP déjà affecté à la société.
+                Ne crée pas d’utilisateur — Délier ne le supprime pas.
+              </p>
+              {employee.linkedUser ? (
+                <div className="flex flex-wrap items-center gap-3 rounded-md bg-a-surface-3 px-3 py-2">
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <p className="truncate text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                      {employee.linkedUser.displayName}
+                    </p>
+                    <p className="truncate text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      {employee.linkedUser.email}
+                    </p>
+                  </div>
+                  <ABadge
+                    tone={
+                      employee.linkedUser.status === "ACTIVE"
+                        ? "success"
+                        : "neutral"
+                    }
+                  >
+                    {employee.linkedUser.status}
+                  </ABadge>
+                  <AButton
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => void onUnlinkIdentity()}
+                  >
+                    Délier
+                  </AButton>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="min-w-[16rem] flex-1 space-y-1">
+                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Utilisateur company
+                    </span>
+                    <select
+                      className={softSelect}
+                      value={linkUserId}
+                      onChange={(e) => setLinkUserId(e.target.value)}
+                    >
+                      <option value="">— Choisir —</option>
+                      {linkableUsers.map((u) => {
+                        const taken =
+                          u.linkedEmployeeId != null &&
+                          u.linkedEmployeeId !== employee.id;
+                        return (
+                          <option
+                            key={u.id}
+                            value={u.id}
+                            disabled={taken}
+                          >
+                            {u.displayName} · {u.email}
+                            {taken ? " (déjà lié)" : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </label>
+                  <AButton
+                    type="button"
+                    disabled={busy || !linkUserId}
+                    onClick={() => void onLinkIdentity()}
+                  >
+                    Lier
+                  </AButton>
+                </div>
+              )}
+            </section>
+
             <section className={softPanel} aria-labelledby="hr-tax-title">
               <h2
                 id="hr-tax-title"
@@ -810,22 +1240,41 @@ export default function HrEmployeeFichePage() {
             </section>
 
             <section className="space-y-3" aria-labelledby="hr-ctr-title">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
                 <h2
                   id="hr-ctr-title"
                   className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
                 >
-                  Contrats
+                  Contrats & documents
                 </h2>
-                {active ? (
-                  <AButton type="button" onClick={openCreateContract}>
-                    Nouveau contrat
-                  </AButton>
-                ) : null}
+                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  Générer un contrat ou une attestation — texte librement
+                  modifiable avant le PDF.
+                </p>
               </div>
+              {active ? (
+                <div className="flex flex-wrap gap-2">
+                  <AButton
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void openGenContract()}
+                  >
+                    Générer contrat
+                  </AButton>
+                  <AButton
+                    type="button"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => void openGenAttestation()}
+                  >
+                    Générer attestation
+                  </AButton>
+                </div>
+              ) : null}
               {employee.contracts.length === 0 ? (
                 <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                  Aucun contrat.
+                  Aucun contrat — « Générer contrat » en crée un
+                  automatiquement.
                 </p>
               ) : (
                 <div className={softTableWrap}>
@@ -862,6 +1311,14 @@ export default function HrEmployeeFichePage() {
                           <td className="a-table-cell">
                             {c.status === "ACTIVE" ? (
                               <div className="flex flex-wrap gap-1">
+                                <AButton
+                                  type="button"
+                                  variant="ghost"
+                                  disabled={busy}
+                                  onClick={() => openEditContract(c)}
+                                >
+                                  Modifier
+                                </AButton>
                                 <AButton
                                   type="button"
                                   variant="ghost"
@@ -928,7 +1385,8 @@ export default function HrEmployeeFichePage() {
                     <thead className={softThead}>
                       <tr>
                         <th className="a-table-cell font-medium">Fichier</th>
-                        <th className="a-table-cell font-medium">Type</th>
+                        <th className="a-table-cell font-medium">Kind</th>
+                        <th className="a-table-cell font-medium">MIME</th>
                         <th className="a-table-cell font-medium">Actions</th>
                       </tr>
                     </thead>
@@ -949,6 +1407,11 @@ export default function HrEmployeeFichePage() {
                                   <ABadge tone="accent">Photo</ABadge>
                                 </>
                               ) : null}
+                            </td>
+                            <td className="a-table-cell">
+                              {d.hrDocKind
+                                ? `${d.hrDocKind.code} · ${d.hrDocKind.name}`
+                                : "—"}
                             </td>
                             <td className="a-table-cell text-a-fg-muted">
                               {d.mime || "—"}
@@ -1008,14 +1471,40 @@ export default function HrEmployeeFichePage() {
               )}
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Kind (catalogue)
+                </span>
+                <select
+                  className={softSelect}
+                  value={docKindId}
+                  onChange={(e) => setDocKindId(e.target.value)}
+                >
+                  <option value="">— Aucun —</option>
+                  {docKinds
+                    .filter((k) => k.active)
+                    .map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {k.code} · {k.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Titre
                 </span>
                 <AInput
                   value={docTitle}
                   onChange={(e) => setDocTitle(e.target.value)}
-                  placeholder="CIN, contrat scanné…"
+                  placeholder="Libellé libre — ex. scan recto"
                 />
               </label>
+              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                Catalogue vide jusqu’à saisie sur{" "}
+                <Link href="/hr?tab=kinds" className="text-a-accent hover:underline">
+                  /hr · Kinds
+                </Link>
+                — pas de CIN/contrat inventés.
+              </p>
               <input
                 type="file"
                 className="text-[length:var(--a-text-sm)] text-a-fg-muted"
@@ -1041,13 +1530,19 @@ export default function HrEmployeeFichePage() {
         title={
           drawerMode === "contract"
             ? "Nouveau contrat"
-            : drawerMode === "irpp"
-              ? "IRPP — preview"
-              : drawerMode === "bulletin"
-                ? "Bulletin — preview"
-                : drawerMode === "docPreview"
-                  ? previewDoc?.title ?? "Aperçu"
-                  : "CNSS — preview"
+            : drawerMode === "contractEdit"
+              ? "Modifier le contrat"
+              : drawerMode === "genContract"
+                ? "Générer contrat"
+                : drawerMode === "genAttestation"
+                  ? "Générer attestation"
+                  : drawerMode === "irpp"
+                    ? "IRPP — preview"
+                    : drawerMode === "bulletin"
+                      ? "Bulletin — preview"
+                      : drawerMode === "docPreview"
+                        ? previewDoc?.title ?? "Aperçu"
+                        : "CNSS — preview"
         }
       >
         <div className="space-y-4 p-1">
@@ -1057,8 +1552,13 @@ export default function HrEmployeeFichePage() {
             </p>
           ) : null}
 
-          {drawerMode === "contract" ? (
+          {drawerMode === "contract" || drawerMode === "contractEdit" ? (
             <>
+              {drawerMode === "contractEdit" ? (
+                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  ACTIVE uniquement. Pour le PDF : bouton « Générer contrat ».
+                </p>
+              ) : null}
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Type
@@ -1116,12 +1616,133 @@ export default function HrEmployeeFichePage() {
                   className="a-mono"
                 />
               </label>
+              {drawerMode === "contractEdit" ? (
+                <label className="block space-y-1">
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Notes
+                  </span>
+                  <textarea
+                    value={contractNotes}
+                    onChange={(e) => setContractNotes(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-md bg-a-surface-3 px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                  />
+                </label>
+              ) : null}
               <AButton
                 type="button"
                 disabled={busy || !startDate}
-                onClick={() => void onCreateContract()}
+                onClick={() =>
+                  void (drawerMode === "contractEdit"
+                    ? onPatchContract()
+                    : onCreateContract())
+                }
               >
-                Créer le contrat
+                {drawerMode === "contractEdit"
+                  ? "Enregistrer"
+                  : "Créer le contrat"}
+              </AButton>
+            </>
+          ) : null}
+
+          {drawerMode === "genContract" || drawerMode === "genAttestation" ? (
+            <>
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                {drawerMode === "genContract"
+                  ? genContractId
+                    ? "Contrat ACTIVE — ajustez les champs et le texte, puis téléchargez."
+                    : "Aucun contrat ACTIVE — un CDI sera créé automatiquement."
+                  : "Texte prérempli depuis la fiche — modifiable librement avant PDF."}
+              </p>
+              {drawerMode === "genContract" ? (
+                <>
+                  <label className="block space-y-1">
+                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Type
+                    </span>
+                    <select
+                      className={softSelect}
+                      value={contractType}
+                      onChange={(e) => setContractType(e.target.value)}
+                    >
+                      <option value="CDI">CDI</option>
+                      <option value="CDD">CDD</option>
+                      <option value="INTERIM">Intérim</option>
+                      <option value="STAGE">Stage</option>
+                      <option value="OTHER">Autre</option>
+                    </select>
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Début
+                    </span>
+                    <AInput
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Fin (optionnel)
+                    </span>
+                    <AInput
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Réf. salaire
+                    </span>
+                    <AInput
+                      value={wageRef}
+                      onChange={(e) => setWageRef(e.target.value)}
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Base TND
+                    </span>
+                    <AInput
+                      value={wageBase}
+                      onChange={(e) => setWageBase(e.target.value)}
+                      className="a-mono"
+                    />
+                  </label>
+                </>
+              ) : null}
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Corps du document (modifiable)
+                </span>
+                <textarea
+                  value={genBody}
+                  onChange={(e) => setGenBody(e.target.value)}
+                  rows={12}
+                  className="w-full rounded-md bg-a-surface-3 px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                />
+              </label>
+              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                En-tête logo + coordonnées Fattorie Covelli et pied de page sont
+                appliqués automatiquement.
+              </p>
+              <AButton
+                type="button"
+                disabled={
+                  busy ||
+                  (drawerMode === "genContract" && !startDate)
+                }
+                onClick={() =>
+                  void (drawerMode === "genContract"
+                    ? onConfirmGenContract()
+                    : onConfirmGenAttestation())
+                }
+              >
+                {drawerMode === "genContract"
+                  ? "Télécharger le contrat PDF"
+                  : "Télécharger l’attestation PDF"}
               </AButton>
             </>
           ) : null}

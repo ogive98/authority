@@ -18,4 +18,9 @@ export class CreateDocumentMetaDto {
   @IsOptional()
   @IsUUID()
   linkId?: string;
+
+  /** Optional HR dossier kind (validated by HR before pass-through). */
+  @IsOptional()
+  @IsUUID()
+  hrDocKindId?: string;
 }

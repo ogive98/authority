@@ -5,18 +5,6 @@ import { softPanel } from "@/lib/soft-glass-ui";
 
 const UPCOMING: Array<{ title: string; body: string }> = [
   {
-    title: "Compte Identity",
-    body: "Lier un user (userId) — accès ERP optionnel, pas un second annuaire.",
-  },
-  {
-    title: "Site / établissement",
-    body: "Sélecteur org (siteId) déjà en base, pas encore saisi sur la fiche.",
-  },
-  {
-    title: "Kinds documents",
-    body: "CIN / contrat scanné en catalogue — pas de kinds fermés inventés ici.",
-  },
-  {
     title: "Pointage / congés",
     body: "Hors périmètre HR V0 — lots dédiés, pas dans ce dossier.",
   },

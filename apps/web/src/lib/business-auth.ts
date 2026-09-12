@@ -338,6 +338,40 @@ export async function revokeMySession(
   }
 }
 
+export async function listCompanySites(
+  companyId: string,
+): Promise<
+  | { ok: true; data: Array<{ id: string; code: string; type: string; status: string }> }
+  | { ok: false; status: number; message: string }
+> {
+  try {
+    const res = await fetch(
+      `${BUSINESS_API.companies}/${encodeURIComponent(companyId)}/sites`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) {
+      return {
+        ok: false,
+        status: res.status,
+        message: `HTTP ${res.status}`,
+      };
+    }
+    const data = (await res.json()) as Array<{
+      id: string;
+      code: string;
+      type: string;
+      status: string;
+    }>;
+    return { ok: true, data: Array.isArray(data) ? data : [] };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function fetchBusinessContext(): Promise<
   | { ok: true; data: { companyId: string | null; siteId: string | null } }
   | { ok: false; message: string }

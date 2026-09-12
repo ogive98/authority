@@ -14,7 +14,13 @@ import { BulletinService } from './bulletin.service';
 import { BulletinPdfService } from './bulletin-pdf.service';
 import { LevyService } from './levy.service';
 import { JobTitleService } from './job-title.service';
+import { DocKindService } from './doc-kind.service';
 import { HrDocumentService } from './hr-document.service';
+import { ContractPdfService } from './contract-pdf.service';
+import { ContractPrintSettingsResolver } from './contract-print-settings.resolver';
+import { AttestationPdfService } from './attestation-pdf.service';
+import { AttestationPrintSettingsResolver } from './attestation-print-settings.resolver';
+import { PrintTemplateService } from './print-template.service';
 
 @Module({
   imports: [
@@ -35,7 +41,13 @@ import { HrDocumentService } from './hr-document.service';
     BulletinPdfService,
     LevyService,
     JobTitleService,
+    DocKindService,
     HrDocumentService,
+    ContractPdfService,
+    ContractPrintSettingsResolver,
+    AttestationPdfService,
+    AttestationPrintSettingsResolver,
+    PrintTemplateService,
   ],
   exports: [
     HrService,
@@ -44,6 +56,7 @@ import { HrDocumentService } from './hr-document.service';
     BulletinService,
     LevyService,
     JobTitleService,
+    DocKindService,
   ],
 })
 export class HrModule {}

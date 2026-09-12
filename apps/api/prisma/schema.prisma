@@ -158,6 +158,7 @@ model IamUser {
   superAdminMembership   IamSuperAdminMembership?
   portalMemberships      PtlMembership[]
   invite                 IamInvite?
+  hrEmployees            HrEmployee[]
 
   @@map("iam_user")
 }
@@ -336,6 +337,7 @@ model OrgSite {
 
   company    OrgCompany    @relation(fields: [companyId], references: [id])
   warehouses OrgWarehouse[]
+  hrEmployees HrEmployee[]
 
   @@unique([companyId, code])
   @@index([companyId, createdAt(sort: Desc)])
@@ -993,6 +995,10 @@ enum DocLinkType {
   HR_BULLETIN
   /** Employee dossier file (D209) — INTERNAL only. */
   HR_EMPLOYEE
+  /** Generated contract PDF (D216). */
+  HR_CONTRACT
+  /** Generated work attestation PDF (D217). */
+  HR_ATTESTATION
 }
 
 model DocDocument {
@@ -1009,17 +1015,22 @@ model DocDocument {
   /** Denormalized for portal membership scoping. */
   customerId      String?       @map("customer_id") @db.Uuid
   createdByUserId String?       @map("created_by_user_id") @db.Uuid
+  /** Optional HR dossier kind (D215) — company catalogue, never seeded. */
+  hrDocKindId     String?       @map("hr_doc_kind_id") @db.Uuid
   version         Int           @default(0)
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt       DateTime?     @map("deleted_at") @db.Timestamptz(6)
 
-  hrPhotoEmployees HrEmployee[]
+  hrPhotoEmployees       HrEmployee[] @relation("HrEmployeePhoto")
+  hrAttestationEmployees HrEmployee[] @relation("HrEmployeeAttestationPdf")
+  hrDocKind              HrDocKind?   @relation(fields: [hrDocKindId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, number])
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, customerId, visibility])
   @@index([companyId, linkType, linkId])
+  @@index([companyId, hrDocKindId])
   @@map("doc_document")
 }
 
@@ -2424,6 +2435,26 @@ model HrJobTitle {
   @@map("hr_job_title")
 }
 
+/** Company dossier kind catalogue — empty until human (D215). Never seed CIN/contrat. */
+model HrDocKind {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  code      String
+  name      String
+  active    Boolean   @default(true)
+  version   Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  documents DocDocument[]
+
+  @@unique([companyId, code])
+  @@index([companyId, active])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("hr_doc_kind")
+}
+
 model HrEmployee {
   id          String           @id @default(uuid()) @db.Uuid
   companyId   String           @map("company_id") @db.Uuid
@@ -2434,7 +2465,15 @@ model HrEmployee {
   jobTitleId  String?          @map("job_title_id") @db.Uuid
   /** CNSS affiliation number — identifier only, never a contribution rate. */
   cnssNo      String?          @map("cnss_no")
+  /** Tunisian CIN — 8 digits when set (D217). */
+  cinNo       String?          @map("cin_no")
+  address     String?
+  bankName    String?          @map("bank_name")
+  bankAgency  String?          @map("bank_agency")
+  /** RIB / account — free text opaque (D217). */
+  bankAccount String?          @map("bank_account")
   email       String?
+  /** Optional ERP Identity account — same company assignment (D213). */
   userId      String?          @map("user_id") @db.Uuid
   status      HrEmployeeStatus @default(ACTIVE)
   hiredAt     DateTime?        @map("hired_at") @db.Date
@@ -2446,24 +2485,63 @@ model HrEmployee {
   taxEnfantCount   Int?        @map("tax_enfant_count")
   /** Portrait — Documents HR_EMPLOYEE image (D211). */
   photoDocumentId  String?     @map("photo_document_id") @db.Uuid
+  /** Latest generated attestation PDF (D217 Documents HR_ATTESTATION). */
+  attestationPdfDocumentId String? @map("attestation_pdf_document_id") @db.Uuid
   version     Int              @default(0)
   createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz(6)
 
   jobTitle      HrJobTitle?      @relation(fields: [jobTitleId], references: [id], onDelete: SetNull)
-  photoDocument DocDocument?     @relation(fields: [photoDocumentId], references: [id], onDelete: SetNull)
+  photoDocument DocDocument?     @relation("HrEmployeePhoto", fields: [photoDocumentId], references: [id], onDelete: SetNull)
+  attestationPdfDocument DocDocument? @relation("HrEmployeeAttestationPdf", fields: [attestationPdfDocumentId], references: [id], onDelete: SetNull)
+  user          IamUser?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  site          OrgSite?         @relation(fields: [siteId], references: [id], onDelete: SetNull)
   contracts     HrContract[]
   cnssSnapshots HrCnssSnapshot[]
   irppSnapshots HrIrppSnapshot[]
   bulletins     HrBulletin[]
 
   @@unique([companyId, matricule])
+  @@unique([companyId, userId])
   @@index([companyId, status])
   @@index([companyId, jobTitleId])
+  @@index([companyId, siteId])
   @@index([companyId, photoDocumentId])
+  @@index([companyId, attestationPdfDocumentId])
   @@index([companyId, createdAt(sort: Desc)])
   @@map("hr_employee")
+}
+
+/** Print template catalogue kind — company-owned, never seeded (D217). */
+enum HrPrintDocKind {
+  CONTRACT
+  ATTESTATION
+}
+
+/**
+ * Company print templates (D217 B) — empty until human.
+ * Structural Prefs seats remain the default when no templateId is passed.
+ */
+model HrPrintTemplate {
+  id         String         @id @default(uuid()) @db.Uuid
+  companyId  String         @map("company_id") @db.Uuid
+  kind       HrPrintDocKind
+  code       String
+  name       String
+  letterhead String         @default("")
+  bodyHtml   String         @default("") @map("body_html") @db.Text
+  footer     String         @default("")
+  active     Boolean        @default(true)
+  version    Int            @default(0)
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, kind, code])
+  @@index([companyId, kind, active])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("hr_print_template")
 }
 
 model HrContract {
@@ -2480,6 +2558,8 @@ model HrContract {
   /** Human numeric wage base TND for CNSS preview/snapshot (D195) — not a rate. */
   wageBase   Decimal?         @map("wage_base") @db.Decimal(18, 3)
   notes      String?
+  /** Latest generated contract PDF (D216 Documents HR_CONTRACT). */
+  pdfDocumentId String?       @map("pdf_document_id") @db.Uuid
   version    Int              @default(0)
   createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -2493,6 +2573,7 @@ model HrContract {
   @@unique([companyId, number])
   @@index([companyId, employeeId])
   @@index([companyId, status])
+  @@index([companyId, pdfDocumentId])
   @@map("hr_contract")
 }
 

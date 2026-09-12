@@ -6,10 +6,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { OutboxService } from '../audit/outbox.service';
 import { HR_ERROR_CODES, HR_EVENT_TYPES } from './hr.constants';
 import { HrException } from './hr.exception';
+import { DocKindService } from './doc-kind.service';
 
 /**
  * Employee dossier files via Documents (D209) — INTERNAL + HR_EMPLOYEE.
- * No parallel DMS. Portal never sees these (visibility INTERNAL).
+ * Optional company kind catalogue (D215) — never seeded.
  */
 @Injectable()
 export class HrDocumentService {
@@ -17,6 +18,7 @@ export class HrDocumentService {
     private readonly prisma: PrismaService,
     private readonly documents: DocumentsService,
     private readonly outbox: OutboxService,
+    private readonly docKinds: DocKindService,
   ) {}
 
   async list(
@@ -38,11 +40,17 @@ export class HrDocumentService {
     actorUserId: string,
     employeeId: string,
     file: { buffer: Buffer; mimetype: string; originalname?: string },
-    title?: string,
+    opts: { title?: string; kindId?: string | null } = {},
   ): Promise<DocumentDto> {
     await this.assertEmployee(companyId, employeeId);
     const resolvedTitle =
-      title?.trim() || file?.originalname?.trim() || 'Document RH';
+      opts.title?.trim() || file?.originalname?.trim() || 'Document RH';
+    const hrDocKindId = await this.docKinds.resolveAssignableId(
+      companyId,
+      opts.kindId === undefined || opts.kindId === ''
+        ? null
+        : opts.kindId,
+    );
     const doc = await this.documents.createFromUpload(
       companyId,
       actorUserId,
@@ -52,6 +60,7 @@ export class HrDocumentService {
         visibility: DocVisibility.INTERNAL,
         linkType: DocLinkType.HR_EMPLOYEE,
         linkId: employeeId,
+        ...(hrDocKindId ? { hrDocKindId } : {}),
       },
     );
     await this.prisma.$transaction(async (tx) => {
@@ -64,6 +73,7 @@ export class HrDocumentService {
           employeeId,
           documentId: doc.id,
           number: doc.number,
+          hrDocKindId: doc.hrDocKindId,
         },
       });
     });

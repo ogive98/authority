@@ -11,17 +11,73 @@ export type HrContract = {
   wageRef: string | null;
   wageBase: string | null;
   notes: string | null;
+  pdfDocumentId?: string | null;
+};
+
+export type HrContractPrintTemplate = {
+  letterhead: string;
+  bodyHtml: string;
+  footer: string;
+};
+
+export type HrAttestationPrintTemplate = HrContractPrintTemplate;
+
+export type HrPrintDocKind = "CONTRACT" | "ATTESTATION";
+
+export type HrPrintTemplate = {
+  id: string;
+  companyId: string;
+  kind: HrPrintDocKind;
+  code: string;
+  name: string;
+  letterhead: string;
+  bodyHtml: string;
+  footer: string;
+  active: boolean;
+};
+
+export type HrLinkedUser = {
+  id: string;
+  email: string;
+  displayName: string;
+  status: string;
+};
+
+export type HrLinkableUser = {
+  id: string;
+  email: string;
+  displayName: string;
+  status: string;
+  roleCode: string | null;
+  linkedEmployeeId: string | null;
+};
+
+export type HrSite = {
+  id: string;
+  code: string;
+  type: string;
+  status: string;
 };
 
 export type HrEmployee = {
   id: string;
+  companyId?: string;
   matricule: string;
   displayName: string;
+  siteId: string | null;
+  site: HrSite | null;
   department: string | null;
   jobTitleId: string | null;
   jobTitle: string | null;
   cnssNo: string | null;
+  cinNo: string | null;
+  address: string | null;
+  bankName: string | null;
+  bankAgency: string | null;
+  bankAccount: string | null;
   email: string | null;
+  userId: string | null;
+  linkedUser: HrLinkedUser | null;
   status: string;
   hiredAt: string | null;
   leftAt: string | null;
@@ -29,6 +85,7 @@ export type HrEmployee = {
   taxChefDeFamille: boolean | null;
   taxEnfantCount: number | null;
   photoDocumentId: string | null;
+  attestationPdfDocumentId: string | null;
   contracts: HrContract[];
   createdAt: string;
 };
@@ -138,12 +195,21 @@ export type HrJobTitle = {
   active: boolean;
 };
 
+export type HrDocKind = {
+  id: string;
+  code: string;
+  name: string;
+  active: boolean;
+};
+
 export type HrEmployeeDocument = {
   id: string;
   number: string;
   title: string;
   mime: string;
   size: string;
+  hrDocKindId?: string | null;
+  hrDocKind?: { id: string; code: string; name: string } | null;
   createdAt: string;
 };
 
@@ -192,6 +258,51 @@ export async function patchJobTitle(
   return { ok: true, data: (await res.json()) as HrJobTitle };
 }
 
+export async function fetchDocKinds(
+  activeOnly = false,
+): Promise<ApiOk<{ items: HrDocKind[] }> | ApiFail> {
+  const qs = activeOnly ? "?activeOnly=1" : "";
+  const res = await fetch(`/api/v1/hr/doc-kinds${qs}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as { items: HrDocKind[] } };
+}
+
+export async function createDocKind(input: {
+  code: string;
+  name: string;
+}): Promise<ApiOk<HrDocKind> | ApiFail> {
+  const res = await fetch("/api/v1/hr/doc-kinds", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrDocKind };
+}
+
+export async function patchDocKind(
+  id: string,
+  input: { code?: string; name?: string; active?: boolean },
+): Promise<ApiOk<HrDocKind> | ApiFail> {
+  const res = await fetch(`/api/v1/hr/doc-kinds/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrDocKind };
+}
+
 export async function fetchEmployeeDocuments(
   employeeId: string,
 ): Promise<ApiOk<{ items: HrEmployeeDocument[] }> | ApiFail> {
@@ -211,11 +322,12 @@ export async function fetchEmployeeDocuments(
 export async function uploadEmployeeDocument(
   employeeId: string,
   file: File,
-  title?: string,
+  opts?: { title?: string; kindId?: string },
 ): Promise<ApiOk<HrEmployeeDocument> | ApiFail> {
   const body = new FormData();
   body.append("file", file);
-  if (title?.trim()) body.append("title", title.trim());
+  if (opts?.title?.trim()) body.append("title", opts.title.trim());
+  if (opts?.kindId) body.append("kindId", opts.kindId);
   const res = await fetch(
     `/api/v1/hr/employees/${encodeURIComponent(employeeId)}/documents`,
     { method: "POST", credentials: "include", body },
@@ -271,6 +383,11 @@ export async function createEmployee(input: {
   department?: string;
   jobTitleId?: string;
   cnssNo?: string;
+  cinNo?: string;
+  address?: string;
+  bankName?: string;
+  bankAgency?: string;
+  bankAccount?: string;
   email?: string;
   hiredAt?: string;
 }): Promise<ApiOk<HrEmployee> | ApiFail> {
@@ -308,7 +425,14 @@ export async function createContract(input: {
 
 export async function patchContract(
   id: string,
-  input: { wageRef?: string | null; wageBase?: number | null },
+  input: {
+    type?: string;
+    startDate?: string;
+    endDate?: string | null;
+    wageRef?: string | null;
+    wageBase?: number | null;
+    notes?: string | null;
+  },
 ): Promise<ApiOk<HrContract> | ApiFail> {
   const res = await fetch(`/api/v1/hr/contracts/${id}`, {
     method: "PATCH",
@@ -320,6 +444,247 @@ export async function patchContract(
     return { ok: false, status: res.status, message: await parseError(res) };
   }
   return { ok: true, data: (await res.json()) as HrContract };
+}
+
+export async function downloadContractPdf(
+  id: string,
+  opts?: {
+    templateId?: string;
+    letterhead?: string;
+    bodyHtml?: string;
+    footer?: string;
+  },
+): Promise<{ ok: true } | ApiFail> {
+  try {
+    const hasBody =
+      opts &&
+      (opts.letterhead !== undefined ||
+        opts.bodyHtml !== undefined ||
+        opts.footer !== undefined ||
+        opts.templateId);
+    const res = hasBody
+      ? await fetch(`/api/v1/hr/contracts/${encodeURIComponent(id)}/pdf`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/pdf",
+          },
+          body: JSON.stringify({
+            templateId: opts?.templateId,
+            letterhead: opts?.letterhead,
+            bodyHtml: opts?.bodyHtml,
+            footer: opts?.footer,
+          }),
+        })
+      : await fetch(`/api/v1/hr/contracts/${encodeURIComponent(id)}/pdf`, {
+          credentials: "include",
+        });
+    if (!res.ok) {
+      return { ok: false, status: res.status, message: await parseError(res) };
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download =
+      res.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ??
+      `contrat-${id}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function downloadAttestationPdf(
+  employeeId: string,
+  opts?: {
+    templateId?: string;
+    letterhead?: string;
+    bodyHtml?: string;
+    footer?: string;
+  },
+): Promise<{ ok: true } | ApiFail> {
+  try {
+    const hasBody =
+      opts &&
+      (opts.letterhead !== undefined ||
+        opts.bodyHtml !== undefined ||
+        opts.footer !== undefined ||
+        opts.templateId);
+    const res = hasBody
+      ? await fetch(
+          `/api/v1/hr/employees/${encodeURIComponent(employeeId)}/attestation/pdf`,
+          {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/pdf",
+            },
+            body: JSON.stringify({
+              templateId: opts?.templateId,
+              letterhead: opts?.letterhead,
+              bodyHtml: opts?.bodyHtml,
+              footer: opts?.footer,
+            }),
+          },
+        )
+      : await fetch(
+          `/api/v1/hr/employees/${encodeURIComponent(employeeId)}/attestation/pdf`,
+          { credentials: "include" },
+        );
+    if (!res.ok) {
+      return { ok: false, status: res.status, message: await parseError(res) };
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download =
+      res.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ??
+      `attestation-${employeeId}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+/** Expand {{placeholders}} for free-edit drawers before PDF. */
+export function applyHrPrintPlaceholders(
+  template: string,
+  fields: Record<string, string>,
+): string {
+  return template.replace(/\{\{\s*([a-zA-Z]+)\s*\}\}/g, (_, key: string) => {
+    return fields[key] ?? "";
+  });
+}
+
+export async function fetchContractPrintTemplate(): Promise<
+  ApiOk<HrContractPrintTemplate> | ApiFail
+> {
+  const res = await fetch("/api/v1/hr/contract-print-template", {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrContractPrintTemplate };
+}
+
+export async function putContractPrintTemplate(
+  input: Partial<HrContractPrintTemplate>,
+): Promise<ApiOk<HrContractPrintTemplate> | ApiFail> {
+  const res = await fetch("/api/v1/hr/contract-print-template", {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrContractPrintTemplate };
+}
+
+export async function fetchAttestationPrintTemplate(): Promise<
+  ApiOk<HrAttestationPrintTemplate> | ApiFail
+> {
+  const res = await fetch("/api/v1/hr/attestation-print-template", {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrAttestationPrintTemplate };
+}
+
+export async function putAttestationPrintTemplate(
+  input: Partial<HrAttestationPrintTemplate>,
+): Promise<ApiOk<HrAttestationPrintTemplate> | ApiFail> {
+  const res = await fetch("/api/v1/hr/attestation-print-template", {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrAttestationPrintTemplate };
+}
+
+export async function fetchPrintTemplates(opts?: {
+  kind?: HrPrintDocKind;
+  activeOnly?: boolean;
+}): Promise<ApiOk<{ items: HrPrintTemplate[] }> | ApiFail> {
+  const qs = new URLSearchParams();
+  if (opts?.kind) qs.set("kind", opts.kind);
+  if (opts?.activeOnly) qs.set("activeOnly", "1");
+  const q = qs.toString();
+  const res = await fetch(`/api/v1/hr/print-templates${q ? `?${q}` : ""}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return {
+    ok: true,
+    data: (await res.json()) as { items: HrPrintTemplate[] },
+  };
+}
+
+export async function createPrintTemplate(input: {
+  kind: HrPrintDocKind;
+  code: string;
+  name: string;
+  letterhead?: string;
+  bodyHtml?: string;
+  footer?: string;
+}): Promise<ApiOk<HrPrintTemplate> | ApiFail> {
+  const res = await fetch("/api/v1/hr/print-templates", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrPrintTemplate };
+}
+
+export async function patchPrintTemplate(
+  id: string,
+  input: Partial<{
+    code: string;
+    name: string;
+    letterhead: string;
+    bodyHtml: string;
+    footer: string;
+    active: boolean;
+  }>,
+): Promise<ApiOk<HrPrintTemplate> | ApiFail> {
+  const res = await fetch(
+    `/api/v1/hr/print-templates/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as HrPrintTemplate };
 }
 
 export async function endContract(
@@ -609,6 +974,24 @@ export async function createBulletin(input: {
   return { ok: true, data: (await res.json()) as Bulletin };
 }
 
+export async function fetchLinkableUsers(
+  q?: string,
+): Promise<ApiOk<{ items: HrLinkableUser[] }> | ApiFail> {
+  const qs = q?.trim()
+    ? `?q=${encodeURIComponent(q.trim())}`
+    : "";
+  const res = await fetch(`/api/v1/hr/linkable-users${qs}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return {
+    ok: true,
+    data: (await res.json()) as { items: HrLinkableUser[] },
+  };
+}
+
 export async function patchEmployee(
   id: string,
   input: {
@@ -616,6 +999,11 @@ export async function patchEmployee(
     department?: string | null;
     jobTitleId?: string | null;
     cnssNo?: string | null;
+    cinNo?: string | null;
+    address?: string | null;
+    bankName?: string | null;
+    bankAgency?: string | null;
+    bankAccount?: string | null;
     email?: string | null;
     status?: string;
     hiredAt?: string | null;
@@ -624,6 +1012,8 @@ export async function patchEmployee(
     taxChefDeFamille?: boolean | null;
     taxEnfantCount?: number | null;
     photoDocumentId?: string | null;
+    userId?: string | null;
+    siteId?: string | null;
   },
 ): Promise<ApiOk<HrEmployee> | ApiFail> {
   const res = await fetch(`/api/v1/hr/employees/${encodeURIComponent(id)}`, {

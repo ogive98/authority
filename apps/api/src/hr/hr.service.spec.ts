@@ -34,6 +34,18 @@ describe('HrService', () => {
       updatedAt: new Date(),
       deletedAt: null as Date | null,
       contracts: [] as unknown[],
+      site: null as {
+        id: string;
+        code: string;
+        type: string;
+        status: string;
+      } | null,
+      user: null as {
+        id: string;
+        email: string;
+        displayName: string;
+        status: string;
+      } | null,
     };
 
     const contract = {
@@ -74,13 +86,50 @@ describe('HrService', () => {
             ...data,
             contracts: [contract],
             version: 1,
-          } as typeof employee & { photoDocument?: unknown };
+          } as typeof employee & {
+            photoDocument?: unknown;
+            user?: unknown;
+          };
           const photo = data.photoDocument as
             | { connect?: { id: string }; disconnect?: boolean }
             | undefined;
           if (photo?.connect?.id) next.photoDocumentId = photo.connect.id;
           if (photo?.disconnect) next.photoDocumentId = null;
           delete next.photoDocument;
+          const userRel = data.user as
+            | { connect?: { id: string }; disconnect?: boolean }
+            | undefined;
+          if (userRel?.connect?.id) {
+            next.userId = userRel.connect.id;
+            next.user = {
+              id: userRel.connect.id,
+              email: 'u@example.com',
+              displayName: 'Linked User',
+              status: 'ACTIVE',
+            };
+          } else if (userRel?.disconnect) {
+            next.userId = null;
+            next.user = null;
+          } else {
+            delete next.user;
+          }
+          const siteRel = data.site as
+            | { connect?: { id: string }; disconnect?: boolean }
+            | undefined;
+          if (siteRel?.connect?.id) {
+            next.siteId = siteRel.connect.id;
+            next.site = {
+              id: siteRel.connect.id,
+              code: 'SIEGE',
+              type: 'HQ',
+              status: 'ACTIVE',
+            };
+          } else if (siteRel?.disconnect) {
+            next.siteId = null;
+            next.site = null;
+          } else {
+            delete next.site;
+          }
           return Promise.resolve(next);
         }),
       },
@@ -98,6 +147,13 @@ describe('HrService', () => {
         findFirst: jest.fn().mockResolvedValue(null),
       },
       docDocument: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+      orgUserAssignment: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      orgSite: {
         findFirst: jest.fn().mockResolvedValue(null),
       },
       $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
@@ -207,6 +263,8 @@ describe('HrService', () => {
           updatedAt: new Date(),
           deletedAt: null,
           contracts: [],
+          site: null,
+          user: null,
         }),
     );
     const dto = await service.createEmployee(companyId, {
@@ -275,5 +333,95 @@ describe('HrService', () => {
       photoDocumentId: null,
     });
     expect(dto.photoDocumentId).toBeNull();
+  });
+
+  it('links an Identity user assigned to the company', async () => {
+    const { service, prisma, employee, contract } = build();
+    const userId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    prisma.orgUserAssignment.findFirst = jest.fn().mockResolvedValue({
+      companyId,
+      userId,
+      user: { id: userId, deletedAt: null },
+    });
+    prisma.hrEmployee.findFirst = jest
+      .fn()
+      .mockResolvedValueOnce({ ...employee, contracts: [contract] })
+      .mockResolvedValueOnce(null);
+    const dto = await service.patchEmployee(companyId, employeeId, { userId });
+    expect(dto.userId).toBe(userId);
+    expect(dto.linkedUser?.email).toBe('u@example.com');
+  });
+
+  it('rejects linking a user not assigned to the company', async () => {
+    const { service, prisma } = build();
+    prisma.orgUserAssignment.findFirst = jest.fn().mockResolvedValue(null);
+    await expect(
+      service.patchEmployee(companyId, employeeId, {
+        userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      }),
+    ).rejects.toMatchObject({
+      status: HttpStatus.BAD_REQUEST,
+      response: { code: HR_ERROR_CODES.USER_INVALID },
+    });
+  });
+
+  it('rejects linking a user already tied to another employee', async () => {
+    const { service, prisma, employee, contract } = build();
+    const userId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    prisma.orgUserAssignment.findFirst = jest.fn().mockResolvedValue({
+      companyId,
+      userId,
+      user: { id: userId, deletedAt: null },
+    });
+    prisma.hrEmployee.findFirst = jest
+      .fn()
+      .mockResolvedValueOnce({ ...employee, contracts: [contract] })
+      .mockResolvedValueOnce({ id: 'other', matricule: 'E-002' });
+    await expect(
+      service.patchEmployee(companyId, employeeId, { userId }),
+    ).rejects.toMatchObject({
+      status: HttpStatus.CONFLICT,
+      response: { code: HR_ERROR_CODES.USER_ALREADY_LINKED },
+    });
+  });
+
+  it('unlinks Identity without deleting the user', async () => {
+    const { service } = build();
+    const dto = await service.patchEmployee(companyId, employeeId, {
+      userId: null,
+    });
+    expect(dto.userId).toBeNull();
+    expect(dto.linkedUser).toBeNull();
+  });
+
+  it('assigns a company site to the employee', async () => {
+    const { service, prisma } = build();
+    const siteId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+    prisma.orgSite.findFirst = jest.fn().mockResolvedValue({ id: siteId });
+    const dto = await service.patchEmployee(companyId, employeeId, { siteId });
+    expect(dto.siteId).toBe(siteId);
+    expect(dto.site?.code).toBe('SIEGE');
+  });
+
+  it('rejects a site outside the company', async () => {
+    const { service, prisma } = build();
+    prisma.orgSite.findFirst = jest.fn().mockResolvedValue(null);
+    await expect(
+      service.patchEmployee(companyId, employeeId, {
+        siteId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      }),
+    ).rejects.toMatchObject({
+      status: HttpStatus.BAD_REQUEST,
+      response: { code: HR_ERROR_CODES.SITE_INVALID },
+    });
+  });
+
+  it('clears site assignment', async () => {
+    const { service } = build();
+    const dto = await service.patchEmployee(companyId, employeeId, {
+      siteId: null,
+    });
+    expect(dto.siteId).toBeNull();
+    expect(dto.site).toBeNull();
   });
 });
