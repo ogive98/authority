@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Post,
@@ -12,16 +13,20 @@ import {
   StreamableFile,
   UseGuards,
 } from '@nestjs/common';
-import { IamSessionRealm } from '@prisma/client';
+import { AttAbsenceStatus, IamSessionRealm } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { AttendanceService } from '../attendance/attendance.service';
 import { BulletinPdfService } from '../hr/bulletin-pdf.service';
 import { BulletinService } from '../hr/bulletin.service';
+import { HrDocumentService } from '../hr/hr-document.service';
 import { LoginDto } from '../identity/login.dto';
 import { SessionService } from '../identity/session.service';
 import { RequireModule } from '../modules-registry/modules.decorators';
 import { toPortalBulletin } from './employee-portal-bulletin.mapper';
-import { EMPLOYEE_PORTAL_COOKIE_NAME } from './employee-portal.constants';
+import {
+  EMPLOYEE_PORTAL_COOKIE_NAME,
+  EMPLOYEE_PORTAL_ERROR_CODES,
+} from './employee-portal.constants';
 import { PortalCreateAbsenceDto } from './employee-portal.dto';
 import { EmployeePortalAuthService } from './employee-portal-auth.service';
 import { EmployeePortalModuleGuard } from './employee-portal-module.guard';
@@ -29,6 +34,11 @@ import {
   EmployeePortalSessionGuard,
   type EmployeePortalRequest,
 } from './employee-portal-session.guard';
+import {
+  toPortalDocument,
+  type PortalDashboard,
+} from './employee-portal-profile.mapper';
+import { EmployeePortalException } from './employee-portal.exception';
 
 @Controller('api/v1/employee-portal')
 export class EmployeePortalController {
@@ -37,6 +47,7 @@ export class EmployeePortalController {
     private readonly attendance: AttendanceService,
     private readonly bulletin: BulletinService,
     private readonly bulletinPdf: BulletinPdfService,
+    private readonly hrDocuments: HrDocumentService,
     private readonly sessionService: SessionService,
   ) {}
 
@@ -92,6 +103,45 @@ export class EmployeePortalController {
     return this.portalAuthService.getMe(req.user!.id);
   }
 
+  /** D231 — Accueil KPI (own only). */
+  @Get('dashboard')
+  @UseGuards(EmployeePortalSessionGuard, EmployeePortalModuleGuard)
+  async dashboard(
+    @Req() req: EmployeePortalRequest,
+  ): Promise<PortalDashboard> {
+    const companyId = req.companyId!;
+    const employeeId = req.employeeId!;
+
+    const [absences, docs, bulletins] = await Promise.all([
+      this.attendance.listAbsences(companyId, { employeeId }),
+      this.moduleHrDocs(companyId, employeeId),
+      this.moduleBulletins(companyId, employeeId),
+    ]);
+
+    const pendingAbsences = absences.filter(
+      (a) => a.status === AttAbsenceStatus.REQUESTED,
+    ).length;
+    const approvedAbsences = absences.filter(
+      (a) => a.status === AttAbsenceStatus.APPROVED,
+    ).length;
+    const last = bulletins[0] ?? null;
+
+    return {
+      pendingAbsences,
+      approvedAbsences,
+      documentCount: docs,
+      lastBulletin: last
+        ? {
+            id: last.id,
+            number: last.number,
+            periodYm: last.periodYm,
+            netPay: last.netPay,
+            currency: last.currency,
+          }
+        : null,
+    };
+  }
+
   @Get('absences')
   @UseGuards(EmployeePortalSessionGuard, EmployeePortalModuleGuard)
   listAbsences(@Req() req: EmployeePortalRequest) {
@@ -102,9 +152,15 @@ export class EmployeePortalController {
 
   @Get('calendar')
   @UseGuards(EmployeePortalSessionGuard, EmployeePortalModuleGuard)
-  calendar(@Req() req: EmployeePortalRequest) {
+  calendar(
+    @Req() req: EmployeePortalRequest,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
     return this.attendance.getCalendar(req.companyId!, {
       employeeId: req.employeeId!,
+      from,
+      to,
     });
   }
 
@@ -126,6 +182,58 @@ export class EmployeePortalController {
         notes: dto.notes,
       },
       req.user!.id,
+    );
+  }
+
+  /** D231 — cancel own REQUESTED only (canManage=false). */
+  @Post('absences/:id/cancel')
+  @HttpCode(200)
+  @UseGuards(EmployeePortalSessionGuard, EmployeePortalModuleGuard)
+  async cancelAbsence(
+    @Req() req: EmployeePortalRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    const list = await this.attendance.listAbsences(req.companyId!, {
+      employeeId: req.employeeId!,
+    });
+    const own = list.find((a) => a.id === id);
+    if (!own) {
+      throw new EmployeePortalException(
+        EMPLOYEE_PORTAL_ERROR_CODES.NOT_FOUND,
+        'Absence not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return this.attendance.cancelAbsence(
+      req.companyId!,
+      id,
+      req.user!.id,
+      false,
+    );
+  }
+
+  @Get('documents')
+  @RequireModule('hr')
+  @UseGuards(EmployeePortalSessionGuard, EmployeePortalModuleGuard)
+  async listDocuments(@Req() req: EmployeePortalRequest) {
+    const page = await this.hrDocuments.list(
+      req.companyId!,
+      req.employeeId!,
+    );
+    return { items: page.items.map(toPortalDocument) };
+  }
+
+  @Get('documents/:id/download')
+  @RequireModule('hr')
+  @UseGuards(EmployeePortalSessionGuard, EmployeePortalModuleGuard)
+  async downloadDocument(
+    @Req() req: EmployeePortalRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.hrDocuments.getDownload(
+      req.companyId!,
+      req.employeeId!,
+      id,
     );
   }
 
@@ -187,6 +295,41 @@ export class EmployeePortalController {
     );
     res.setHeader('X-Authority-Document-Id', result.documentId);
     return new StreamableFile(result.buffer);
+  }
+
+  private async moduleHrDocs(
+    companyId: string,
+    employeeId: string,
+  ): Promise<number> {
+    try {
+      const page = await this.hrDocuments.list(companyId, employeeId);
+      return page.items.length;
+    } catch {
+      return 0;
+    }
+  }
+
+  private async moduleBulletins(
+    companyId: string,
+    employeeId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      number: string;
+      periodYm: string;
+      netPay: string;
+      currency: string;
+    }>
+  > {
+    try {
+      const result = await this.bulletin.list(companyId, {
+        employeeId,
+        limit: 1,
+      });
+      return result.items.map(toPortalBulletin);
+    } catch {
+      return [];
+    }
   }
 
   private setSessionCookie(res: Response, token: string, expires: Date): void {

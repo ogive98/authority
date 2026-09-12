@@ -10,12 +10,17 @@ import { IdentityException } from '../identity/identity.exception';
 import { SessionService } from '../identity/session.service';
 import { ModuleRegistryService } from '../modules-registry/module-registry.service';
 import { MODULE_ERROR_CODES } from '../modules-registry/modules.constants';
+import { HrService } from '../hr/hr.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   EMPLOYEE_PORTAL_DEFAULTS,
   EMPLOYEE_PORTAL_ERROR_CODES,
 } from './employee-portal.constants';
 import { EmployeePortalException } from './employee-portal.exception';
+import {
+  toPortalProfile,
+  type PortalEmployeeProfile,
+} from './employee-portal-profile.mapper';
 
 export type EmployeePortalLink = {
   employeeId: string;
@@ -36,6 +41,7 @@ export class EmployeePortalAuthService {
     private readonly authService: AuthService,
     private readonly sessionService: SessionService,
     private readonly moduleRegistry: ModuleRegistryService,
+    private readonly hr: HrService,
   ) {}
 
   async login(params: {
@@ -112,7 +118,12 @@ export class EmployeePortalAuthService {
     return employee;
   }
 
-  async getMe(userId: string) {
+  async getMe(userId: string): Promise<{
+    user: ReturnType<AuthService['toMeResponse']>;
+    employee: EmployeePortalLink;
+    profile: PortalEmployeeProfile;
+    realm: 'employee_portal';
+  }> {
     const employee = await this.requireLinkedEmployee(userId);
     const user = await this.prisma.iamUser.findUniqueOrThrow({
       where: { id: userId },
@@ -129,9 +140,16 @@ export class EmployeePortalAuthService {
       );
     }
 
+    const full = await this.hr.getEmployee(
+      employee.companyId,
+      employee.id,
+      false,
+    );
+
     return {
       user: this.authService.toMeResponse(user),
       employee: this.toLink(employee),
+      profile: toPortalProfile(full),
       realm: 'employee_portal' as const,
     };
   }

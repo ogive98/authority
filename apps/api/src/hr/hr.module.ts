@@ -59,6 +59,7 @@ import { TransferOrderPdfService } from './transfer-order-pdf.service';
   ],
   exports: [
     HrService,
+    HrDocumentService,
     CnssService,
     IrppService,
     BulletinService,

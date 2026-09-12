@@ -1,10 +1,13 @@
 /** Employee Portal client helpers (`/api/v1/employee-portal`). */
 
-import type { AttAbsence, AttAbsenceType } from "@/lib/attendance";
+import type { AttAbsence, AttAbsenceStatus, AttAbsenceType } from "@/lib/attendance";
 
 export const EMPLOYEE_PORTAL_LOGIN_PATH = "/employee-portal/login";
 export const EMPLOYEE_PORTAL_HOME_PATH = "/employee-portal";
+export const EMPLOYEE_PORTAL_CONGES_PATH = "/employee-portal/conges";
 export const EMPLOYEE_PORTAL_BULLETINS_PATH = "/employee-portal/bulletins";
+export const EMPLOYEE_PORTAL_DOCUMENTS_PATH = "/employee-portal/documents";
+export const EMPLOYEE_PORTAL_PROFIL_PATH = "/employee-portal/profil";
 export const EMPLOYEE_PORTAL_COOKIE_NAME =
   "authority_employee_portal_session";
 
@@ -12,10 +15,32 @@ export const EMPLOYEE_PORTAL_API = {
   login: "/api/v1/employee-portal/auth/login",
   logout: "/api/v1/employee-portal/auth/logout",
   me: "/api/v1/employee-portal/me",
+  dashboard: "/api/v1/employee-portal/dashboard",
   absences: "/api/v1/employee-portal/absences",
   calendar: "/api/v1/employee-portal/calendar",
   bulletins: "/api/v1/employee-portal/bulletins",
+  documents: "/api/v1/employee-portal/documents",
 } as const;
+
+export type PortalEmployeeProfile = {
+  employeeId: string;
+  companyId: string;
+  matricule: string;
+  displayName: string;
+  status: string;
+  department: string | null;
+  jobTitle: string | null;
+  siteName: string | null;
+  email: string | null;
+  cinNo: string | null;
+  address: string | null;
+  bankName: string | null;
+  bankAgency: string | null;
+  bankAccountMasked: string | null;
+  hiredAt: string | null;
+  photoDocumentId: string | null;
+  hasAttestationPdf: boolean;
+};
 
 export type EmployeePortalMe = {
   user: {
@@ -34,7 +59,32 @@ export type EmployeePortalMe = {
     displayName: string;
     status: string;
   };
+  profile: PortalEmployeeProfile;
   realm: "employee_portal";
+};
+
+export type PortalDashboard = {
+  pendingAbsences: number;
+  approvedAbsences: number;
+  documentCount: number;
+  lastBulletin: {
+    id: string;
+    number: string;
+    periodYm: string;
+    netPay: string;
+    currency: string;
+  } | null;
+};
+
+export type PortalDocument = {
+  id: string;
+  number: string;
+  title: string;
+  mime: string;
+  size: string;
+  kindCode: string | null;
+  kindName: string | null;
+  createdAt: string;
 };
 
 /** Own bulletin (portal-safe — no company/snapshot internals). */
@@ -62,6 +112,34 @@ export type PortalBulletin = {
   taxEnfantCount: number | null;
   createdAt: string;
 };
+
+export function portalAbsenceTypeLabel(type: AttAbsenceType): string {
+  switch (type) {
+    case "PAID":
+      return "Congé payé";
+    case "UNPAID":
+      return "Absence non payée";
+    case "OTHER":
+      return "Autre";
+    default:
+      return type;
+  }
+}
+
+export function portalAbsenceStatusLabel(status: AttAbsenceStatus): string {
+  switch (status) {
+    case "REQUESTED":
+      return "Demandé";
+    case "APPROVED":
+      return "Approuvé";
+    case "REJECTED":
+      return "Refusé";
+    case "CANCELLED":
+      return "Annulé";
+    default:
+      return status;
+  }
+}
 
 /**
  * True when Employee Portal session is missing/invalid (redirect to login).
@@ -157,5 +235,31 @@ export async function downloadPortalBulletinPdf(
     return { ok: true };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function downloadPortalDocument(
+  id: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    const res = await fetch(
+      `${EMPLOYEE_PORTAL_API.documents}/${encodeURIComponent(id)}/download`,
+      { credentials: "include", headers: { Accept: "application/json" } },
+    );
+    if (!res.ok) {
+      let message = "Téléchargement impossible.";
+      try {
+        const body = (await res.json()) as { message?: string };
+        if (body.message) message = body.message;
+      } catch {
+        /* ignore */
+      }
+      return { ok: false, message };
+    }
+    const body = (await res.json()) as { downloadUrl: string };
+    window.open(body.downloadUrl, "_blank", "noopener,noreferrer");
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Réseau indisponible." };
   }
 }

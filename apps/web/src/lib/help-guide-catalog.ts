@@ -859,8 +859,8 @@ export const HELP_MODULES: HelpModule[] = [
       it: "Portali (dipendente / cliente)",
     },
     summary: {
-      fr: "Employee Portal : congés, calendrier, bulletins. Customer Portal : commandes / docs (shell séparé).",
-      it: "Employee Portal: congedi, calendario, buste. Customer Portal: ordini / doc (shell separato).",
+      fr: "Employee Portal : accueil KPI, congés (annuler), calendrier, bulletins, documents, profil. Customer Portal : commandes / docs (shell séparé).",
+      it: "Employee Portal: home KPI, congedi (annulla), calendario, buste, documenti, profilo. Customer Portal: ordini / doc (shell separato).",
     },
     when: {
       fr: "Self-service collaborateur ou client B2B — cookies de session distincts.",
@@ -879,17 +879,35 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Connexion `/employee-portal/login`.",
-            "Demander / suivre congés ; voir calendrier.",
-            "Consulter / imprimer ses bulletins (own only — IDOR→404).",
+            "Accueil : KPI demandes / bulletins / documents.",
+            "Congés : demander, suivre, annuler une demande REQUESTED ; calendrier.",
+            "Bulletins : consulter / PDF (own only — IDOR→404).",
+            "Documents : télécharger le dossier RH lié.",
+            "Profil : lecture seule (compte bancaire masqué).",
           ],
           it: [
             "Login `/employee-portal/login`.",
-            "Richiedere / seguire congedi; vedere calendario.",
-            "Consultare / stampare le proprie buste (own only — IDOR→404).",
+            "Home: KPI richieste / buste / documenti.",
+            "Congedi: richiedere, seguire, annullare una REQUESTED; calendario.",
+            "Buste: consultare / PDF (own only — IDOR→404).",
+            "Documenti: scaricare il dossier RH collegato.",
+            "Profilo: sola lettura (conto bancario mascherato).",
           ],
         },
       },
     ],
+    locks: {
+      fr: [
+        "Pas de soldes / quotas inventés.",
+        "Pas de pointage ni virement depuis le portail (lots ultérieurs).",
+        "Pas d’édition profil — RH ADV seulement.",
+      ],
+      it: [
+        "Nessun saldo / quota inventato.",
+        "Niente timbratura né bonifico dal portale (lotti successivi).",
+        "Nessuna modifica profilo — solo RH ADV.",
+      ],
+    },
   },
 ];
 

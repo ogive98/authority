@@ -1,80 +1,98 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ABadge,
-  AButton,
   AEmptyState,
   AErrorState,
-  AInput,
   APageBody,
   APageSection,
   AScreenHeader,
   ASkeleton,
-  ASoftTable,
-  ASoftThead,
-  ASoftTr,
 } from "@/components/a";
 import {
-  absenceStatusTone,
-  type AttAbsence,
-  type AttAbsenceType,
-} from "@/lib/attendance";
-import { AttendanceCalendarPanel } from "@/components/attendance/attendance-calendar-panel";
-import { EMPLOYEE_PORTAL_API } from "@/lib/employee-portal";
+  EMPLOYEE_PORTAL_API,
+  EMPLOYEE_PORTAL_BULLETINS_PATH,
+  EMPLOYEE_PORTAL_CONGES_PATH,
+  EMPLOYEE_PORTAL_DOCUMENTS_PATH,
+  EMPLOYEE_PORTAL_PROFIL_PATH,
+  type PortalDashboard,
+} from "@/lib/employee-portal";
 
 type LoadState =
   | { kind: "loading" }
-  | {
-      kind: "ok";
-      items: AttAbsence[];
-      label: string;
-      employeeId: string;
-    }
+  | { kind: "ok"; data: PortalDashboard; label: string }
   | { kind: "error"; message: string };
+
+function formatTnd(value: string): string {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return value;
+  return n.toLocaleString("fr-TN", {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
+  });
+}
+
+function KpiTile({
+  href,
+  label,
+  value,
+  hint,
+}: {
+  href: string;
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="a-underlay a-action-quiet block space-y-1 rounded-[var(--a-radius-md)] px-4 py-3 transition-colors hover:bg-a-surface-3/60"
+    >
+      <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wide text-a-fg-muted">
+        {label}
+      </p>
+      <p className="a-mono text-[length:var(--a-text-xl)] tabular-nums text-a-fg">
+        {value}
+      </p>
+      {hint ? (
+        <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">{hint}</p>
+      ) : null}
+    </Link>
+  );
+}
 
 export default function EmployeePortalHomePage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
-  const [busy, setBusy] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [type, setType] = useState<AttAbsenceType>("PAID");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [reason, setReason] = useState("");
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
     try {
-      const [meRes, absRes] = await Promise.all([
+      const [meRes, dashRes] = await Promise.all([
         fetch(EMPLOYEE_PORTAL_API.me, {
           credentials: "include",
           headers: { Accept: "application/json" },
         }),
-        fetch(EMPLOYEE_PORTAL_API.absences, {
+        fetch(EMPLOYEE_PORTAL_API.dashboard, {
           credentials: "include",
           headers: { Accept: "application/json" },
         }),
       ]);
-      if (!meRes.ok || !absRes.ok) {
+      if (!meRes.ok || !dashRes.ok) {
         setState({
           kind: "error",
-          message: "Impossible de charger vos congés.",
+          message: "Impossible de charger l’accueil.",
         });
         return;
       }
       const me = (await meRes.json()) as {
-        employee: {
-          employeeId: string;
-          matricule: string;
-          displayName: string;
-        };
+        employee: { matricule: string; displayName: string };
       };
-      const items = (await absRes.json()) as AttAbsence[];
+      const data = (await dashRes.json()) as PortalDashboard;
       setState({
         kind: "ok",
-        items,
+        data,
         label: `${me.employee.matricule} · ${me.employee.displayName}`,
-        employeeId: me.employee.employeeId,
       });
     } catch {
       setState({ kind: "error", message: "API indisponible." });
@@ -85,135 +103,26 @@ export default function EmployeePortalHomePage() {
     void load();
   }, [load]);
 
-  async function onCreate() {
-    if (!startDate || !endDate) {
-      setFormError("Début et fin sont requis.");
-      return;
-    }
-    setBusy(true);
-    setFormError(null);
-    try {
-      const res = await fetch(EMPLOYEE_PORTAL_API.absences, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          type,
-          startDate,
-          endDate,
-          reason: reason.trim() || undefined,
-        }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as {
-          message?: string | string[];
-        };
-        setFormError(
-          Array.isArray(body.message)
-            ? body.message.join(", ")
-            : body.message || "Création refusée",
-        );
-        setBusy(false);
-        return;
-      }
-      setStartDate("");
-      setEndDate("");
-      setReason("");
-      setBusy(false);
-      void load();
-    } catch {
-      setBusy(false);
-      setFormError("API indisponible.");
-    }
-  }
-
   return (
     <>
       <AScreenHeader
-        kicker="Employee Portal"
-        title="Mes congés"
+        kicker="Portail employé"
+        title="Accueil"
         description={
           state.kind === "ok"
-            ? `${state.label} — demande / suivi seulement (pas de solde inventé)`
-            : "Demandes d’absence"
+            ? `${state.label} — self-service (pas de solde inventé)`
+            : "Tableau de bord personnel"
         }
       />
       <APageBody>
-        {formError ? (
-          <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
-            {formError}
-          </p>
-        ) : null}
-
-        {state.kind === "ok" ? (
-          <APageSection title="Calendrier" bare>
-            <AttendanceCalendarPanel
-              employeeId={state.employeeId}
-              mode="portal"
-            />
-          </APageSection>
-        ) : null}
-
-        <APageSection
-          title="Nouvelle demande"
-          action={
-            <AButton type="button" size="sm" disabled={busy} onClick={() => void onCreate()}>
-              Envoyer la demande
-            </AButton>
-          }
-        >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block space-y-1.5">
-              <span className="text-[length:var(--a-text-sm)] font-medium">
-                Type
-              </span>
-              <select
-                className="w-full rounded-[var(--a-radius-sm)] bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)]"
-                value={type}
-                onChange={(e) => setType(e.target.value as AttAbsenceType)}
-              >
-                <option value="PAID">PAID</option>
-                <option value="UNPAID">UNPAID</option>
-                <option value="OTHER">OTHER</option>
-              </select>
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-[length:var(--a-text-sm)] font-medium">
-                Motif
-              </span>
-              <AInput
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="Optionnel"
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-[length:var(--a-text-sm)] font-medium">
-                Début
-              </span>
-              <AInput
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-[length:var(--a-text-sm)] font-medium">
-                Fin
-              </span>
-              <AInput
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </label>
+        {state.kind === "loading" ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <ASkeleton className="h-24 w-full" />
+            <ASkeleton className="h-24 w-full" />
+            <ASkeleton className="h-24 w-full" />
+            <ASkeleton className="h-24 w-full" />
           </div>
-        </APageSection>
-
-        {state.kind === "loading" ? <ASkeleton className="h-40 w-full" /> : null}
+        ) : null}
         {state.kind === "error" ? (
           <AErrorState
             message={state.message}
@@ -221,43 +130,83 @@ export default function EmployeePortalHomePage() {
             onRetry={() => void load()}
           />
         ) : null}
-        {state.kind === "ok" && state.items.length === 0 ? (
-          <AEmptyState
-            title="Aucune demande"
-            description="Vos absences apparaîtront ici après envoi."
-          />
-        ) : null}
-        {state.kind === "ok" && state.items.length > 0 ? (
-          <APageSection title="Historique" bare>
-            <ASoftTable className="min-w-[560px]">
-              <ASoftThead>
-                <tr>
-                  <th className="a-table-cell font-medium">Type</th>
-                  <th className="a-table-cell font-medium">Période</th>
-                  <th className="a-table-cell font-medium">Statut</th>
-                  <th className="a-table-cell font-medium">Motif</th>
-                </tr>
-              </ASoftThead>
-              <tbody>
-                {state.items.map((row) => (
-                  <ASoftTr key={row.id}>
-                    <td className="a-mono a-table-cell">{row.type}</td>
-                    <td className="a-mono a-table-cell tabular-nums">
-                      {row.startDate} → {row.endDate}
-                    </td>
-                    <td className="a-table-cell">
-                      <ABadge tone={absenceStatusTone(row.status)}>
-                        {row.status}
-                      </ABadge>
-                    </td>
-                    <td className="a-table-cell text-a-fg-muted">
-                      {row.reason ?? "—"}
-                    </td>
-                  </ASoftTr>
-                ))}
-              </tbody>
-            </ASoftTable>
-          </APageSection>
+        {state.kind === "ok" ? (
+          <>
+            <APageSection title="Aperçu" bare>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <KpiTile
+                  href={EMPLOYEE_PORTAL_CONGES_PATH}
+                  label="Demandes en attente"
+                  value={String(state.data.pendingAbsences)}
+                  hint="Congés REQUESTED"
+                />
+                <KpiTile
+                  href={EMPLOYEE_PORTAL_CONGES_PATH}
+                  label="Absences approuvées"
+                  value={String(state.data.approvedAbsences)}
+                />
+                <KpiTile
+                  href={EMPLOYEE_PORTAL_DOCUMENTS_PATH}
+                  label="Documents dossier"
+                  value={String(state.data.documentCount)}
+                />
+                <KpiTile
+                  href={
+                    state.data.lastBulletin
+                      ? `${EMPLOYEE_PORTAL_BULLETINS_PATH}/${state.data.lastBulletin.id}`
+                      : EMPLOYEE_PORTAL_BULLETINS_PATH
+                  }
+                  label="Dernier bulletin"
+                  value={
+                    state.data.lastBulletin
+                      ? `${formatTnd(state.data.lastBulletin.netPay)} ${state.data.lastBulletin.currency}`
+                      : "—"
+                  }
+                  hint={
+                    state.data.lastBulletin
+                      ? `${state.data.lastBulletin.number} · ${state.data.lastBulletin.periodYm}`
+                      : "Aucun bulletin"
+                  }
+                />
+              </div>
+            </APageSection>
+
+            <APageSection title="Raccourcis">
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={EMPLOYEE_PORTAL_CONGES_PATH}
+                  className="a-action-primary inline-flex items-center rounded-[var(--a-radius-sm)] px-3 py-2 text-[length:var(--a-text-sm)] font-medium"
+                >
+                  Demander un congé
+                </Link>
+                <Link
+                  href={EMPLOYEE_PORTAL_BULLETINS_PATH}
+                  className="a-action-quiet inline-flex items-center rounded-[var(--a-radius-sm)] bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)] font-medium"
+                >
+                  Mes bulletins
+                </Link>
+                <Link
+                  href={EMPLOYEE_PORTAL_DOCUMENTS_PATH}
+                  className="a-action-quiet inline-flex items-center rounded-[var(--a-radius-sm)] bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)] font-medium"
+                >
+                  Mes documents
+                </Link>
+                <Link
+                  href={EMPLOYEE_PORTAL_PROFIL_PATH}
+                  className="a-action-quiet inline-flex items-center rounded-[var(--a-radius-sm)] bg-a-surface-2 px-3 py-2 text-[length:var(--a-text-sm)] font-medium"
+                >
+                  Mon profil
+                </Link>
+              </div>
+            </APageSection>
+
+            {!state.data.lastBulletin && state.data.documentCount === 0 ? (
+              <AEmptyState
+                title="Bienvenue"
+                description="Utilisez Congés pour une demande, Bulletins pour vos reçus PDF, Documents pour le dossier RH."
+              />
+            ) : null}
+          </>
         ) : null}
       </APageBody>
     </>
