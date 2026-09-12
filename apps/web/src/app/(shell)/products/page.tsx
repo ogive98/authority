@@ -7,12 +7,18 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftThead,
+  ASoftTr,
   ASwitch,
 } from "@/components/a";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import {
   STATUS_LABELS,
   activateProduct,
@@ -22,13 +28,7 @@ import {
   type Product,
   type RefValue,
 } from "@/lib/products";
-import {
-  softPageBody,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -176,40 +176,37 @@ export default function ProductsPage() {
         kicker="Produits"
         title="Catalogue"
         description="Listes paramétrables · conservation (jours) pour certificat de salubrité."
-        actions={
+        primary={
           <AButton type="button" size="sm" onClick={openCreate}>
-            Nouveau produit
+            {LAYOUT_ACTIONS.newProduct}
           </AButton>
         }
       />
-      <div className={softPageBody}>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="prd-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Recherche
-            </label>
+      <APageBody>
+        <AFilterBar
+          search={
             <AInput
               id="prd-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="SKU ou nom"
+              aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q);
               }}
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? (
           <div className="space-y-2">
@@ -234,27 +231,26 @@ export default function ProductsPage() {
           <AEmptyState
             title="Aucun produit"
             description="Créez le premier article du catalogue."
-            actionLabel="Nouveau produit"
+            actionLabel={LAYOUT_ACTIONS.newProduct}
             onAction={openCreate}
           />
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[40rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">SKU</th>
-                  <th className="a-table-cell font-medium">Nom</th>
-                  <th className="a-table-cell font-medium">Type</th>
-                  <th className="a-table-cell font-medium">Conserv.</th>
-                  <th className="a-table-cell font-medium">Statut</th>
-                  <th className="a-table-cell font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row) => (
-                  <tr key={row.id} className={softTr}>
+          <ASoftTable className="min-w-[40rem]">
+            <ASoftThead>
+              <tr>
+                <th className="a-table-cell font-medium">SKU</th>
+                <th className="a-table-cell font-medium">Nom</th>
+                <th className="a-table-cell font-medium">Type</th>
+                <th className="a-table-cell font-medium">Conserv.</th>
+                <th className="a-table-cell font-medium">Statut</th>
+                <th className="a-table-cell font-medium">Actions</th>
+              </tr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((row) => (
+                <ASoftTr key={row.id}>
                     <td className="a-mono a-table-cell">
                       <Link
                         href={`/products/${row.id}`}
@@ -304,13 +300,12 @@ export default function ProductsPage() {
                         ) : null}
                       </div>
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}

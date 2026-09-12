@@ -91,11 +91,11 @@
   --a-space-7: 2rem;
   --a-space-8: 3rem;
 
-  --a-radius-sm: 0.625rem;
-  --a-radius-md: 0.875rem;
-  --a-radius-lg: 1.25rem;
-  --a-radius-pill: 9999px;
-  --a-radius-app: 1.25rem;
+  --a-radius-sm: 0.125rem;
+  --a-radius-md: 0.25rem;
+  --a-radius-lg: 0.375rem;
+  --a-radius-pill: 0.25rem;
+  --a-radius-app: 0.375rem;
 
   --a-shadow-card: none;
   --a-shadow-panel: 0 18px 50px rgb(15 23 42 / 0.12);
@@ -419,30 +419,122 @@
       );
   }
 
-  /* Soft underlay — hierarchy without frames (D160). */
+  /* Soft underlay — hierarchy without frames (D160). Tight radius (D228). */
   .a-underlay {
     background: var(--a-surface-2);
     border: 0;
+    border-radius: var(--a-radius-md);
     box-shadow: var(--a-shadow-glass);
     backdrop-filter: blur(16px) saturate(160%);
     -webkit-backdrop-filter: blur(16px) saturate(160%);
+  }
+
+  /**
+   * Quiet actions — icon-color underline + hover grow (D228).
+   * Use for secondary / Filtrer / overflow / chips inactive — NOT primary CTAs.
+   */
+  .a-action-quiet {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--a-radius-sm);
+    background: transparent;
+    color: var(--a-fg-muted);
+    font-weight: 500;
+    transition: color 180ms ease;
+  }
+
+  .a-action-quiet::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1.5px;
+    border-radius: 1px;
+    background: var(--a-orange);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .a-action-quiet:hover {
+    color: var(--a-fg);
+    background: transparent;
+  }
+
+  .a-action-quiet:hover::after,
+  .a-action-quiet[aria-selected="true"]::after,
+  .a-action-quiet[data-active="true"]::after,
+  .a-action-quiet.is-active::after {
+    transform: scaleX(1);
+  }
+
+  .a-action-quiet:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-orange) 45%, transparent);
+  }
+
+  /**
+   * Primary CTA frame — teal/green encadrement only (Nouveau / Enregistrer / Créer).
+   */
+  .a-action-primary {
+    border-radius: var(--a-radius-sm);
+    background: var(--a-accent);
+    color: var(--a-accent-fg);
+    box-shadow:
+      inset 0 0 0 1.5px color-mix(in srgb, var(--a-accent) 100%, #fff 12%),
+      0 0 0 1.5px var(--a-accent);
+    transition:
+      background-color 160ms ease,
+      box-shadow 160ms ease,
+      opacity 160ms ease;
+  }
+
+  .a-action-primary:hover {
+    background: var(--a-accent-hover);
+    box-shadow:
+      inset 0 0 0 1.5px var(--a-accent-hover),
+      0 0 0 2px color-mix(in srgb, var(--a-accent) 70%, transparent);
   }
 
   .a-nav-row {
     position: relative;
     transition:
       background-color 180ms ease,
-      transform 180ms ease,
-      box-shadow 220ms ease;
+      color 180ms ease;
+  }
+
+  .a-nav-row::after {
+    content: "";
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.15rem;
+    height: 1.5px;
+    border-radius: 1px;
+    background: var(--a-orange);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .a-nav-row[aria-current="true"]::after,
+  .a-nav-row.is-active::after,
+  .a-nav-row:hover::after {
+    transform: scaleX(1);
   }
 
   .a-nav-row[aria-current="true"],
   .a-nav-row.is-active {
-    box-shadow: inset 3px 0 0 var(--a-orange);
+    box-shadow: none;
+    color: var(--a-fg);
   }
 
   .a-nav-row:hover {
-    transform: translateX(2px);
+    transform: none;
   }
 
   @keyframes a-stagger-in {
@@ -549,7 +641,7 @@
   }
 
   .a-spotlight-panel {
-    border-radius: 20px;
+    border-radius: var(--a-radius-lg);
     background: rgb(255 255 255 / 0.82);
     backdrop-filter: saturate(200%) blur(48px);
     -webkit-backdrop-filter: saturate(200%) blur(48px);
@@ -962,7 +1054,7 @@
     z-index: 4;
     width: min(17.5rem, calc(100vw - 2.5rem));
     padding: 0.85rem 0.9rem;
-    border-radius: 1.25rem;
+    border-radius: var(--a-radius-lg);
     background: color-mix(in srgb, var(--a-glass-bg-strong) 78%, transparent);
     backdrop-filter: saturate(200%) blur(28px);
     -webkit-backdrop-filter: saturate(200%) blur(28px);

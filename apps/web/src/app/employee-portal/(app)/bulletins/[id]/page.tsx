@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileDown, Printer } from "lucide-react";
 import {
   AButton,
   AErrorState,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
+  type AOverflowItem,
 } from "@/components/a";
 import { BulletinPrintSheet } from "@/components/hr/bulletin-print-sheet";
 import {
@@ -17,7 +20,7 @@ import {
   EMPLOYEE_PORTAL_BULLETINS_PATH,
   type PortalBulletin,
 } from "@/lib/employee-portal";
-import { softPageBody } from "@/lib/soft-glass-ui";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 
 type Load =
   | { kind: "loading" }
@@ -62,94 +65,109 @@ export default function EmployeePortalBulletinDetailPage() {
     void load();
   }, [load]);
 
-  async function onPdf() {
+  const onPdf = useCallback(async () => {
     if (!id) return;
     setPdfBusy(true);
     setPdfError(null);
     const res = await downloadPortalBulletinPdf(id);
     setPdfBusy(false);
     if (!res.ok) setPdfError(res.message);
-  }
+  }, [id]);
+
+  const bulletin = state.kind === "ok" ? state.data : null;
+
+  const overflowItems = useMemo((): AOverflowItem[] => {
+    if (!bulletin) return [];
+    return [
+      {
+        id: "pdf",
+        label: (
+          <>
+            <FileDown className="mr-1.5 inline h-4 w-4" strokeWidth={1.75} />
+            PDF
+          </>
+        ),
+        disabled: pdfBusy,
+        onSelect: () => void onPdf(),
+      },
+    ];
+  }, [bulletin, pdfBusy, onPdf]);
 
   return (
     <>
-      <div className={`print:hidden ${softPageBody}`}>
+      <div className="print:hidden">
         <AScreenHeader
+          breadcrumb={
+            <Link
+              href={EMPLOYEE_PORTAL_BULLETINS_PATH}
+              className="hover:text-a-fg"
+            >
+              Mes bulletins
+            </Link>
+          }
           kicker="Portail employé"
-          title="Bulletin"
+          title={bulletin ? bulletin.number : "Bulletin"}
           description="Consultation Soft Glass + reçu PDF (layout légal minimal)."
-          actions={
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={EMPLOYEE_PORTAL_BULLETINS_PATH}
-                className="inline-flex items-center rounded-[var(--a-radius-md)] bg-a-surface-3 px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium text-a-fg hover:opacity-90"
-              >
-                Retour
-              </Link>
-              {state.kind === "ok" ? (
-                <>
-                  <AButton type="button" onClick={() => window.print()}>
-                    <Printer className="mr-1.5 h-4 w-4" strokeWidth={1.75} />
-                    Imprimer
-                  </AButton>
-                  <AButton
-                    type="button"
-                    variant="secondary"
-                    disabled={pdfBusy}
-                    onClick={() => void onPdf()}
-                  >
-                    <FileDown className="mr-1.5 h-4 w-4" strokeWidth={1.75} />
-                    PDF
-                  </AButton>
-                </>
-              ) : null}
-            </div>
+          primary={
+            bulletin ? (
+              <AButton type="button" size="sm" onClick={() => window.print()}>
+                <Printer className="mr-1.5 h-4 w-4" strokeWidth={1.75} />
+                {LAYOUT_ACTIONS.print}
+              </AButton>
+            ) : undefined
+          }
+          more={
+            overflowItems.length > 0 ? (
+              <AOverflowMenu items={overflowItems} />
+            ) : undefined
           }
         />
-        {pdfError ? (
-          <p className="mb-4 text-[length:var(--a-text-sm)] text-a-danger">
-            {pdfError}
-          </p>
-        ) : null}
-        {state.kind === "loading" ? (
-          <div className="space-y-3">
-            <ASkeleton className="h-8 w-48" />
-            <ASkeleton className="h-64 w-full" />
-          </div>
-        ) : null}
-        {state.kind === "error" ? (
-          <AErrorState
-            message={state.message}
-            retryable
-            onRetry={() => void load()}
-          />
-        ) : null}
+        <APageBody>
+          {pdfError ? (
+            <p className="text-[length:var(--a-text-sm)] text-a-danger">
+              {pdfError}
+            </p>
+          ) : null}
+          {state.kind === "loading" ? (
+            <div className="space-y-3">
+              <ASkeleton className="h-8 w-48" />
+              <ASkeleton className="h-64 w-full" />
+            </div>
+          ) : null}
+          {state.kind === "error" ? (
+            <AErrorState
+              message={state.message}
+              retryable
+              onRetry={() => void load()}
+            />
+          ) : null}
+        </APageBody>
       </div>
 
-      {state.kind === "ok" ? (
-        <div className="mx-auto max-w-3xl px-[var(--a-space-5)] pb-[var(--a-space-8)]">
+      {bulletin ? (
+        <APageBody className="mx-auto max-w-3xl">
           <BulletinPrintSheet
             data={{
-              number: state.data.number,
-              periodYm: state.data.periodYm,
-              employeeName: state.data.employeeName ?? "—",
-              matricule: state.data.matricule ?? "—",
-              contractNumber: state.data.contractNumber ?? "—",
-              wageBase: state.data.wageBase,
-              cnssEmployeeAmount: state.data.cnssEmployeeAmount,
-              cnssEmployerAmount: state.data.cnssEmployerAmount,
-              irppMonthly: state.data.irppMonthly,
-              netPay: state.data.netPay,
-              currency: state.data.currency,
-              annualTaxableBeforeAbat: state.data.annualTaxableBeforeAbat,
-              abatChefAnnual: state.data.abatChefAnnual,
-              abatEnfantAnnual: state.data.abatEnfantAnnual,
-              abatTotalAnnual: state.data.abatTotalAnnual,
-              taxChefDeFamille: state.data.taxChefDeFamille,
-              taxEnfantCount: state.data.taxEnfantCount,
+              number: bulletin.number,
+              periodYm: bulletin.periodYm,
+              employeeName: bulletin.employeeName ?? "—",
+              matricule: bulletin.matricule ?? "—",
+              contractNumber: bulletin.contractNumber ?? "—",
+              wageBase: bulletin.wageBase,
+              cnssEmployeeAmount: bulletin.cnssEmployeeAmount,
+              cnssEmployerAmount: bulletin.cnssEmployerAmount,
+              irppMonthly: bulletin.irppMonthly,
+              netPay: bulletin.netPay,
+              currency: bulletin.currency,
+              annualTaxableBeforeAbat: bulletin.annualTaxableBeforeAbat,
+              abatChefAnnual: bulletin.abatChefAnnual,
+              abatEnfantAnnual: bulletin.abatEnfantAnnual,
+              abatTotalAnnual: bulletin.abatTotalAnnual,
+              taxChefDeFamille: bulletin.taxChefDeFamille,
+              taxEnfantCount: bulletin.taxEnfantCount,
             }}
           />
-        </div>
+        </APageBody>
       ) : null}
     </>
   );

@@ -81,7 +81,7 @@ export default function PortalLoginPage() {
 
         <form
           onSubmit={submit}
-          className="w-full space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]"
+          className="w-full space-y-4 rounded-[var(--a-radius-md)] bg-a-surface-2 p-[var(--a-space-5)]"
         >
           <div className="space-y-1.5">
             <label

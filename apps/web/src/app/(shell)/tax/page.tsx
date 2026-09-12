@@ -1,22 +1,22 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   ABadge,
   AEmptyState,
   AErrorState,
   AForbiddenState,
+  AOverflowMenu,
+  APageBody,
+  APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftThead,
+  ASoftTr,
 } from "@/components/a";
 import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
-import {
-  softPageBody,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -25,6 +25,7 @@ type LoadState =
   | { kind: "error"; message: string };
 
 export default function TaxCatalogPage() {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
 
   const load = useCallback(async () => {
@@ -51,16 +52,19 @@ export default function TaxCatalogPage() {
         kicker="Fiscalité"
         title="TVA Tunisie"
         description="Catalogue Code TVA (7 / 13 / 19 / 0 %). CNSS et IRPP réservés au futur module RH."
-        actions={
-          <Link
-            href="/finance/invoices"
-            className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-          >
-            Factures
-          </Link>
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "invoices",
+                label: "Factures",
+                onSelect: () => router.push("/finance/invoices"),
+              },
+            ]}
+          />
         }
       />
-      <div className={softPageBody}>
+      <APageBody>
         {state.kind === "loading" ? <ASkeleton className="h-40" /> : null}
         {state.kind === "forbidden" ? (
           <AForbiddenState message={state.message} />
@@ -79,9 +83,13 @@ export default function TaxCatalogPage() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[40rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
+          <APageSection
+            title="Catalogue codes TVA"
+            description="Taux as-recorded — consommés par Finance et Ventes. Pas de taux inventés."
+            bare
+          >
+            <ASoftTable className="min-w-[40rem]">
+              <ASoftThead>
                 <tr>
                   <th className="a-table-cell font-medium">Code</th>
                   <th className="a-table-cell font-medium">Libellé</th>
@@ -89,10 +97,10 @@ export default function TaxCatalogPage() {
                   <th className="a-table-cell font-medium">Réf. légale</th>
                   <th className="a-table-cell font-medium">Type</th>
                 </tr>
-              </thead>
+              </ASoftThead>
               <tbody>
                 {state.items.map((row) => (
-                  <tr key={row.id} className={softTr}>
+                  <ASoftTr key={row.id}>
                     <td className="a-mono a-table-cell">{row.code}</td>
                     <td className="a-table-cell">{row.label}</td>
                     <td className="a-mono a-table-cell tabular-nums">
@@ -104,13 +112,13 @@ export default function TaxCatalogPage() {
                     <td className="a-table-cell">
                       <ABadge tone="accent">{row.kind}</ABadge>
                     </td>
-                  </tr>
+                  </ASoftTr>
                 ))}
               </tbody>
-            </table>
-          </div>
+            </ASoftTable>
+          </APageSection>
         ) : null}
-      </div>
+      </APageBody>
     </>
   );
 }

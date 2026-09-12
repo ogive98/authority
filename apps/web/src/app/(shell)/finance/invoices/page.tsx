@@ -10,12 +10,16 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
   type AComboboxOption,
 } from "@/components/a";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { fetchCustomers } from "@/lib/customers";
 import {
   INVOICE_STATUS_LABELS,
@@ -31,7 +35,6 @@ import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
   softChipClass,
-  softPageBody,
   softSelect,
   softTableWrap,
   softThead,
@@ -241,93 +244,91 @@ export default function FinanceInvoicesPage() {
         kicker="Finance"
         title="Factures"
         description="Factures HT / TVA / FODEC / timbre / TTC — FODEC·timbre seulement si validés en Préférences. Soft Glass fiche D224."
-        actions={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/tax"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              TVA Tunisie
-            </Link>
-            <Link
-              href="/finance"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Créances
-            </Link>
-            <Link
-              href="/finance/credit-notes"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Avoirs
-            </Link>
-            <Link
-              href="/finance/banking"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Banque
-            </Link>
-            <AButton type="button" size="sm" onClick={openCreate}>
-              Nouvelle facture
-            </AButton>
-          </div>
+        primary={
+          <AButton type="button" size="sm" onClick={openCreate}>
+            {LAYOUT_ACTIONS.newInvoice}
+          </AButton>
+        }
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "tax",
+                label: "TVA Tunisie",
+                onSelect: () => router.push("/tax"),
+              },
+              {
+                id: "receivables",
+                label: "Créances",
+                onSelect: () => router.push("/finance"),
+              },
+              {
+                id: "credit-notes",
+                label: "Avoirs",
+                onSelect: () => router.push("/finance/credit-notes"),
+              },
+              {
+                id: "banking",
+                label: "Banque",
+                onSelect: () => router.push("/finance/banking"),
+              },
+            ]}
+          />
         }
       />
-      <div className={softPageBody}>
+      <APageBody>
         <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre"]} />
 
-        <div
-          className="flex flex-wrap gap-2"
-          role="tablist"
-          aria-label="Filtrer par statut"
-        >
-          {STATUS_FILTERS.map((chip) => {
-            const active = statusFilter === chip.id;
-            return (
-              <button
-                key={chip.id || "all"}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => {
-                  setStatusFilter(chip.id);
-                  void load(q, chip.id);
-                }}
-                className={softChipClass(active)}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="inv-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Recherche
-            </label>
+        <AFilterBar
+          search={
             <AInput
               id="inv-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="N° / libellé"
+              aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q, statusFilter);
               }}
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q, statusFilter)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          filters={
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filtrer par statut"
+            >
+              {STATUS_FILTERS.map((chip) => {
+                const active = statusFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id || "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => {
+                      setStatusFilter(chip.id);
+                      void load(q, chip.id);
+                    }}
+                    className={softChipClass(active)}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q, statusFilter)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? (
           <div className="space-y-2">
@@ -349,6 +350,8 @@ export default function FinanceInvoicesPage() {
           <AEmptyState
             title="Aucune facture"
             description="Créez une facture avec lignes et codes TVA."
+            actionLabel={LAYOUT_ACTIONS.newInvoice}
+            onAction={openCreate}
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
@@ -444,7 +447,7 @@ export default function FinanceInvoicesPage() {
             </table>
           </div>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}
@@ -525,7 +528,7 @@ export default function FinanceInvoicesPage() {
               {form.lines.map((line, idx) => (
                 <div
                   key={idx}
-                  className="space-y-2 rounded-[12px] bg-a-surface-3/60 p-3"
+                  className="space-y-2 rounded-[var(--a-radius-sm)] bg-a-surface-3/60 p-3"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">

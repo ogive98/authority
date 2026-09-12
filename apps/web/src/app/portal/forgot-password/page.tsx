@@ -24,7 +24,7 @@ export default function PortalForgotPasswordPage() {
         <p className="text-center text-[length:var(--a-text-sm)] text-a-fg-muted">
           Mot de passe oublié
         </p>
-        <div className="w-full space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]">
+        <div className="w-full space-y-4 rounded-[var(--a-radius-md)] bg-a-surface-2 p-[var(--a-space-5)]">
           <p className="text-[length:var(--a-text-md)] font-medium tracking-tight text-a-fg">
             Réinitialisation non disponible
           </p>

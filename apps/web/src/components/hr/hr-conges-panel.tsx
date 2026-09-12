@@ -7,8 +7,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  APageSection,
   ASkeleton,
 } from "@/components/a";
 import {
@@ -123,45 +125,53 @@ export function HrCongesPanel() {
   }
 
   return (
-    <div className="space-y-[var(--a-space-4)]">
-      <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-        Demandes d’absence PAID / UNPAID / OTHER — approbation seulement. Aucun
-        solde ni quota tunisien inventé. Portail salarié :{" "}
-        <a
-          href="/employee-portal/login"
-          className="a-mono text-a-accent hover:underline"
-          target="_blank"
-          rel="noreferrer"
-        >
-          /employee-portal
-        </a>
-      </p>
-
+    <APageSection
+      bare
+      title="Congés"
+      description={
+        <>
+          Demandes d’absence PAID / UNPAID / OTHER — approbation seulement. Aucun
+          solde ni quota tunisien inventé. Portail salarié :{" "}
+          <a
+            href="/employee-portal/login"
+            className="a-mono text-a-accent hover:underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            /employee-portal
+          </a>
+        </>
+      }
+    >
       {formError ? (
         <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
           {formError}
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          className="rounded-[var(--a-radius-sm)] bg-a-surface-2 px-3 py-1.5 text-[length:var(--a-text-sm)] text-a-fg"
-          value={filter}
-          onChange={(e) =>
-            setFilter((e.target.value || "") as AttAbsenceStatus | "")
-          }
-          aria-label="Filtrer par statut"
-        >
-          <option value="">Tous les statuts</option>
-          <option value="REQUESTED">REQUESTED</option>
-          <option value="APPROVED">APPROVED</option>
-          <option value="REJECTED">REJECTED</option>
-          <option value="CANCELLED">CANCELLED</option>
-        </select>
-        <AButton type="button" onClick={openCreate}>
-          Nouvelle absence
-        </AButton>
-      </div>
+      <AFilterBar
+        filters={
+          <select
+            className="rounded-[var(--a-radius-sm)] bg-a-surface-2 px-3 py-1.5 text-[length:var(--a-text-sm)] text-a-fg"
+            value={filter}
+            onChange={(e) =>
+              setFilter((e.target.value || "") as AttAbsenceStatus | "")
+            }
+            aria-label="Filtrer par statut"
+          >
+            <option value="">Tous les statuts</option>
+            <option value="REQUESTED">REQUESTED</option>
+            <option value="APPROVED">APPROVED</option>
+            <option value="REJECTED">REJECTED</option>
+            <option value="CANCELLED">CANCELLED</option>
+          </select>
+        }
+        utilities={
+          <AButton type="button" size="sm" onClick={openCreate}>
+            Nouvelle absence
+          </AButton>
+        }
+      />
 
       {state.kind === "loading" ? <ASkeleton className="h-48 w-full" /> : null}
       {state.kind === "forbidden" ? (
@@ -341,6 +351,6 @@ export function HrCongesPanel() {
           </div>
         </div>
       </ADrawer>
-    </div>
+    </APageSection>
   );
 }

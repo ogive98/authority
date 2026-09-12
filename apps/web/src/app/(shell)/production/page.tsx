@@ -7,8 +7,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  APageBody,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
@@ -25,7 +27,6 @@ import {
 } from "@/lib/production";
 import { cn } from "@/lib/utils";
 import {
-  softPageBody,
   softSelect,
   softTableWrap,
   softThead,
@@ -208,29 +209,38 @@ export default function ProductionPage() {
         kicker="Production"
         title="Ordres de fabrication"
         description="OF light — créer, libérer, déclarer conso / output (stock via Inventory)."
-        actions={
-          <AButton type="button" onClick={openCreate}>
+        primary={
+          <AButton type="button" size="sm" onClick={openCreate}>
             Nouvel OF
           </AButton>
         }
       />
 
-      <div className={softPageBody}>
-      <div className="flex flex-wrap items-center gap-2">
-        <AInput
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Rechercher OF / lot…"
-          className="max-w-xs"
+      <APageBody>
+        <AFilterBar
+          search={
+            <AInput
+              id="prod-q"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Rechercher OF / lot…"
+              aria-label="Recherche"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void load(q);
+              }}
+            />
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q)}
+            >
+              Filtrer
+            </AButton>
+          }
         />
-        <AButton
-          type="button"
-          variant="ghost"
-          onClick={() => void load(q)}
-        >
-          Filtrer
-        </AButton>
-      </div>
 
       {state.kind === "loading" ? <ASkeleton className="h-48 w-full" /> : null}
       {state.kind === "forbidden" ? (
@@ -340,7 +350,7 @@ export default function ProductionPage() {
           </table>
         </div>
       ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}

@@ -9,9 +9,11 @@ import {
   AErrorState,
   AForbiddenState,
   AInput,
+  APageBody,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { PrefsModesOpsPanel } from "@/components/settings/prefs-modes-ops-panel";
 import { PrefsToggleRow } from "@/components/settings/prefs-toggle-row";
 import { useMeRegistry } from "@/hooks/use-me-registry";
@@ -43,7 +45,7 @@ import {
   fetchIrppBrackets,
   replaceIrppBrackets,
 } from "@/lib/hr";
-import { softPageBody, softPanel, softSelect } from "@/lib/soft-glass-ui";
+import { softPanel, softSelect } from "@/lib/soft-glass-ui";
 import { fetchMailStatus, type MailStatus } from "@/lib/users";
 import { usePrefsStore, type Density, type SurfaceMode } from "@/stores/prefs-store";
 
@@ -801,20 +803,6 @@ export default function SettingsPage() {
     window.setTimeout(() => setSavedFlash(false), 1600);
   }
 
-  async function persistRoleSetting(key: string, value: unknown) {
-    if (!roleCaps?.canWriteRole || !selectedRole || roleBusy) return;
-    setRoleBusy(true);
-    setRoleMsg(null);
-    setRoleError(null);
-    const r = await putRoleSetting(key, value, selectedRole);
-    setRoleBusy(false);
-    if (!r.ok) {
-      setRoleError(r.message);
-      return;
-    }
-    setRoleMsg("Override rôle enregistré.");
-  }
-
   function patchDraft(key: string, patch: Partial<ExpertDraft>) {
     setDrafts((prev) => ({
       ...prev,
@@ -957,65 +945,70 @@ export default function SettingsPage() {
             ? "Rail compartiments Soft Glass (D203) — poste, société, modes ops, expertise, envois, finance, compta, ventes, rôles. Une préférence n’outrepasse jamais une permission."
             : "Rail compartiments Soft Glass (D203) — réglages de votre poste. Les compartiments société sont réservés à l’administrateur."
         }
-        actions={
+        status={
+          compartment === "envois" && canCompanyWrite && mailStatus ? (
+            <ABadge
+              tone={mailStatus.configured ? "success" : "neutral"}
+              title={
+                mailStatus.configured
+                  ? [
+                      mailStatus.host,
+                      mailStatus.port != null ? `:${mailStatus.port}` : "",
+                      mailStatus.from ? ` · ${mailStatus.from}` : "",
+                      mailStatus.autoSend ? " · auto-send" : " · auto-send off",
+                      ` · TTL ${mailStatus.ttlDays}j`,
+                    ].join("")
+                  : `SMTP off · mailto · TTL ${mailStatus.ttlDays}j`
+              }
+            >
+              {mailStatus.configured
+                ? `${mailStatus.from ? `SMTP · ${mailStatus.from}` : `SMTP · ${mailStatus.host}`}${
+                    mailStatus.autoSend ? "" : " · manuel"
+                  }`
+                : "SMTP off · mailto"}
+            </ABadge>
+          ) : null
+        }
+        primary={
           compartment === "envois" && canCompanyWrite ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {mailStatus ? (
-                <ABadge
-                  tone={mailStatus.configured ? "success" : "neutral"}
-                  title={
-                    mailStatus.configured
-                      ? [
-                          mailStatus.host,
-                          mailStatus.port != null ? `:${mailStatus.port}` : "",
-                          mailStatus.from ? ` · ${mailStatus.from}` : "",
-                          mailStatus.autoSend
-                            ? " · auto-send"
-                            : " · auto-send off",
-                          ` · TTL ${mailStatus.ttlDays}j`,
-                        ].join("")
-                      : `SMTP off · mailto · TTL ${mailStatus.ttlDays}j`
-                  }
-                >
-                  {mailStatus.configured
-                    ? `${mailStatus.from ? `SMTP · ${mailStatus.from}` : `SMTP · ${mailStatus.host}`}${
-                        mailStatus.autoSend ? "" : " · manuel"
-                      }`
-                    : "SMTP off · mailto"}
-                </ABadge>
-              ) : null}
-              <AButton
-                type="button"
-                size="sm"
-                variant="ghost"
-                disabled={
-                  envoisBusy ||
-                  mailTestBusy ||
-                  mailStatus?.configured === false
-                }
-                title={
-                  mailStatus?.configured === false
-                    ? "SMTP non configuré — renseignez l’hôte, Enregistrer, puis retestez"
-                    : undefined
-                }
-                onClick={() => void onMailTest()}
-              >
-                {mailTestBusy ? "…" : "Tester l’envoi"}
-              </AButton>
-              <AButton
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={envoisBusy || mailTestBusy}
-                onClick={() => void onSaveEnvois()}
-              >
-                {envoisBusy ? "…" : savedFlash ? "Enregistré" : "Enregistrer"}
-              </AButton>
-            </div>
+            <AButton
+              type="button"
+              size="sm"
+              disabled={envoisBusy || mailTestBusy}
+              onClick={() => void onSaveEnvois()}
+            >
+              {envoisBusy
+                ? "…"
+                : savedFlash
+                  ? "Enregistré"
+                  : LAYOUT_ACTIONS.save}
+            </AButton>
+          ) : null
+        }
+        more={
+          compartment === "envois" && canCompanyWrite ? (
+            <AButton
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={
+                envoisBusy ||
+                mailTestBusy ||
+                mailStatus?.configured === false
+              }
+              title={
+                mailStatus?.configured === false
+                  ? "SMTP non configuré — renseignez l’hôte, Enregistrer, puis retestez"
+                  : undefined
+              }
+              onClick={() => void onMailTest()}
+            >
+              {mailTestBusy ? "…" : "Tester l’envoi"}
+            </AButton>
           ) : null
         }
       />
-      <div className={softPageBody}>
+      <APageBody>
         {companyDeniedHint ? (
           <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
             Compartiments société réservés à l’administrateur.
@@ -2437,7 +2430,7 @@ export default function SettingsPage() {
             ) : null}
           </div>
         </div>
-      </div>
+      </APageBody>
     </>
   );
 }

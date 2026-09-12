@@ -188,17 +188,29 @@ export class SalesService {
     }
     if (opts.q?.trim()) {
       const q = opts.q.trim();
+      const matchingCustomers = await this.prisma.cusCustomer.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          OR: [
+            { code: { contains: q, mode: 'insensitive' } },
+            { nickname: { contains: q, mode: 'insensitive' } },
+            {
+              party: { legalName: { contains: q, mode: 'insensitive' } },
+            },
+          ],
+        },
+        select: { id: true },
+        take: 100,
+      });
+      const customerIds = matchingCustomers.map((c) => c.id);
       where.OR = [
         { number: { contains: q, mode: 'insensitive' } },
         { notes: { contains: q, mode: 'insensitive' } },
         { preferredDriver: { contains: q, mode: 'insensitive' } },
-        { customer: { code: { contains: q, mode: 'insensitive' } } },
-        { customer: { nickname: { contains: q, mode: 'insensitive' } } },
-        {
-          customer: {
-            party: { legalName: { contains: q, mode: 'insensitive' } },
-          },
-        },
+        ...(customerIds.length > 0
+          ? [{ customerId: { in: customerIds } }]
+          : []),
       ];
     }
 

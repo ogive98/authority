@@ -1,15 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ABadge,
   AButton,
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
@@ -23,7 +26,6 @@ import {
 } from "@/lib/finance";
 import {
   softChipClass,
-  softPageBody,
   softTableWrap,
   softThead,
   softTr,
@@ -46,6 +48,7 @@ const STATUS_FILTERS: Array<{ id: FilterMode; label: string }> = [
 ];
 
 export default function FinancePromisesPage() {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterMode>("");
@@ -105,71 +108,74 @@ export default function FinancePromisesPage() {
         kicker="Finance"
         title="Promesses de paiement"
         description="Engagements client sur créances AR — sans blocage automatique des ventes."
-        actions={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/finance"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Créances
-            </Link>
-            <Link
-              href="/finance/banking"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Banque
-            </Link>
-          </div>
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "receivables",
+                label: "Créances",
+                onSelect: () => router.push("/finance"),
+              },
+              {
+                id: "banking",
+                label: "Banque",
+                onSelect: () => router.push("/finance/banking"),
+              },
+              {
+                id: "payments",
+                label: "Encaissements",
+                onSelect: () => router.push("/finance/payments"),
+              },
+            ]}
+          />
         }
       />
 
-      <div className={softPageBody}>
-        <div
-          className="flex flex-wrap gap-2"
-          role="tablist"
-          aria-label="Filtrer par statut"
-        >
-          {STATUS_FILTERS.map((chip) => {
-            const active = statusFilter === chip.id;
-            return (
-              <button
-                key={chip.id || "all"}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setStatusFilter(chip.id)}
-                className={softChipClass(active)}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="ptp-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Recherche
-            </label>
+      <APageBody>
+        <AFilterBar
+          search={
             <AInput
               id="ptp-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="N° / note"
+              aria-label="Recherche"
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q, statusFilter)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          filters={
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filtrer par statut"
+            >
+              {STATUS_FILTERS.map((chip) => {
+                const active = statusFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id || "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setStatusFilter(chip.id)}
+                    className={softChipClass(active)}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q, statusFilter)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? <ASkeleton className="h-40" /> : null}
         {state.kind === "forbidden" ? (
@@ -240,7 +246,7 @@ export default function FinancePromisesPage() {
             </table>
           </div>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={!!selected}

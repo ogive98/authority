@@ -146,7 +146,7 @@ export default function InviteAcceptClient() {
 
         {peek.kind === "error" ? (
           <div
-            className="w-full space-y-3 rounded-[14px] bg-a-surface-2 px-[var(--a-space-5)] py-[var(--a-space-5)] text-center"
+            className="w-full space-y-3 rounded-[var(--a-radius-md)] bg-a-surface-2 px-[var(--a-space-5)] py-[var(--a-space-5)] text-center"
             role="alert"
           >
             <p className="text-[length:var(--a-text-md)] font-medium tracking-tight text-a-fg">
@@ -170,7 +170,7 @@ export default function InviteAcceptClient() {
         {peek.kind === "ok" ? (
           <form
             onSubmit={(e) => void onSubmit(e)}
-            className="w-full space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]"
+            className="w-full space-y-4 rounded-[var(--a-radius-md)] bg-a-surface-2 p-[var(--a-space-5)]"
           >
             <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
               Bonjour <span className="text-a-fg">{peek.displayName}</span>

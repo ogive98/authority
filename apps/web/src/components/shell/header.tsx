@@ -37,7 +37,7 @@ function IconBtn({
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "inline-flex h-9 w-9 items-center justify-center rounded-full text-a-fg-muted transition-colors duration-150 hover:bg-a-surface-3 hover:text-a-fg",
+        "a-action-quiet inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted",
         className,
       )}
     >
@@ -146,7 +146,7 @@ export function ShellHeader() {
     <header className="a-glass relative z-[var(--a-z-sticky)] flex h-[3.75rem] w-full shrink-0 items-center gap-3 px-3 md:px-5">
       <button
         type="button"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-a-fg-muted hover:bg-a-surface-3 md:hidden"
+        className="a-action-quiet inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted md:hidden"
         aria-label={t("expandNav")}
         aria-controls="shell-sidebar-mobile"
         onClick={() => setMobileNavOpen(true)}
@@ -161,7 +161,7 @@ export function ShellHeader() {
           type="button"
           onClick={() => setPaletteOpen(true)}
           className={cn(
-            "a-underlay flex h-10 w-full max-w-2xl items-center gap-2.5 rounded-full px-4",
+            "a-underlay flex h-10 w-full max-w-2xl items-center gap-2.5 rounded-[var(--a-radius-md)] px-4",
             "text-left text-[length:var(--a-text-sm)] text-a-fg-muted transition-colors",
             "hover:bg-a-surface-3 hover:text-a-fg",
           )}
@@ -238,7 +238,7 @@ export function ShellHeader() {
           onClick={toggleLocale}
           title={t("langToggle")}
           aria-label={t("langToggle")}
-          className="inline-flex h-9 items-center gap-1 rounded-full bg-a-surface-3 px-2.5 text-[11px] font-semibold tracking-wide text-a-fg transition-colors hover:bg-a-surface-4"
+          className="a-action-quiet inline-flex h-9 items-center gap-1 rounded-[var(--a-radius-sm)] px-2.5 text-[11px] font-semibold tracking-wide text-a-fg"
         >
           <span aria-hidden>{locale === "fr" ? "🇫🇷" : "🇮🇹"}</span>
           <span className="a-mono uppercase">{locale}</span>

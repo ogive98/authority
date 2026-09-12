@@ -9,6 +9,8 @@ import {
   AErrorState,
   AForbiddenState,
   AInput,
+  APageBody,
+  APageSection,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
@@ -268,11 +270,10 @@ export default function CertificatSalubritePage() {
         kicker="Stock"
         title="Certificat de salubrité"
         description="Date → certificat → imprimer ou envoyer"
-        actions={
+        primary={
           <AButton
             type="button"
             size="sm"
-            variant="secondary"
             disabled={busy}
             onClick={() => void onGenerate()}
           >
@@ -281,8 +282,8 @@ export default function CertificatSalubritePage() {
         }
       />
 
-      <div className="mx-auto max-w-3xl space-y-5 px-6 pb-16 pt-2 md:px-10 print:max-w-none print:px-0 print:pb-0">
-        <section className="flex flex-wrap items-end gap-3 print:hidden">
+      <APageBody className="mx-auto max-w-3xl print:max-w-none print:px-0 print:pb-0">
+        <APageSection bare className="flex flex-wrap items-end gap-3 print:hidden">
           <div className="min-w-[14rem] flex-1 space-y-1">
             <label htmlFor="pack-date" className="text-[12px] text-a-fg-subtle">
               Date d’emballage
@@ -302,11 +303,11 @@ export default function CertificatSalubritePage() {
           >
             Actualiser
           </AButton>
-        </section>
+        </APageSection>
 
-        <section
+        <APageSection
+          bare
           className="flex flex-wrap gap-2 a-underlay rounded-md p-2 print:hidden"
-          aria-label="Actions certificat"
         >
           <button
             type="button"
@@ -360,7 +361,7 @@ export default function CertificatSalubritePage() {
             <FileText className="h-4 w-4 text-a-fg" strokeWidth={1.75} />
             Modèle Word
           </button>
-        </section>
+        </APageSection>
 
         {toast ? (
           <p className="text-[13px] text-a-fg-muted print:hidden" role="status">
@@ -392,14 +393,14 @@ export default function CertificatSalubritePage() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className="salubrita-sheet rounded-[16px] bg-white px-4 py-2 text-black print:rounded-none print:px-0 print:py-0">
+          <div className="salubrita-sheet rounded-[var(--a-radius-md)] bg-white px-4 py-2 text-black print:rounded-none print:px-0 print:py-0">
             <SalubritaCertificateDocument
               packDate={state.packDate}
               items={state.items}
             />
           </div>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={sendOpen}

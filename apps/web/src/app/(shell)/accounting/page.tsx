@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
@@ -15,9 +15,16 @@ import {
   AButton,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
+  AOverflowMenu,
+  APageBody,
+  APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftThead,
+  ASoftTr,
 } from "@/components/a";
 import {
   fetchAccounts,
@@ -43,15 +50,7 @@ import { isAccountingPartialMode } from "@/lib/ops-visibility";
 import { localizeUiString } from "@/lib/i18n/route-labels";
 import { useLocaleStore } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
-import {
-  softPageBody,
-  softPanel,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-  softUnderlineTabClass,
-} from "@/lib/soft-glass-ui";
+import { softSelect, softUnderlineTabClass } from "@/lib/soft-glass-ui";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 
@@ -102,6 +101,7 @@ function periodTone(
 }
 
 export default function AccountingPage() {
+  const router = useRouter();
   const locale = useLocaleStore((s) => s.locale);
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [tab, setTab] = useState<Tab>("coa");
@@ -285,6 +285,24 @@ export default function AccountingPage() {
     if (partial && tab !== "coa") setTab("coa");
   }, [partial, tab]);
 
+  const periodSelect =
+    state.kind === "ok" ? (
+      <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+        Période
+        <select
+          className={cn(softSelect, "mt-1 w-auto min-w-[12rem]")}
+          value={state.periodId}
+          onChange={(e) => void load(e.target.value)}
+        >
+          {state.periods.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.code} ({p.status})
+            </option>
+          ))}
+        </select>
+      </label>
+    ) : null;
+
   return (
     <>
       <AScreenHeader
@@ -295,22 +313,28 @@ export default function AccountingPage() {
             ? "Mode ops — vue partielle (plan comptable seul). Préférences Admin : ops.*.accounting_partial."
             : "Plan comptable, périodes (clôture), écritures, mapping Finance→GL. Période CLOSED bloque le pont Finance→GL."
         }
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "customers",
+                label: "Hub clients",
+                onSelect: () => router.push("/customers"),
+              },
+            ]}
+          />
+        }
       />
-      <div className={softPageBody}>
-        <div className={cn(softPanel, "flex flex-wrap items-center gap-3 py-3")}>
+      <APageBody>
+        <APageSection className="flex flex-wrap items-center gap-3 py-3">
           <ABadge tone="neutral">IA DISABLED</ABadge>
           <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
             Comptabilité intelligente = Thunder FIN-INTEL (pression crédit,
             jalons recouvrement, décompta) — jamais une dépendance runtime IA.
             Préférences : seuils Admin.
           </p>
-          <Link
-            href="/customers"
-            className="text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
-          >
-            Hub clients →
-          </Link>
-        </div>
+        </APageSection>
+
         {state.kind === "loading" ? (
           <ASkeleton className="h-32 w-full" />
         ) : null}
@@ -369,302 +393,288 @@ export default function AccountingPage() {
             ) : null}
 
             {tab === "coa" ? (
-              <section className="space-y-2">
+              <APageSection bare>
                 {state.accounts.length === 0 ? (
                   <AEmptyState
                     title="Aucun compte"
                     description="Les comptes seed apparaissent après seed."
                   />
                 ) : (
-                  <div className={softTableWrap}>
-                    <table className="w-full border-collapse text-left text-[length:var(--a-text-sm)]">
-                      <thead className={softThead}>
-                        <tr>
-                          <th className="a-table-cell font-medium">
-                            {localizeUiString("Code", locale) ?? "Code"}
-                          </th>
-                          <th className="a-table-cell font-medium">
-                            {localizeUiString("Nom", locale) ?? "Nom"}
-                          </th>
-                          <th className="a-table-cell font-medium">
-                            {localizeUiString("Type", locale) ?? "Type"}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {state.accounts.map((a) => (
-                          <tr key={a.id} className={softTr}>
-                            <td className="a-mono a-table-cell">{a.code}</td>
-                            <td className="a-table-cell">{a.name}</td>
-                            <td className="a-table-cell">
-                              <ABadge tone="neutral">{a.type}</ABadge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ASoftTable>
+                    <ASoftThead>
+                      <tr>
+                        <th className="a-table-cell font-medium">
+                          {localizeUiString("Code", locale) ?? "Code"}
+                        </th>
+                        <th className="a-table-cell font-medium">
+                          {localizeUiString("Nom", locale) ?? "Nom"}
+                        </th>
+                        <th className="a-table-cell font-medium">
+                          {localizeUiString("Type", locale) ?? "Type"}
+                        </th>
+                      </tr>
+                    </ASoftThead>
+                    <tbody>
+                      {state.accounts.map((a) => (
+                        <ASoftTr key={a.id}>
+                          <td className="a-mono a-table-cell">{a.code}</td>
+                          <td className="a-table-cell">{a.name}</td>
+                          <td className="a-table-cell">
+                            <ABadge tone="neutral">{a.type}</ABadge>
+                          </td>
+                        </ASoftTr>
+                      ))}
+                    </tbody>
+                  </ASoftTable>
                 )}
-              </section>
+              </APageSection>
             ) : null}
 
             {tab === "trial" ? (
-              <section className="space-y-2">
-                <div className="flex flex-wrap items-end gap-3">
-                  <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                    Période
-                    <select
-                      className={cn(softSelect, "mt-1 w-auto min-w-[12rem]")}
-                      value={state.periodId}
-                      onChange={(e) => void load(e.target.value)}
-                    >
-                      {state.periods.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.code} ({p.status})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+              <APageSection bare>
+                <AFilterBar filters={periodSelect} />
                 {state.trial.length === 0 ? (
                   <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                     Aucune écriture POSTED pour cette période.
                   </p>
                 ) : (
-                  <div className={softTableWrap}>
-                    <table className="w-full border-collapse text-left text-[length:var(--a-text-sm)]">
-                      <thead className={softThead}>
-                        <tr>
-                          <th className="a-table-cell font-medium">Compte</th>
-                          <th className="a-table-cell font-medium text-right">
-                            Débit
-                          </th>
-                          <th className="a-table-cell font-medium text-right">
-                            Crédit
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {state.trial.map((r) => (
-                          <tr key={r.accountId} className={softTr}>
-                            <td className="a-table-cell">
-                              <span className="a-mono">{r.accountCode}</span>{" "}
-                              {r.accountName}
-                            </td>
-                            <td className="a-mono a-table-cell text-right tabular-nums">
-                              {r.debit}
-                            </td>
-                            <td className="a-mono a-table-cell text-right tabular-nums">
-                              {r.credit}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ASoftTable>
+                    <ASoftThead>
+                      <tr>
+                        <th className="a-table-cell font-medium">Compte</th>
+                        <th className="a-table-cell font-medium text-right">
+                          Débit
+                        </th>
+                        <th className="a-table-cell font-medium text-right">
+                          Crédit
+                        </th>
+                      </tr>
+                    </ASoftThead>
+                    <tbody>
+                      {state.trial.map((r) => (
+                        <ASoftTr key={r.accountId}>
+                          <td className="a-table-cell">
+                            <span className="a-mono">{r.accountCode}</span>{" "}
+                            {r.accountName}
+                          </td>
+                          <td className="a-mono a-table-cell text-right tabular-nums">
+                            {r.debit}
+                          </td>
+                          <td className="a-mono a-table-cell text-right tabular-nums">
+                            {r.credit}
+                          </td>
+                        </ASoftTr>
+                      ))}
+                    </tbody>
+                  </ASoftTable>
                 )}
-              </section>
+              </APageSection>
             ) : null}
 
             {tab === "entries" ? (
-              <section className="space-y-2">
-                <div className="flex flex-wrap items-end gap-3">
-                  <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                    Période
-                    <select
-                      className={cn(softSelect, "mt-1 w-auto min-w-[12rem]")}
-                      value={state.periodId}
-                      onChange={(e) => void load(e.target.value)}
-                    >
-                      {state.periods.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.code} ({p.status})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {state.patchSample?.applied ? (
-                    <ABadge tone="warning">
-                      PATCH échantillon {state.patchSample.kept}/
-                      {state.patchSample.total} · {state.patchSample.intensity}{" "}
-                      %
-                    </ABadge>
-                  ) : null}
-                </div>
+              <APageSection bare>
+                <AFilterBar
+                  filters={
+                    <>
+                      {periodSelect}
+                      {state.patchSample?.applied ? (
+                        <ABadge tone="warning">
+                          PATCH échantillon {state.patchSample.kept}/
+                          {state.patchSample.total} ·{" "}
+                          {state.patchSample.intensity} %
+                        </ABadge>
+                      ) : null}
+                    </>
+                  }
+                />
                 {state.entries.length === 0 ? (
                   <AEmptyState
                     title="Aucune écriture"
                     description="Les ponts Finance→GL et les brouillons apparaîtront ici."
                   />
                 ) : (
-                  <div className={softTableWrap}>
-                    <table className="w-full border-collapse text-left text-[length:var(--a-text-sm)]">
-                      <thead className={softThead}>
-                        <tr>
-                          <th className="a-table-cell font-medium">N°</th>
-                          <th className="a-table-cell font-medium">Date</th>
-                          <th className="a-table-cell font-medium">Journal</th>
-                          <th className="a-table-cell font-medium">Statut</th>
-                          <th className="a-table-cell font-medium">Source</th>
-                          <th className="a-table-cell font-medium text-right">
-                            Action
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {state.entries.map((e) => (
-                          <tr key={e.id} className={softTr}>
-                            <td className="a-mono a-table-cell">{e.number}</td>
-                            <td className="a-mono a-table-cell">
-                              {e.entryDate}
-                            </td>
-                            <td className="a-mono a-table-cell">
-                              {e.journalCode ?? "—"}
-                            </td>
-                            <td className="a-table-cell">
-                              <ABadge tone={entryTone(e.status)}>
-                                {e.status}
-                              </ABadge>
-                            </td>
-                            <td className="a-mono a-table-cell text-a-fg-muted">
-                              {e.sourceType ?? "—"}
-                            </td>
-                            <td className="a-table-cell text-right">
-                              <div className="flex flex-wrap justify-end gap-1">
-                                {e.status === "DRAFT" ? (
-                                  <AButton
-                                    type="button"
-                                    size="sm"
-                                    disabled={postBusy === e.id}
-                                    onClick={() => void onPost(e.id)}
-                                  >
-                                    {postBusy === e.id ? "…" : "Poster"}
-                                  </AButton>
-                                ) : null}
-                                {e.status === "POSTED" ? (
-                                  <AButton
-                                    type="button"
-                                    size="sm"
-                                    variant="secondary"
-                                    disabled={postBusy === e.id}
-                                    onClick={() => void onReverse(e.id)}
-                                  >
-                                    {postBusy === e.id
-                                      ? "…"
-                                      : "Décomptabiliser"}
-                                  </AButton>
-                                ) : null}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ASoftTable>
+                    <ASoftThead>
+                      <tr>
+                        <th className="a-table-cell font-medium">N°</th>
+                        <th className="a-table-cell font-medium">Date</th>
+                        <th className="a-table-cell font-medium">Journal</th>
+                        <th className="a-table-cell font-medium">Statut</th>
+                        <th className="a-table-cell font-medium">Source</th>
+                        <th className="a-table-cell font-medium text-right">
+                          Action
+                        </th>
+                      </tr>
+                    </ASoftThead>
+                    <tbody>
+                      {state.entries.map((e) => (
+                        <ASoftTr key={e.id}>
+                          <td className="a-mono a-table-cell">{e.number}</td>
+                          <td className="a-mono a-table-cell">
+                            {e.entryDate}
+                          </td>
+                          <td className="a-mono a-table-cell">
+                            {e.journalCode ?? "—"}
+                          </td>
+                          <td className="a-table-cell">
+                            <ABadge tone={entryTone(e.status)}>
+                              {e.status}
+                            </ABadge>
+                          </td>
+                          <td className="a-mono a-table-cell text-a-fg-muted">
+                            {e.sourceType ?? "—"}
+                          </td>
+                          <td className="a-table-cell text-right">
+                            <div className="flex flex-wrap justify-end gap-1">
+                              {e.status === "DRAFT" ? (
+                                <AButton
+                                  type="button"
+                                  size="sm"
+                                  disabled={postBusy === e.id}
+                                  onClick={() => void onPost(e.id)}
+                                >
+                                  {postBusy === e.id ? "…" : "Poster"}
+                                </AButton>
+                              ) : null}
+                              {e.status === "POSTED" ? (
+                                <AButton
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={postBusy === e.id}
+                                  onClick={() => void onReverse(e.id)}
+                                >
+                                  {postBusy === e.id
+                                    ? "…"
+                                    : "Décomptabiliser"}
+                                </AButton>
+                              ) : null}
+                            </div>
+                          </td>
+                        </ASoftTr>
+                      ))}
+                    </tbody>
+                  </ASoftTable>
                 )}
-              </section>
+              </APageSection>
             ) : null}
 
             {tab === "periods" ? (
-              <section className="space-y-3">
-                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Clôturer une période bloque le pont Finance→GL pour les dates
-                  couvertes (et le post manuel). Rouvrir = statut OPEN. LOCKED
-                  est immutable.
-                </p>
+              <APageSection
+                bare
+                description="Clôturer une période bloque le pont Finance→GL pour les dates couvertes (et le post manuel). Rouvrir = statut OPEN. LOCKED est immutable."
+              >
                 {state.periods.length === 0 ? (
                   <AEmptyState
                     title="Aucune période"
                     description="Créez des périodes fiscales (API / seed)."
                   />
                 ) : (
-                  <div className={softTableWrap}>
-                    <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
-                      <thead className={softThead}>
-                        <tr>
-                          <th className="a-table-cell font-medium">Code</th>
-                          <th className="a-table-cell font-medium">Début</th>
-                          <th className="a-table-cell font-medium">Fin</th>
-                          <th className="a-table-cell font-medium">Statut</th>
-                          <th className="a-table-cell font-medium">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {state.periods.map((p) => (
-                          <tr key={p.id} className={softTr}>
-                            <td className="a-mono a-table-cell">{p.code}</td>
-                            <td className="a-mono a-table-cell">
-                              {p.startDate}
-                            </td>
-                            <td className="a-mono a-table-cell">{p.endDate}</td>
-                            <td className="a-table-cell">
-                              <ABadge tone={periodTone(p.status)}>
-                                {p.status}
-                              </ABadge>
-                            </td>
-                            <td className="a-table-cell">
-                              <div className="flex flex-wrap gap-2">
-                                {p.status === "OPEN" ? (
-                                  <>
-                                    <AButton
-                                      type="button"
-                                      size="sm"
-                                      variant="secondary"
-                                      disabled={periodBusy === p.id}
-                                      onClick={() =>
-                                        void onPeriodStatus(p.id, "SOFT_CLOSED")
-                                      }
-                                    >
-                                      Soft close
-                                    </AButton>
-                                    <AButton
-                                      type="button"
-                                      size="sm"
-                                      disabled={periodBusy === p.id}
-                                      onClick={() =>
-                                        void onPeriodStatus(p.id, "CLOSED")
-                                      }
-                                    >
-                                      Clôturer
-                                    </AButton>
-                                  </>
-                                ) : null}
-                                {p.status === "SOFT_CLOSED" ||
-                                p.status === "CLOSED" ? (
+                  <ASoftTable className="min-w-[640px]">
+                    <ASoftThead>
+                      <tr>
+                        <th className="a-table-cell font-medium">Code</th>
+                        <th className="a-table-cell font-medium">Début</th>
+                        <th className="a-table-cell font-medium">Fin</th>
+                        <th className="a-table-cell font-medium">Statut</th>
+                        <th className="a-table-cell font-medium">Actions</th>
+                      </tr>
+                    </ASoftThead>
+                    <tbody>
+                      {state.periods.map((p) => (
+                        <ASoftTr key={p.id}>
+                          <td className="a-mono a-table-cell">{p.code}</td>
+                          <td className="a-mono a-table-cell">
+                            {p.startDate}
+                          </td>
+                          <td className="a-mono a-table-cell">{p.endDate}</td>
+                          <td className="a-table-cell">
+                            <ABadge tone={periodTone(p.status)}>
+                              {p.status}
+                            </ABadge>
+                          </td>
+                          <td className="a-table-cell">
+                            <div className="flex flex-wrap gap-2">
+                              {p.status === "OPEN" ? (
+                                <>
                                   <AButton
                                     type="button"
                                     size="sm"
                                     variant="secondary"
                                     disabled={periodBusy === p.id}
                                     onClick={() =>
-                                      void onPeriodStatus(p.id, "OPEN")
+                                      void onPeriodStatus(p.id, "SOFT_CLOSED")
                                     }
                                   >
-                                    Rouvrir
+                                    Soft close
                                   </AButton>
-                                ) : null}
-                                {p.status === "LOCKED" ? (
-                                  <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                                    Immutable
-                                  </span>
-                                ) : null}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                                  <AButton
+                                    type="button"
+                                    size="sm"
+                                    disabled={periodBusy === p.id}
+                                    onClick={() =>
+                                      void onPeriodStatus(p.id, "CLOSED")
+                                    }
+                                  >
+                                    Clôturer
+                                  </AButton>
+                                </>
+                              ) : null}
+                              {p.status === "SOFT_CLOSED" ||
+                              p.status === "CLOSED" ? (
+                                <AButton
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={periodBusy === p.id}
+                                  onClick={() =>
+                                    void onPeriodStatus(p.id, "OPEN")
+                                  }
+                                >
+                                  Rouvrir
+                                </AButton>
+                              ) : null}
+                              {p.status === "LOCKED" ? (
+                                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                  Immutable
+                                </span>
+                              ) : null}
+                            </div>
+                          </td>
+                        </ASoftTr>
+                      ))}
+                    </tbody>
+                  </ASoftTable>
                 )}
-              </section>
+              </APageSection>
             ) : null}
 
             {tab === "mapping" && mapDraft ? (
-              <section className={softPanel}>
-                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                  Codes de comptes et journaux utilisés par le pont
-                  Finance→GL. Saisie société — pas de taux fiscaux.
-                </p>
+              <APageSection
+                title="Mapping Finance→GL"
+                description="Codes de comptes et journaux utilisés par le pont Finance→GL. Saisie société — pas de taux fiscaux."
+                action={
+                  <>
+                    <AButton
+                      type="button"
+                      size="sm"
+                      disabled={mapBusy}
+                      onClick={() => void saveMapping()}
+                    >
+                      {mapBusy ? "Enregistrement…" : "Enregistrer"}
+                    </AButton>
+                    <AButton
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={mapBusy}
+                      onClick={() => setMapDraft(state.mapping)}
+                    >
+                      Réinitialiser
+                    </AButton>
+                  </>
+                }
+              >
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(
                     [
@@ -727,30 +737,11 @@ export default function AccountingPage() {
                     </label>
                   ))}
                 </div>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <AButton
-                    type="button"
-                    size="sm"
-                    disabled={mapBusy}
-                    onClick={() => void saveMapping()}
-                  >
-                    {mapBusy ? "Enregistrement…" : "Enregistrer"}
-                  </AButton>
-                  <AButton
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={mapBusy}
-                    onClick={() => setMapDraft(state.mapping)}
-                  >
-                    Réinitialiser
-                  </AButton>
-                </div>
-              </section>
+              </APageSection>
             ) : null}
           </>
         ) : null}
-      </div>
+      </APageBody>
     </>
   );
 }

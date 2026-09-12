@@ -2,19 +2,26 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ABadge,
   AButton,
   ACombobox,
+  AContextPanel,
+  ADetailGrid,
   AErrorState,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
+  APageSection,
   AScreenHeader,
   ASkeleton,
   type AComboboxOption,
+  type AOverflowItem,
 } from "@/components/a";
 import { suggestCustomerPrice } from "@/lib/customers";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { fetchWarehouses, type InventoryWarehouse } from "@/lib/inventory";
 import {
   cancelSalesOrder,
@@ -28,13 +35,7 @@ import {
   type SalesOrder,
   type SalesOrderStatus,
 } from "@/lib/sales";
-import {
-  softPageBody,
-  softPanel,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
 
 function orderBadgeTone(
@@ -233,78 +234,84 @@ export default function SalesOrderFichePage() {
       ? `${warehouses.find((w) => w.id === order.warehouseId)!.code} — ${warehouses.find((w) => w.id === order.warehouseId)!.name}`
       : order.warehouseCode);
 
+  const overflowItems = useMemo((): AOverflowItem[] => {
+    if (!order) return [];
+    const items: AOverflowItem[] = [];
+    if (order.status === "DRAFT" && !editing) {
+      items.push({
+        id: "edit",
+        label: LAYOUT_ACTIONS.edit,
+        onSelect: () => setEditing(true),
+        disabled: busy,
+      });
+    }
+    if (order.status === "DRAFT" && editing) {
+      items.push({
+        id: "cancel-edit",
+        label: "Annuler édition",
+        onSelect: () => void load(),
+        disabled: busy,
+      });
+    }
+    if (order.status !== "CANCELLED") {
+      items.push({
+        id: "cancel-order",
+        label: "Annuler commande",
+        danger: true,
+        onSelect: () => void onCancelOrder(),
+        disabled: busy,
+      });
+    }
+    return items;
+  }, [order, editing, busy, load]);
+
   return (
     <>
       <AScreenHeader
+        breadcrumb={
+          <Link href="/sales" className="hover:text-a-fg">
+            Commandes
+          </Link>
+        }
         kicker="Ventes"
         title={order ? order.number : "Commande"}
         description="Fiche Soft Glass — lecture · édition brouillon · confirm/annuler (D223)."
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/sales"
-              className="inline-flex items-center rounded-[var(--a-radius-md)] bg-a-surface-3 px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium text-a-fg hover:opacity-90"
+        status={
+          order ? (
+            <ABadge tone={orderBadgeTone(order.status)}>
+              {st(order.status)}
+            </ABadge>
+          ) : undefined
+        }
+        primary={
+          order?.status === "DRAFT" && editing ? (
+            <AButton
+              type="button"
+              size="sm"
+              disabled={busy}
+              onClick={() => void onSaveDraft()}
             >
-              Retour
-            </Link>
-            {order?.status === "DRAFT" && !editing ? (
-              <AButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={busy}
-                onClick={() => setEditing(true)}
-              >
-                Modifier
-              </AButton>
-            ) : null}
-            {order?.status === "DRAFT" && editing ? (
-              <>
-                <AButton
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => void load()}
-                >
-                  Annuler édition
-                </AButton>
-                <AButton
-                  type="button"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => void onSaveDraft()}
-                >
-                  Enregistrer
-                </AButton>
-              </>
-            ) : null}
-            {order?.status === "DRAFT" && !editing ? (
-              <AButton
-                type="button"
-                size="sm"
-                disabled={busy}
-                onClick={() => void onConfirm()}
-              >
-                Confirmer
-              </AButton>
-            ) : null}
-            {order && order.status !== "CANCELLED" ? (
-              <AButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={busy}
-                onClick={() => void onCancelOrder()}
-              >
-                Annuler commande
-              </AButton>
-            ) : null}
-          </div>
+              {LAYOUT_ACTIONS.save}
+            </AButton>
+          ) : order?.status === "DRAFT" && !editing ? (
+            <AButton
+              type="button"
+              size="sm"
+              disabled={busy}
+              onClick={() => void onConfirm()}
+            >
+              {LAYOUT_ACTIONS.confirm}
+            </AButton>
+          ) : undefined
+        }
+        more={
+          overflowItems.length > 0 ? (
+            <AOverflowMenu items={overflowItems} />
+          ) : undefined
         }
       />
 
-      <div className={softPageBody}>
+      <APageBody>
         {error ? (
           <p className="text-[length:var(--a-text-sm)] text-a-danger">{error}</p>
         ) : null}
@@ -329,310 +336,322 @@ export default function SalesOrderFichePage() {
         ) : null}
 
         {order ? (
-          <>
-            <section className={`${softPanel} space-y-4 p-5`}>
-              <div className="flex flex-wrap items-center gap-2">
-                <ABadge tone={orderBadgeTone(order.status)}>
-                  {st(order.status)}
-                </ABadge>
-                {order.status === "CONFIRMED" && order.fulfillmentStatus ? (
-                  <ABadge tone={fulfillmentBadgeTone(order.fulfillmentStatus)}>
-                    {fulfillmentLabel(order.fulfillmentStatus)}
-                  </ABadge>
-                ) : null}
-                <span className="a-mono text-[length:var(--a-text-sm)] text-a-fg-muted">
-                  v{order.version}
-                </span>
-              </div>
-
-              <dl className="grid gap-3 text-[length:var(--a-text-sm)] sm:grid-cols-2">
-                <div>
-                  <dt className="text-a-fg-muted">Client</dt>
-                  <dd>
-                    {order.customerName ?? "—"}{" "}
-                    <span className="a-mono text-a-fg-muted">
-                      {order.customerCode}
-                    </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-a-fg-muted">Entrepôt</dt>
-                  <dd>{warehouseLabel ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt className="text-a-fg-muted">Date demandée</dt>
-                  <dd>
-                    {editing ? (
-                      <AInput
-                        type="date"
-                        value={requestedDate}
-                        onChange={(e) => setRequestedDate(e.target.value)}
-                      />
-                    ) : (
-                      <span className="a-mono">
-                        {order.requestedDate ?? "—"}
-                      </span>
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-a-fg-muted">Livreur souhaité</dt>
-                  <dd>
-                    {editing ? (
-                      <AInput
-                        value={preferredDriver}
-                        onChange={(e) => setPreferredDriver(e.target.value)}
-                      />
-                    ) : (
-                      order.preferredDriver ?? "—"
-                    )}
-                  </dd>
-                </div>
-                <div className="sm:col-span-2">
-                  <dt className="text-a-fg-muted">Notes</dt>
-                  <dd>
-                    {editing ? (
-                      <AInput
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                      />
-                    ) : (
-                      order.notes ?? "—"
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-a-fg-muted">Total</dt>
-                  <dd className="a-mono tabular-nums text-[length:var(--a-text-base)] font-semibold">
-                    {order.amountTotal} {order.currency}
-                  </dd>
-                </div>
-              </dl>
-            </section>
-
-            <section className={`${softPanel} overflow-hidden`}>
-              <div className="flex items-center justify-between px-5 py-3">
-                <h2 className="text-[length:var(--a-text-sm)] font-semibold text-a-fg">
-                  Lignes
-                </h2>
-                {editing ? (
-                  <AButton
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() =>
-                      setLines((prev) => [
-                        ...prev,
-                        {
-                          key: `l-${Date.now()}`,
-                          productId: null,
-                          productLabel: "",
-                          qty: "1",
-                          unitPrice: "0",
-                        },
-                      ])
-                    }
-                  >
-                    + Ligne
-                  </AButton>
-                ) : null}
-              </div>
-
-              {editing ? (
-                <div className="space-y-3 px-5 pb-5">
-                  {lines.map((line, idx) => (
-                    <div
-                      key={line.key}
-                      className="space-y-2 rounded-[12px] bg-a-surface-3/60 p-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                          Ligne {idx + 1}
+          <ADetailGrid
+            primary={
+              <>
+                <APageSection title="Identité">
+                  <span className="mb-3 inline-block a-mono text-[length:var(--a-text-sm)] text-a-fg-muted">
+                    v{order.version}
+                  </span>
+                  <dl className="grid gap-3 text-[length:var(--a-text-sm)] sm:grid-cols-2">
+                    <div>
+                      <dt className="text-a-fg-muted">Client</dt>
+                      <dd>
+                        {order.customerName ?? "—"}{" "}
+                        <span className="a-mono text-a-fg-muted">
+                          {order.customerCode}
                         </span>
-                        {lines.length > 1 ? (
-                          <AButton
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              setLines((prev) =>
-                                prev.filter((l) => l.key !== line.key),
-                              )
-                            }
-                          >
-                            Retirer
-                          </AButton>
-                        ) : null}
-                      </div>
-                      <ACombobox
-                        label="Produit"
-                        valueId={line.productId}
-                        displayValue={line.productLabel}
-                        onDisplayChange={(text) => {
-                          setLines((prev) =>
-                            prev.map((l) =>
-                              l.key === line.key
-                                ? {
-                                    ...l,
-                                    productLabel: text,
-                                    productId: null,
-                                  }
-                                : l,
-                            ),
-                          );
-                          searchProductForLine(line.key, text);
-                        }}
-                        onSelect={(opt) => {
-                          setLines((prev) =>
-                            prev.map((l) =>
-                              l.key === line.key
-                                ? {
-                                    ...l,
-                                    productId: opt.id,
-                                    productLabel: opt.label,
-                                  }
-                                : l,
-                            ),
-                          );
-                          void suggestCustomerPrice(
-                            order.customerId,
-                            opt.id,
-                          ).then((priceRes) => {
-                            if (
-                              !priceRes.ok ||
-                              priceRes.data.unitPrice == null
-                            )
-                              return;
-                            setLines((prev) =>
-                              prev.map((l) =>
-                                l.key === line.key
-                                  ? {
-                                      ...l,
-                                      unitPrice: String(
-                                        priceRes.data.unitPrice,
-                                      ),
-                                    }
-                                  : l,
-                              ),
-                            );
-                          });
-                        }}
-                        onOpen={() =>
-                          searchProductForLine(line.key, line.productLabel)
-                        }
-                        options={productOptsByKey[line.key] ?? []}
-                        loading={productLoadingKey === line.key}
-                        placeholder="SKU ou nom…"
-                        emptyText="Aucun produit"
-                      />
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                            Qté
-                          </label>
-                          <AInput
-                            value={line.qty}
-                            onChange={(e) =>
-                              setLines((prev) =>
-                                prev.map((l) =>
-                                  l.key === line.key
-                                    ? { ...l, qty: e.target.value }
-                                    : l,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                            PU
-                          </label>
-                          <AInput
-                            value={line.unitPrice}
-                            disabled={settings?.allowManualPrice === false}
-                            onChange={(e) =>
-                              setLines((prev) =>
-                                prev.map((l) =>
-                                  l.key === line.key
-                                    ? { ...l, unitPrice: e.target.value }
-                                    : l,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
-                      </div>
+                      </dd>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className={softTableWrap}>
-                  <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                    <thead className={softThead}>
-                      <tr>
-                        <th className="px-4 py-3 font-medium">#</th>
-                        <th className="px-4 py-3 font-medium">Produit</th>
-                        <th className="px-4 py-3 font-medium text-right">Qté</th>
-                        <th className="px-4 py-3 font-medium text-right">
-                          Livré
-                        </th>
-                        <th className="px-4 py-3 font-medium text-right">
-                          Reste
-                        </th>
-                        <th className="px-4 py-3 font-medium text-right">PU</th>
-                        <th className="px-4 py-3 font-medium text-right">
-                          Total
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {order.lines.map((l) => (
-                        <tr key={l.id} className={softTr}>
-                          <td className="a-mono px-4 py-3">{l.lineNo}</td>
-                          <td className="px-4 py-3">
-                            <span className="a-mono text-a-fg-muted">
-                              {l.productSku}
-                            </span>{" "}
-                            {l.productName}
-                          </td>
-                          <td className="a-mono px-4 py-3 text-right tabular-nums">
-                            {l.qty}
-                          </td>
-                          <td className="a-mono px-4 py-3 text-right tabular-nums">
-                            {l.deliveredQty ?? "0"}
-                          </td>
-                          <td className="a-mono px-4 py-3 text-right tabular-nums">
-                            {l.remainingQty ?? l.qty}
-                          </td>
-                          <td className="a-mono px-4 py-3 text-right tabular-nums">
-                            {l.unitPrice}
-                          </td>
-                          <td className="a-mono px-4 py-3 text-right tabular-nums">
-                            {l.lineTotal}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
+                    <div>
+                      <dt className="text-a-fg-muted">Entrepôt</dt>
+                      <dd>{warehouseLabel ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-a-fg-muted">Date demandée</dt>
+                      <dd>
+                        {editing ? (
+                          <AInput
+                            type="date"
+                            value={requestedDate}
+                            onChange={(e) => setRequestedDate(e.target.value)}
+                          />
+                        ) : (
+                          <span className="a-mono">
+                            {order.requestedDate ?? "—"}
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-a-fg-muted">Livreur souhaité</dt>
+                      <dd>
+                        {editing ? (
+                          <AInput
+                            value={preferredDriver}
+                            onChange={(e) => setPreferredDriver(e.target.value)}
+                          />
+                        ) : (
+                          order.preferredDriver ?? "—"
+                        )}
+                      </dd>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <dt className="text-a-fg-muted">Notes</dt>
+                      <dd>
+                        {editing ? (
+                          <AInput
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                          />
+                        ) : (
+                          order.notes ?? "—"
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                </APageSection>
 
-            {order.status === "CONFIRMED" ? (
-              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Livraison / FEFO : module Delivery.{" "}
-                <button
-                  type="button"
-                  className="font-medium text-a-accent hover:underline"
-                  onClick={() => router.push("/delivery")}
+                <APageSection
+                  title="Lignes"
+                  action={
+                    editing ? (
+                      <AButton
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          setLines((prev) => [
+                            ...prev,
+                            {
+                              key: `l-${Date.now()}`,
+                              productId: null,
+                              productLabel: "",
+                              qty: "1",
+                              unitPrice: "0",
+                            },
+                          ])
+                        }
+                      >
+                        + Ligne
+                      </AButton>
+                    ) : undefined
+                  }
                 >
-                  Ouvrir Delivery
-                </button>
-              </p>
-            ) : null}
-          </>
+                  {editing ? (
+                    <div className="space-y-3">
+                      {lines.map((line, idx) => (
+                        <div
+                          key={line.key}
+                          className="space-y-2 rounded-[var(--a-radius-sm)] bg-a-surface-3/60 p-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                              Ligne {idx + 1}
+                            </span>
+                            {lines.length > 1 ? (
+                              <AButton
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  setLines((prev) =>
+                                    prev.filter((l) => l.key !== line.key),
+                                  )
+                                }
+                              >
+                                Retirer
+                              </AButton>
+                            ) : null}
+                          </div>
+                          <ACombobox
+                            label="Produit"
+                            valueId={line.productId}
+                            displayValue={line.productLabel}
+                            onDisplayChange={(text) => {
+                              setLines((prev) =>
+                                prev.map((l) =>
+                                  l.key === line.key
+                                    ? {
+                                        ...l,
+                                        productLabel: text,
+                                        productId: null,
+                                      }
+                                    : l,
+                                ),
+                              );
+                              searchProductForLine(line.key, text);
+                            }}
+                            onSelect={(opt) => {
+                              setLines((prev) =>
+                                prev.map((l) =>
+                                  l.key === line.key
+                                    ? {
+                                        ...l,
+                                        productId: opt.id,
+                                        productLabel: opt.label,
+                                      }
+                                    : l,
+                                ),
+                              );
+                              void suggestCustomerPrice(
+                                order.customerId,
+                                opt.id,
+                              ).then((priceRes) => {
+                                if (
+                                  !priceRes.ok ||
+                                  priceRes.data.unitPrice == null
+                                )
+                                  return;
+                                setLines((prev) =>
+                                  prev.map((l) =>
+                                    l.key === line.key
+                                      ? {
+                                          ...l,
+                                          unitPrice: String(
+                                            priceRes.data.unitPrice,
+                                          ),
+                                        }
+                                      : l,
+                                  ),
+                                );
+                              });
+                            }}
+                            onOpen={() =>
+                              searchProductForLine(line.key, line.productLabel)
+                            }
+                            options={productOptsByKey[line.key] ?? []}
+                            loading={productLoadingKey === line.key}
+                            placeholder="SKU ou nom…"
+                            emptyText="Aucun produit"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                Qté
+                              </label>
+                              <AInput
+                                value={line.qty}
+                                onChange={(e) =>
+                                  setLines((prev) =>
+                                    prev.map((l) =>
+                                      l.key === line.key
+                                        ? { ...l, qty: e.target.value }
+                                        : l,
+                                    ),
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                PU
+                              </label>
+                              <AInput
+                                value={line.unitPrice}
+                                disabled={settings?.allowManualPrice === false}
+                                onChange={(e) =>
+                                  setLines((prev) =>
+                                    prev.map((l) =>
+                                      l.key === line.key
+                                        ? { ...l, unitPrice: e.target.value }
+                                        : l,
+                                    ),
+                                  )
+                                }
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={softTableWrap}>
+                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
+                        <thead className={softThead}>
+                          <tr>
+                            <th className="px-4 py-3 font-medium">#</th>
+                            <th className="px-4 py-3 font-medium">Produit</th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              Qté
+                            </th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              Livré
+                            </th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              Reste
+                            </th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              PU
+                            </th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              Total
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {order.lines.map((l) => (
+                            <tr key={l.id} className={softTr}>
+                              <td className="a-mono px-4 py-3">{l.lineNo}</td>
+                              <td className="px-4 py-3">
+                                <span className="a-mono text-a-fg-muted">
+                                  {l.productSku}
+                                </span>{" "}
+                                {l.productName}
+                              </td>
+                              <td className="a-mono px-4 py-3 text-right tabular-nums">
+                                {l.qty}
+                              </td>
+                              <td className="a-mono px-4 py-3 text-right tabular-nums">
+                                {l.deliveredQty ?? "0"}
+                              </td>
+                              <td className="a-mono px-4 py-3 text-right tabular-nums">
+                                {l.remainingQty ?? l.qty}
+                              </td>
+                              <td className="a-mono px-4 py-3 text-right tabular-nums">
+                                {l.unitPrice}
+                              </td>
+                              <td className="a-mono px-4 py-3 text-right tabular-nums">
+                                {l.lineTotal}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </APageSection>
+              </>
+            }
+            context={
+              <AContextPanel title="Synthèse">
+                <dl className="space-y-3 text-[length:var(--a-text-sm)]">
+                  <div>
+                    <dt className="text-a-fg-muted">Total</dt>
+                    <dd className="a-mono tabular-nums text-[length:var(--a-text-base)] font-semibold">
+                      {order.amountTotal} {order.currency}
+                    </dd>
+                  </div>
+                  {order.status === "CONFIRMED" && order.fulfillmentStatus ? (
+                    <div>
+                      <dt className="mb-1 text-a-fg-muted">Livraison</dt>
+                      <dd>
+                        <ABadge
+                          tone={fulfillmentBadgeTone(order.fulfillmentStatus)}
+                        >
+                          {fulfillmentLabel(order.fulfillmentStatus)}
+                        </ABadge>
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+                {order.status === "CONFIRMED" ? (
+                  <p className="mt-4 text-[length:var(--a-text-sm)] text-a-fg-muted">
+                    Livraison / FEFO : module Delivery.{" "}
+                    <button
+                      type="button"
+                      className="font-medium text-a-accent hover:underline"
+                      onClick={() => router.push("/delivery")}
+                    >
+                      Ouvrir Delivery
+                    </button>
+                  </p>
+                ) : null}
+              </AContextPanel>
+            }
+          />
         ) : null}
-      </div>
+      </APageBody>
     </>
   );
 }

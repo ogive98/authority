@@ -2,9 +2,9 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-/** Pastel pill badges — Utility Cube status chips. */
+/** Pastel status badges — tight radius (D228), not pill chrome. */
 const badgeVariants = cva(
-  "inline-flex items-center rounded-[var(--a-radius-pill)] border border-transparent px-2.5 py-0.5 text-[length:var(--a-text-xs)] font-medium",
+  "inline-flex items-center rounded-[var(--a-radius-sm)] border border-transparent px-2 py-0.5 text-[length:var(--a-text-xs)] font-medium",
   {
     variants: {
       tone: {

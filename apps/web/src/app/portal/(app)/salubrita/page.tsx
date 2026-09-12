@@ -59,7 +59,7 @@ export default async function PortalSalubritaPage() {
               <li key={row.packDate}>
                 <Link
                   href={`${PORTAL_SALUBRITA_PATH}/${row.packDate}`}
-                  className="flex items-center justify-between rounded-[12px] px-3 py-3 hover:bg-a-surface-3/70"
+                  className="flex items-center justify-between rounded-[var(--a-radius-sm)] px-3 py-3 hover:bg-a-surface-3/70"
                 >
                   <div>
                     <p className="a-mono text-[13px] font-semibold text-a-fg">

@@ -18,11 +18,14 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  APageBody,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { HrCongesPanel } from "@/components/hr/hr-conges-panel";
 import { hrTabHref, parseHrTab, hrEmployeeHref, type HrTab } from "@/lib/hr-tabs";
 import { localizeUiString } from "@/lib/i18n/route-labels";
@@ -57,7 +60,6 @@ import {
 } from "@/lib/hr";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
-  softPageBody,
   softPanel,
   softSelect,
   softTableWrap,
@@ -426,24 +428,24 @@ function HrWorkspace() {
                     ? "Demandes d’absence — approbation seulement. Pas de quotas inventés."
                     : "Liste des salariés. Ouvrir la fiche pour contrats, fiscal, dossier."
         }
-        actions={
+        primary={
           tab === "postes" ? (
-            <AButton type="button" onClick={openCreateJobTitle}>
+            <AButton type="button" size="sm" onClick={openCreateJobTitle}>
               Nouveau poste
             </AButton>
           ) : tab === "kinds" ? (
-            <AButton type="button" onClick={openCreateDocKind}>
+            <AButton type="button" size="sm" onClick={openCreateDocKind}>
               Nouveau kind
             </AButton>
-          ) : tab === "templates" ? undefined : tab === "employees" ? (
-            <AButton type="button" onClick={openCreateEmployee}>
-              Nouvel employé
+          ) : tab === "employees" ? (
+            <AButton type="button" size="sm" onClick={openCreateEmployee}>
+              {LAYOUT_ACTIONS.newEmployee}
             </AButton>
           ) : undefined
         }
       />
 
-      <div className={softPageBody}>
+      <APageBody>
         {tab !== "postes" &&
         tab !== "kinds" &&
         tab !== "templates" &&
@@ -515,17 +517,29 @@ function HrWorkspace() {
 
         {tab === "employees" && state.kind === "ok" ? (
           <>
-            <div className="flex flex-wrap items-center gap-2">
-              <AInput
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Matricule, nom, CNSS…"
-                className="max-w-xs"
-              />
-              <AButton type="button" variant="ghost" onClick={() => void load(q)}>
-                Filtrer
-              </AButton>
-            </div>
+            <AFilterBar
+              search={
+                <AInput
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Matricule, nom, CNSS…"
+                  aria-label="Recherche employés"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void load(q);
+                  }}
+                />
+              }
+              utilities={
+                <AButton
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void load(q)}
+                >
+                  Filtrer
+                </AButton>
+              }
+            />
 
             {state.items.length === 0 ? (
               <AEmptyState
@@ -996,7 +1010,7 @@ function HrWorkspace() {
         ) : null}
 
         {tab === "conges" ? <HrCongesPanel /> : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}
@@ -1256,7 +1270,7 @@ function HrWorkspace() {
           aria-modal="true"
           aria-labelledby="provision-title"
         >
-          <div className="a-underlay w-full max-w-md space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]">
+          <div className="a-underlay w-full max-w-md space-y-4 rounded-[var(--a-radius-md)] bg-a-surface-2 p-[var(--a-space-5)]">
             <h2
               id="provision-title"
               className="text-[length:var(--a-text-lg)] font-semibold text-a-fg"

@@ -6,21 +6,19 @@ import {
   ABadge,
   AEmptyState,
   AErrorState,
+  APageBody,
+  APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftThead,
+  ASoftTr,
 } from "@/components/a";
 import {
   EMPLOYEE_PORTAL_API,
   EMPLOYEE_PORTAL_BULLETINS_PATH,
   type PortalBulletin,
 } from "@/lib/employee-portal";
-import {
-  softPageBody,
-  softPanel,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -68,40 +66,39 @@ export default function EmployeePortalBulletinsPage() {
   }, [load]);
 
   return (
-    <div className={softPageBody}>
+    <>
       <AScreenHeader
         kicker="Portail employé"
         title="Mes bulletins"
         description="Consultation et reçu PDF — montants figés à l’édition RH (aucune invention)."
       />
+      <APageBody>
+        {state.kind === "loading" ? (
+          <div className="space-y-3">
+            <ASkeleton className="h-8 w-48" />
+            <ASkeleton className="h-24 w-full" />
+          </div>
+        ) : null}
 
-      {state.kind === "loading" ? (
-        <div className={`${softPanel} space-y-3 p-5`}>
-          <ASkeleton className="h-8 w-48" />
-          <ASkeleton className="h-24 w-full" />
-        </div>
-      ) : null}
+        {state.kind === "error" ? (
+          <AErrorState
+            message={state.message}
+            retryable
+            onRetry={() => void load()}
+          />
+        ) : null}
 
-      {state.kind === "error" ? (
-        <AErrorState
-          message={state.message}
-          retryable
-          onRetry={() => void load()}
-        />
-      ) : null}
+        {state.kind === "ok" && state.items.length === 0 ? (
+          <AEmptyState
+            title="Aucun bulletin"
+            description="Vos bulletins apparaîtront ici une fois édités par les RH."
+          />
+        ) : null}
 
-      {state.kind === "ok" && state.items.length === 0 ? (
-        <AEmptyState
-          title="Aucun bulletin"
-          description="Vos bulletins apparaîtront ici une fois édités par les RH."
-        />
-      ) : null}
-
-      {state.kind === "ok" && state.items.length > 0 ? (
-        <div className={`${softPanel} overflow-hidden`}>
-          <div className={softTableWrap}>
-            <table className="w-full text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
+        {state.kind === "ok" && state.items.length > 0 ? (
+          <APageSection title="Bulletins publiés" bare>
+            <ASoftTable>
+              <ASoftThead>
                 <tr>
                   <th className="px-4 py-3 font-medium">Période</th>
                   <th className="px-4 py-3 font-medium">N°</th>
@@ -109,10 +106,10 @@ export default function EmployeePortalBulletinsPage() {
                   <th className="px-4 py-3 font-medium">PDF</th>
                   <th className="px-4 py-3 font-medium" />
                 </tr>
-              </thead>
+              </ASoftThead>
               <tbody>
                 {state.items.map((b) => (
-                  <tr key={b.id} className={softTr}>
+                  <ASoftTr key={b.id}>
                     <td className="a-mono px-4 py-3">{b.periodYm}</td>
                     <td className="a-mono px-4 py-3 text-a-fg-muted">
                       {b.number}
@@ -136,13 +133,13 @@ export default function EmployeePortalBulletinsPage() {
                         Voir
                       </Link>
                     </td>
-                  </tr>
+                  </ASoftTr>
                 ))}
               </tbody>
-            </table>
-          </div>
-        </div>
-      ) : null}
-    </div>
+            </ASoftTable>
+          </APageSection>
+        ) : null}
+      </APageBody>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AScreenHeader } from "@/components/a";
+import { APageBody, AScreenHeader } from "@/components/a";
 import { USAGE_TIPS } from "@/lib/tips-catalog";
 
 const CATEGORIES = [
@@ -21,17 +21,17 @@ export default function HelpPage() {
         kicker="Aide"
         title="Centre d’aide"
         description="Astuces documentées, raccourcis et liens vers le User Guide."
-        actions={
+        primary={
           <Link
             href="/help/guide"
-            className="text-[13px] font-medium text-a-accent hover:underline"
+            className="inline-flex h-8 items-center rounded-[var(--a-radius-md)] bg-a-accent px-3 text-[length:var(--a-text-xs)] font-medium text-a-accent-fg hover:opacity-90"
           >
             User Guide →
           </Link>
         }
       />
 
-      <div className="mx-auto max-w-3xl space-y-10 px-6 pb-16 pt-2 md:px-10">
+      <APageBody className="mx-auto max-w-3xl space-y-10">
         <section id="shortcuts" className="text-center">
           <h2 className="text-[15px] font-semibold text-a-fg">Raccourcis</h2>
           <ul className="mt-3 space-y-2 text-[13px] text-a-fg-muted">
@@ -39,9 +39,7 @@ export default function HelpPage() {
               <kbd className="a-mono text-a-fg">⌘K</kbd> — palette de commandes
             </li>
             <li>Clic module sidebar — liste dense sur l’accueil</li>
-            <li>
-              Toolbar — SPECTRE / PATCH / thème
-            </li>
+            <li>Toolbar — SPECTRE / PATCH / thème</li>
           </ul>
         </section>
 
@@ -99,7 +97,11 @@ export default function HelpPage() {
               </h2>
               <ul className="space-y-4">
                 {tips.map((tip) => (
-                  <li key={tip.id} id={`tip-${tip.id}`} className="scroll-mt-24 text-center">
+                  <li
+                    key={tip.id}
+                    id={`tip-${tip.id}`}
+                    className="scroll-mt-24 text-center"
+                  >
                     <p className="text-[13px] font-semibold text-a-fg">
                       {tip.title}
                       {tip.shortcut ? (
@@ -125,7 +127,7 @@ export default function HelpPage() {
             </section>
           );
         })}
-      </div>
+      </APageBody>
     </>
   );
 }

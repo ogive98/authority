@@ -13,7 +13,7 @@ export function AuthApiUnavailable({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-a-surface-1 px-[var(--a-space-6)] text-a-fg">
       <div
-        className="a-underlay w-full max-w-md space-y-4 rounded-[14px] p-[var(--a-space-6)]"
+        className="a-underlay w-full max-w-md space-y-4 rounded-[var(--a-radius-md)] p-[var(--a-space-6)]"
         role="alert"
       >
         <h1 className="text-[length:var(--a-text-lg)] font-semibold">{title}</h1>

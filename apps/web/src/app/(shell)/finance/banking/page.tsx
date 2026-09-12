@@ -1,15 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ABadge,
   AButton,
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
@@ -42,7 +45,6 @@ import {
 } from "@/lib/finance";
 import {
   softChipClass,
-  softPageBody,
   softTableWrap,
   softThead,
   softTr,
@@ -57,6 +59,7 @@ type LoadState =
 type LineFilter = "" | "UNMATCHED" | "MATCHED" | "IGNORED";
 
 export default function FinanceBankingPage() {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [treasury, setTreasury] = useState<BankTreasury | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -401,6 +404,21 @@ export default function FinanceBankingPage() {
     [],
   );
 
+  function openAccountCreate(defaults?: {
+    code: string;
+    label: string;
+  }) {
+    setAccountForm({
+      code: defaults?.code ?? "",
+      label: defaults?.label ?? "",
+      bankName: "",
+      rib: "",
+      glAccountCode: "",
+    });
+    setFormError(null);
+    setAccountOpen(true);
+  }
+
   const ofxSample = useMemo(
     () =>
       [
@@ -438,48 +456,40 @@ export default function FinanceBankingPage() {
         kicker="Finance"
         title="Banque"
         description="Rapprochement soft AR (+) / AP (−) · CSV/OFX · ignore sans GL · frais (Prefs bank_fee)."
-        actions={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/finance/payments"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Encaissements
-            </Link>
-            <Link
-              href="/finance/credit-notes"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Avoirs
-            </Link>
-            <Link
-              href="/finance/instruments"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Instruments
-            </Link>
-            <AButton
-              type="button"
-              size="sm"
-              onClick={() => {
-                setAccountForm({
-                  code: "",
-                  label: "",
-                  bankName: "",
-                  rib: "",
-                  glAccountCode: "",
-                });
-                setFormError(null);
-                setAccountOpen(true);
-              }}
-            >
-              Nouveau compte
-            </AButton>
-          </div>
+        primary={
+          <AButton type="button" size="sm" onClick={() => openAccountCreate()}>
+            Nouveau compte
+          </AButton>
+        }
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "payments",
+                label: "Encaissements",
+                onSelect: () => router.push("/finance/payments"),
+              },
+              {
+                id: "credit-notes",
+                label: "Avoirs",
+                onSelect: () => router.push("/finance/credit-notes"),
+              },
+              {
+                id: "instruments",
+                label: "Instruments",
+                onSelect: () => router.push("/finance/instruments"),
+              },
+              {
+                id: "receivables",
+                label: "Créances",
+                onSelect: () => router.push("/finance"),
+              },
+            ]}
+          />
         }
       />
 
-      <div className={softPageBody}>
+      <APageBody>
         {state.kind === "loading" ? <ASkeleton className="h-40 w-full" /> : null}
         {state.kind === "forbidden" ? (
           <AForbiddenState message={state.message} />
@@ -511,43 +521,40 @@ export default function FinanceBankingPage() {
             title="Aucun compte"
             description="Créez un compte bancaire société (RIB/IBAN libres). Pas d’annuaire inventé."
             actionLabel="Nouveau compte"
-            onAction={() => {
-              setAccountForm({
-                code: "BQ1",
-                label: "Compte principal",
-                bankName: "",
-                rib: "",
-                glAccountCode: "",
-              });
-              setAccountOpen(true);
-            }}
+            onAction={() =>
+              openAccountCreate({ code: "BQ1", label: "Compte principal" })
+            }
           />
         ) : null}
 
         {state.kind === "ok" && state.accounts.length > 0 ? (
           <>
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Comptes bancaires"
-            >
-              {state.accounts.map((a) => {
-                const active = a.id === selectedId;
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setSelectedId(a.id)}
-                    className={softChipClass(active)}
-                  >
-                    {a.code}
-                    {a.unmatchedCount > 0 ? ` · ${a.unmatchedCount}` : ""}
-                  </button>
-                );
-              })}
-            </div>
+            <AFilterBar
+              filters={
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="tablist"
+                  aria-label="Comptes bancaires"
+                >
+                  {state.accounts.map((a) => {
+                    const active = a.id === selectedId;
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setSelectedId(a.id)}
+                        className={softChipClass(active)}
+                      >
+                        {a.code}
+                        {a.unmatchedCount > 0 ? ` · ${a.unmatchedCount}` : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+              }
+            />
 
             {selected ? (
               <div className="a-underlay rounded-md p-[var(--a-space-4)] space-y-1">
@@ -630,72 +637,85 @@ export default function FinanceBankingPage() {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {(
-                [
-                  { id: "" as LineFilter, label: "Toutes" },
-                  { id: "UNMATCHED" as LineFilter, label: "Non rapprochées" },
-                  { id: "MATCHED" as LineFilter, label: "Rapprochées" },
-                  { id: "IGNORED" as LineFilter, label: "Ignorées" },
-                ] as const
-              ).map((chip) => (
-                <button
-                  key={chip.id || "all"}
-                  type="button"
-                  onClick={() => setLineFilter(chip.id)}
-                  className={softChipClass(lineFilter === chip.id)}
+            <AFilterBar
+              filters={
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="tablist"
+                  aria-label="Filtrer les lignes"
                 >
-                  {chip.label}
-                </button>
-              ))}
-              <div className="flex-1" />
-              <AButton
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={!selectedId}
-                onClick={() => {
-                  setCsvText(csvSample);
-                  setCsvPreview(null);
-                  setFormError(null);
-                  setCsvOpen(true);
-                }}
-              >
-                Import CSV
-              </AButton>
-              <AButton
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={!selectedId}
-                onClick={() => {
-                  setOfxText(ofxSample);
-                  setOfxPreview(null);
-                  setFormError(null);
-                  setOfxOpen(true);
-                }}
-              >
-                Import OFX
-              </AButton>
-              <AButton
-                type="button"
-                size="sm"
-                disabled={!selectedId}
-                onClick={() => {
-                  setLineForm({
-                    lineDate: new Date().toISOString().slice(0, 10),
-                    amount: "",
-                    reference: "",
-                    counterparty: "",
-                    memo: "",
-                  });
-                  setFormError(null);
-                  setLineOpen(true);
-                }}
-              >
-                Ajouter ligne
-              </AButton>
-            </div>
+                  {(
+                    [
+                      { id: "" as LineFilter, label: "Toutes" },
+                      { id: "UNMATCHED" as LineFilter, label: "Non rapprochées" },
+                      { id: "MATCHED" as LineFilter, label: "Rapprochées" },
+                      { id: "IGNORED" as LineFilter, label: "Ignorées" },
+                    ] as const
+                  ).map((chip) => (
+                    <button
+                      key={chip.id || "all"}
+                      type="button"
+                      role="tab"
+                      aria-selected={lineFilter === chip.id}
+                      onClick={() => setLineFilter(chip.id)}
+                      className={softChipClass(lineFilter === chip.id)}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              }
+              utilities={
+                <div className="flex flex-wrap gap-2">
+                  <AButton
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={!selectedId}
+                    onClick={() => {
+                      setCsvText(csvSample);
+                      setCsvPreview(null);
+                      setFormError(null);
+                      setCsvOpen(true);
+                    }}
+                  >
+                    Import CSV
+                  </AButton>
+                  <AButton
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={!selectedId}
+                    onClick={() => {
+                      setOfxText(ofxSample);
+                      setOfxPreview(null);
+                      setFormError(null);
+                      setOfxOpen(true);
+                    }}
+                  >
+                    Import OFX
+                  </AButton>
+                  <AButton
+                    type="button"
+                    size="sm"
+                    disabled={!selectedId}
+                    onClick={() => {
+                      setLineForm({
+                        lineDate: new Date().toISOString().slice(0, 10),
+                        amount: "",
+                        reference: "",
+                        counterparty: "",
+                        memo: "",
+                      });
+                      setFormError(null);
+                      setLineOpen(true);
+                    }}
+                  >
+                    Ajouter ligne
+                  </AButton>
+                </div>
+              }
+            />
 
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
@@ -825,7 +845,7 @@ export default function FinanceBankingPage() {
             ) : null}
           </>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={accountOpen}

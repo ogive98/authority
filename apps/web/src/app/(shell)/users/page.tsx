@@ -7,15 +7,16 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  APageBody,
   AScreenHeader,
   ASkeleton,
   ASwitch,
 } from "@/components/a";
 import {
   softChipClass,
-  softPageBody,
   softSelect,
   softTableWrap,
   softThead,
@@ -353,92 +354,90 @@ export default function UsersPage() {
         kicker="Identité"
         title="Utilisateurs"
         description="Invitation par lien (Outlook) ou mot de passe immédiat · Admin / Comptable / Opérateur"
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {mailStatus ? (
-              <ABadge
-                tone={mailStatus.configured ? "success" : "neutral"}
-                title={
-                  mailStatus.configured
-                    ? [
-                        mailStatus.host,
-                        mailStatus.port != null ? `:${mailStatus.port}` : "",
-                        mailStatus.from ? ` · ${mailStatus.from}` : "",
-                        mailStatus.autoSend ? " · auto-send" : " · auto-send off",
-                        ` · TTL ${mailStatus.ttlDays}j`,
-                      ].join("")
-                    : `SMTP off · mailto · TTL ${mailStatus.ttlDays}j`
-                }
-              >
-                {mailStatus.configured
-                  ? `${mailStatus.from ? `SMTP · ${mailStatus.from}` : `SMTP · ${mailStatus.host}`}${
-                      mailStatus.autoSend ? "" : " · manuel"
-                    }`
-                  : "SMTP off · mailto"}
-              </ABadge>
-            ) : null}
-            <AButton type="button" size="sm" variant="secondary" onClick={openCreate}>
-              Nouvel utilisateur
-            </AButton>
-          </div>
+        status={
+          mailStatus ? (
+            <ABadge
+              tone={mailStatus.configured ? "success" : "neutral"}
+              title={
+                mailStatus.configured
+                  ? [
+                      mailStatus.host,
+                      mailStatus.port != null ? `:${mailStatus.port}` : "",
+                      mailStatus.from ? ` · ${mailStatus.from}` : "",
+                      mailStatus.autoSend ? " · auto-send" : " · auto-send off",
+                      ` · TTL ${mailStatus.ttlDays}j`,
+                    ].join("")
+                  : `SMTP off · mailto · TTL ${mailStatus.ttlDays}j`
+              }
+            >
+              {mailStatus.configured
+                ? `${mailStatus.from ? `SMTP · ${mailStatus.from}` : `SMTP · ${mailStatus.host}`}${
+                    mailStatus.autoSend ? "" : " · manuel"
+                  }`
+                : "SMTP off · mailto"}
+            </ABadge>
+          ) : null
+        }
+        primary={
+          <AButton type="button" size="sm" onClick={openCreate}>
+            Nouvel utilisateur
+          </AButton>
         }
       />
 
-      <div className={softPageBody}>
-        <div
-          className="flex flex-wrap gap-1.5"
-          role="tablist"
-          aria-label="Filtrer par statut"
-        >
-          {STATUS_FILTERS.map((chip) => {
-            const active = statusFilter === chip.id;
-            return (
-              <button
-                key={chip.id || "all"}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setStatusFilter(chip.id)}
-                className={softChipClass(active)}
-              >
-                {chip.label}
-                {state.kind === "ok" ? (
-                  <span className="a-mono ml-1.5 opacity-80">
-                    {statusCounts[chip.id] ?? 0}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="users-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Recherche
-            </label>
+      <APageBody>
+        <AFilterBar
+          search={
             <AInput
               id="users-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="E-mail ou nom"
+              aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q);
               }}
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          filters={
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="tablist"
+              aria-label="Filtrer par statut"
+            >
+              {STATUS_FILTERS.map((chip) => {
+                const active = statusFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id || "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setStatusFilter(chip.id)}
+                    className={softChipClass(active)}
+                  >
+                    {chip.label}
+                    {state.kind === "ok" ? (
+                      <span className="a-mono ml-1.5 opacity-80">
+                        {statusCounts[chip.id] ?? 0}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? (
           <div className="space-y-2">
@@ -564,7 +563,7 @@ export default function UsersPage() {
             </table>
           </div>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}

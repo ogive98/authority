@@ -8,9 +8,12 @@ import {
   AButton,
   AErrorState,
   AInput,
+  APageBody,
+  APageSection,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { AccountAvatarCrop } from "./account-avatar-crop";
 import {
   BUSINESS_LOGIN_PATH,
@@ -288,11 +291,23 @@ export default function AccountPage() {
         kicker="Identité"
         title="Mon compte"
         description="Photo, société, sessions et sécurité."
-        actions={
+        status={
           me?.roleLabel || me?.roleCode ? (
             <ABadge tone="info" title={me.roleCode ?? undefined}>
               {me.roleLabel ?? me.roleCode}
             </ABadge>
+          ) : null
+        }
+        primary={
+          me ? (
+            <AButton
+              type="button"
+              size="sm"
+              disabled={busy || !displayName.trim() || !timezone.trim()}
+              onClick={() => void onSaveProfile()}
+            >
+              {busy ? "…" : LAYOUT_ACTIONS.save}
+            </AButton>
           ) : null
         }
       />
@@ -305,7 +320,7 @@ export default function AccountPage() {
         />
       ) : null}
 
-      <div className="mx-auto max-w-lg space-y-6 px-6 pb-16 pt-2 md:px-10">
+      <APageBody className="mx-auto max-w-lg space-y-6">
         {loadError ? (
           <AErrorState
             message={loadError}
@@ -334,7 +349,7 @@ export default function AccountPage() {
 
         {me ? (
           <>
-            <section className="space-y-5 a-underlay rounded-md p-5">
+            <APageSection title="Profil">
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
                 <div className="relative shrink-0">
                   {photoSrc ? (
@@ -460,13 +475,10 @@ export default function AccountPage() {
                   ) : null}
                 </dd>
               </dl>
-            </section>
+            </APageSection>
 
             {companies.length > 0 ? (
-              <section className="space-y-3 a-underlay rounded-md p-5">
-                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
-                  Société active
-                </h2>
+              <APageSection title="Société active">
                 {companies.length === 1 ? (
                   <p className="text-[length:var(--a-text-sm)] text-a-fg">
                     {companies[0]!.legalName || companies[0]!.code}
@@ -485,13 +497,10 @@ export default function AccountPage() {
                     ))}
                   </select>
                 )}
-              </section>
+              </APageSection>
             ) : null}
 
-            <section className="space-y-4 a-underlay rounded-md p-5">
-              <h2 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
-                Informations
-              </h2>
+            <APageSection title="Informations">
               <div className="space-y-1">
                 <label
                   htmlFor="acc-name"
@@ -537,21 +546,9 @@ export default function AccountPage() {
                   />
                 </div>
               </div>
-              <AButton
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={busy || !displayName.trim() || !timezone.trim()}
-                onClick={() => void onSaveProfile()}
-              >
-                {busy ? "…" : "Enregistrer"}
-              </AButton>
-            </section>
+            </APageSection>
 
-            <section className="space-y-3 a-underlay rounded-md p-5">
-              <h2 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
-                Sessions actives
-              </h2>
+            <APageSection title="Sessions actives">
               {sessions.length === 0 ? (
                 <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                   Aucune session listée.
@@ -588,12 +585,9 @@ export default function AccountPage() {
                   ))}
                 </ul>
               )}
-            </section>
+            </APageSection>
 
-            <section className="space-y-3 a-underlay rounded-md p-5">
-              <h2 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
-                Raccourcis
-              </h2>
+            <APageSection title="Raccourcis">
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/settings"
@@ -608,17 +602,12 @@ export default function AccountPage() {
                   Apparence / densité
                 </Link>
               </div>
-            </section>
+            </APageSection>
 
-            <section className="space-y-4 a-underlay rounded-md p-5">
-              <div>
-                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
-                  Mot de passe
-                </h2>
-                <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                  Minimum {minPwd} caractères (Préférences → Envois).
-                </p>
-              </div>
+            <APageSection
+              title="Mot de passe"
+              description={`Minimum ${minPwd} caractères (Préférences → Envois).`}
+            >
               <div className="space-y-1">
                 <label
                   htmlFor="acc-cur"
@@ -675,10 +664,10 @@ export default function AccountPage() {
               >
                 {busy ? "…" : "Changer le mot de passe"}
               </AButton>
-            </section>
+            </APageSection>
           </>
         ) : null}
-      </div>
+      </APageBody>
     </>
   );
 }

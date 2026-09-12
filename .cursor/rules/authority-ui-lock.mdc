@@ -17,10 +17,11 @@ No parallel design system.
 
 1. Read `apps/web/src/app/globals.css` (`--a-*` tokens only).
 2. Reuse `AppShell` + `MissionControl` / `ModuleFeatureList` + `SmartActionDock` + `A*`.
-3. Match reference: `/` (Mission Control) · dock · `/settings`.
+3. Match reference: `/` (Mission Control) · dock · `/settings` · `/dev/layout-gate`.
 4. Identify page pattern (List / Detail / Form / Workflow / ModuleDashboard / Settings) + one primary action.
-5. If a screen diverges → **fix that screen**, never invent a second look.
-6. **Registry-driven** — never hardcode sidebar, dashboard widgets, or actions.
+5. Compose with `APageBody` · `AFilterBar` · `AOverflowMenu` · `APageSection` · `ADetailGrid` · `AContextPanel` (D226).
+6. If a screen diverges → **fix that screen**, never invent a second look.
+7. **Registry-driven** — never hardcode sidebar, dashboard widgets, or actions.
 
 ## Locked identity (D161 — 2026-09-10)
 
@@ -32,9 +33,10 @@ No parallel design system.
 | Theme | Dark navy `#0a1628` default · light cool `#e8eef7` |
 | Surface | `data-surface=patch\|ghost\|solid\|minimal` |
 | Density | comfortable · compact · spacious |
-| Materials | Glassmorphism blur · **zero frames / borders** |
+| Materials | Glassmorphism blur · **zero frames** on panels · radius **tight** (2–6px) |
 | Hierarchy | Soft underlays (`.a-underlay`) only |
-| Motion | Stagger rows · glow pulse · nav slide · shimmer |
+| Actions | **Primary** (Nouveau/Enregistrer/Créer) = encadrement accent teal · **reste** = soulignement `--a-orange` (couleur icônes) + hover anim (D228) |
+| Motion | Stagger rows · glow pulse · nav underline · quiet action underline |
 
 ## Chrome (mandatory)
 

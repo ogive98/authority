@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ABadge,
   AButton,
@@ -9,8 +9,11 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
   type AComboboxOption,
@@ -35,7 +38,6 @@ import {
 } from "@/lib/finance";
 import {
   softChipClass,
-  softPageBody,
   softSelect,
   softTableWrap,
   softThead,
@@ -77,6 +79,7 @@ type PromiseDraft = {
 type FilterMode = "" | OpenItemStatus | "OVERDUE";
 
 export default function FinancePage() {
+  const router = useRouter();
   const { label: st } = useStatusLabel();
   const STATUS_FILTERS: Array<{ id: FilterMode; label: string }> = [
     { id: "", label: st("ALL", "Tous") },
@@ -324,94 +327,91 @@ export default function FinancePage() {
         kicker="Finance"
         title="Créances"
         description="Open items AR — montants enregistrés tels quels (pas de calcul TVA). Relance = mailto / WhatsApp (humain)."
-        actions={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/finance/invoices"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Factures
-            </Link>
-            <Link
-              href="/finance/credit-notes"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Avoirs
-            </Link>
-            <Link
-              href="/finance/payments"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Encaissements
-            </Link>
-            <Link
-              href="/finance/promises"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Promesses
-            </Link>
-            <Link
-              href="/finance/banking"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Banque
-            </Link>
-            <AButton type="button" size="sm" onClick={openCreate}>
-              Nouvelle créance
-            </AButton>
-          </div>
+        primary={
+          <AButton type="button" size="sm" onClick={openCreate}>
+            Nouvelle créance
+          </AButton>
+        }
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "invoices",
+                label: "Factures",
+                onSelect: () => router.push("/finance/invoices"),
+              },
+              {
+                id: "credit-notes",
+                label: "Avoirs",
+                onSelect: () => router.push("/finance/credit-notes"),
+              },
+              {
+                id: "payments",
+                label: "Encaissements",
+                onSelect: () => router.push("/finance/payments"),
+              },
+              {
+                id: "promises",
+                label: "Promesses",
+                onSelect: () => router.push("/finance/promises"),
+              },
+              {
+                id: "banking",
+                label: "Banque",
+                onSelect: () => router.push("/finance/banking"),
+              },
+            ]}
+          />
         }
       />
-      <div className={softPageBody}>
-        <div
-          className="flex flex-wrap gap-2"
-          role="tablist"
-          aria-label="Filtrer par statut"
-        >
-          {STATUS_FILTERS.map((chip) => {
-            const active = statusFilter === chip.id;
-            return (
-              <button
-                key={chip.id || "all"}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setStatusFilter(chip.id)}
-                className={softChipClass(active)}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="fin-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Recherche
-            </label>
+      <APageBody>
+        <AFilterBar
+          search={
             <AInput
               id="fin-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="N° / libellé"
+              aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q, statusFilter);
               }}
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q, statusFilter)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          filters={
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filtrer par statut"
+            >
+              {STATUS_FILTERS.map((chip) => {
+                const active = statusFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id || "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setStatusFilter(chip.id)}
+                    className={softChipClass(active)}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q, statusFilter)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? (
           <div className="space-y-2">
@@ -546,7 +546,7 @@ export default function FinancePage() {
             </table>
           </div>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}

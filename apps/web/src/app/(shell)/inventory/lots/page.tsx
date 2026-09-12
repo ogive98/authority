@@ -1,15 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ABadge,
   AButton,
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
@@ -24,7 +27,7 @@ import {
   type InventoryWarehouse,
   type ProductOption,
 } from "@/lib/inventory";
-import { softList, softListRow, softPageBody, softSelect } from "@/lib/soft-glass-ui";
+import { softList, softListRow, softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -55,6 +58,7 @@ function statusLabel(status: InventoryLot["status"]): string {
 }
 
 export default function InventoryLotsPage() {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -186,54 +190,63 @@ export default function InventoryLotsPage() {
         kicker="Stock"
         title="Lots"
         description="Lots / DLC fromagerie — ajustement synchronisé avec le solde SKU."
-        actions={
-          <div className="flex items-center gap-3">
-            <Link
-              href="/inventory"
-              className="text-[13px] font-medium text-a-accent hover:underline"
-            >
-              Inventaire →
-            </Link>
-            <Link
-              href="/inventory/certificat-salubrite"
-              className="text-[13px] font-medium text-a-accent hover:underline"
-            >
-              Certificat →
-            </Link>
-            <AButton type="button" size="sm" onClick={openCreate}>
-              Nouveau lot
-            </AButton>
-          </div>
+        primary={
+          <AButton type="button" size="sm" onClick={openCreate}>
+            Nouveau lot
+          </AButton>
+        }
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "inventory",
+                label: "Inventaire",
+                onSelect: () => router.push("/inventory"),
+              },
+              {
+                id: "certificat",
+                label: "Certificat de salubrité",
+                onSelect: () => router.push("/inventory/certificat-salubrite"),
+              },
+            ]}
+          />
         }
       />
 
-      <div className={softPageBody}>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="min-w-[12rem] flex-1 space-y-1">
-            <span className="text-[11px] text-a-fg-subtle">Recherche</span>
+      <APageBody>
+        <AFilterBar
+          search={
             <AInput
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Lot, SKU, produit…"
+              aria-label="Recherche"
             />
-          </label>
-          <label className="space-y-1">
-            <span className="text-[11px] text-a-fg-subtle">Statut</span>
+          }
+          filters={
             <select
               className={softSelect}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Filtrer par statut"
             >
               <option value="all">Tous</option>
               <option value="OPEN">Ouverts</option>
               <option value="QUARANTINE">Quarantaine</option>
               <option value="CLOSED">Clos</option>
             </select>
-          </label>
-          <AButton type="button" size="sm" variant="secondary" onClick={() => void load()}>
-            Actualiser
-          </AButton>
-        </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => void load()}
+            >
+              Actualiser
+            </AButton>
+          }
+        />
 
         {state.kind === "ok" ? (
           <p className="text-[12px] text-a-fg-muted">
@@ -340,7 +353,7 @@ export default function InventoryLotsPage() {
             ))}
           </ul>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}

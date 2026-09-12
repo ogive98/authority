@@ -25,7 +25,7 @@ export function BulletinPrintSheet({ data }: { data: BulletinPrintModel }) {
     data.abatTotalAnnual != null && Number(data.abatTotalAnnual) > 0;
 
   return (
-    <div className="hr-bulletin-sheet rounded-[16px] bg-white px-6 py-5 text-black print:rounded-none print:px-0 print:py-0">
+    <div className="hr-bulletin-sheet rounded-[var(--a-radius-md)] bg-white px-6 py-5 text-black print:rounded-none print:px-0 print:py-0">
       <header className="mb-6 border-b border-black/10 pb-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-black/50">
           AUTHORITY · RH

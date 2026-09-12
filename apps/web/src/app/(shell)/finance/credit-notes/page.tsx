@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   ABadge,
@@ -10,12 +9,16 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
   type AComboboxOption,
 } from "@/components/a";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
   CREDIT_NOTE_STATUS_LABELS,
@@ -30,7 +33,6 @@ import {
 } from "@/lib/finance";
 import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
 import {
-  softPageBody,
   softSelect,
   softTableWrap,
   softThead,
@@ -69,6 +71,7 @@ function emptyLine(taxCodeId = ""): LineDraft {
 }
 
 function FinanceCreditNotesPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const prefillInvoiceId = searchParams.get("invoiceId");
 
@@ -286,61 +289,59 @@ function FinanceCreditNotesPageInner() {
         kicker="Finance"
         title="Avoirs"
         description="Avoirs liés à une facture émise — partiel ou total via lignes. Pas de restauration stock. FODEC·timbre seulement si validés."
-        actions={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/finance/invoices"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Factures
-            </Link>
-            <Link
-              href="/finance"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Créances
-            </Link>
-            <Link
-              href="/finance/banking"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Banque
-            </Link>
-            <AButton type="button" size="sm" onClick={() => openCreate()}>
-              Nouvel avoir
-            </AButton>
-          </div>
+        primary={
+          <AButton type="button" size="sm" onClick={() => openCreate()}>
+            {LAYOUT_ACTIONS.newCreditNote}
+          </AButton>
+        }
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "invoices",
+                label: "Factures",
+                onSelect: () => router.push("/finance/invoices"),
+              },
+              {
+                id: "receivables",
+                label: "Créances",
+                onSelect: () => router.push("/finance"),
+              },
+              {
+                id: "banking",
+                label: "Banque",
+                onSelect: () => router.push("/finance/banking"),
+              },
+            ]}
+          />
         }
       />
-      <div className={softPageBody}>
+      <APageBody>
         <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre"]} />
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="cn-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Recherche
-            </label>
+        <AFilterBar
+          search={
             <AInput
               id="cn-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="N° / motif"
+              aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q, prefillInvoiceId);
               }}
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q, prefillInvoiceId)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q, prefillInvoiceId)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? (
           <div className="space-y-2">
@@ -447,7 +448,7 @@ function FinanceCreditNotesPageInner() {
             </table>
           </div>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}
@@ -696,10 +697,10 @@ export default function FinanceCreditNotesPage() {
   return (
     <Suspense
       fallback={
-        <div className={softPageBody}>
+        <APageBody>
           <ASkeleton className="h-10 w-48" />
           <ASkeleton className="h-10 w-full" />
-        </div>
+        </APageBody>
       }
     >
       <FinanceCreditNotesPageInner />

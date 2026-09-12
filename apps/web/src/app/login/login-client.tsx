@@ -130,7 +130,7 @@ export default function BusinessLoginPage() {
         {step === "credentials" ? (
           <form
             onSubmit={(e) => void submitCredentials(e)}
-            className="w-full space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]"
+            className="w-full space-y-4 rounded-[var(--a-radius-md)] bg-a-surface-2 p-[var(--a-space-5)]"
           >
             <div className="space-y-1.5">
               <label
@@ -201,7 +201,7 @@ export default function BusinessLoginPage() {
             </AButton>
           </form>
         ) : (
-          <div className="w-full space-y-3 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]">
+          <div className="w-full space-y-3 rounded-[var(--a-radius-md)] bg-a-surface-2 p-[var(--a-space-5)]">
             {userLabel ? (
               <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                 Connecté · {userLabel}

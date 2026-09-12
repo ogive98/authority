@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AScreenHeader } from "@/components/a";
+import { APageBody, AScreenHeader } from "@/components/a";
 
 const CHAPTERS = [
   {
@@ -46,16 +46,16 @@ export default function UserGuidePage() {
         kicker="Documentation"
         title="User Guide"
         description="Parcours AUTHORITY — fromagerie B2B Tunisie."
-        actions={
+        primary={
           <Link
             href="/help"
-            className="text-[13px] font-medium text-a-accent hover:underline"
+            className="inline-flex h-8 items-center rounded-[var(--a-radius-md)] bg-a-surface-3 px-3 text-[length:var(--a-text-xs)] font-medium text-a-fg hover:bg-a-surface-4"
           >
             ← Centre d’aide
           </Link>
         }
       />
-      <div className="mx-auto max-w-2xl space-y-8 px-6 pb-16 pt-4 md:px-10">
+      <APageBody className="mx-auto max-w-2xl space-y-8">
         {CHAPTERS.map((ch) => (
           <section key={ch.id} id={ch.id} className="text-center">
             <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-a-fg">
@@ -72,7 +72,7 @@ export default function UserGuidePage() {
             Centre d’aide
           </Link>
         </p>
-      </div>
+      </APageBody>
     </>
   );
 }

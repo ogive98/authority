@@ -7,6 +7,7 @@ import {
   AEmptyState,
   AErrorState,
   AInput,
+  APageSection,
   ASkeleton,
 } from "@/components/a";
 import {
@@ -18,12 +19,7 @@ import {
   type AttCalendarKind,
 } from "@/lib/attendance";
 import { EMPLOYEE_PORTAL_API } from "@/lib/employee-portal";
-import {
-  softPanel,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -165,20 +161,10 @@ export function AttendanceCalendarPanel({
   }
 
   return (
-    <section className={softPanel} aria-labelledby="att-cal-title">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2
-            id="att-cal-title"
-            className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
-          >
-            Calendrier présence
-          </h2>
-          <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
-            Congés approuvés (vert) · absences UNPAID (rouge) · pénalités ADV
-            (orange). Pas de soldes inventés.
-          </p>
-        </div>
+    <APageSection
+      title="Calendrier présence"
+      description="Congés approuvés (vert) · absences UNPAID (rouge) · pénalités ADV (orange). Pas de soldes inventés."
+      action={
         <label className="block space-y-1">
           <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
             Mois
@@ -190,7 +176,8 @@ export function AttendanceCalendarPanel({
             className="a-mono"
           />
         </label>
-      </div>
+      }
+    >
 
       <div className="flex flex-wrap gap-2 text-[length:var(--a-text-xs)]">
         <span className="rounded-md bg-emerald-500/25 px-2 py-1 text-emerald-200">
@@ -328,6 +315,6 @@ export function AttendanceCalendarPanel({
           </div>
         </div>
       ) : null}
-    </section>
+    </APageSection>
   );
 }

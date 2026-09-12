@@ -1,4 +1,4 @@
-import { AScreenHeader } from "@/components/a/a-screen-header";
+import { APageBody, AScreenHeader } from "@/components/a";
 
 export default function SearchPage() {
   return (
@@ -13,6 +13,11 @@ export default function SearchPage() {
           </>
         }
       />
+      <APageBody>
+        <p className="text-[13px] text-a-fg-muted">
+          Recherche globale — à brancher sur le registry et l’index de contenu.
+        </p>
+      </APageBody>
     </>
   );
 }

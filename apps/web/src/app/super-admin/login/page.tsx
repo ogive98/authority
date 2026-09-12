@@ -106,7 +106,7 @@ function SuperAdminLoginForm() {
     <>
       <form
         onSubmit={step === "password" ? submitPassword : submitMfa}
-        className="w-full space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]"
+        className="w-full space-y-4 rounded-[var(--a-radius-md)] bg-a-surface-2 p-[var(--a-space-5)]"
       >
         {step === "password" ? (
           <>
@@ -202,7 +202,7 @@ export default function SuperAdminLoginPage() {
         </p>
         <Suspense
           fallback={
-            <div className="w-full rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)] text-center text-a-fg-muted">
+            <div className="w-full rounded-[var(--a-radius-md)] bg-a-surface-2 p-[var(--a-space-5)] text-center text-a-fg-muted">
               Chargement…
             </div>
           }

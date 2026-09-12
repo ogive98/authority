@@ -211,7 +211,7 @@ export function FeedGlyph({
   return (
     <span
       className={cn(
-        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px]",
+        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--a-radius-sm)]",
         def.softBg,
         def.toneClass,
         className,

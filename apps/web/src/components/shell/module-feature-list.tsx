@@ -114,7 +114,7 @@ export function ModuleFeatureList({
                 >
                   <span
                     className={cn(
-                      "flex shrink-0 items-center justify-center rounded-[12px] bg-a-accent-muted",
+                      "flex shrink-0 items-center justify-center rounded-[var(--a-radius-sm)] bg-a-accent-muted",
                       embedded ? "h-9 w-9" : "h-10 w-10",
                       p.colorClass,
                     )}

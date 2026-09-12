@@ -32,7 +32,7 @@ function WidgetChrome({
   return (
     <section
       className={cn(
-        "a-glass a-stagger-in rounded-[1.25rem] p-4 md:p-5",
+        "a-glass a-stagger-in rounded-[var(--a-radius-lg)] p-4 md:p-5",
         accent &&
           "ring-1 ring-[color-mix(in_oklab,var(--a-violet)_35%,transparent)]",
         className,
@@ -138,7 +138,7 @@ export function MissionControl({ className }: { className?: string }) {
               {t("preferences")}
             </Link>
           </div>
-          <div className="a-glass min-h-[min(52vh,28rem)] flex-1 overflow-hidden rounded-[1.25rem]">
+          <div className="a-glass min-h-[min(52vh,28rem)] flex-1 overflow-hidden rounded-[var(--a-radius-lg)]">
             <ModuleFeatureList
               className="h-full min-h-0"
               variant="embedded"

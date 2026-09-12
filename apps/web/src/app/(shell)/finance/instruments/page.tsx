@@ -1,13 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ABadge,
   AButton,
   AEmptyState,
   AErrorState,
   AForbiddenState,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
@@ -19,7 +21,6 @@ import {
   type InstrumentStatus,
 } from "@/lib/finance";
 import {
-  softPageBody,
   softTableWrap,
   softThead,
   softTr,
@@ -38,6 +39,7 @@ const NEXT: Partial<Record<InstrumentStatus, InstrumentStatus[]>> = {
 };
 
 export default function FinanceInstrumentsPage() {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [busy, setBusy] = useState(false);
 
@@ -83,24 +85,29 @@ export default function FinanceInstrumentsPage() {
         kicker="Finance"
         title="Instruments"
         description="Chèques et traites — rejet = restauration des créances AR."
-        actions={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/finance/payments"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Encaissements
-            </Link>
-            <Link
-              href="/finance/banking"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Banque
-            </Link>
-          </div>
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "payments",
+                label: "Encaissements",
+                onSelect: () => router.push("/finance/payments"),
+              },
+              {
+                id: "banking",
+                label: "Banque",
+                onSelect: () => router.push("/finance/banking"),
+              },
+              {
+                id: "receivables",
+                label: "Créances",
+                onSelect: () => router.push("/finance"),
+              },
+            ]}
+          />
         }
       />
-      <div className={softPageBody}>
+      <APageBody>
         {state.kind === "loading" ? (
           <ASkeleton className="h-24 w-full" />
         ) : null}
@@ -179,7 +186,7 @@ export default function FinanceInstrumentsPage() {
             </table>
           </div>
         ) : null}
-      </div>
+      </APageBody>
     </>
   );
 }

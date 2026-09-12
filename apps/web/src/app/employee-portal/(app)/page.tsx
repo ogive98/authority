@@ -7,8 +7,13 @@ import {
   AEmptyState,
   AErrorState,
   AInput,
+  APageBody,
+  APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftThead,
+  ASoftTr,
 } from "@/components/a";
 import {
   absenceStatusTone,
@@ -17,13 +22,6 @@ import {
 } from "@/lib/attendance";
 import { AttendanceCalendarPanel } from "@/components/attendance/attendance-calendar-panel";
 import { EMPLOYEE_PORTAL_API } from "@/lib/employee-portal";
-import {
-  softPageBody,
-  softPanel,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -133,7 +131,7 @@ export default function EmployeePortalHomePage() {
   }
 
   return (
-    <div>
+    <>
       <AScreenHeader
         kicker="Employee Portal"
         title="Mes congés"
@@ -143,7 +141,7 @@ export default function EmployeePortalHomePage() {
             : "Demandes d’absence"
         }
       />
-      <div className={softPageBody}>
+      <APageBody>
         {formError ? (
           <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
             {formError}
@@ -151,19 +149,22 @@ export default function EmployeePortalHomePage() {
         ) : null}
 
         {state.kind === "ok" ? (
-          <AttendanceCalendarPanel
-            employeeId={state.employeeId}
-            mode="portal"
-          />
+          <APageSection title="Calendrier" bare>
+            <AttendanceCalendarPanel
+              employeeId={state.employeeId}
+              mode="portal"
+            />
+          </APageSection>
         ) : null}
 
-        <section className={softPanel} aria-labelledby="new-leave-title">
-          <h2
-            id="new-leave-title"
-            className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
-          >
-            Nouvelle demande
-          </h2>
+        <APageSection
+          title="Nouvelle demande"
+          action={
+            <AButton type="button" size="sm" disabled={busy} onClick={() => void onCreate()}>
+              Envoyer la demande
+            </AButton>
+          }
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block space-y-1.5">
               <span className="text-[length:var(--a-text-sm)] font-medium">
@@ -210,12 +211,7 @@ export default function EmployeePortalHomePage() {
               />
             </label>
           </div>
-          <div className="flex justify-end">
-            <AButton type="button" disabled={busy} onClick={() => void onCreate()}>
-              Envoyer la demande
-            </AButton>
-          </div>
-        </section>
+        </APageSection>
 
         {state.kind === "loading" ? <ASkeleton className="h-40 w-full" /> : null}
         {state.kind === "error" ? (
@@ -232,19 +228,19 @@ export default function EmployeePortalHomePage() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[560px] text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
+          <APageSection title="Historique" bare>
+            <ASoftTable className="min-w-[560px]">
+              <ASoftThead>
                 <tr>
                   <th className="a-table-cell font-medium">Type</th>
                   <th className="a-table-cell font-medium">Période</th>
                   <th className="a-table-cell font-medium">Statut</th>
                   <th className="a-table-cell font-medium">Motif</th>
                 </tr>
-              </thead>
+              </ASoftThead>
               <tbody>
                 {state.items.map((row) => (
-                  <tr key={row.id} className={softTr}>
+                  <ASoftTr key={row.id}>
                     <td className="a-mono a-table-cell">{row.type}</td>
                     <td className="a-mono a-table-cell tabular-nums">
                       {row.startDate} → {row.endDate}
@@ -257,13 +253,13 @@ export default function EmployeePortalHomePage() {
                     <td className="a-table-cell text-a-fg-muted">
                       {row.reason ?? "—"}
                     </td>
-                  </tr>
+                  </ASoftTr>
                 ))}
               </tbody>
-            </table>
-          </div>
+            </ASoftTable>
+          </APageSection>
         ) : null}
-      </div>
-    </div>
+      </APageBody>
+    </>
   );
 }

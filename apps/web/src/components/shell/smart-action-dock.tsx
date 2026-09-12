@@ -137,14 +137,14 @@ function ThunderCoreDialog({
         <Dialog.Content
           className={cn(
             "fixed top-1/2 left-1/2 z-[var(--a-z-modal)] w-[min(22.5rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 outline-none",
-            "rounded-[28px] p-6",
+            "rounded-[var(--a-radius-lg)] p-6",
             "bg-[color-mix(in_srgb,var(--a-surface-2)_88%,transparent)]",
             "shadow-[0_24px_80px_rgb(0_0_0/0.35),0_0_0_0.5px_rgb(255_255_255/0.12)_inset]",
             "backdrop-blur-[40px] saturate-[180%]",
           )}
         >
           <Dialog.Title className="flex items-center gap-2.5 text-[17px] font-semibold tracking-[-0.02em] text-a-fg">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-[12px] bg-a-accent/20 text-a-accent">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] bg-a-accent/20 text-a-accent">
               <Zap
                 className="h-4 w-4"
                 strokeWidth={2}
@@ -163,17 +163,15 @@ function ThunderCoreDialog({
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-a-fg-subtle">
                 {t("surface")}
               </p>
-              <div className="grid grid-cols-4 gap-1.5 rounded-[16px] bg-a-surface-3/70 p-1.5">
+              <div className="grid grid-cols-4 gap-1.5 rounded-[var(--a-radius-md)] bg-a-surface-3/70 p-1.5">
                 {SURFACES.map((s) => (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => setSurfaceMode(s.id)}
                     className={cn(
-                      "rounded-[12px] px-1 py-2.5 text-[11px] font-semibold transition-all",
-                      surfaceMode === s.id
-                        ? "bg-[rgb(255_255_255/0.92)] text-[#0a1628] shadow-sm [data-theme=dark]:bg-[rgb(44_44_46/0.95)] [data-theme=dark]:text-a-fg"
-                        : "text-a-fg-muted hover:text-a-fg",
+                      "a-action-quiet rounded-[var(--a-radius-sm)] px-1 py-2.5 text-[11px] font-semibold",
+                      surfaceMode === s.id && "is-active text-a-fg",
                     )}
                   >
                     {s.label}
@@ -185,17 +183,15 @@ function ThunderCoreDialog({
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-a-fg-subtle">
                 {t("density")}
               </p>
-              <div className="grid grid-cols-3 gap-1.5 rounded-[16px] bg-a-surface-3/70 p-1.5">
+              <div className="grid grid-cols-3 gap-1.5 rounded-[var(--a-radius-md)] bg-a-surface-3/70 p-1.5">
                 {DENSITIES.map((d) => (
                   <button
                     key={d.id}
                     type="button"
                     onClick={() => setDensity(d.id)}
                     className={cn(
-                      "rounded-[12px] px-1 py-2.5 text-[11px] font-semibold transition-all",
-                      density === d.id
-                        ? "bg-[rgb(255_255_255/0.92)] text-[#0a1628] shadow-sm"
-                        : "text-a-fg-muted hover:text-a-fg",
+                      "a-action-quiet rounded-[var(--a-radius-sm)] px-1 py-2.5 text-[11px] font-semibold",
+                      density === d.id && "is-active text-a-fg",
                     )}
                   >
                     {d.label}
@@ -206,14 +202,14 @@ function ThunderCoreDialog({
             <Link
               href="/settings#apparence"
               onClick={() => onOpenChange(false)}
-              className="flex items-center gap-2 rounded-[14px] bg-a-surface-3/50 px-3.5 py-3 text-[14px] text-a-fg-muted transition-colors hover:bg-a-surface-3 hover:text-a-fg"
+              className="a-action-quiet flex w-full items-center gap-2 rounded-[var(--a-radius-sm)] px-3.5 py-3 text-[14px]"
             >
               <Settings2 className="h-4 w-4" strokeWidth={1.5} />
               {t("preferences")}
             </Link>
           </div>
 
-          <Dialog.Close className="mt-5 w-full rounded-[14px] bg-a-accent px-3 py-3 text-[15px] font-semibold text-white shadow-md transition-opacity hover:opacity-90">
+          <Dialog.Close className="a-action-primary mt-5 w-full px-3 py-3 text-[15px] font-semibold">
             {t("close")}
           </Dialog.Close>
         </Dialog.Content>
@@ -240,7 +236,7 @@ function ActionTile({
       <Link
         href={action.href}
         title={action.label}
-        className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-md text-a-orange hover:bg-a-surface-3"
+        className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)] text-a-orange"
       >
         <Icon className="h-5 w-5" strokeWidth={SIDEBAR_STROKE} aria-hidden />
       </Link>
@@ -250,7 +246,7 @@ function ActionTile({
   return (
     <Link
       href={action.href}
-      className="a-nav-row group flex w-full items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left hover:bg-a-surface-3"
+      className="a-nav-row group flex w-full items-center gap-2.5 rounded-[var(--a-radius-sm)] px-1.5 py-1.5 text-left"
     >
       <Icon
         className="h-5 w-5 shrink-0 text-a-orange"
@@ -460,7 +456,7 @@ export function SmartActionDock() {
           <Link
             href="/settings#apparence"
             aria-label={t("preferences")}
-            className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-md text-a-orange hover:bg-a-surface-3"
+            className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)] text-a-orange"
           >
             <Settings2 className="h-5 w-5" strokeWidth={SIDEBAR_STROKE} />
           </Link>

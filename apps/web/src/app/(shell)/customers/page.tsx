@@ -7,12 +7,18 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftThead,
+  ASoftTr,
   ASwitch,
 } from "@/components/a";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import {
   STATUS_LABELS,
   addCustomerContact,
@@ -35,7 +41,7 @@ import {
   fetchCustomerFinancialOverview,
   type CustomerFinancialOverview,
 } from "@/lib/finance";
-import { softPageBody, softSelect, softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 import Link from "next/link";
 
 type LoadState =
@@ -361,40 +367,37 @@ export default function CustomersPage() {
         kicker="Clients"
         title="Clients"
         description="Fiches liées party (master data) + contacts, zones et crédit."
-        actions={
+        primary={
           <AButton type="button" size="sm" onClick={openCreate}>
-            Nouveau client
+            {LAYOUT_ACTIONS.newCustomer}
           </AButton>
         }
       />
-      <div className={softPageBody}>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="cus-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Recherche
-            </label>
+      <APageBody>
+        <AFilterBar
+          search={
             <AInput
               id="cus-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Code ou raison sociale"
+              aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q);
               }}
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? (
           <div className="space-y-2">
@@ -419,28 +422,27 @@ export default function CustomersPage() {
           <AEmptyState
             title="Aucun client"
             description="Créez la première fiche client."
-            actionLabel="Nouveau client"
+            actionLabel={LAYOUT_ACTIONS.newCustomer}
             onAction={openCreate}
           />
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[44rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">Code</th>
-                  <th className="a-table-cell font-medium">Surnom</th>
-                  <th className="a-table-cell font-medium">Raison sociale</th>
-                  <th className="a-table-cell font-medium">Zone</th>
-                  <th className="a-table-cell font-medium">Crédit</th>
-                  <th className="a-table-cell font-medium">Statut</th>
-                  <th className="a-table-cell font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row) => (
-                  <tr key={row.id} className={softTr}>
+          <ASoftTable className="min-w-[44rem]">
+            <ASoftThead>
+              <tr>
+                <th className="a-table-cell font-medium">Code</th>
+                <th className="a-table-cell font-medium">Surnom</th>
+                <th className="a-table-cell font-medium">Raison sociale</th>
+                <th className="a-table-cell font-medium">Zone</th>
+                <th className="a-table-cell font-medium">Crédit</th>
+                <th className="a-table-cell font-medium">Statut</th>
+                <th className="a-table-cell font-medium">Actions</th>
+              </tr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((row) => (
+                <ASoftTr key={row.id}>
                     <td className="a-mono a-table-cell">
                       <button
                         type="button"
@@ -489,13 +491,12 @@ export default function CustomersPage() {
                         </AButton>
                       </div>
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}
@@ -726,7 +727,7 @@ export default function CustomersPage() {
               </select>
             </Field>
 
-            <div className="space-y-3 rounded-[12px] bg-a-surface-3 p-3">
+            <div className="space-y-3 rounded-[var(--a-radius-sm)] bg-a-surface-3 p-3">
               <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
                 Certificat de salubrité
               </p>

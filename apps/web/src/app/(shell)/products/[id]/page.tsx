@@ -4,14 +4,21 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
+  ABadge,
   AButton,
+  AContextPanel,
+  ADetailGrid,
   AErrorState,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
+  APageSection,
   AScreenHeader,
   ASkeleton,
   ASwitch,
 } from "@/components/a";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import {
   STATUS_LABELS,
   activateProduct,
@@ -188,6 +195,29 @@ export default function ProductEditPage() {
     router.push("/products");
   }
 
+  const overflowItems =
+    state.kind === "ok"
+      ? [
+          ...(state.product.status === "DRAFT"
+            ? [
+                {
+                  id: "activate",
+                  label: "Activer",
+                  onSelect: () => void onActivate(),
+                  disabled: busy,
+                },
+              ]
+            : []),
+          {
+            id: "archive",
+            label: "Archiver",
+            onSelect: () => void onArchive(),
+            disabled: busy,
+            danger: true,
+          },
+        ]
+      : [];
+
   return (
     <>
       <AScreenHeader
@@ -198,16 +228,45 @@ export default function ProductEditPage() {
             : "Modifier le produit"
         }
         description="Catalogue · conservation (jours) pour le certificat de salubrité."
-        actions={
-          <Link
-            href="/products"
-            className="text-[13px] font-medium text-a-accent hover:underline"
-          >
+        breadcrumb={
+          <Link href="/products" className="text-a-accent hover:underline">
             ← Catalogue
           </Link>
         }
+        status={
+          state.kind === "ok" ? (
+            <ABadge
+              tone={
+                state.product.status === "ACTIVE"
+                  ? "success"
+                  : state.product.status === "DRAFT"
+                    ? "neutral"
+                    : "warning"
+              }
+            >
+              {STATUS_LABELS[state.product.status]}
+            </ABadge>
+          ) : null
+        }
+        primary={
+          state.kind === "ok" && form ? (
+            <AButton
+              type="button"
+              size="sm"
+              disabled={busy}
+              onClick={() => void onSave()}
+            >
+              {busy ? "…" : LAYOUT_ACTIONS.save}
+            </AButton>
+          ) : null
+        }
+        more={
+          overflowItems.length > 0 ? (
+            <AOverflowMenu items={overflowItems} />
+          ) : null
+        }
       />
-      <div className="mx-auto max-w-xl space-y-6 px-6 pb-16 pt-2 md:px-10">
+      <APageBody>
         {state.kind === "loading" ? <ASkeleton className="h-64 w-full" /> : null}
         {state.kind === "forbidden" ? (
           <AForbiddenState message={state.message} />
@@ -221,19 +280,10 @@ export default function ProductEditPage() {
         ) : null}
 
         {state.kind === "ok" && form ? (
-          <div className="space-y-4">
-            <p className="text-[13px] text-a-fg-muted">
-              Statut{" "}
-              <span className="font-medium text-a-fg">
-                {STATUS_LABELS[state.product.status]}
-              </span>
-              {" · "}
-              SKU{" "}
-              <span className="a-mono font-medium text-a-fg">
-                {state.product.sku}
-              </span>
-            </p>
-
+          <ADetailGrid
+            primary={
+              <APageSection title="Identité produit">
+                <div className="max-w-xl space-y-4">
             <Field label="Nom" htmlFor="prd-name">
               <AInput
                 id="prd-name"
@@ -366,40 +416,40 @@ export default function ProductEditPage() {
                 {formError}
               </p>
             ) : null}
-
-            <div className="flex flex-wrap gap-2 pt-2">
-              <AButton
-                type="button"
-                size="sm"
-                disabled={busy}
-                onClick={() => void onSave()}
-              >
-                {busy ? "…" : "Enregistrer"}
-              </AButton>
-              {state.product.status === "DRAFT" ? (
-                <AButton
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => void onActivate()}
-                >
-                  Activer
-                </AButton>
-              ) : null}
-              <AButton
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={busy}
-                onClick={() => void onArchive()}
-              >
-                Archiver
-              </AButton>
-            </div>
-          </div>
+                </div>
+              </APageSection>
+            }
+            context={
+              <AContextPanel title="Résumé">
+                <dl className="space-y-3 text-[13px]">
+                  <div>
+                    <dt className="text-a-fg-muted">SKU</dt>
+                    <dd className="a-mono font-medium text-a-fg">
+                      {state.product.sku}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">Statut</dt>
+                    <dd className="font-medium text-a-fg">
+                      {STATUS_LABELS[state.product.status]}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">Unité</dt>
+                    <dd className="text-a-fg">{form.uom}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">Suivi lot</dt>
+                    <dd className="text-a-fg">
+                      {form.trackLot || form.perishable ? "Oui" : "Non"}
+                    </dd>
+                  </div>
+                </dl>
+              </AContextPanel>
+            }
+          />
         ) : null}
-      </div>
+      </APageBody>
     </>
   );
 }

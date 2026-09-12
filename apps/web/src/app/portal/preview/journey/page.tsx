@@ -64,7 +64,7 @@ export default function PortalJourneyPreviewPage() {
           </AButton>
         </div>
 
-        <p className="rounded-[14px] bg-a-surface-2 px-3 py-2 text-center text-[length:var(--a-text-xs)] text-a-fg-muted">
+        <p className="rounded-[var(--a-radius-md)] bg-a-surface-2 px-3 py-2 text-center text-[length:var(--a-text-xs)] text-a-fg-muted">
           Stub : {delivery.number} · commande {delivery.orderNumber} · livreur{" "}
           {delivery.driverLabel}. Cliquez les étapes du schéma.
         </p>

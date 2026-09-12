@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ABadge,
   AButton,
@@ -9,8 +9,11 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
   type AComboboxOption,
@@ -29,7 +32,6 @@ import {
   type PaymentMethod,
 } from "@/lib/finance";
 import {
-  softPageBody,
   softSelect,
   softTableWrap,
   softThead,
@@ -54,6 +56,7 @@ const METHODS: { id: PaymentMethod; label: string }[] = [
 const POLICIES = Object.keys(POLICY_LABELS) as AllocationPolicy[];
 
 export default function FinancePaymentsPage() {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -210,83 +213,85 @@ export default function FinancePaymentsPage() {
 
   const today = new Date().toISOString().slice(0, 10);
 
+  function openCreate() {
+    setFormError(null);
+    setForm({
+      customerId: null,
+      customerLabel: "",
+      amount: "",
+      method: "CASH",
+      paymentDate: today,
+      reference: "",
+      instrumentNumber: "",
+      bankName: "",
+      dueDate: "",
+    });
+    setDrawerOpen(true);
+  }
+
   return (
     <>
       <AScreenHeader
         kicker="Finance"
         title="Encaissements"
         description="Paiements + Allocation Engine (politiques A–G) — Utility Cube."
-        actions={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/finance/invoices"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Factures
-            </Link>
-            <Link
-              href="/finance/credit-notes"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Avoirs
-            </Link>
-            <Link
-              href="/finance/banking"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted hover:text-a-fg"
-            >
-              Banque
-            </Link>
-            <AButton
-              type="button"
-              size="sm"
-              onClick={() => {
-                setFormError(null);
-                setForm({
-                  customerId: null,
-                  customerLabel: "",
-                  amount: "",
-                  method: "CASH",
-                  paymentDate: today,
-                  reference: "",
-                  instrumentNumber: "",
-                  bankName: "",
-                  dueDate: "",
-                });
-                setDrawerOpen(true);
-              }}
-            >
-              Nouveau paiement
-            </AButton>
-          </div>
+        primary={
+          <AButton type="button" size="sm" onClick={openCreate}>
+            Nouveau paiement
+          </AButton>
+        }
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "invoices",
+                label: "Factures",
+                onSelect: () => router.push("/finance/invoices"),
+              },
+              {
+                id: "credit-notes",
+                label: "Avoirs",
+                onSelect: () => router.push("/finance/credit-notes"),
+              },
+              {
+                id: "banking",
+                label: "Banque",
+                onSelect: () => router.push("/finance/banking"),
+              },
+              {
+                id: "receivables",
+                label: "Créances",
+                onSelect: () => router.push("/finance"),
+              },
+            ]}
+          />
         }
       />
-      <div className={softPageBody}>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="pay-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Recherche
-            </label>
+      <APageBody>
+        <AFilterBar
+          search={
             <AInput
               id="pay-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              placeholder="N° / client / référence"
+              aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q);
               }}
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? (
           <ASkeleton className="h-24 w-full" />
@@ -383,7 +388,7 @@ export default function FinancePaymentsPage() {
             </table>
           </div>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}

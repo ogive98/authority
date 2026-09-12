@@ -7,14 +7,15 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  APageBody,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
 import {
   softChipClass,
-  softPageBody,
   softSelect,
   softTableWrap,
   softThead,
@@ -210,66 +211,64 @@ export default function DocumentsPage() {
         kicker="Documents"
         title="Bibliothèque"
         description="Fichiers SOC-09 · lien CLAIM/ORDER/SHIPMENT/HR_EMPLOYEE/HR_BULLETIN · signed URL portal."
-        actions={
+        primary={
           <AButton type="button" size="sm" onClick={() => setDrawerOpen(true)}>
             Déposer un fichier
           </AButton>
         }
       />
-      <div className={softPageBody}>
-        <div
-          role="tablist"
-          aria-label="Filtre visibilité"
-          className="flex flex-wrap gap-2"
-        >
-          {VIS_FILTERS.map((chip) => {
-            const active = visFilter === chip.id;
-            return (
-              <button
-                key={chip.id || "all"}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() =>
-                  setVisFilter(
-                    chip.id as "" | "INTERNAL" | "CUSTOMER_PORTAL",
-                  )
-                }
-                className={softChipClass(active)}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="doc-q"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Recherche
-            </label>
+      <APageBody>
+        <AFilterBar
+          search={
             <AInput
               id="doc-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="N° / titre"
+              aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q, visFilter);
               }}
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q, visFilter)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          filters={
+            <div
+              role="tablist"
+              aria-label="Filtre visibilité"
+              className="flex flex-wrap gap-2"
+            >
+              {VIS_FILTERS.map((chip) => {
+                const active = visFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id || "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() =>
+                      setVisFilter(
+                        chip.id as "" | "INTERNAL" | "CUSTOMER_PORTAL",
+                      )
+                    }
+                    className={softChipClass(active)}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q, visFilter)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? (
           <div className="space-y-2">
@@ -347,7 +346,7 @@ export default function DocumentsPage() {
             </table>
           </div>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}

@@ -2,18 +2,25 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ABadge,
   AButton,
+  AContextPanel,
+  ADetailGrid,
   ADrawer,
   AErrorState,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
+  APageSection,
   AScreenHeader,
   ASkeleton,
   ASwitch,
+  type AOverflowItem,
 } from "@/components/a";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import { HrUpcomingLots } from "@/components/hr/hr-upcoming-lots";
 import { AttendanceCalendarPanel } from "@/components/attendance/attendance-calendar-panel";
@@ -61,8 +68,6 @@ import {
   type LevyPreview,
 } from "@/lib/hr";
 import {
-  softPageBody,
-  softPanel,
   softSelect,
   softTableWrap,
   softThead,
@@ -803,31 +808,67 @@ export default function HrEmployeeFichePage() {
   const employee = state.kind === "ok" ? state.employee : null;
   const active = employee?.status === "ACTIVE";
 
+  const overflowItems = useMemo((): AOverflowItem[] => {
+    if (!employee || !active) return [];
+    const items: AOverflowItem[] = [
+      {
+        id: "gen-contract",
+        label: "Générer contrat",
+        onSelect: () => void openGenContract(),
+        disabled: busy,
+      },
+      {
+        id: "gen-attestation",
+        label: "Générer attestation",
+        onSelect: () => void openGenAttestation(),
+        disabled: busy,
+      },
+    ];
+    return items;
+  }, [employee, active, busy]);
+
   return (
     <>
       <AScreenHeader
-        kicker="Ressources humaines"
-        title={
-          employee
-            ? `${employee.displayName}`
-            : "Fiche salarié"
+        breadcrumb={
+          <Link href="/hr" className="hover:text-a-fg">
+            Employés
+          </Link>
         }
+        kicker="Ressources humaines"
+        title={employee ? employee.displayName : "Fiche salarié"}
         description={
           employee
             ? `Matricule ${employee.matricule} · photo, identité, contrats, fiscal, dossier.`
             : "Photo, identité, contrats, fiscal, dossier."
         }
-        actions={
-          <Link
-            href="/hr"
-            className="inline-flex items-center rounded-[var(--a-radius-md)] bg-a-surface-3 px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium text-a-fg hover:opacity-90"
-          >
-            Retour RH
-          </Link>
+        status={
+          employee ? (
+            <ABadge tone={statusTone(employee.status)}>
+              {employee.status}
+            </ABadge>
+          ) : undefined
+        }
+        primary={
+          employee ? (
+            <AButton
+              type="button"
+              size="sm"
+              disabled={busy || !displayName.trim()}
+              onClick={() => void onSaveIdentity()}
+            >
+              {LAYOUT_ACTIONS.save}
+            </AButton>
+          ) : undefined
+        }
+        more={
+          overflowItems.length > 0 ? (
+            <AOverflowMenu items={overflowItems} />
+          ) : undefined
         }
       />
 
-      <div className={softPageBody}>
+      <APageBody>
         <ExpertiseHintsStrip
           keys={[
             "hr.cnss.employee",
@@ -858,19 +899,10 @@ export default function HrEmployeeFichePage() {
         ) : null}
 
         {employee ? (
-          <>
-            <section className={softPanel} aria-labelledby="hr-id-title">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2
-                  id="hr-id-title"
-                  className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
-                >
-                  Identité
-                </h2>
-                <ABadge tone={statusTone(employee.status)}>
-                  {employee.status}
-                </ABadge>
-              </div>
+          <ADetailGrid
+            primary={
+              <>
+            <APageSection title="Identité">
               <input
                 ref={photoInputRef}
                 type="file"
@@ -1115,19 +1147,12 @@ export default function HrEmployeeFichePage() {
               >
                 Enregistrer l’identité
               </AButton>
-            </section>
+            </APageSection>
 
-            <section className={softPanel} aria-labelledby="hr-iam-title">
-              <h2
-                id="hr-iam-title"
-                className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
-              >
-                Compte Identity
-              </h2>
-              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Lien optionnel vers un compte ERP déjà affecté à la société.
-                Ne crée pas d’utilisateur — Délier ne le supprime pas.
-              </p>
+            <APageSection
+              title="Compte Identity"
+              description="Lien optionnel vers un compte ERP déjà affecté à la société. Ne crée pas d’utilisateur — Délier ne le supprime pas."
+            >
               {employee.linkedUser ? (
                 <div className="flex flex-wrap items-center gap-3 rounded-md bg-a-surface-3 px-3 py-2">
                   <div className="min-w-0 flex-1 space-y-0.5">
@@ -1195,19 +1220,12 @@ export default function HrEmployeeFichePage() {
                   </AButton>
                 </div>
               )}
-            </section>
+            </APageSection>
 
-            <section className={softPanel} aria-labelledby="hr-tax-title">
-              <h2
-                id="hr-tax-title"
-                className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
-              >
-                Situation fiscale
-              </h2>
-              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Défauts employé — figés dans le snapshot IRPP. Obligatoires si
-                Prefs abattements VALIDATED.
-              </p>
+            <APageSection
+              title="Situation fiscale"
+              description="Défauts employé — figés dans le snapshot IRPP. Obligatoires si Prefs abattements VALIDATED."
+            >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[length:var(--a-text-sm)]">
                   Chef de famille
@@ -1238,40 +1256,12 @@ export default function HrEmployeeFichePage() {
               >
                 Enregistrer le fiscal
               </AButton>
-            </section>
+            </APageSection>
 
-            <section className="space-y-3" aria-labelledby="hr-ctr-title">
-              <div>
-                <h2
-                  id="hr-ctr-title"
-                  className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
-                >
-                  Contrats & documents
-                </h2>
-                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                  Générer un contrat ou une attestation — texte librement
-                  modifiable avant le PDF.
-                </p>
-              </div>
-              {active ? (
-                <div className="flex flex-wrap gap-2">
-                  <AButton
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void openGenContract()}
-                  >
-                    Générer contrat
-                  </AButton>
-                  <AButton
-                    type="button"
-                    variant="ghost"
-                    disabled={busy}
-                    onClick={() => void openGenAttestation()}
-                  >
-                    Générer attestation
-                  </AButton>
-                </div>
-              ) : null}
+            <APageSection
+              title="Contrats & documents"
+              description="Générer un contrat ou une attestation — texte librement modifiable avant le PDF."
+            >
               {employee.contracts.length === 0 ? (
                 <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                   Aucun contrat — « Générer contrat » en crée un
@@ -1363,19 +1353,12 @@ export default function HrEmployeeFichePage() {
                   </table>
                 </div>
               )}
-            </section>
+            </APageSection>
 
-            <section className={softPanel} aria-labelledby="hr-doc-title">
-              <h2
-                id="hr-doc-title"
-                className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
-              >
-                Dossier personnel
-              </h2>
-              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Documents internes (Documents · HR_EMPLOYEE). Aperçu et
-                impression same-origin. Pas de portail client.
-              </p>
+            <APageSection
+              title="Dossier personnel"
+              description="Documents internes (Documents · HR_EMPLOYEE). Aperçu et impression same-origin. Pas de portail client."
+            >
               {docs.length === 0 ? (
                 <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                   Aucun document.
@@ -1518,13 +1501,55 @@ export default function HrEmployeeFichePage() {
               >
                 Joindre
               </AButton>
-            </section>
-
-            <AttendanceCalendarPanel employeeId={id} mode="adv" />
-            <HrUpcomingLots />
-          </>
+            </APageSection>
+              </>
+            }
+            context={
+              <AContextPanel title="Synthèse">
+                <dl className="space-y-2 text-[length:var(--a-text-sm)]">
+                  <div>
+                    <dt className="text-a-fg-muted">Matricule</dt>
+                    <dd className="a-mono">{employee.matricule}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">Poste</dt>
+                    <dd>
+                      {[employee.jobTitle, employee.department]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">CNSS n°</dt>
+                    <dd className="a-mono">{employee.cnssNo ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">Contrats actifs</dt>
+                    <dd className="a-mono">
+                      {employee.contracts.filter((c) => c.status === "ACTIVE")
+                        .length || "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">Identity</dt>
+                    <dd>
+                      {employee.linkedUser
+                        ? employee.linkedUser.displayName
+                        : "Non lié"}
+                    </dd>
+                  </div>
+                </dl>
+              </AContextPanel>
+            }
+            below={
+              <>
+                <AttendanceCalendarPanel employeeId={id} mode="adv" />
+                <HrUpcomingLots />
+              </>
+            }
+          />
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}

@@ -167,7 +167,7 @@ export function ModuleShortcutsWidget({ className }: { className?: string }) {
                 >
                   <span
                     className={cn(
-                      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] bg-a-accent-muted",
+                      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--a-radius-sm)] bg-a-accent-muted",
                       personalityForFeature(f.id, f.label).colorClass,
                     )}
                     aria-hidden
@@ -409,7 +409,7 @@ export function HomeKpiStrip() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="a-glass flex min-h-[7.5rem] flex-col justify-between rounded-[1.25rem] p-4"
+            className="a-glass flex min-h-[7.5rem] flex-col justify-between rounded-[var(--a-radius-lg)] p-4"
           >
             <ASkeleton className="h-3 w-24" />
             <ASkeleton className="h-8 w-32" />
@@ -451,7 +451,7 @@ export function HomeKpiStrip() {
           <Link
             key={card.id}
             href={card.href}
-            className="a-glass a-stagger-in flex min-h-[7.5rem] flex-col justify-between rounded-[1.25rem] p-4 transition-colors hover:bg-a-surface-3/40"
+            className="a-glass a-stagger-in flex min-h-[7.5rem] flex-col justify-between rounded-[var(--a-radius-lg)] p-4 transition-colors hover:bg-a-surface-3/40"
           >
             <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#f97316]">
               {label}

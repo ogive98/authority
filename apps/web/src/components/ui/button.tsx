@@ -3,20 +3,22 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/**
+ * Soft Glass buttons (D228):
+ * - primary = grandes actions (Nouveau / Enregistrer / Créer) — encadrement accent
+ * - secondary / outline / ghost = soulignement couleur icônes (orange) + hover
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-a-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-a-surface-1",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none",
   {
     variants: {
       variant: {
-        primary:
-          "bg-a-accent text-a-accent-fg hover:bg-a-accent-hover",
-        secondary:
-          "bg-a-surface-3 text-a-fg hover:bg-a-surface-4",
-        outline:
-          "bg-a-surface-3 text-a-fg hover:bg-a-surface-4",
-        ghost: "bg-transparent text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
+        primary: "a-action-primary focus-visible:ring-2 focus-visible:ring-a-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-a-surface-1",
+        secondary: "a-action-quiet px-2",
+        outline: "a-action-quiet px-2",
+        ghost: "a-action-quiet px-1.5",
         danger:
-          "bg-a-danger text-white hover:opacity-90",
+          "a-action-quiet text-a-danger hover:text-a-danger-fg [&::after]:bg-a-danger",
       },
       size: {
         sm: "h-8 px-3 text-[length:var(--a-text-sm)]",
@@ -39,11 +41,12 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
+    const isPrimary = !variant || variant === "primary";
     return (
       <Comp
         className={cn(
           buttonVariants({ variant, size }),
-          "rounded-[var(--a-radius-sm)]",
+          isPrimary ? "rounded-[var(--a-radius-sm)]" : "rounded-[var(--a-radius-sm)]",
           className,
         )}
         ref={ref}

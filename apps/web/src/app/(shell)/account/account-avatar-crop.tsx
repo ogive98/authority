@@ -67,7 +67,7 @@ export function AccountAvatarCrop({ file, onCancel, onCropped }: Props) {
 
   return (
     <div className="fixed inset-0 z-[var(--a-z-modal,80)] flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm space-y-4 rounded-[14px] bg-a-surface-1 p-5 shadow-[var(--a-shadow-panel)]">
+      <div className="w-full max-w-sm space-y-4 rounded-[var(--a-radius-md)] bg-a-surface-1 p-5 shadow-[var(--a-shadow-panel)]">
         <h3 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
           Ajuster la photo
         </h3>

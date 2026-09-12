@@ -3,22 +3,25 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { FileDown, Printer } from "lucide-react";
 import {
   AButton,
+  AContextPanel,
+  ADetailGrid,
   AErrorState,
   AForbiddenState,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
 import { BulletinPrintSheet } from "@/components/hr/bulletin-print-sheet";
 import { HrTransferOrderPanel } from "@/components/hr/hr-transfer-order-panel";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import {
   downloadBulletinPdf,
   fetchBulletin,
   type Bulletin,
 } from "@/lib/hr";
-import { softPageBody } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -64,56 +67,55 @@ export default function HrBulletinPrintPage() {
     if (!res.ok) setPdfError(res.message);
   }
 
+  const bulletin = state.kind === "ok" ? state.data : null;
+
   return (
     <>
       <div className="print:hidden">
         <AScreenHeader
+          breadcrumb={
+            <Link href="/hr" className="hover:text-a-fg">
+              Bulletins
+            </Link>
+          }
           kicker="Ressources humaines"
-          title="Bulletin"
+          title={bulletin ? bulletin.number : "Bulletin"}
           description="Impression Soft Glass + PDF serveur (layout légal minimal)."
-          actions={
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/hr"
-                className="inline-flex items-center rounded-[var(--a-radius-md)] bg-a-surface-3 px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium text-a-fg hover:opacity-90"
-              >
-                Retour RH
-              </Link>
-              {state.kind === "ok" ? (
-                <>
-                  <AButton type="button" onClick={() => window.print()}>
-                    <Printer className="mr-1.5 h-4 w-4" strokeWidth={1.75} />
-                    Imprimer
-                  </AButton>
-                  <AButton
-                    type="button"
-                    variant="secondary"
-                    disabled={pdfBusy}
-                    onClick={() => void onPdf()}
-                  >
-                    <FileDown className="mr-1.5 h-4 w-4" strokeWidth={1.75} />
-                    PDF
-                  </AButton>
-                </>
-              ) : null}
-            </div>
+          primary={
+            bulletin ? (
+              <AButton type="button" size="sm" onClick={() => window.print()}>
+                {LAYOUT_ACTIONS.print}
+              </AButton>
+            ) : undefined
+          }
+          more={
+            bulletin ? (
+              <AOverflowMenu
+                items={[
+                  {
+                    id: "pdf",
+                    label: "Télécharger PDF",
+                    onSelect: () => void onPdf(),
+                    disabled: pdfBusy,
+                  },
+                ]}
+              />
+            ) : undefined
           }
         />
         {pdfError ? (
-          <p className="mb-3 text-[length:var(--a-text-sm)] text-a-danger-fg">
+          <p className="mb-3 px-6 text-[length:var(--a-text-sm)] text-a-danger-fg md:px-8">
             {pdfError}
           </p>
         ) : null}
-        {state.kind === "ok" ? (
-          <div className={`${softPageBody} mb-6`}>
-            <HrTransferOrderPanel bulletinId={state.data.id} />
-          </div>
+        {bulletin ? (
+          <APageBody className="mb-6">
+            <HrTransferOrderPanel bulletinId={bulletin.id} />
+          </APageBody>
         ) : null}
       </div>
 
-      <div
-        className={`${softPageBody} mx-auto max-w-2xl print:max-w-none print:p-0`}
-      >
+      <APageBody className="mx-auto max-w-2xl print:max-w-none print:p-0">
         {state.kind === "loading" ? (
           <ASkeleton className="h-64 w-full print:hidden" />
         ) : null}
@@ -131,30 +133,67 @@ export default function HrBulletinPrintPage() {
             />
           </div>
         ) : null}
-        {state.kind === "ok" ? (
-          <BulletinPrintSheet
-            data={{
-              number: state.data.number,
-              periodYm: state.data.periodYm,
-              employeeName: state.data.employeeName ?? "—",
-              matricule: state.data.matricule ?? "—",
-              contractNumber: state.data.contractNumber ?? "—",
-              wageBase: state.data.wageBase,
-              cnssEmployeeAmount: state.data.cnssEmployeeAmount,
-              cnssEmployerAmount: state.data.cnssEmployerAmount,
-              irppMonthly: state.data.irppMonthly,
-              netPay: state.data.netPay,
-              currency: state.data.currency,
-              annualTaxableBeforeAbat: state.data.annualTaxableBeforeAbat,
-              abatChefAnnual: state.data.abatChefAnnual,
-              abatEnfantAnnual: state.data.abatEnfantAnnual,
-              abatTotalAnnual: state.data.abatTotalAnnual,
-              taxChefDeFamille: state.data.taxChefDeFamille,
-              taxEnfantCount: state.data.taxEnfantCount,
-            }}
+        {bulletin ? (
+          <ADetailGrid
+            primary={
+              <BulletinPrintSheet
+                data={{
+                  number: bulletin.number,
+                  periodYm: bulletin.periodYm,
+                  employeeName: bulletin.employeeName ?? "—",
+                  matricule: bulletin.matricule ?? "—",
+                  contractNumber: bulletin.contractNumber ?? "—",
+                  wageBase: bulletin.wageBase,
+                  cnssEmployeeAmount: bulletin.cnssEmployeeAmount,
+                  cnssEmployerAmount: bulletin.cnssEmployerAmount,
+                  irppMonthly: bulletin.irppMonthly,
+                  netPay: bulletin.netPay,
+                  currency: bulletin.currency,
+                  annualTaxableBeforeAbat: bulletin.annualTaxableBeforeAbat,
+                  abatChefAnnual: bulletin.abatChefAnnual,
+                  abatEnfantAnnual: bulletin.abatEnfantAnnual,
+                  abatTotalAnnual: bulletin.abatTotalAnnual,
+                  taxChefDeFamille: bulletin.taxChefDeFamille,
+                  taxEnfantCount: bulletin.taxEnfantCount,
+                }}
+              />
+            }
+            context={
+              <AContextPanel title="Synthèse" className="print:hidden">
+                <dl className="space-y-2 text-[length:var(--a-text-sm)]">
+                  <div>
+                    <dt className="text-a-fg-muted">Période</dt>
+                    <dd className="a-mono tabular-nums">{bulletin.periodYm}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">Employé</dt>
+                    <dd>
+                      {bulletin.matricule ? `${bulletin.matricule} · ` : ""}
+                      {bulletin.employeeName ?? "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">Contrat</dt>
+                    <dd className="a-mono">{bulletin.contractNumber ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">Base CNSS</dt>
+                    <dd className="a-mono tabular-nums">
+                      {bulletin.wageBase ?? "—"} {bulletin.currency}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">Net à payer</dt>
+                    <dd className="a-mono tabular-nums font-medium text-a-fg">
+                      {bulletin.netPay} {bulletin.currency}
+                    </dd>
+                  </div>
+                </dl>
+              </AContextPanel>
+            }
           />
         ) : null}
-      </div>
+      </APageBody>
 
       <style>{`
         @media print {

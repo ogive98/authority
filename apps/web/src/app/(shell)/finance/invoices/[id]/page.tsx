@@ -2,14 +2,20 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ABadge,
   AButton,
+  AContextPanel,
+  ADetailGrid,
   AErrorState,
   AForbiddenState,
+  AOverflowMenu,
+  APageBody,
+  APageSection,
   AScreenHeader,
   ASkeleton,
+  type AOverflowItem,
 } from "@/components/a";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
@@ -20,13 +26,7 @@ import {
   issueInvoice,
   type FinInvoice,
 } from "@/lib/finance";
-import {
-  softPageBody,
-  softPanel,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -103,60 +103,69 @@ export default function FinanceInvoiceFichePage() {
 
   const inv = state.kind === "ok" ? state.data : null;
 
+  const overflowItems = useMemo((): AOverflowItem[] => {
+    if (!inv) return [];
+    const items: AOverflowItem[] = [];
+    if (inv.status === "ISSUED") {
+      items.push({
+        id: "credit-note",
+        label: "Avoir",
+        onSelect: () =>
+          router.push(
+            `/finance/credit-notes?invoiceId=${encodeURIComponent(inv.id)}`,
+          ),
+      });
+    }
+    if (inv.status === "DRAFT" || inv.status === "ISSUED") {
+      items.push({
+        id: "cancel",
+        label: "Annuler",
+        danger: true,
+        disabled: busy,
+        onSelect: () => void onCancel(),
+      });
+    }
+    return items;
+  }, [inv, busy, router]);
+
   return (
     <>
       <AScreenHeader
+        breadcrumb={
+          <Link href="/finance/invoices" className="hover:text-a-fg">
+            Factures
+          </Link>
+        }
         kicker="Finance"
         title={inv ? inv.number : "Facture"}
         description="Fiche Soft Glass — HT/TVA/FODEC/timbre/TTC as-recorded (D224)."
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/finance/invoices"
-              className="inline-flex items-center rounded-[var(--a-radius-md)] bg-a-surface-3 px-3 py-1.5 text-[length:var(--a-text-sm)] font-medium text-a-fg hover:opacity-90"
+        status={
+          inv ? (
+            <ABadge tone={invoiceBadgeTone(inv.status)}>
+              {INVOICE_STATUS_LABELS[inv.status]}
+            </ABadge>
+          ) : undefined
+        }
+        primary={
+          inv?.status === "DRAFT" ? (
+            <AButton
+              type="button"
+              size="sm"
+              disabled={busy}
+              onClick={() => void onIssue()}
             >
-              Retour
-            </Link>
-            {inv?.status === "DRAFT" ? (
-              <AButton
-                type="button"
-                size="sm"
-                disabled={busy}
-                onClick={() => void onIssue()}
-              >
-                Émettre
-              </AButton>
-            ) : null}
-            {inv?.status === "ISSUED" ? (
-              <AButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  router.push(
-                    `/finance/credit-notes?invoiceId=${encodeURIComponent(inv.id)}`,
-                  )
-                }
-              >
-                Avoir
-              </AButton>
-            ) : null}
-            {inv && (inv.status === "DRAFT" || inv.status === "ISSUED") ? (
-              <AButton
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={busy}
-                onClick={() => void onCancel()}
-              >
-                Annuler
-              </AButton>
-            ) : null}
-          </div>
+              Émettre
+            </AButton>
+          ) : undefined
+        }
+        more={
+          overflowItems.length > 0 ? (
+            <AOverflowMenu items={overflowItems} />
+          ) : undefined
         }
       />
 
-      <div className={softPageBody}>
+      <APageBody>
         <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre"]} />
 
         {actionError ? (
@@ -185,181 +194,183 @@ export default function FinanceInvoiceFichePage() {
         ) : null}
 
         {inv ? (
-          <>
-            <section className={`${softPanel} space-y-4 p-5`}>
-              <div className="flex flex-wrap items-center gap-2">
-                <ABadge tone={invoiceBadgeTone(inv.status)}>
-                  {INVOICE_STATUS_LABELS[inv.status]}
-                </ABadge>
-                <span className="a-mono text-[length:var(--a-text-sm)] text-a-fg-muted">
-                  v{inv.version}
-                </span>
-              </div>
+          <ADetailGrid
+            primary={
+              <>
+                <APageSection title="Identité">
+                  <span className="mb-3 inline-block a-mono text-[length:var(--a-text-sm)] text-a-fg-muted">
+                    v{inv.version}
+                  </span>
+                  <dl className="grid gap-3 text-[length:var(--a-text-sm)] sm:grid-cols-2">
+                    <div>
+                      <dt className="text-a-fg-muted">Client</dt>
+                      <dd>
+                        {inv.customerName ?? "—"}{" "}
+                        <span className="a-mono text-a-fg-muted">
+                          {inv.customerCode}
+                        </span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-a-fg-muted">Libellé</dt>
+                      <dd>{inv.label ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-a-fg-muted">Échéance</dt>
+                      <dd className="a-mono">{inv.dueDate ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-a-fg-muted">Émise le</dt>
+                      <dd className="a-mono">
+                        {inv.issuedAt ? inv.issuedAt.slice(0, 10) : "—"}
+                      </dd>
+                    </div>
+                    {inv.salesOrderId ? (
+                      <div>
+                        <dt className="text-a-fg-muted">Commande</dt>
+                        <dd>
+                          <Link
+                            href={`/sales/${inv.salesOrderId}`}
+                            className="text-a-accent hover:underline"
+                          >
+                            Ouvrir Sales
+                          </Link>
+                        </dd>
+                      </div>
+                    ) : null}
+                    {inv.openItemId ? (
+                      <div>
+                        <dt className="text-a-fg-muted">Créance AR</dt>
+                        <dd>
+                          <Link
+                            href="/finance"
+                            className="a-mono text-a-accent hover:underline"
+                          >
+                            {inv.openItemId.slice(0, 8)}…
+                          </Link>
+                        </dd>
+                      </div>
+                    ) : null}
+                    {inv.notes ? (
+                      <div className="sm:col-span-2">
+                        <dt className="text-a-fg-muted">Notes</dt>
+                        <dd>{inv.notes}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                </APageSection>
 
-              <dl className="grid gap-3 text-[length:var(--a-text-sm)] sm:grid-cols-2">
-                <div>
-                  <dt className="text-a-fg-muted">Client</dt>
-                  <dd>
-                    {inv.customerName ?? "—"}{" "}
-                    <span className="a-mono text-a-fg-muted">
-                      {inv.customerCode}
-                    </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-a-fg-muted">Libellé</dt>
-                  <dd>{inv.label ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt className="text-a-fg-muted">Échéance</dt>
-                  <dd className="a-mono">{inv.dueDate ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt className="text-a-fg-muted">Émise le</dt>
-                  <dd className="a-mono">
-                    {inv.issuedAt
-                      ? inv.issuedAt.slice(0, 10)
-                      : "—"}
-                  </dd>
-                </div>
-                {inv.salesOrderId ? (
+                <APageSection title="Lignes">
+                  {(inv.lines?.length ?? 0) > 0 ? (
+                    <div className={softTableWrap}>
+                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
+                        <thead className={softThead}>
+                          <tr>
+                            <th className="px-4 py-3 font-medium">#</th>
+                            <th className="px-4 py-3 font-medium">
+                              Description
+                            </th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              Qté
+                            </th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              PU HT
+                            </th>
+                            <th className="px-4 py-3 font-medium">TVA</th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              HT
+                            </th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              Taxe
+                            </th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              TTC
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {inv.lines.map((l) => (
+                            <tr key={l.id} className={softTr}>
+                              <td className="a-mono px-4 py-3">{l.lineNo}</td>
+                              <td className="px-4 py-3">{l.description}</td>
+                              <td className="a-mono px-4 py-3 text-right tabular-nums">
+                                {l.qty}
+                              </td>
+                              <td className="a-mono px-4 py-3 text-right tabular-nums">
+                                {l.unitPriceHt}
+                              </td>
+                              <td className="a-mono px-4 py-3 text-a-fg-muted">
+                                {l.taxCode ?? "—"}
+                              </td>
+                              <td className="a-mono px-4 py-3 text-right tabular-nums">
+                                {l.amountHt}
+                              </td>
+                              <td className="a-mono px-4 py-3 text-right tabular-nums">
+                                {l.amountTax}
+                              </td>
+                              <td className="a-mono px-4 py-3 text-right tabular-nums font-medium">
+                                {l.amountTtc}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                      Aucune ligne (facture legacy).
+                    </p>
+                  )}
+                </APageSection>
+              </>
+            }
+            context={
+              <AContextPanel title="Synthèse">
+                <dl className="space-y-3 text-[length:var(--a-text-sm)]">
                   <div>
-                    <dt className="text-a-fg-muted">Commande</dt>
-                    <dd>
-                      <Link
-                        href={`/sales/${inv.salesOrderId}`}
-                        className="text-a-accent hover:underline"
-                      >
-                        Ouvrir Sales
-                      </Link>
+                    <dt className="text-a-fg-muted">HT</dt>
+                    <dd className="a-mono tabular-nums font-medium">
+                      {inv.amountHt}
                     </dd>
                   </div>
-                ) : null}
-                {inv.openItemId ? (
                   <div>
-                    <dt className="text-a-fg-muted">Créance AR</dt>
-                    <dd>
-                      <Link
-                        href="/finance"
-                        className="a-mono text-a-accent hover:underline"
-                      >
-                        {inv.openItemId.slice(0, 8)}…
-                      </Link>
+                    <dt className="text-a-fg-muted">TVA</dt>
+                    <dd className="a-mono tabular-nums">{inv.amountTax}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">FODEC</dt>
+                    <dd className="a-mono tabular-nums">
+                      {inv.amountFodec ?? "0.000"}
+                      {!inv.expertiseApplied?.fodec ? (
+                        <span className="ml-1 text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                          (off)
+                        </span>
+                      ) : null}
                     </dd>
                   </div>
-                ) : null}
-                {inv.notes ? (
-                  <div className="sm:col-span-2">
-                    <dt className="text-a-fg-muted">Notes</dt>
-                    <dd>{inv.notes}</dd>
+                  <div>
+                    <dt className="text-a-fg-muted">Timbre</dt>
+                    <dd className="a-mono tabular-nums">
+                      {inv.amountTimbre ?? "0.000"}
+                      {!inv.expertiseApplied?.timbre ? (
+                        <span className="ml-1 text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                          (off)
+                        </span>
+                      ) : null}
+                    </dd>
                   </div>
-                ) : null}
-              </dl>
-
-              <dl className="grid gap-2 text-[length:var(--a-text-sm)] sm:grid-cols-2 lg:grid-cols-5">
-                <div>
-                  <dt className="text-a-fg-muted">HT</dt>
-                  <dd className="a-mono tabular-nums font-medium">
-                    {inv.amountHt}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-a-fg-muted">TVA</dt>
-                  <dd className="a-mono tabular-nums">{inv.amountTax}</dd>
-                </div>
-                <div>
-                  <dt className="text-a-fg-muted">FODEC</dt>
-                  <dd className="a-mono tabular-nums">
-                    {inv.amountFodec ?? "0.000"}
-                    {!inv.expertiseApplied?.fodec ? (
-                      <span className="ml-1 text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                        (off)
-                      </span>
-                    ) : null}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-a-fg-muted">Timbre</dt>
-                  <dd className="a-mono tabular-nums">
-                    {inv.amountTimbre ?? "0.000"}
-                    {!inv.expertiseApplied?.timbre ? (
-                      <span className="ml-1 text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                        (off)
-                      </span>
-                    ) : null}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-a-fg-muted">TTC</dt>
-                  <dd className="a-mono tabular-nums text-[length:var(--a-text-base)] font-semibold">
-                    {inv.amountTotal} {inv.currency}
-                  </dd>
-                </div>
-              </dl>
-            </section>
-
-            <section className={`${softPanel} overflow-hidden`}>
-              <h2 className="px-5 py-3 text-[length:var(--a-text-sm)] font-semibold text-a-fg">
-                Lignes
-              </h2>
-              {(inv.lines?.length ?? 0) > 0 ? (
-                <div className={softTableWrap}>
-                  <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                    <thead className={softThead}>
-                      <tr>
-                        <th className="px-4 py-3 font-medium">#</th>
-                        <th className="px-4 py-3 font-medium">Description</th>
-                        <th className="px-4 py-3 font-medium text-right">Qté</th>
-                        <th className="px-4 py-3 font-medium text-right">
-                          PU HT
-                        </th>
-                        <th className="px-4 py-3 font-medium">TVA</th>
-                        <th className="px-4 py-3 font-medium text-right">HT</th>
-                        <th className="px-4 py-3 font-medium text-right">
-                          Taxe
-                        </th>
-                        <th className="px-4 py-3 font-medium text-right">
-                          TTC
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {inv.lines.map((l) => (
-                        <tr key={l.id} className={softTr}>
-                          <td className="a-mono px-4 py-3">{l.lineNo}</td>
-                          <td className="px-4 py-3">{l.description}</td>
-                          <td className="a-mono px-4 py-3 text-right tabular-nums">
-                            {l.qty}
-                          </td>
-                          <td className="a-mono px-4 py-3 text-right tabular-nums">
-                            {l.unitPriceHt}
-                          </td>
-                          <td className="a-mono px-4 py-3 text-a-fg-muted">
-                            {l.taxCode ?? "—"}
-                          </td>
-                          <td className="a-mono px-4 py-3 text-right tabular-nums">
-                            {l.amountHt}
-                          </td>
-                          <td className="a-mono px-4 py-3 text-right tabular-nums">
-                            {l.amountTax}
-                          </td>
-                          <td className="a-mono px-4 py-3 text-right tabular-nums font-medium">
-                            {l.amountTtc}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="px-5 pb-5 text-[length:var(--a-text-sm)] text-a-fg-muted">
-                  Aucune ligne (facture legacy).
-                </p>
-              )}
-            </section>
-          </>
+                  <div>
+                    <dt className="text-a-fg-muted">TTC</dt>
+                    <dd className="a-mono tabular-nums text-[length:var(--a-text-base)] font-semibold">
+                      {inv.amountTotal} {inv.currency}
+                    </dd>
+                  </div>
+                </dl>
+              </AContextPanel>
+            }
+          />
         ) : null}
-      </div>
+      </APageBody>
     </>
   );
 }

@@ -1,14 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AButton,
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
@@ -21,7 +24,7 @@ import {
   type InventoryWarehouse,
   type ProductOption,
 } from "@/lib/inventory";
-import { softList, softListRow, softPageBody, softSelect } from "@/lib/soft-glass-ui";
+import { softList, softListRow, softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -39,6 +42,7 @@ type FormState = {
 };
 
 export default function InventoryPage() {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -130,51 +134,53 @@ export default function InventoryPage() {
         kicker="Stock"
         title="Inventaire"
         description="Soldes on-hand / reserved par entrepôt."
-        actions={
-          <div className="flex items-center gap-3">
-            <Link
-              href="/inventory/certificat-salubrite"
-              className="text-[13px] font-medium text-a-accent hover:underline"
-            >
-              Certificat →
-            </Link>
-            <Link
-              href="/inventory/lots"
-              className="text-[13px] font-medium text-a-accent hover:underline"
-            >
-              Lots →
-            </Link>
-            <AButton type="button" size="sm" onClick={() => openAdjust()}>
-              Ajuster
-            </AButton>
-          </div>
+        primary={
+          <AButton type="button" size="sm" onClick={() => openAdjust()}>
+            Ajuster
+          </AButton>
+        }
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "certificat",
+                label: "Certificat de salubrité",
+                onSelect: () => router.push("/inventory/certificat-salubrite"),
+              },
+              {
+                id: "lots",
+                label: "Lots",
+                onSelect: () => router.push("/inventory/lots"),
+              },
+            ]}
+          />
         }
       />
-      <div className={softPageBody}>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label htmlFor="inv-q" className="text-[12px] text-a-fg-subtle">
-              Recherche
-            </label>
+      <APageBody>
+        <AFilterBar
+          search={
             <AInput
               id="inv-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="SKU ou nom produit"
+              aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q);
               }}
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? (
           <div className="space-y-2">
@@ -250,7 +256,7 @@ export default function InventoryPage() {
             ))}
           </ul>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}

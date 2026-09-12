@@ -8,8 +8,11 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AOverflowMenu,
+  APageBody,
   AScreenHeader,
   ASkeleton,
   type AComboboxOption,
@@ -31,12 +34,7 @@ import {
   type EligibleOrder,
   type ShipmentStatus,
 } from "@/lib/delivery";
-import {
-  softChipClass,
-  softList,
-  softListRow,
-  softPageBody,
-} from "@/lib/soft-glass-ui";
+import { softChipClass, softList, softListRow } from "@/lib/soft-glass-ui";
 import { cn } from "@/lib/utils";
 import { useStatusLabel } from "@/hooks/use-status-label";
 import { shouldHideDeliveryRoute } from "@/lib/ops-visibility";
@@ -401,9 +399,9 @@ export default function DeliveryPage() {
           title="Livraison masquée"
           description="Mode GHOST / PATCH — bons de livraison masqués (préférence société)."
         />
-        <div className={softPageBody}>
+        <APageBody>
           <AForbiddenState message="BL masqué en mode ops. Sortir via le code calculatrice, ou ajuster les prefs Admin (ops.*.hide_delivery)." />
-        </div>
+        </APageBody>
       </>
     );
   }
@@ -414,69 +412,71 @@ export default function DeliveryPage() {
         kicker="Logistique"
         title="Tournées"
         description="Rounds CRUD · livraisons · stock issue/release · AR auto à la livraison."
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={openRoundCreate}
-            >
-              Nouvelle tournée
-            </AButton>
-            <AButton type="button" size="sm" onClick={openCreate}>
-              Nouvelle livraison
-            </AButton>
-          </div>
+        primary={
+          <AButton type="button" size="sm" onClick={openCreate}>
+            Nouvelle livraison
+          </AButton>
+        }
+        more={
+          <AOverflowMenu
+            items={[
+              {
+                id: "new-round",
+                label: "Nouvelle tournée",
+                onSelect: openRoundCreate,
+              },
+            ]}
+          />
         }
       />
-      <div className={softPageBody}>
-        <div
-          className="flex flex-wrap gap-2"
-          role="tablist"
-          aria-label="Filtrer par statut"
-        >
-          {STATUS_FILTERS.map((chip) => {
-            const active = statusFilter === chip.id;
-            return (
-              <button
-                key={chip.id || "all"}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setStatusFilter(chip.id)}
-                className={softChipClass(active)}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label htmlFor="dlv-q" className="text-[12px] text-a-fg-subtle">
-              Recherche
-            </label>
+      <APageBody>
+        <AFilterBar
+          search={
             <AInput
               id="dlv-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="N° livraison / livreur"
+              aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q, statusFilter);
               }}
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q, statusFilter)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          filters={
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filtrer par statut"
+            >
+              {STATUS_FILTERS.map((chip) => {
+                const active = statusFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id || "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setStatusFilter(chip.id)}
+                    className={softChipClass(active)}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q, statusFilter)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? (
           <div className="space-y-2">
@@ -622,7 +622,7 @@ export default function DeliveryPage() {
               </div>
             ))
           : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}

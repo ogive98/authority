@@ -10,12 +10,15 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  APageBody,
   AScreenHeader,
   ASkeleton,
   type AComboboxOption,
 } from "@/components/a";
+import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import {
   fetchWarehouses,
   type InventoryWarehouse,
@@ -38,7 +41,6 @@ import {
   softChipClass,
   softList,
   softListRow,
-  softPageBody,
 } from "@/lib/soft-glass-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
 
@@ -341,65 +343,63 @@ function SalesPageInner() {
         kicker="Ventes"
         title="Commandes"
         description={`Prise de commande multi-lignes. Workflow: ${workflowHint}.`}
-        actions={
+        primary={
           <AButton type="button" size="sm" onClick={openCreate}>
-            Nouvelle commande
+            {LAYOUT_ACTIONS.newOrder}
           </AButton>
         }
       />
-      <div className={softPageBody}>
-        <div
-          className="flex flex-wrap gap-2"
-          role="tablist"
-          aria-label="Filtrer par statut"
-        >
-          {STATUS_FILTERS.map((chip) => {
-            const active = statusFilter === chip.id;
-            return (
-              <button
-                key={chip.id || "all"}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => {
-                  setStatusFilter(chip.id);
-                  void load(q, chip.id);
-                }}
-                className={softChipClass(active)}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <label
-              htmlFor="so-q"
-              className="text-[12px] text-a-fg-subtle"
-            >
-              Recherche
-            </label>
+      <APageBody>
+        <AFilterBar
+          search={
             <AInput
               id="so-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="N° · client · surnom · notes"
+              aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q, statusFilter);
               }}
             />
-          </div>
-          <AButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void load(q, statusFilter)}
-          >
-            Filtrer
-          </AButton>
-        </div>
+          }
+          filters={
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filtrer par statut"
+            >
+              {STATUS_FILTERS.map((chip) => {
+                const active = statusFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id || "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => {
+                      setStatusFilter(chip.id);
+                      void load(q, chip.id);
+                    }}
+                    className={softChipClass(active)}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(q, statusFilter)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
 
         {state.kind === "loading" ? (
           <div className="space-y-2">
@@ -424,7 +424,7 @@ function SalesPageInner() {
           <AEmptyState
             title="Aucune commande"
             description="Saisissez le surnom ou le code client, ajoutez plusieurs articles, puis confirmez."
-            actionLabel="Nouvelle commande"
+            actionLabel={LAYOUT_ACTIONS.newOrder}
             onAction={openCreate}
           />
         ) : null}
@@ -504,7 +504,7 @@ function SalesPageInner() {
             ))}
           </ul>
         ) : null}
-      </div>
+      </APageBody>
 
       <ADrawer
         open={drawerOpen}
@@ -544,7 +544,7 @@ function SalesPageInner() {
       >
         {form ? (
           <div className="space-y-4">
-            <p className="rounded-[12px] bg-a-surface-3/80 px-3 py-2 text-[12px] text-a-fg-muted">
+            <p className="rounded-[var(--a-radius-sm)] bg-a-surface-3/80 px-3 py-2 text-[12px] text-a-fg-muted">
               Workflow auto à la confirmation : {workflowHint}
               {settings?.autoConfirmOnCreate
                 ? " · auto_confirm_on_create=ON"
@@ -672,7 +672,7 @@ function SalesPageInner() {
               {form.lines.map((line, idx) => (
                 <div
                   key={line.key}
-                  className="space-y-2 rounded-[12px] bg-a-surface-3/60 p-3"
+                  className="space-y-2 rounded-[var(--a-radius-sm)] bg-a-surface-3/60 p-3"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -821,10 +821,10 @@ export default function SalesPage() {
   return (
     <Suspense
       fallback={
-        <div className={softPageBody}>
+        <APageBody>
           <ASkeleton className="h-10 w-48" />
           <ASkeleton className="h-10 w-full" />
-        </div>
+        </APageBody>
       }
     >
       <SalesPageInner />

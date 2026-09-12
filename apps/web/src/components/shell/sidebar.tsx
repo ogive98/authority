@@ -143,8 +143,8 @@ export function ShellSidebar() {
           type="button"
           title={mod.name}
           className={cn(
-            "a-nav-row group flex w-full items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left",
-            on ? "is-active bg-a-orange-soft" : "hover:bg-a-surface-3",
+            "a-nav-row group flex w-full items-center gap-2.5 rounded-[var(--a-radius-sm)] px-1.5 py-1.5 text-left",
+            on && "is-active",
             !expanded && "justify-center px-0.5",
           )}
           aria-current={on ? "true" : undefined}
@@ -189,7 +189,7 @@ export function ShellSidebar() {
     onClick?: () => void;
   }) {
     const className = cn(
-      "group flex w-full items-center gap-2.5 rounded-md px-1.5 py-1.5 text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
+      "a-nav-row group flex w-full items-center gap-2.5 rounded-[var(--a-radius-sm)] px-1.5 py-1.5 text-a-fg-muted",
       !expanded && "justify-center px-0.5",
     );
     const inner = (
