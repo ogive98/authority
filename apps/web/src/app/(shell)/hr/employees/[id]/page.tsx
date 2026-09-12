@@ -24,6 +24,7 @@ import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import { HrUpcomingLots } from "@/components/hr/hr-upcoming-lots";
 import { AttendanceCalendarPanel } from "@/components/attendance/attendance-calendar-panel";
+import { ribFieldHint } from "@/lib/rib-tn";
 import {
   fetchBusinessContext,
   listCompanySites,
@@ -1084,14 +1085,23 @@ export default function HrEmployeeFichePage() {
                 </label>
                 <label className="block space-y-1 md:col-span-2">
                   <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    N° compte / RIB
+                    N° compte / RIB (TN · 20 chiffres · clé mod 97)
                   </span>
                   <AInput
                     value={bankAccount}
                     onChange={(e) => setBankAccount(e.target.value)}
                     className="a-mono"
-                    placeholder="Texte libre"
+                    placeholder="07 040 0058101111296 53"
                   />
+                  {ribFieldHint(bankAccount) ? (
+                    <span className="text-[length:var(--a-text-xs)] text-a-danger-fg">
+                      {ribFieldHint(bankAccount)}
+                    </span>
+                  ) : (
+                    <span className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                      IBAN TN accepté. Vide autorisé jusqu’au virement.
+                    </span>
+                  )}
                 </label>
                 <label className="block space-y-1">
                   <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">

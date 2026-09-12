@@ -9,6 +9,7 @@ import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HR_ERROR_CODES, HR_EVENT_TYPES } from './hr.constants';
 import { HrException } from './hr.exception';
+import { assertTunisianRib } from './rib-tn';
 
 export type TransferBankAccountOption = {
   id: string;
@@ -174,11 +175,23 @@ export class TransferOrderService {
       );
     }
 
-    const rib = bulletin.employee.bankAccount?.trim();
-    if (!rib) {
+    const ribRaw = bulletin.employee.bankAccount?.trim();
+    if (!ribRaw) {
       throw new HrException(
         HR_ERROR_CODES.TRANSFER_BANK_REQUIRED,
         'Employee bank account (RIB) is required on the fiche.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    let rib: string;
+    try {
+      rib = assertTunisianRib(ribRaw);
+    } catch (e) {
+      throw new HrException(
+        HR_ERROR_CODES.RIB_INVALID,
+        e instanceof Error
+          ? e.message
+          : 'Employee RIB on the fiche is invalid.',
         HttpStatus.BAD_REQUEST,
       );
     }

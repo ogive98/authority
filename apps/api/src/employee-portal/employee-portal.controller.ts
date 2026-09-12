@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -19,6 +20,7 @@ import { AttendanceService } from '../attendance/attendance.service';
 import { BulletinPdfService } from '../hr/bulletin-pdf.service';
 import { BulletinService } from '../hr/bulletin.service';
 import { HrDocumentService } from '../hr/hr-document.service';
+import { HrService } from '../hr/hr.service';
 import { LoginDto } from '../identity/login.dto';
 import { SessionService } from '../identity/session.service';
 import { RequireModule } from '../modules-registry/modules.decorators';
@@ -27,7 +29,7 @@ import {
   EMPLOYEE_PORTAL_COOKIE_NAME,
   EMPLOYEE_PORTAL_ERROR_CODES,
 } from './employee-portal.constants';
-import { PortalCreateAbsenceDto } from './employee-portal.dto';
+import { PortalCreateAbsenceDto, PortalPatchBankDto } from './employee-portal.dto';
 import { EmployeePortalAuthService } from './employee-portal-auth.service';
 import { EmployeePortalModuleGuard } from './employee-portal-module.guard';
 import {
@@ -36,6 +38,7 @@ import {
 } from './employee-portal-session.guard';
 import {
   toPortalDocument,
+  toPortalProfile,
   type PortalDashboard,
 } from './employee-portal-profile.mapper';
 import { EmployeePortalException } from './employee-portal.exception';
@@ -48,6 +51,7 @@ export class EmployeePortalController {
     private readonly bulletin: BulletinService,
     private readonly bulletinPdf: BulletinPdfService,
     private readonly hrDocuments: HrDocumentService,
+    private readonly hr: HrService,
     private readonly sessionService: SessionService,
   ) {}
 
@@ -101,6 +105,27 @@ export class EmployeePortalController {
   @UseGuards(EmployeePortalSessionGuard, EmployeePortalModuleGuard)
   async me(@Req() req: EmployeePortalRequest) {
     return this.portalAuthService.getMe(req.user!.id);
+  }
+
+  /** D232 — update own bank coords (RIB TN checksum). */
+  @Patch('me/bank')
+  @RequireModule('hr')
+  @UseGuards(EmployeePortalSessionGuard, EmployeePortalModuleGuard)
+  async patchBank(
+    @Req() req: EmployeePortalRequest,
+    @Body() dto: PortalPatchBankDto,
+  ) {
+    const updated = await this.hr.patchEmployee(
+      req.companyId!,
+      req.employeeId!,
+      {
+        bankName: dto.bankName,
+        bankAgency: dto.bankAgency,
+        bankAccount: dto.bankAccount,
+      },
+      false,
+    );
+    return { profile: toPortalProfile(updated) };
   }
 
   /** D231 — Accueil KPI (own only). */

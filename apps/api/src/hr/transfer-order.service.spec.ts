@@ -27,7 +27,7 @@ describe('TransferOrderService (D222)', () => {
         matricule: 'E-001',
         bankName: 'BIAT',
         bankAgency: 'Tunis',
-        bankAccount: '20 006 0001234567890 12',
+        bankAccount: '07040005810111129653',
       },
     };
 
@@ -37,7 +37,7 @@ describe('TransferOrderService (D222)', () => {
       code: 'BIAT-MAIN',
       label: 'Compte paie',
       bankName: 'BIAT',
-      rib: '08 000 0000000000000 00',
+      rib: '20006000123456789078',
       active: true,
       isDefault: true,
       deletedAt: null,

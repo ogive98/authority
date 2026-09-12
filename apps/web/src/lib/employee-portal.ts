@@ -15,6 +15,7 @@ export const EMPLOYEE_PORTAL_API = {
   login: "/api/v1/employee-portal/auth/login",
   logout: "/api/v1/employee-portal/auth/logout",
   me: "/api/v1/employee-portal/me",
+  bank: "/api/v1/employee-portal/me/bank",
   dashboard: "/api/v1/employee-portal/dashboard",
   absences: "/api/v1/employee-portal/absences",
   calendar: "/api/v1/employee-portal/calendar",
@@ -36,6 +37,9 @@ export type PortalEmployeeProfile = {
   address: string | null;
   bankName: string | null;
   bankAgency: string | null;
+  bankAccount: string | null;
+  bankAccountFormatted: string | null;
+  bankAccountValid: boolean;
   bankAccountMasked: string | null;
   hiredAt: string | null;
   photoDocumentId: string | null;

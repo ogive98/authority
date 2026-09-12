@@ -883,7 +883,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Congés : demander, suivre, annuler une demande REQUESTED ; calendrier.",
             "Bulletins : consulter / PDF (own only — IDOR→404).",
             "Documents : télécharger le dossier RH lié.",
-            "Profil : lecture seule (compte bancaire masqué).",
+            "Profil : lecture seule identité · RIB éditable (validation TN).",
           ],
           it: [
             "Login `/employee-portal/login`.",
@@ -891,7 +891,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Congedi: richiedere, seguire, annullare una REQUESTED; calendario.",
             "Buste: consultare / PDF (own only — IDOR→404).",
             "Documenti: scaricare il dossier RH collegato.",
-            "Profilo: sola lettura (conto bancario mascherato).",
+            "Profilo: identità sola lettura · RIB modificabile (validazione TN).",
           ],
         },
       },
@@ -900,12 +900,12 @@ export const HELP_MODULES: HelpModule[] = [
       fr: [
         "Pas de soldes / quotas inventés.",
         "Pas de pointage ni virement depuis le portail (lots ultérieurs).",
-        "Pas d’édition profil — RH ADV seulement.",
+        "RIB : checksum structurel seulement (pas d’existence compte inventée).",
       ],
       it: [
         "Nessun saldo / quota inventato.",
         "Niente timbratura né bonifico dal portale (lotti successivi).",
-        "Nessuna modifica profilo — solo RH ADV.",
+        "RIB: solo checksum strutturale (nessuna esistenza conto inventata).",
       ],
     },
   },

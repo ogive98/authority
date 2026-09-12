@@ -29,6 +29,7 @@ import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { HrCongesPanel } from "@/components/hr/hr-conges-panel";
 import { hrTabHref, parseHrTab, hrEmployeeHref, type HrTab } from "@/lib/hr-tabs";
 import { localizeUiString } from "@/lib/i18n/route-labels";
+import { ribFieldHint } from "@/lib/rib-tn";
 import { useLocaleStore } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
 import {
@@ -1130,13 +1131,19 @@ function HrWorkspace() {
               </label>
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  N° compte / RIB
+                  N° compte / RIB (TN)
                 </span>
                 <AInput
                   value={bankAccount}
                   onChange={(e) => setBankAccount(e.target.value)}
                   className="a-mono"
+                  placeholder="20 chiffres ou IBAN TN…"
                 />
+                {ribFieldHint(bankAccount) ? (
+                  <span className="text-[length:var(--a-text-xs)] text-a-danger-fg">
+                    {ribFieldHint(bankAccount)}
+                  </span>
+                ) : null}
               </label>
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">

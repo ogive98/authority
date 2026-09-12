@@ -16,6 +16,7 @@ import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HR_ERROR_CODES, HR_EVENT_TYPES, isHrImageMime } from './hr.constants';
 import { assertTunisianCin } from './hr-print-merge';
+import { normalizeOptionalTunisianRib } from './rib-tn';
 import type {
   CreateContractDto,
   CreateEmployeeDto,
@@ -222,6 +223,17 @@ export class HrService {
       );
     }
 
+    let bankAccount: string | null = null;
+    try {
+      bankAccount = normalizeOptionalTunisianRib(dto.bankAccount);
+    } catch (e) {
+      throw new HrException(
+        HR_ERROR_CODES.RIB_INVALID,
+        e instanceof Error ? e.message : 'Invalid Tunisian RIB.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const provisionLogin = dto.provisionLogin === true;
     const emailRaw = dto.email?.trim() || '';
     if (provisionLogin && !emailRaw) {
@@ -256,7 +268,7 @@ export class HrService {
           address: dto.address?.trim() || null,
           bankName: dto.bankName?.trim() || null,
           bankAgency: dto.bankAgency?.trim() || null,
-          bankAccount: dto.bankAccount?.trim() || null,
+          bankAccount,
           email: emailRaw || null,
           hiredAt: dto.hiredAt ? startOfUtcDay(new Date(dto.hiredAt)) : null,
           notes: dto.notes?.trim() || null,
@@ -356,7 +368,15 @@ export class HrService {
       data.bankAgency = dto.bankAgency?.trim() || null;
     }
     if (dto.bankAccount !== undefined) {
-      data.bankAccount = dto.bankAccount?.trim() || null;
+      try {
+        data.bankAccount = normalizeOptionalTunisianRib(dto.bankAccount);
+      } catch (e) {
+        throw new HrException(
+          HR_ERROR_CODES.RIB_INVALID,
+          e instanceof Error ? e.message : 'Invalid Tunisian RIB.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
     }
     if (dto.email !== undefined) data.email = dto.email?.trim() || null;
     if (dto.notes !== undefined) data.notes = dto.notes?.trim() || null;

@@ -71,7 +71,7 @@ export class CreateEmployeeDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(64)
+  @MaxLength(34)
   bankAccount?: string;
 
   @IsOptional()
@@ -145,7 +145,7 @@ export class PatchEmployeeDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(64)
+  @MaxLength(34)
   bankAccount?: string | null;
 
   @IsOptional()

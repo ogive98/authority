@@ -1,5 +1,10 @@
 import type { DocumentDto } from '../documents/documents.service';
 import type { HrEmployeeDto } from '../hr/hr.service';
+import {
+  isValidTunisianRibDigits,
+  normalizeRibInput,
+  parseTunisianRib,
+} from '../hr/rib-tn';
 
 /** Portal-safe employee profile — no wage / tax internals / Identity secrets. */
 export type PortalEmployeeProfile = {
@@ -16,7 +21,10 @@ export type PortalEmployeeProfile = {
   address: string | null;
   bankName: string | null;
   bankAgency: string | null;
-  /** Masked IBAN/RIB — last 4 only when long enough. */
+  /** Own RIB — full compact digits when set (editable on portal). */
+  bankAccount: string | null;
+  bankAccountFormatted: string | null;
+  bankAccountValid: boolean;
   bankAccountMasked: string | null;
   hiredAt: string | null;
   photoDocumentId: string | null;
@@ -48,6 +56,23 @@ export type PortalDashboard = {
 };
 
 export function toPortalProfile(dto: HrEmployeeDto): PortalEmployeeProfile {
+  const raw = dto.bankAccount?.trim() || null;
+  let digits: string | null = null;
+  let formatted: string | null = null;
+  let valid = false;
+  if (raw) {
+    const compact = normalizeRibInput(raw);
+    if (/^\d{20}$/.test(compact) && isValidTunisianRibDigits(compact)) {
+      digits = compact;
+      formatted = parseTunisianRib(compact).formatted;
+      valid = true;
+    } else {
+      digits = compact;
+      formatted = raw;
+      valid = false;
+    }
+  }
+
   return {
     employeeId: dto.id,
     companyId: dto.companyId,
@@ -62,7 +87,10 @@ export function toPortalProfile(dto: HrEmployeeDto): PortalEmployeeProfile {
     address: dto.address,
     bankName: dto.bankName,
     bankAgency: dto.bankAgency,
-    bankAccountMasked: maskBankAccount(dto.bankAccount),
+    bankAccount: digits,
+    bankAccountFormatted: formatted,
+    bankAccountValid: valid,
+    bankAccountMasked: maskBankAccount(digits ?? raw),
     hiredAt: dto.hiredAt,
     photoDocumentId: dto.photoDocumentId,
     hasAttestationPdf: Boolean(dto.attestationPdfDocumentId),
