@@ -72,6 +72,9 @@ describe('HrService', () => {
       hrEmployee: {
         findMany: jest.fn().mockResolvedValue([{ ...employee, contracts: [contract] }]),
         findFirst: jest.fn().mockResolvedValue({ ...employee, contracts: [contract] }),
+        findFirstOrThrow: jest.fn().mockImplementation(() =>
+          Promise.resolve({ ...employee, contracts: [contract] }),
+        ),
         create: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
           Promise.resolve({
             ...employee,
@@ -165,6 +168,9 @@ describe('HrService', () => {
       prisma as never,
       outbox as never,
       new JobTitleService(prisma as never, outbox as never),
+      {
+        provisionForNewEmployee: jest.fn(),
+      } as never,
     );
     return { service, prisma, outbox, employee, contract };
   }
@@ -423,5 +429,20 @@ describe('HrService', () => {
     });
     expect(dto.siteId).toBeNull();
     expect(dto.site).toBeNull();
+  });
+
+  it('rejects provisionLogin without email', async () => {
+    const { service, prisma } = build();
+    prisma.hrEmployee.findFirst = jest.fn().mockResolvedValue(null);
+    await expect(
+      service.createEmployee(companyId, {
+        matricule: 'E-NEW',
+        displayName: 'Nouveau',
+        provisionLogin: true,
+      }),
+    ).rejects.toMatchObject({
+      status: HttpStatus.BAD_REQUEST,
+      response: { code: HR_ERROR_CODES.EMAIL_REQUIRED },
+    });
   });
 });

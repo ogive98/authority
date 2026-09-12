@@ -109,7 +109,7 @@ describe('CAP-01 ERP simulations (e2e)', () => {
     }
 
     const manifests = catalog.list();
-    expect(manifests).toHaveLength(20);
+    expect(manifests).toHaveLength(21);
 
     const ids = new Set(manifests.map((m) => m.id));
     const capKeys = new Set<string>();

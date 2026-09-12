@@ -252,6 +252,23 @@ describe('SalesService', () => {
     );
   });
 
+  it('list accepts optional status filter (D223)', async () => {
+    const { service, prisma } = build();
+    prisma.salOrder.findMany.mockResolvedValue([]);
+
+    await service.list(companyId, { status: 'DRAFT' });
+
+    expect(prisma.salOrder.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          companyId,
+          status: SalOrderStatus.DRAFT,
+          deletedAt: null,
+        }),
+      }),
+    );
+  });
+
   it('list exposes fulfillmentStatus from deliveredQty', async () => {
     const { service, prisma } = build({
       status: SalOrderStatus.CONFIRMED,

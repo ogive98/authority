@@ -237,9 +237,17 @@ export type PortalClaimList = {
   nextCursor: string | null;
 };
 
-/** True when Customer Portal session is missing/invalid (redirect to login). */
+/**
+ * True when Customer Portal session is missing/invalid (redirect to login).
+ * Do NOT treat 503/timeout as logout — Nest watch restarts are transient.
+ */
 export function shouldHidePortal(httpStatus: number): boolean {
-  return httpStatus !== 200;
+  return httpStatus === 401 || httpStatus === 403;
+}
+
+/** API unreachable — keep cookie, show retry (not login). */
+export function isPortalApiUnavailable(httpStatus: number): boolean {
+  return httpStatus === 503 || httpStatus === 502 || httpStatus === 504;
 }
 
 function apiOrigin(): string {
@@ -265,7 +273,7 @@ async function portalFetch<T>(
         cookie: await cookieHeader(),
       },
       cache: "no-store",
-      signal: AbortSignal.timeout(4_000),
+      signal: AbortSignal.timeout(8_000),
     });
     if (!res.ok) {
       return { status: res.status, data: null };

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ABadge,
@@ -24,16 +25,25 @@ import {
   invoiceBadgeTone,
   issueInvoice,
   type FinInvoice,
+  type InvoiceStatus,
 } from "@/lib/finance";
 import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
+  softChipClass,
   softPageBody,
   softSelect,
   softTableWrap,
   softThead,
   softTr,
 } from "@/lib/soft-glass-ui";
+
+const STATUS_FILTERS: { id: "" | InvoiceStatus; label: string }[] = [
+  { id: "", label: "Tout" },
+  { id: "DRAFT", label: "Brouillon" },
+  { id: "ISSUED", label: "Émise" },
+  { id: "CANCELLED", label: "Annulée" },
+];
 
 type LoadState =
   | { kind: "loading" }
@@ -67,10 +77,11 @@ function emptyLine(taxCodeId = ""): LineDraft {
 }
 
 export default function FinanceInvoicesPage() {
+  const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | InvoiceStatus>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [detail, setDetail] = useState<FinInvoice | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
@@ -79,22 +90,28 @@ export default function FinanceInvoicesPage() {
   const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async (query?: string) => {
-    setState({ kind: "loading" });
-    const res = await fetchInvoices({ q: query });
-    if (!res.ok) {
-      if (res.status === 403) {
-        setState({ kind: "forbidden", message: res.message });
+  const load = useCallback(
+    async (query?: string, status?: "" | InvoiceStatus) => {
+      setState({ kind: "loading" });
+      const res = await fetchInvoices({
+        q: query,
+        status: status || undefined,
+      });
+      if (!res.ok) {
+        if (res.status === 403) {
+          setState({ kind: "forbidden", message: res.message });
+          return;
+        }
+        setState({ kind: "error", message: res.message });
         return;
       }
-      setState({ kind: "error", message: res.message });
-      return;
-    }
-    setState({ kind: "ok", items: res.data.items });
-  }, []);
+      setState({ kind: "ok", items: res.data.items });
+    },
+    [],
+  );
 
   useEffect(() => {
-    void load(q);
+    void load("", "");
   }, [load]);
 
   useEffect(() => {
@@ -165,7 +182,9 @@ export default function FinanceInvoicesPage() {
           l.unitPriceHt < 0,
       )
     ) {
-      setFormError("Chaque ligne doit avoir description, qté, PU HT et code TVA.");
+      setFormError(
+        "Chaque ligne doit avoir description, qté, PU HT et code TVA.",
+      );
       return;
     }
     setBusy(true);
@@ -184,21 +203,21 @@ export default function FinanceInvoicesPage() {
       return;
     }
     setDrawerOpen(false);
-    await load(q);
+    router.push(`/finance/invoices/${res.data.id}`);
   }
 
-  async function onIssue(id: string) {
+  async function onIssue(invoiceId: string) {
     setBusy(true);
-    const res = await issueInvoice(id);
+    const res = await issueInvoice(invoiceId);
     setBusy(false);
     if (!res.ok) {
       setState({ kind: "error", message: res.message });
       return;
     }
-    await load(q);
+    await load(q, statusFilter);
   }
 
-  async function onCancel(id: string) {
+  async function onCancel(invoiceId: string) {
     if (
       !window.confirm(
         "Annuler cette facture ? La créance ouverte sera clôturée et le GL décomptabilisé via Thunder.",
@@ -207,13 +226,13 @@ export default function FinanceInvoicesPage() {
       return;
     }
     setBusy(true);
-    const res = await cancelInvoice(id);
+    const res = await cancelInvoice(invoiceId);
     setBusy(false);
     if (!res.ok) {
       setState({ kind: "error", message: res.message });
       return;
     }
-    await load(q);
+    await load(q, statusFilter);
   }
 
   return (
@@ -221,7 +240,7 @@ export default function FinanceInvoicesPage() {
       <AScreenHeader
         kicker="Finance"
         title="Factures"
-        description="Factures HT / TVA / FODEC / timbre / TTC — FODEC·timbre seulement si validés en Préférences."
+        description="Factures HT / TVA / FODEC / timbre / TTC — FODEC·timbre seulement si validés en Préférences. Soft Glass fiche D224."
         actions={
           <div className="flex items-center gap-2">
             <Link
@@ -256,6 +275,32 @@ export default function FinanceInvoicesPage() {
       />
       <div className={softPageBody}>
         <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre"]} />
+
+        <div
+          className="flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Filtrer par statut"
+        >
+          {STATUS_FILTERS.map((chip) => {
+            const active = statusFilter === chip.id;
+            return (
+              <button
+                key={chip.id || "all"}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => {
+                  setStatusFilter(chip.id);
+                  void load(q, chip.id);
+                }}
+                className={softChipClass(active)}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
             <label
@@ -270,7 +315,7 @@ export default function FinanceInvoicesPage() {
               onChange={(e) => setQ(e.target.value)}
               placeholder="N° / libellé"
               onKeyDown={(e) => {
-                if (e.key === "Enter") void load(q);
+                if (e.key === "Enter") void load(q, statusFilter);
               }}
             />
           </div>
@@ -278,7 +323,7 @@ export default function FinanceInvoicesPage() {
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => void load(q)}
+            onClick={() => void load(q, statusFilter)}
           >
             Filtrer
           </AButton>
@@ -297,7 +342,7 @@ export default function FinanceInvoicesPage() {
           <AErrorState
             message={state.message}
             retryable
-            onRetry={() => void load(q)}
+            onRetry={() => void load(q, statusFilter)}
           />
         ) : null}
         {state.kind === "ok" && state.items.length === 0 ? (
@@ -323,7 +368,14 @@ export default function FinanceInvoicesPage() {
               <tbody>
                 {state.items.map((inv) => (
                   <tr key={inv.id} className={softTr}>
-                    <td className="a-mono a-table-cell">{inv.number}</td>
+                    <td className="a-mono a-table-cell">
+                      <Link
+                        href={`/finance/invoices/${inv.id}`}
+                        className="font-semibold text-a-accent hover:underline"
+                      >
+                        {inv.number}
+                      </Link>
+                    </td>
                     <td className="a-table-cell">
                       {inv.customerName ?? inv.customerCode ?? "—"}
                     </td>
@@ -343,14 +395,11 @@ export default function FinanceInvoicesPage() {
                     </td>
                     <td className="a-table-cell">
                       <div className="flex flex-wrap gap-2">
-                        <AButton
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setDetail(inv)}
-                        >
-                          Détail
-                        </AButton>
+                        <Link href={`/finance/invoices/${inv.id}`}>
+                          <AButton type="button" variant="secondary" size="sm">
+                            Fiche
+                          </AButton>
+                        </Link>
                         {inv.status === "DRAFT" ? (
                           <AButton
                             type="button"
@@ -367,7 +416,11 @@ export default function FinanceInvoicesPage() {
                             href={`/finance/credit-notes?invoiceId=${encodeURIComponent(inv.id)}`}
                             className="inline-flex"
                           >
-                            <AButton type="button" variant="secondary" size="sm">
+                            <AButton
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                            >
                               Avoir
                             </AButton>
                           </Link>
@@ -397,7 +450,8 @@ export default function FinanceInvoicesPage() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title="Nouvelle facture"
-        description="Lignes HT + code TVA Tunisie — totaux calculés côté serveur."
+        description="Lignes HT + code TVA catalogue · FODEC/timbre si Prefs VALIDATED"
+        className="max-w-xl"
       >
         {form ? (
           <div className="space-y-4">
@@ -405,64 +459,52 @@ export default function FinanceInvoicesPage() {
               label="Client"
               valueId={form.customerId}
               displayValue={form.customerLabel}
-              options={customerOpts}
-              loading={customerLoading}
-              placeholder="Rechercher un client…"
-              onOpen={() => void refreshCustomers(form.customerLabel.trim())}
               onDisplayChange={(text) => {
-                setForm({
-                  ...form,
-                  customerLabel: text,
-                  customerId: null,
-                });
+                setForm({ ...form, customerLabel: text, customerId: null });
                 scheduleCustomerSearch(text);
               }}
-              onSelect={(opt) => {
+              onSelect={(opt) =>
                 setForm({
                   ...form,
                   customerId: opt.id,
                   customerLabel: opt.label,
-                });
-              }}
+                })
+              }
+              onOpen={() => void refreshCustomers(form.customerLabel)}
+              options={customerOpts}
+              loading={customerLoading}
+              placeholder="Code ou raison sociale…"
+              emptyText="Aucun client"
             />
+
             <div className="space-y-1">
-              <label
-                htmlFor="inv-label"
-                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-              >
-                Libellé
-              </label>
-              <AInput
-                id="inv-label"
-                value={form.label}
-                onChange={(e) => setForm({ ...form, label: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1">
-              <label
-                htmlFor="inv-due"
-                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-              >
+              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                 Échéance
               </label>
               <AInput
-                id="inv-due"
                 type="date"
-                className="a-mono"
                 value={form.dueDate}
                 onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
               />
             </div>
 
+            <div className="space-y-1">
+              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Libellé
+              </label>
+              <AInput
+                value={form.label}
+                onChange={(e) => setForm({ ...form, label: e.target.value })}
+              />
+            </div>
+
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[length:var(--a-text-sm)] font-medium">
-                  Lignes
-                </p>
+                <p className="text-[13px] font-medium text-a-fg">Lignes</p>
                 <AButton
                   type="button"
-                  variant="secondary"
                   size="sm"
+                  variant="secondary"
                   onClick={() =>
                     setForm({
                       ...form,
@@ -483,55 +525,91 @@ export default function FinanceInvoicesPage() {
               {form.lines.map((line, idx) => (
                 <div
                   key={idx}
-                  className="space-y-2 pb-3"
+                  className="space-y-2 rounded-[12px] bg-a-surface-3/60 p-3"
                 >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Ligne {idx + 1}
+                    </span>
+                    {form.lines.length > 1 ? (
+                      <AButton
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            lines: form.lines.filter((_, i) => i !== idx),
+                          })
+                        }
+                      >
+                        Retirer
+                      </AButton>
+                    ) : null}
+                  </div>
                   <AInput
                     placeholder="Description"
                     value={line.description}
-                    onChange={(e) => {
-                      const lines = [...form.lines];
-                      lines[idx] = { ...line, description: e.target.value };
-                      setForm({ ...form, lines });
-                    }}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        lines: form.lines.map((l, i) =>
+                          i === idx
+                            ? { ...l, description: e.target.value }
+                            : l,
+                        ),
+                      })
+                    }
                   />
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <AInput
-                      className="a-mono"
                       placeholder="Qté"
                       value={line.qty}
-                      onChange={(e) => {
-                        const lines = [...form.lines];
-                        lines[idx] = { ...line, qty: e.target.value };
-                        setForm({ ...form, lines });
-                      }}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          lines: form.lines.map((l, i) =>
+                            i === idx ? { ...l, qty: e.target.value } : l,
+                          ),
+                        })
+                      }
                     />
                     <AInput
-                      className="a-mono"
                       placeholder="PU HT"
                       value={line.unitPriceHt}
-                      onChange={(e) => {
-                        const lines = [...form.lines];
-                        lines[idx] = { ...line, unitPriceHt: e.target.value };
-                        setForm({ ...form, lines });
-                      }}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          lines: form.lines.map((l, i) =>
+                            i === idx
+                              ? { ...l, unitPriceHt: e.target.value }
+                              : l,
+                          ),
+                        })
+                      }
                     />
+                    <select
+                      className={softSelect}
+                      value={line.taxCodeId}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          lines: form.lines.map((l, i) =>
+                            i === idx
+                              ? { ...l, taxCodeId: e.target.value }
+                              : l,
+                          ),
+                        })
+                      }
+                    >
+                      <option value="">TVA…</option>
+                      {taxCodes.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} — {formatRateBps(c.currentRateBps)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <select
-                    className={softSelect}
-                    value={line.taxCodeId}
-                    onChange={(e) => {
-                      const lines = [...form.lines];
-                      lines[idx] = { ...line, taxCodeId: e.target.value };
-                      setForm({ ...form, lines });
-                    }}
-                  >
-                    <option value="">Code TVA…</option>
-                    {taxCodes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.code} — {formatRateBps(c.currentRateBps)}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               ))}
             </div>
@@ -570,76 +648,6 @@ export default function FinanceInvoicesPage() {
                 Créer
               </AButton>
             </div>
-          </div>
-        ) : null}
-      </ADrawer>
-
-      <ADrawer
-        open={!!detail}
-        onOpenChange={(open) => {
-          if (!open) setDetail(null);
-        }}
-        title={detail?.number ?? "Facture"}
-        description="Ventilation HT / TVA / FODEC / timbre / TTC"
-      >
-        {detail ? (
-          <div className="space-y-4 text-[length:var(--a-text-sm)]">
-            <dl className="space-y-2">
-              <div className="flex justify-between gap-4">
-                <dt className="text-a-fg-muted">HT</dt>
-                <dd className="a-mono">{detail.amountHt}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-a-fg-muted">TVA</dt>
-                <dd className="a-mono">{detail.amountTax}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-a-fg-muted">FODEC</dt>
-                <dd className="a-mono">
-                  {detail.amountFodec ?? "0.000"}
-                  {!detail.expertiseApplied?.fodec ? (
-                    <span className="ml-2 text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                      (non appliqué)
-                    </span>
-                  ) : null}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-a-fg-muted">Timbre</dt>
-                <dd className="a-mono">
-                  {detail.amountTimbre ?? "0.000"}
-                  {!detail.expertiseApplied?.timbre ? (
-                    <span className="ml-2 text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                      (non appliqué)
-                    </span>
-                  ) : null}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-a-fg-muted">TTC</dt>
-                <dd className="a-mono font-medium">
-                  {detail.amountTotal} {detail.currency}
-                </dd>
-              </div>
-            </dl>
-            {(detail.lines?.length ?? 0) > 0 ? (
-              <ul className="space-y-2">
-                {detail.lines.map((l) => (
-                  <li
-                    key={l.id}
-                    className="a-underlay rounded-md px-2 py-2"
-                  >
-                    <p>{l.description}</p>
-                    <p className="a-mono text-a-fg-muted">
-                      {l.qty} × {l.unitPriceHt} · {l.taxCode ?? "—"} · TTC{" "}
-                      {l.amountTtc}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-a-fg-muted">Aucune ligne (facture legacy).</p>
-            )}
           </div>
         ) : null}
       </ADrawer>

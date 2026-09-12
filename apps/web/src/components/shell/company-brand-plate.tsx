@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -32,6 +34,7 @@ export function CompanyBrandPlate({
             : "h-9 object-left sm:h-10",
         )}
         priority
+        suppressHydrationWarning
       />
 
       {isHero ? (
@@ -76,6 +79,7 @@ export function CompanyBrandPlate({
         className,
       )}
       aria-label="Fattorie Covelli — Powered by AUTHORITY — Haithem Hammami"
+      suppressHydrationWarning
     >
       {inner}
     </Link>

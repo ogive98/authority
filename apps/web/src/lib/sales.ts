@@ -30,6 +30,7 @@ export type SalesOrder = {
   requestedDate: string | null;
   currency: string;
   notes: string | null;
+  preferredDriver: string | null;
   amountTotal: string;
   version: number;
   confirmedAt: string | null;
@@ -106,20 +107,72 @@ export async function fetchIntakeSettings(): Promise<
   }
 }
 
-export async function fetchSalesOrders(q?: string): Promise<
-  { ok: true; data: SalesOrderListResponse } | ApiFail
-> {
+export async function fetchSalesOrders(opts?: {
+  q?: string;
+  status?: SalesOrderStatus | "";
+}): Promise<{ ok: true; data: SalesOrderListResponse } | ApiFail> {
   try {
-    const url = q?.trim()
-      ? `/api/v1/sales/orders?q=${encodeURIComponent(q.trim())}`
-      : "/api/v1/sales/orders";
-    const res = await fetch(url, {
+    const params = new URLSearchParams();
+    if (opts?.q?.trim()) params.set("q", opts.q.trim());
+    if (opts?.status) params.set("status", opts.status);
+    const qs = params.toString();
+    const res = await fetch(
+      qs ? `/api/v1/sales/orders?${qs}` : "/api/v1/sales/orders",
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as SalesOrderListResponse };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchSalesOrder(
+  id: string,
+): Promise<{ ok: true; data: SalesOrder } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/sales/orders/${encodeURIComponent(id)}`, {
       credentials: "include",
       headers: { Accept: "application/json" },
       cache: "no-store",
     });
     if (!res.ok) return parseFail(res);
-    return { ok: true, data: (await res.json()) as SalesOrderListResponse };
+    return { ok: true, data: (await res.json()) as SalesOrder };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export type UpdateSalesOrderBody = {
+  version: number;
+  customerId?: string;
+  warehouseId?: string;
+  requestedDate?: string | null;
+  notes?: string | null;
+  preferredDriver?: string | null;
+  lines?: SalesLineInput[];
+};
+
+export async function updateSalesOrder(
+  id: string,
+  body: UpdateSalesOrderBody,
+): Promise<{ ok: true; data: SalesOrder } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/sales/orders/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as SalesOrder };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }

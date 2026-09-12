@@ -50,6 +50,7 @@ export const FEATURE_LABELS_IT: Record<string, string> = {
   "hr-employees": "Dipendenti",
   "hr-job-titles": "Mansioni",
   "hr-bulletins": "Buste paga",
+  "hr-conges": "Congedi",
   gl: "Libro mastro",
   "repair-home": "Riparazione",
   "repair-diagnostics": "Diagnostica",

@@ -3,10 +3,10 @@ import type { ModuleManifest } from '../manifest.types';
 export const portalsManifest: ModuleManifest = {
   id: 'portals',
   name: 'Portals',
-  version: '0.7.0',
+  version: '0.8.0',
   apiVersion: '1',
   description:
-    'External portals — Customer Portal P1–P7 + P6b documents signed download',
+    'External portals — Customer Portal + Employee Portal leave + bulletins (D221)',
   capabilities: [
     {
       key: 'customer_portal.access',
@@ -49,8 +49,17 @@ export const portalsManifest: ModuleManifest = {
       permissionKey: 'customer_portal.documents.read',
       riskLevel: 'low',
     },
+    {
+      key: 'employee_portal.access',
+      moduleId: 'portals',
+      version: '1',
+      description:
+        'Access employee portal login, leave, calendar, and own bulletins',
+      permissionKey: 'employee_portal.access',
+      riskLevel: 'medium',
+    },
   ],
-  commands: ['customer_portal.claims.create'],
+  commands: ['customer_portal.claims.create', 'employee_portal.absence.create'],
   queries: [
     'customer_portal.me',
     'customer_portal.dashboard',
@@ -58,6 +67,12 @@ export const portalsManifest: ModuleManifest = {
     'customer_portal.claims.get',
     'customer_portal.documents.list',
     'customer_portal.documents.download',
+    'employee_portal.me',
+    'employee_portal.absences.list',
+    'employee_portal.calendar.get',
+    'employee_portal.bulletins.list',
+    'employee_portal.bulletins.get',
+    'employee_portal.bulletins.pdf',
   ],
   permissions: [
     'customer_portal.access',
@@ -65,10 +80,14 @@ export const portalsManifest: ModuleManifest = {
     'customer_portal.claims.read',
     'customer_portal.claims.create',
     'customer_portal.documents.read',
+    'employee_portal.access',
   ],
   dependencies: [
     'platform',
     'identity',
+    'organization',
+    'hr',
+    'attendance',
     'customers',
     'sales',
     'delivery',

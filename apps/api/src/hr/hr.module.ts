@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { IdentityModule } from '../identity/identity.module';
+import { MailModule } from '../mail/mail.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
@@ -21,10 +22,14 @@ import { ContractPrintSettingsResolver } from './contract-print-settings.resolve
 import { AttestationPdfService } from './attestation-pdf.service';
 import { AttestationPrintSettingsResolver } from './attestation-print-settings.resolver';
 import { PrintTemplateService } from './print-template.service';
+import { HrIdentityProvisionService } from './hr-identity-provision.service';
+import { TransferOrderService } from './transfer-order.service';
+import { TransferOrderPdfService } from './transfer-order-pdf.service';
 
 @Module({
   imports: [
     IdentityModule,
+    MailModule,
     OrganizationModule,
     PermissionsModule,
     ModulesRegistryModule,
@@ -48,15 +53,20 @@ import { PrintTemplateService } from './print-template.service';
     AttestationPdfService,
     AttestationPrintSettingsResolver,
     PrintTemplateService,
+    HrIdentityProvisionService,
+    TransferOrderService,
+    TransferOrderPdfService,
   ],
   exports: [
     HrService,
     CnssService,
     IrppService,
     BulletinService,
+    BulletinPdfService,
     LevyService,
     JobTitleService,
     DocKindService,
+    TransferOrderService,
   ],
 })
 export class HrModule {}

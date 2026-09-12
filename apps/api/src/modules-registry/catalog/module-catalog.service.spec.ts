@@ -17,13 +17,13 @@ describe('ModuleCatalogService', () => {
   });
 
   it('loads exactly 17 seeded manifests', () => {
-    expect(catalog.list()).toHaveLength(20);
-    expect(STATIC_MODULE_MANIFESTS).toHaveLength(20);
+    expect(catalog.list()).toHaveLength(21);
+    expect(STATIC_MODULE_MANIFESTS).toHaveLength(21);
   });
 
   it('resolves getByKey and capabilitiesFor', () => {
     const sales = catalog.getByKey('sales');
-    expect(sales?.name).toBe('Sales');
+    expect(sales?.name).toBe('Ventes');
     expect(catalog.capabilitiesFor('sales').map((c) => c.key)).toContain(
       'sales.ping',
     );

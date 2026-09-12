@@ -390,7 +390,21 @@ export async function createEmployee(input: {
   bankAccount?: string;
   email?: string;
   hiredAt?: string;
-}): Promise<ApiOk<HrEmployee> | ApiFail> {
+  provisionLogin?: boolean;
+}): Promise<
+  | ApiOk<
+      HrEmployee & {
+        provisionalPassword?: string;
+        provision?: {
+          userId: string;
+          email: string;
+          emailSent: boolean;
+          smtpConfigured: boolean;
+        };
+      }
+    >
+  | ApiFail
+> {
   const res = await fetch("/api/v1/hr/employees", {
     method: "POST",
     credentials: "include",
@@ -400,7 +414,18 @@ export async function createEmployee(input: {
   if (!res.ok) {
     return { ok: false, status: res.status, message: await parseError(res) };
   }
-  return { ok: true, data: (await res.json()) as HrEmployee };
+  return {
+    ok: true,
+    data: (await res.json()) as HrEmployee & {
+      provisionalPassword?: string;
+      provision?: {
+        userId: string;
+        email: string;
+        emailSent: boolean;
+        smtpConfigured: boolean;
+      };
+    },
+  };
 }
 
 export async function createContract(input: {
@@ -1047,6 +1072,150 @@ export async function downloadBulletinPdf(
     a.download =
       res.headers.get("Content-Disposition")?.match(/filename="?([^"]+)"?/)?.[1] ??
       `bulletin-${id}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+/** D222 — salary transfer order (ADV confirm + PDF). */
+export type TransferBankAccountOption = {
+  id: string;
+  code: string;
+  label: string;
+  bankName: string | null;
+  rib: string | null;
+  isDefault: boolean;
+};
+
+export type TransferOrder = {
+  id: string;
+  number: string;
+  bulletinId: string;
+  bulletinNumber: string | null;
+  periodYm: string | null;
+  employeeId: string;
+  employeeName: string | null;
+  matricule: string | null;
+  bankAccountId: string;
+  amount: string;
+  currency: string;
+  status: "DRAFT" | "CONFIRMED" | "CANCELLED";
+  beneficiaryName: string;
+  beneficiaryBankName: string | null;
+  beneficiaryBankAgency: string | null;
+  beneficiaryBankAccount: string;
+  companyBankCode: string;
+  companyBankLabel: string;
+  companyBankRib: string | null;
+  apPaymentId: string | null;
+  apPaymentNumber: string | null;
+  pdfDocumentId: string | null;
+  confirmedAt: string | null;
+  createdAt: string;
+};
+
+export async function fetchTransferBankAccounts(): Promise<
+  ApiOk<{ items: TransferBankAccountOption[] }> | ApiFail
+> {
+  const res = await fetch("/api/v1/hr/transfer-bank-accounts", {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return {
+    ok: true,
+    data: (await res.json()) as { items: TransferBankAccountOption[] },
+  };
+}
+
+export async function fetchTransferOrders(opts?: {
+  bulletinId?: string;
+}): Promise<ApiOk<{ items: TransferOrder[] }> | ApiFail> {
+  const params = new URLSearchParams();
+  if (opts?.bulletinId) params.set("bulletinId", opts.bulletinId);
+  const qs = params.toString();
+  const res = await fetch(
+    qs ? `/api/v1/hr/transfer-orders?${qs}` : "/api/v1/hr/transfer-orders",
+    { credentials: "include" },
+  );
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as { items: TransferOrder[] } };
+}
+
+export async function createTransferOrder(input: {
+  bulletinId: string;
+  bankAccountId: string;
+}): Promise<ApiOk<TransferOrder> | ApiFail> {
+  const res = await fetch("/api/v1/hr/transfer-orders", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as TransferOrder };
+}
+
+export async function confirmTransferOrder(
+  id: string,
+): Promise<ApiOk<TransferOrder> | ApiFail> {
+  const res = await fetch(
+    `/api/v1/hr/transfer-orders/${encodeURIComponent(id)}/confirm`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    },
+  );
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as TransferOrder };
+}
+
+export async function cancelTransferOrder(
+  id: string,
+): Promise<ApiOk<TransferOrder> | ApiFail> {
+  const res = await fetch(
+    `/api/v1/hr/transfer-orders/${encodeURIComponent(id)}/cancel`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    },
+  );
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as TransferOrder };
+}
+
+export async function downloadTransferOrderPdf(
+  id: string,
+): Promise<{ ok: true } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/hr/transfer-orders/${encodeURIComponent(id)}/pdf`,
+      { credentials: "include" },
+    );
+    if (!res.ok) {
+      return { ok: false, status: res.status, message: await parseError(res) };
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download =
+      res.headers.get("Content-Disposition")?.match(/filename="?([^"]+)"?/)?.[1] ??
+      `ordre-virement-${id}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
     return { ok: true };

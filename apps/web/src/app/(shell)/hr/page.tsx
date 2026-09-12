@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import {
   Briefcase,
+  CalendarDays,
   FileStack,
   FileText,
   ScrollText,
@@ -22,6 +23,7 @@ import {
   AScreenHeader,
   ASkeleton,
 } from "@/components/a";
+import { HrCongesPanel } from "@/components/hr/hr-conges-panel";
 import { hrTabHref, parseHrTab, hrEmployeeHref, type HrTab } from "@/lib/hr-tabs";
 import { localizeUiString } from "@/lib/i18n/route-labels";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -145,6 +147,15 @@ function HrWorkspace() {
   const [bankAgency, setBankAgency] = useState("");
   const [bankAccount, setBankAccount] = useState("");
   const [hiredAt, setHiredAt] = useState("");
+  const [email, setEmail] = useState("");
+  const [provisionLogin, setProvisionLogin] = useState(true);
+  const [provisionReveal, setProvisionReveal] = useState<{
+    email: string;
+    password: string;
+    emailSent: boolean;
+    smtpConfigured: boolean;
+    employeeId: string;
+  } | null>(null);
   const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
 
   const load = useCallback(async (query?: string) => {
@@ -212,6 +223,9 @@ function HrWorkspace() {
     setBankAgency("");
     setBankAccount("");
     setHiredAt("");
+    setEmail("");
+    setProvisionLogin(true);
+    setProvisionReveal(null);
     setDrawerOpen(true);
   }
 
@@ -244,6 +258,11 @@ function HrWorkspace() {
   async function onCreateEmployee() {
     setBusy(true);
     setFormError(null);
+    if (provisionLogin && !email.trim()) {
+      setBusy(false);
+      setFormError("E-mail requis pour créer le login Identity.");
+      return;
+    }
     const res = await createEmployee({
       matricule: matricule.trim(),
       displayName: displayName.trim(),
@@ -256,6 +275,8 @@ function HrWorkspace() {
       bankAgency: bankAgency.trim() || undefined,
       bankAccount: bankAccount.trim() || undefined,
       hiredAt: hiredAt || undefined,
+      email: email.trim() || undefined,
+      provisionLogin: provisionLogin || undefined,
     });
     setBusy(false);
     if (!res.ok) {
@@ -263,6 +284,16 @@ function HrWorkspace() {
       return;
     }
     setDrawerOpen(false);
+    if (res.data.provisionalPassword && res.data.provision) {
+      setProvisionReveal({
+        email: res.data.provision.email,
+        password: res.data.provisionalPassword,
+        emailSent: res.data.provision.emailSent,
+        smtpConfigured: res.data.provision.smtpConfigured,
+        employeeId: res.data.id,
+      });
+      return;
+    }
     router.push(hrEmployeeHref(res.data.id));
   }
 
@@ -378,7 +409,9 @@ function HrWorkspace() {
                 ? "Templates impression"
                 : tab === "bulletins"
                   ? "Bulletins"
-                  : "Employés"
+                  : tab === "conges"
+                    ? "Congés"
+                    : "Employés"
         }
         description={
           tab === "postes"
@@ -389,7 +422,9 @@ function HrWorkspace() {
                 ? "Squelettes Prefs (A) + catalogue société (B). Aucune clause légale inventée."
                 : tab === "bulletins"
                   ? "Bulletins persistés (CNSS + IRPP). Création depuis la fiche salarié."
-                  : "Liste des salariés. Ouvrir la fiche pour contrats, fiscal, dossier."
+                  : tab === "conges"
+                    ? "Demandes d’absence — approbation seulement. Pas de quotas inventés."
+                    : "Liste des salariés. Ouvrir la fiche pour contrats, fiscal, dossier."
         }
         actions={
           tab === "postes" ? (
@@ -409,7 +444,10 @@ function HrWorkspace() {
       />
 
       <div className={softPageBody}>
-        {tab !== "postes" && tab !== "kinds" && tab !== "templates" ? (
+        {tab !== "postes" &&
+        tab !== "kinds" &&
+        tab !== "templates" &&
+        tab !== "conges" ? (
           <ExpertiseHintsStrip
             keys={[
               "hr.cnss.employee",
@@ -430,6 +468,7 @@ function HrWorkspace() {
               ["kinds", "Kinds", FileStack],
               ["templates", "Templates", ScrollText],
               ["bulletins", "Bulletins", FileText],
+              ["conges", "Congés", CalendarDays],
             ] as const satisfies ReadonlyArray<
               readonly [HrTab, string, LucideIcon]
             >
@@ -955,6 +994,8 @@ function HrWorkspace() {
             </div>
           )
         ) : null}
+
+        {tab === "conges" ? <HrCongesPanel /> : null}
       </div>
 
       <ADrawer
@@ -1093,9 +1134,38 @@ function HrWorkspace() {
                   onChange={(e) => setHiredAt(e.target.value)}
                 />
               </label>
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  E-mail (Identity / portail)
+                </span>
+                <AInput
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="salarie@entreprise.tn"
+                  autoComplete="off"
+                />
+              </label>
+              <label className="flex items-start gap-2 rounded-[var(--a-radius-sm)] bg-a-surface-2/60 px-3 py-2">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={provisionLogin}
+                  onChange={(e) => setProvisionLogin(e.target.checked)}
+                />
+                <span className="text-[length:var(--a-text-sm)] text-a-fg">
+                  Créer login Identity (rôle salarié) + mot de passe provisoire
+                  affiché une fois · e-mail Soft Glass si SMTP configuré
+                </span>
+              </label>
               <AButton
                 type="button"
-                disabled={busy || !matricule.trim() || !displayName.trim()}
+                disabled={
+                  busy ||
+                  !matricule.trim() ||
+                  !displayName.trim() ||
+                  (provisionLogin && !email.trim())
+                }
                 onClick={() => void onCreateEmployee()}
               >
                 Créer
@@ -1178,6 +1248,73 @@ function HrWorkspace() {
           ) : null}
         </div>
       </ADrawer>
+
+      {provisionReveal ? (
+        <div
+          className="fixed inset-0 z-[var(--a-z-modal)] flex items-center justify-center bg-black/40 px-4 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="provision-title"
+        >
+          <div className="a-underlay w-full max-w-md space-y-4 rounded-[14px] bg-a-surface-2 p-[var(--a-space-5)]">
+            <h2
+              id="provision-title"
+              className="text-[length:var(--a-text-lg)] font-semibold text-a-fg"
+            >
+              Login provisoire (une seule fois)
+            </h2>
+            <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+              Copiez maintenant — le mot de passe ne sera plus réaffiché.
+              Portail :{" "}
+              <span className="a-mono text-a-fg">/employee-portal/login</span>
+            </p>
+            <div className="space-y-2 rounded-[var(--a-radius-sm)] bg-a-surface-3/50 px-3 py-2">
+              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                E-mail
+              </p>
+              <p className="a-mono text-[length:var(--a-text-sm)] text-a-fg">
+                {provisionReveal.email}
+              </p>
+              <p className="mt-2 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                Mot de passe provisoire
+              </p>
+              <p className="a-mono text-[length:var(--a-text-sm)] text-a-fg">
+                {provisionReveal.password}
+              </p>
+            </div>
+            <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+              {provisionReveal.emailSent
+                ? "E-mail Soft Glass envoyé (SMTP)."
+                : provisionReveal.smtpConfigured
+                  ? "SMTP OK mais envoi auto désactivé — remettez le MDP à la main."
+                  : "SMTP non configuré — remettez le MDP à la main (Préférences → Envois)."}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <AButton
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(
+                    `${provisionReveal.email}\n${provisionReveal.password}`,
+                  );
+                }}
+              >
+                Copier
+              </AButton>
+              <AButton
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  const id = provisionReveal.employeeId;
+                  setProvisionReveal(null);
+                  router.push(hrEmployeeHref(id));
+                }}
+              >
+                Ouvrir la fiche
+              </AButton>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

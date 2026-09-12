@@ -16,6 +16,7 @@ import {
 } from "@/components/a";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import { HrUpcomingLots } from "@/components/hr/hr-upcoming-lots";
+import { AttendanceCalendarPanel } from "@/components/attendance/attendance-calendar-panel";
 import {
   fetchBusinessContext,
   listCompanySites,
@@ -1519,6 +1520,7 @@ export default function HrEmployeeFichePage() {
               </AButton>
             </section>
 
+            <AttendanceCalendarPanel employeeId={id} mode="adv" />
             <HrUpcomingLots />
           </>
         ) : null}

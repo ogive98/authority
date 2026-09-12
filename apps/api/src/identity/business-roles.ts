@@ -6,6 +6,8 @@ export const BUSINESS_ROLE_CODES = [
   'admin',
   'accountant',
   'operator',
+  /** Portal salarié — pas d’accès ADV ERP (D219). */
+  'employee',
 ] as const;
 
 export type BusinessRoleCode = (typeof BUSINESS_ROLE_CODES)[number];
@@ -32,6 +34,12 @@ export const BUSINESS_ROLE_CATALOGUE: ReadonlyArray<{
     label: 'Opérateur',
     description:
       'Stock, livraison, opérations terrain — pas users ni Préférences',
+  },
+  {
+    code: 'employee',
+    label: 'Salarié',
+    description:
+      'Employee Portal + congés self — pas d’accès Soft Glass ADV',
   },
 ];
 
@@ -89,6 +97,10 @@ export const ROLE_PERMISSION_PACKS: Record<BusinessRoleCode, readonly string[]> 
       'hr.employee.read',
       'hr.employee.write',
       'hr.wage.read',
+      'attendance.self',
+      'attendance.manage',
+      'attendance.approve',
+      'employee_portal.access',
       'repair.read',
       'repair.scan',
       'repair.execute',
@@ -138,5 +150,9 @@ export const ROLE_PERMISSION_PACKS: Record<BusinessRoleCode, readonly string[]> 
       'production.read',
       'production.wo.write',
       'production.declare',
+    ],
+    employee: [
+      'employee_portal.access',
+      'attendance.self',
     ],
   };

@@ -3,9 +3,10 @@ import type { ModuleManifest } from '../manifest.types';
 export const salesManifest: ModuleManifest = {
   id: 'sales',
   name: 'Ventes',
-  version: '1.0.0',
+  version: '1.1.0',
   apiVersion: '1',
-  description: 'Sales Order V0 — draft, lines, confirm/reserve',
+  description:
+    'Sales Soft Glass — list status chips, order fiche, draft PATCH (D223)',
   capabilities: [
     {
       key: 'sales.ping',

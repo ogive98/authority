@@ -45,12 +45,14 @@ export class SalesController {
   list(
     @CurrentTenancy() tenancy: TenancyContext,
     @Query('q') q?: string,
+    @Query('status') status?: string,
     @Query('limit') limitRaw?: string,
     @Query('cursor') cursor?: string,
   ) {
     const limit = limitRaw ? Number(limitRaw) : undefined;
     return this.salesService.list(tenancy.companyId, {
       q,
+      status,
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor,
     });

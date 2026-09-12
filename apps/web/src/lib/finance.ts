@@ -433,6 +433,25 @@ export async function fetchInvoices(opts?: {
   }
 }
 
+export async function fetchInvoice(
+  id: string,
+): Promise<{ ok: true; data: FinInvoice } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/invoices/${encodeURIComponent(id)}`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinInvoice };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function createInvoice(body: {
   customerId: string;
   amountTotal?: number;

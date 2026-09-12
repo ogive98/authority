@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -33,8 +34,20 @@ import {
   type SalesOrderStatus,
 } from "@/lib/sales";
 import { suggestCustomerPrice } from "@/lib/customers";
-import { softList, softListRow, softPageBody } from "@/lib/soft-glass-ui";
+import {
+  softChipClass,
+  softList,
+  softListRow,
+  softPageBody,
+} from "@/lib/soft-glass-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
+
+const STATUS_FILTERS: { id: "" | SalesOrderStatus; label: string }[] = [
+  { id: "", label: "Tout" },
+  { id: "DRAFT", label: "Brouillon" },
+  { id: "CONFIRMED", label: "Confirmée" },
+  { id: "CANCELLED", label: "Annulée" },
+];
 
 function orderBadgeTone(
   status: SalesOrderStatus,
@@ -107,6 +120,7 @@ function SalesPageInner() {
   const { label: st } = useStatusLabel();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | SalesOrderStatus>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -127,9 +141,12 @@ function SalesPageInner() {
     () => searchParams.get("new") === "1",
   );
 
-  const load = useCallback(async (query?: string) => {
+  const load = useCallback(async (query?: string, status?: "" | SalesOrderStatus) => {
     setState({ kind: "loading" });
-    const res = await fetchSalesOrders(query);
+    const res = await fetchSalesOrders({
+      q: query,
+      status: status || undefined,
+    });
     if (!res.ok) {
       if (res.status === 403) {
         setState({ kind: "forbidden", message: res.message });
@@ -142,7 +159,7 @@ function SalesPageInner() {
   }, []);
 
   useEffect(() => {
-    void load();
+    void load("", "");
     void (async () => {
       const [w, s] = await Promise.all([
         fetchWarehouses(),
@@ -287,7 +304,8 @@ function SalesPageInner() {
       return;
     }
     setDrawerOpen(false);
-    await load(q);
+    await load(q, statusFilter);
+    router.push(`/sales/${res.data.id}`);
   }
 
   async function onConfirm(row: SalesOrder) {
@@ -296,7 +314,7 @@ function SalesPageInner() {
       setState({ kind: "error", message: res.message });
       return;
     }
-    await load(q);
+    await load(q, statusFilter);
   }
 
   async function onCancel(row: SalesOrder) {
@@ -305,12 +323,12 @@ function SalesPageInner() {
       setState({ kind: "error", message: res.message });
       return;
     }
-    await load(q);
+    await load(q, statusFilter);
   }
 
   const workflowHint = settings
     ? [
-        "Crédit (stub)",
+        "Crédit (Prefs)",
         "Prix",
         settings.reserveOnConfirm ? "Stock → réserve" : "Stock (réserve off)",
         "Confirmé + events",
@@ -330,6 +348,31 @@ function SalesPageInner() {
         }
       />
       <div className={softPageBody}>
+        <div
+          className="flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Filtrer par statut"
+        >
+          {STATUS_FILTERS.map((chip) => {
+            const active = statusFilter === chip.id;
+            return (
+              <button
+                key={chip.id || "all"}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => {
+                  setStatusFilter(chip.id);
+                  void load(q, chip.id);
+                }}
+                className={softChipClass(active)}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem] flex-1 space-y-1">
             <label
@@ -342,9 +385,9 @@ function SalesPageInner() {
               id="so-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="N° commande"
+              placeholder="N° · client · surnom · notes"
               onKeyDown={(e) => {
-                if (e.key === "Enter") void load(q);
+                if (e.key === "Enter") void load(q, statusFilter);
               }}
             />
           </div>
@@ -352,7 +395,7 @@ function SalesPageInner() {
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => void load(q)}
+            onClick={() => void load(q, statusFilter)}
           >
             Filtrer
           </AButton>
@@ -373,7 +416,7 @@ function SalesPageInner() {
           <AErrorState
             message={state.message}
             retryable
-            onRetry={() => void load(q)}
+            onRetry={() => void load(q, statusFilter)}
           />
         ) : null}
 
@@ -392,9 +435,12 @@ function SalesPageInner() {
               <li key={row.id} className={softListRow}>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="a-mono text-[13px] font-semibold text-a-fg">
+                    <Link
+                      href={`/sales/${row.id}`}
+                      className="a-mono text-[13px] font-semibold text-a-accent hover:underline"
+                    >
                       {row.number}
-                    </span>
+                    </Link>
                     <ABadge tone={orderBadgeTone(row.status)}>
                       {st(row.status)}
                     </ABadge>
@@ -428,6 +474,12 @@ function SalesPageInner() {
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
+                  <Link
+                    href={`/sales/${row.id}`}
+                    className="inline-flex items-center rounded-[var(--a-radius-md)] bg-a-surface-3 px-2.5 py-1.5 text-[length:var(--a-text-xs)] font-medium text-a-fg hover:opacity-90"
+                  >
+                    Fiche
+                  </Link>
                   {row.status === "DRAFT" ? (
                     <AButton
                       type="button"

@@ -60,6 +60,10 @@ export const PERMISSION_CATALOGUE = [
   'customer_portal.claims.read',
   'customer_portal.claims.create',
   'customer_portal.documents.read',
+  'employee_portal.access',
+  'attendance.self',
+  'attendance.manage',
+  'attendance.approve',
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_CATALOGUE)[number];
@@ -126,6 +130,10 @@ export const PERMISSION_KEYS = {
   customerPortalClaimsRead: 'customer_portal.claims.read',
   customerPortalClaimsCreate: 'customer_portal.claims.create',
   customerPortalDocumentsRead: 'customer_portal.documents.read',
+  employeePortalAccess: 'employee_portal.access',
+  attendanceSelf: 'attendance.self',
+  attendanceManage: 'attendance.manage',
+  attendanceApprove: 'attendance.approve',
 } as const satisfies Record<string, PermissionKey>;
 
 export const PERMISSION_METADATA_KEY = 'authority:permission';

@@ -127,6 +127,7 @@ enum IamSessionRealm {
   BUSINESS
   SUPER_ADMIN
   CUSTOMER_PORTAL
+  EMPLOYEE_PORTAL
 }
 
 enum IamMfaPurpose {
@@ -999,6 +1000,8 @@ enum DocLinkType {
   HR_CONTRACT
   /** Generated work attestation PDF (D217). */
   HR_ATTESTATION
+  /** Salary transfer order PDF (D222). */
+  HR_TRANSFER_ORDER
 }
 
 model DocDocument {
@@ -1724,6 +1727,7 @@ model FinBankAccount {
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   lines FinBankStatementLine[]
+  transferOrders HrTransferOrder[]
 
   @@unique([companyId, code])
   @@index([companyId, active])
@@ -1785,6 +1789,7 @@ model FinApPayment {
   deletedAt      DateTime?        @map("deleted_at") @db.Timestamptz(6)
 
   bankMatches FinBankMatch[]
+  transferOrders HrTransferOrder[]
 
   @@unique([companyId, number])
   @@index([companyId, paymentDate(sort: Desc)])
@@ -2501,6 +2506,9 @@ model HrEmployee {
   cnssSnapshots HrCnssSnapshot[]
   irppSnapshots HrIrppSnapshot[]
   bulletins     HrBulletin[]
+  absences      AttAbsence[]
+  rhEvents      AttRhEvent[]
+  transferOrders HrTransferOrder[]
 
   @@unique([companyId, matricule])
   @@unique([companyId, userId])
@@ -2712,10 +2720,144 @@ model HrBulletin {
 
   contract HrContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  transferOrder HrTransferOrder?
 
   @@unique([companyId, periodYm, contractId])
   @@unique([companyId, number])
   @@index([companyId, periodYm])
   @@index([companyId, employeeId])
   @@map("hr_bulletin")
+}
+
+// --- hr_* Transfer order V0 (D222) — ADV confirm + PDF, amount = bulletin netPay ---
+
+enum HrTransferOrderStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+/**
+ * Ordre de virement salaire (D222).
+ * Amount frozen from HrBulletin.netPay — never invented.
+ * Confirm ADV creates FinApPayment BANK_TRANSFER for soft Banking match (no GL).
+ */
+model HrTransferOrder {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  companyId                String                 @map("company_id") @db.Uuid
+  number                   String
+  bulletinId               String                 @map("bulletin_id") @db.Uuid
+  employeeId               String                 @map("employee_id") @db.Uuid
+  /** Company debit bank (FinBankAccount). */
+  bankAccountId            String                 @map("bank_account_id") @db.Uuid
+  amount                   Decimal                @db.Decimal(18, 3)
+  currency                 String                 @default("TND")
+  status                   HrTransferOrderStatus  @default(DRAFT)
+  beneficiaryName          String                 @map("beneficiary_name")
+  beneficiaryBankName      String?                @map("beneficiary_bank_name")
+  beneficiaryBankAgency    String?                @map("beneficiary_bank_agency")
+  beneficiaryBankAccount   String                 @map("beneficiary_bank_account")
+  companyBankCode          String                 @map("company_bank_code")
+  companyBankLabel         String                 @map("company_bank_label")
+  companyBankRib           String?                @map("company_bank_rib")
+  apPaymentId              String?                @map("ap_payment_id") @db.Uuid
+  pdfDocumentId            String?                @map("pdf_document_id") @db.Uuid
+  createdByUserId          String?                @map("created_by_user_id") @db.Uuid
+  confirmedByUserId        String?                @map("confirmed_by_user_id") @db.Uuid
+  confirmedAt              DateTime?              @map("confirmed_at") @db.Timestamptz(6)
+  version                  Int                    @default(0)
+  createdAt                DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                DateTime?              @map("deleted_at") @db.Timestamptz(6)
+
+  bulletin    HrBulletin      @relation(fields: [bulletinId], references: [id], onDelete: Cascade)
+  employee    HrEmployee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  bankAccount FinBankAccount  @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
+  apPayment   FinApPayment?   @relation(fields: [apPaymentId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, number])
+  @@unique([bulletinId])
+  @@index([companyId, status])
+  @@index([companyId, employeeId])
+  @@index([companyId, bankAccountId])
+  @@index([companyId, apPaymentId])
+  @@map("hr_transfer_order")
+}
+
+// --- att_* Attendance leave V0 (D218) — request/approve only, no quotas ---
+
+enum AttAbsenceType {
+  PAID
+  UNPAID
+  OTHER
+}
+
+enum AttAbsenceStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+/**
+ * Leave / absence request (D218).
+ * Never stores Tunisian leave quotas or day balances — Prefs rates out of scope.
+ */
+model AttAbsence {
+  id                String           @id @default(uuid()) @db.Uuid
+  companyId         String           @map("company_id") @db.Uuid
+  employeeId        String           @map("employee_id") @db.Uuid
+  type              AttAbsenceType
+  status            AttAbsenceStatus @default(REQUESTED)
+  startDate         DateTime         @map("start_date") @db.Date
+  endDate           DateTime         @map("end_date") @db.Date
+  reason            String?
+  notes             String?
+  requestedByUserId String?          @map("requested_by_user_id") @db.Uuid
+  decidedByUserId   String?          @map("decided_by_user_id") @db.Uuid
+  decidedAt         DateTime?        @map("decided_at") @db.Timestamptz(6)
+  version           Int              @default(0)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?        @map("deleted_at") @db.Timestamptz(6)
+
+  employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status])
+  @@index([companyId, employeeId])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("att_absence")
+}
+
+// --- att_* RH events (D220) — penalties etc., no payroll amounts ---
+
+enum AttRhEventKind {
+  PENALTY
+}
+
+/**
+ * Manual ADV RH calendar events (D220).
+ * Never stores Tunisian rates, retenues, or payroll amounts.
+ */
+model AttRhEvent {
+  id              String         @id @default(uuid()) @db.Uuid
+  companyId       String         @map("company_id") @db.Uuid
+  employeeId      String         @map("employee_id") @db.Uuid
+  kind            AttRhEventKind @default(PENALTY)
+  startDate       DateTime       @map("start_date") @db.Date
+  endDate         DateTime       @map("end_date") @db.Date
+  motif           String
+  notes           String?
+  createdByUserId String?        @map("created_by_user_id") @db.Uuid
+  version         Int            @default(0)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  employee HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, employeeId])
+  @@index([companyId, kind])
+  @@index([companyId, startDate])
+  @@map("att_rh_event")
 }

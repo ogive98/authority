@@ -56,9 +56,17 @@ export type BusinessLoginResult = {
   realm?: "business";
 };
 
-/** True when shell session is missing/invalid (redirect to /login). */
+/**
+ * True when shell session is missing/invalid (redirect to /login).
+ * Do NOT treat 503/timeout as logout — Nest watch restarts are transient.
+ */
 export function shouldHideShell(httpStatus: number): boolean {
-  return httpStatus !== 200;
+  return httpStatus === 401 || httpStatus === 403;
+}
+
+/** API unreachable / timed out — keep cookie, show retry (not login). */
+export function isAuthApiUnavailable(httpStatus: number): boolean {
+  return httpStatus === 503 || httpStatus === 502 || httpStatus === 504;
 }
 
 /** Relative in-app path only (open-redirect safe). */
@@ -93,7 +101,7 @@ async function businessServerFetch<T>(
         cookie: await cookieHeader(),
       },
       cache: "no-store",
-      signal: AbortSignal.timeout(4_000),
+      signal: AbortSignal.timeout(8_000),
     });
     if (!res.ok) {
       return { status: res.status, data: null };
@@ -127,25 +135,33 @@ export async function loginBusiness(input: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
+      signal: AbortSignal.timeout(12_000),
     });
     const body = (await res.json().catch(() => ({}))) as BusinessLoginResult & {
       message?: string | string[];
+      code?: string;
     };
     if (!res.ok) {
       let message = "Connexion refusée.";
-      if (Array.isArray(body.message)) message = body.message.join(" ");
+      if (body.code === "IAM.LOCKED") {
+        message =
+          "Compte verrouillé après trop d’échecs. Réessayez plus tard ou contactez un admin.";
+      } else if (Array.isArray(body.message)) message = body.message.join(" ");
       else if (typeof body.message === "string" && body.message.trim()) {
         message = body.message;
       }
       return { ok: false, status: res.status, message };
     }
     return { ok: true, data: body };
-  } catch {
+  } catch (err) {
+    const timedOut =
+      err instanceof DOMException && err.name === "TimeoutError";
     return {
       ok: false,
       status: 0,
-      message:
-        "API indisponible. Vérifiez que le serveur AUTHORITY (API) tourne.",
+      message: timedOut
+        ? "Délai dépassé — l’API ne répond pas. Vérifiez que le serveur AUTHORITY tourne."
+        : "API indisponible. Vérifiez que le serveur AUTHORITY (API) tourne.",
     };
   }
 }

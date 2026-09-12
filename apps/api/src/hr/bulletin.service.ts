@@ -235,6 +235,37 @@ export class BulletinService {
     return serializeBulletin(row, irpp);
   }
 
+  /**
+   * Employee Portal (D221) — own bulletins only.
+   * Wrong employeeId → same NOT_FOUND (no IDOR leak).
+   */
+  async getForEmployee(
+    companyId: string,
+    employeeId: string,
+    id: string,
+  ): Promise<BulletinDto> {
+    const row = await this.prisma.hrBulletin.findFirst({
+      where: { id, companyId, employeeId, deletedAt: null },
+      include: {
+        employee: { select: { displayName: true, matricule: true } },
+        contract: { select: { number: true } },
+      },
+    });
+    if (!row) {
+      throw new HrException(
+        HR_ERROR_CODES.BULLETIN_NOT_FOUND,
+        'Bulletin not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    const irpp = row.irppSnapshotId
+      ? await this.prisma.hrIrppSnapshot.findFirst({
+          where: { id: row.irppSnapshotId, companyId, deletedAt: null },
+        })
+      : null;
+    return serializeBulletin(row, irpp);
+  }
+
   private async compose(
     companyId: string,
     contractId: string,

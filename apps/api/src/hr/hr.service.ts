@@ -25,6 +25,7 @@ import type {
 } from './hr.dto';
 import { HrException } from './hr.exception';
 import { JobTitleService } from './job-title.service';
+import { HrIdentityProvisionService } from './hr-identity-provision.service';
 
 export type HrContractDto = {
   id: string;
@@ -104,12 +105,24 @@ export type HrEmployeeDto = {
   updatedAt: string;
 };
 
+/** D219 — create response may include one-time provisional password. */
+export type CreateEmployeeResult = HrEmployeeDto & {
+  provisionalPassword?: string;
+  provision?: {
+    userId: string;
+    email: string;
+    emailSent: boolean;
+    smtpConfigured: boolean;
+  };
+};
+
 @Injectable()
 export class HrService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly jobTitles: JobTitleService,
+    private readonly identityProvision: HrIdentityProvisionService,
   ) {}
 
   async listEmployees(
@@ -176,7 +189,7 @@ export class HrService {
     companyId: string,
     dto: CreateEmployeeDto,
     includeWage = false,
-  ): Promise<HrEmployeeDto> {
+  ): Promise<CreateEmployeeResult> {
     const matricule = dto.matricule.trim().toUpperCase();
     const existing = await this.prisma.hrEmployee.findFirst({
       where: { companyId, matricule, deletedAt: null },
@@ -209,6 +222,26 @@ export class HrService {
       );
     }
 
+    const provisionLogin = dto.provisionLogin === true;
+    const emailRaw = dto.email?.trim() || '';
+    if (provisionLogin && !emailRaw) {
+      throw new HrException(
+        HR_ERROR_CODES.EMAIL_REQUIRED,
+        'Email is required to provision Identity login.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    let provision:
+      | {
+          userId: string;
+          email: string;
+          provisionalPassword: string;
+          emailSent: boolean;
+          smtpConfigured: boolean;
+        }
+      | undefined;
+
     const created = await this.prisma.$transaction(async (tx) => {
       const row = await tx.hrEmployee.create({
         data: {
@@ -224,7 +257,7 @@ export class HrService {
           bankName: dto.bankName?.trim() || null,
           bankAgency: dto.bankAgency?.trim() || null,
           bankAccount: dto.bankAccount?.trim() || null,
-          email: dto.email?.trim() || null,
+          email: emailRaw || null,
           hiredAt: dto.hiredAt ? startOfUtcDay(new Date(dto.hiredAt)) : null,
           notes: dto.notes?.trim() || null,
           status: HrEmployeeStatus.ACTIVE,
@@ -241,10 +274,36 @@ export class HrService {
           matricule: row.matricule,
         },
       });
+
+      if (provisionLogin) {
+        provision = await this.identityProvision.provisionForNewEmployee({
+          companyId,
+          employeeId: row.id,
+          email: emailRaw,
+          displayName: dto.displayName.trim(),
+          tx,
+        });
+        return tx.hrEmployee.findFirstOrThrow({
+          where: { id: row.id },
+          include: employeeInclude,
+        });
+      }
+
       return row;
     });
 
-    return this.toEmployeeDto(created, includeWage);
+    const dtoOut = this.toEmployeeDto(created, includeWage);
+    if (!provision) return dtoOut;
+    return {
+      ...dtoOut,
+      provisionalPassword: provision.provisionalPassword,
+      provision: {
+        userId: provision.userId,
+        email: provision.email,
+        emailSent: provision.emailSent,
+        smtpConfigured: provision.smtpConfigured,
+      },
+    };
   }
 
   async patchEmployee(

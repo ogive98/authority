@@ -13,6 +13,7 @@ export const BUSINESS_MODULE_KEYS = [
   'production',
   'payroll',
   'hr',
+  'attendance',
   'tax',
   'customers',
   'master_data',

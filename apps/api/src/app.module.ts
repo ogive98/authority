@@ -22,10 +22,12 @@ import { FinanceModule } from './finance/finance.module';
 import { DocumentsModule } from './documents/documents.module';
 import { AccountingModule } from './accounting/accounting.module';
 import { CustomerPortalModule } from './customer-portal/customer-portal.module';
+import { EmployeePortalModule } from './employee-portal/employee-portal.module';
 import { RepairModule } from './repair/repair.module';
 import { ProductionModule } from './production/production.module';
 import { TaxModule } from './tax/tax.module';
 import { HrModule } from './hr/hr.module';
+import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
   imports: [
@@ -49,10 +51,12 @@ import { HrModule } from './hr/hr.module';
     DeliveryModule,
     TaxModule,
     HrModule,
+    AttendanceModule,
     FinanceModule,
     DocumentsModule,
     AccountingModule,
     CustomerPortalModule,
+    EmployeePortalModule,
     RepairModule,
     ProductionModule,
   ],

@@ -12,6 +12,7 @@ import {
   ASkeleton,
 } from "@/components/a";
 import { BulletinPrintSheet } from "@/components/hr/bulletin-print-sheet";
+import { HrTransferOrderPanel } from "@/components/hr/hr-transfer-order-panel";
 import {
   downloadBulletinPdf,
   fetchBulletin,
@@ -102,6 +103,11 @@ export default function HrBulletinPrintPage() {
           <p className="mb-3 text-[length:var(--a-text-sm)] text-a-danger-fg">
             {pdfError}
           </p>
+        ) : null}
+        {state.kind === "ok" ? (
+          <div className={`${softPageBody} mb-6`}>
+            <HrTransferOrderPanel bulletinId={state.data.id} />
+          </div>
         ) : null}
       </div>
 

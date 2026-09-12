@@ -80,7 +80,7 @@ export class SettingsController {
     );
     return {
       canWriteRole,
-      roles: ['admin', 'accountant', 'operator'],
+      roles: ['admin', 'accountant', 'operator', 'employee'],
     };
   }
 

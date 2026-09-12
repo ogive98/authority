@@ -78,6 +78,14 @@ export class CreateEmployeeDto {
   @IsEmail()
   email?: string;
 
+  /**
+   * D219 — create Identity ACTIVE + role `employee` + link userId.
+   * Requires email. Default false when omitted (opt-in from Soft Glass UI).
+   */
+  @IsOptional()
+  @IsBoolean()
+  provisionLogin?: boolean;
+
   @IsOptional()
   @IsDateString()
   hiredAt?: string;
@@ -480,4 +488,12 @@ export class PatchPrintTemplateDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+}
+
+export class CreateTransferOrderDto {
+  @IsUUID()
+  bulletinId!: string;
+
+  @IsUUID()
+  bankAccountId!: string;
 }

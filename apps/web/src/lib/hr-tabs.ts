@@ -4,6 +4,7 @@ export const HR_TABS = [
   "kinds",
   "templates",
   "bulletins",
+  "conges",
 ] as const;
 
 export type HrTab = (typeof HR_TABS)[number];
@@ -25,6 +26,7 @@ export function parseHrTab(
     return "templates";
   }
   if (tab === "bulletins" || tab === "payslips") return "bulletins";
+  if (tab === "conges" || tab === "absences" || tab === "leave") return "conges";
   if (tab === "employees" || tab === "employes") return "employees";
 
   const h = hash.replace(/^#/, "").trim().toLowerCase();
@@ -32,6 +34,7 @@ export function parseHrTab(
   if (h === "kinds" || h === "doc-kinds") return "kinds";
   if (h === "templates" || h === "print") return "templates";
   if (h === "bulletins") return "bulletins";
+  if (h === "conges" || h === "absences") return "conges";
   return "employees";
 }
 

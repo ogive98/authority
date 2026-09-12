@@ -164,6 +164,7 @@ export class SalesService {
     companyId: string,
     opts: {
       q?: string;
+      status?: string;
       limit?: number;
       cursor?: string;
       /** When set, scopes results to this customer (portal / IDOR-safe lists). */
@@ -178,11 +179,26 @@ export class SalesService {
     if (opts.customerId) {
       where.customerId = opts.customerId;
     }
+    const status = opts.status?.trim().toUpperCase();
+    if (
+      status &&
+      Object.values(SalOrderStatus).includes(status as SalOrderStatus)
+    ) {
+      where.status = status as SalOrderStatus;
+    }
     if (opts.q?.trim()) {
       const q = opts.q.trim();
       where.OR = [
         { number: { contains: q, mode: 'insensitive' } },
         { notes: { contains: q, mode: 'insensitive' } },
+        { preferredDriver: { contains: q, mode: 'insensitive' } },
+        { customer: { code: { contains: q, mode: 'insensitive' } } },
+        { customer: { nickname: { contains: q, mode: 'insensitive' } } },
+        {
+          customer: {
+            party: { legalName: { contains: q, mode: 'insensitive' } },
+          },
+        },
       ];
     }
 

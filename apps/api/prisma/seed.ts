@@ -140,6 +140,7 @@ async function main() {
     'production',
     'payroll',
     'hr',
+    'attendance',
     'tax',
     'customers',
     'master_data',
@@ -166,7 +167,8 @@ async function main() {
       moduleKey === 'repair' ||
       moduleKey === 'production' ||
       moduleKey === 'tax' ||
-      moduleKey === 'hr'
+      moduleKey === 'hr' ||
+      moduleKey === 'attendance'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -658,6 +660,30 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'hr.wage.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'attendance.self',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'attendance.manage',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'attendance.approve',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'employee_portal.access',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,
@@ -1289,8 +1315,39 @@ async function main() {
     }
   }
 
+  // D218 — Employee Portal: link demo user to an ACTIVE employee (HrEmployee.userId)
+  const existingDemoEmployee = await prisma.hrEmployee.findFirst({
+    where: {
+      companyId: company.id,
+      OR: [{ userId: demoUser.id }, { matricule: 'EMP-DEMO' }],
+      deletedAt: null,
+    },
+  });
+  if (existingDemoEmployee) {
+    if (!existingDemoEmployee.userId) {
+      await prisma.hrEmployee.update({
+        where: { id: existingDemoEmployee.id },
+        data: { userId: demoUser.id, status: 'ACTIVE', deletedAt: null },
+      });
+    }
+  } else {
+    await prisma.hrEmployee.create({
+      data: {
+        companyId: company.id,
+        matricule: 'EMP-DEMO',
+        displayName: 'Demo Operator',
+        siteId: demoSite.id,
+        email: DEMO_USER_EMAIL,
+        userId: demoUser.id,
+        status: 'ACTIVE',
+        notes:
+          'Seed D218 — linked to demo@authority.local for /employee-portal',
+      },
+    });
+  }
+
   console.log(
-    `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, limited ${LIMITED_USER_EMAIL}, accountant ${ACCOUNTANT_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}, portal ${PORTAL_USER_EMAIL}`,
+    `Seed OK — company ${company.code}, site ${demoSite.code}, other ${otherCompany.code}, user ${DEMO_USER_EMAIL}, limited ${LIMITED_USER_EMAIL}, accountant ${ACCOUNTANT_USER_EMAIL}, super-admin ${SUPER_ADMIN_EMAIL}, portal ${PORTAL_USER_EMAIL}, employee-portal ${DEMO_USER_EMAIL}`,
   );
 }
 

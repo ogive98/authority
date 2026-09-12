@@ -40,6 +40,7 @@ import {
   CreateJobTitleDto,
   CreateDocKindDto,
   CreatePrintTemplateDto,
+  CreateTransferOrderDto,
   EndContractDto,
   GeneratePrintPdfDto,
   PatchContractDto,
@@ -68,6 +69,8 @@ import { ContractPrintSettingsResolver } from './contract-print-settings.resolve
 import { AttestationPdfService } from './attestation-pdf.service';
 import { AttestationPrintSettingsResolver } from './attestation-print-settings.resolver';
 import { PrintTemplateService } from './print-template.service';
+import { TransferOrderService } from './transfer-order.service';
+import { TransferOrderPdfService } from './transfer-order-pdf.service';
 
 const maxUploadBytes =
   Number(process.env.MAX_UPLOAD_MB ?? DEFAULT_MAX_UPLOAD_MB) * 1024 * 1024;
@@ -93,6 +96,8 @@ export class HrController {
     private readonly attestationPdf: AttestationPdfService,
     private readonly attestationPrint: AttestationPrintSettingsResolver,
     private readonly printTemplates: PrintTemplateService,
+    private readonly transferOrders: TransferOrderService,
+    private readonly transferOrderPdf: TransferOrderPdfService,
   ) {}
 
   /**
@@ -345,6 +350,93 @@ export class HrController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
     const result = await this.bulletinPdf.generateAndPersist(
+      tenancy.companyId,
+      user.id,
+      id,
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.filename}"`,
+    );
+    res.setHeader('X-Authority-Document-Id', result.documentId);
+    return new StreamableFile(result.buffer);
+  }
+
+  /** D222 — company bank accounts usable for salary transfer orders. */
+  @Get('transfer-bank-accounts')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  listTransferBankAccounts(@CurrentTenancy() tenancy: TenancyContext) {
+    return this.transferOrders.listBankAccounts(tenancy.companyId);
+  }
+
+  @Get('transfer-orders')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  listTransferOrders(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('bulletinId') bulletinId?: string,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.transferOrders.list(tenancy.companyId, {
+      bulletinId,
+      status,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Post('transfer-orders')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  createTransferOrder(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Body() dto: CreateTransferOrderDto,
+  ) {
+    return this.transferOrders.create(tenancy.companyId, dto, user.id);
+  }
+
+  @Get('transfer-orders/:id')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  getTransferOrder(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.transferOrders.getById(tenancy.companyId, id);
+  }
+
+  @Post('transfer-orders/:id/confirm')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  confirmTransferOrder(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.transferOrders.confirm(tenancy.companyId, id, user.id);
+  }
+
+  @Post('transfer-orders/:id/cancel')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.hrEmployeeWrite)
+  cancelTransferOrder(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.transferOrders.cancel(tenancy.companyId, id, user.id);
+  }
+
+  @Get('transfer-orders/:id/pdf')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  async getTransferOrderPdf(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const result = await this.transferOrderPdf.generateAndPersist(
       tenancy.companyId,
       user.id,
       id,
