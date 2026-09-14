@@ -51,6 +51,7 @@ type VehicleForm = {
   capacityKg: string;
   cold: boolean;
   odometerKm: string;
+  usualDriverLabel: string;
   notes: string;
 };
 
@@ -127,6 +128,7 @@ export default function FleetPage() {
       capacityKg: "",
       cold: true,
       odometerKm: "",
+      usualDriverLabel: "",
       notes: "",
     }),
     [],
@@ -220,6 +222,7 @@ export default function FleetPage() {
         capacityKg: cap ? Number(cap) : undefined,
         cold: form.cold,
         odometerKm: odo ? Number(odo) : undefined,
+        usualDriverLabel: form.usualDriverLabel.trim() || undefined,
         notes: form.notes.trim() || undefined,
       });
       if (!res.ok) {
@@ -254,7 +257,17 @@ export default function FleetPage() {
     setAssignForm({
       roundId: round.id,
       vehicleId: existing?.vehicleId ?? options[0]?.id ?? "",
-      driverLabel: existing?.driverLabel ?? round.driverLabel ?? "",
+      driverLabel:
+        existing?.driverLabel ??
+        (() => {
+          const vid = existing?.vehicleId ?? options[0]?.id ?? "";
+          const v = activeVehicles.find((x) => x.id === vid);
+          return (
+            v?.usualDriverLabel?.trim() ||
+            round.driverLabel ||
+            ""
+          );
+        })(),
       payloadKg: existing?.payloadKg ?? "",
       notes: existing?.notes ?? "",
     });
@@ -607,6 +620,15 @@ export default function FleetPage() {
               <AInput
                 value={form.plate}
                 onChange={(e) => setForm({ ...form, plate: e.target.value })}
+              />
+            </Field>
+            <Field label="Chauffeur habitué">
+              <AInput
+                value={form.usualDriverLabel}
+                onChange={(e) =>
+                  setForm({ ...form, usualDriverLabel: e.target.value })
+                }
+                placeholder="Ex. Karim"
               />
             </Field>
             <Field label="Capacité (kg)">

@@ -12,6 +12,10 @@ function mockPrisma() {
       create: jest.fn(),
       update: jest.fn(),
     },
+    fltVehicleLog: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+    },
     fltAssignment: {
       findMany: jest.fn(),
       findFirst: jest.fn(),
@@ -57,6 +61,9 @@ describe('FleetService', () => {
     capacityKg: new Prisma.Decimal(1000),
     cold: false,
     odometerKm: null,
+    usualDriverLabel: null,
+    nextServiceKm: null,
+    nextServiceAt: null,
     status: FltVehicleStatus.ACTIVE,
     notes: null,
     version: 0,
@@ -340,5 +347,64 @@ describe('FleetService', () => {
     ).rejects.toMatchObject({
       response: { code: FLEET_ERROR_CODES.NOT_FOUND },
     });
+  });
+
+  it('creates oil-change log and bumps next service', async () => {
+    const prisma = mockPrisma();
+    const outbox = { enqueue: jest.fn() };
+    const service = new FleetService(prisma as never, outbox as never);
+
+    prisma.fltVehicle.findFirst.mockResolvedValue({
+      ...vehicle,
+      odometerKm: new Prisma.Decimal(50000),
+      usualDriverLabel: 'Karim',
+    });
+    prisma.$transaction.mockImplementation(async (fn) => {
+      const tx = {
+        fltVehicleLog: {
+          create: jest.fn().mockResolvedValue({
+            id: '55555555-5555-5555-5555-555555555555',
+            companyId,
+            vehicleId,
+            kind: 'OIL_CHANGE',
+            occurredAt: new Date('2026-09-14T10:00:00Z'),
+            odometerKm: new Prisma.Decimal(50200),
+            liters: null,
+            amountTnd: null,
+            notes: 'Castrol',
+            version: 0,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+          }),
+        },
+        fltVehicle: {
+          update: jest.fn().mockResolvedValue({
+            ...vehicle,
+            odometerKm: new Prisma.Decimal(50200),
+            usualDriverLabel: 'Karim',
+            nextServiceKm: new Prisma.Decimal(60200),
+            nextServiceAt: new Date('2027-03-14'),
+            version: 1,
+          }),
+        },
+      };
+      return fn(tx);
+    });
+
+    const result = await service.createVehicleLog(companyId, vehicleId, {
+      kind: 'OIL_CHANGE',
+      occurredAt: '2026-09-14T10:00:00.000Z',
+      odometerKm: 50200,
+      notes: 'Castrol',
+    });
+
+    expect(result.log.kind).toBe('OIL_CHANGE');
+    expect(result.vehicle.odometerKm).toBe('50200');
+    expect(result.vehicle.nextServiceKm).toBe('60200');
+    expect(outbox.enqueue).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: 'fleet.vehicle.log_created.v1' }),
+    );
   });
 });

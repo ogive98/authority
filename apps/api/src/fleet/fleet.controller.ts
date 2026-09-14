@@ -19,7 +19,7 @@ import { RequireModule } from '../modules-registry/modules.decorators';
 import { PermissionGuard } from '../permissions/permission.guard';
 import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
-import { CreateAssignmentDto, CreateVehicleDto, UpdateVehicleDto } from './fleet.dto';
+import { CreateAssignmentDto, CreateVehicleDto, CreateVehicleLogDto, UpdateVehicleDto } from './fleet.dto';
 import { FleetService } from './fleet.service';
 
 @Controller('api/v1/fleet')
@@ -53,6 +53,32 @@ export class FleetController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.fleetService.getVehicle(tenancy.companyId, id);
+  }
+
+  @Get('vehicles/:id/logs')
+  @RequirePermission(PERMISSION_KEYS.fleetManage)
+  listVehicleLogs(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.fleetService.listVehicleLogs(tenancy.companyId, id, {
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor,
+    });
+  }
+
+  @Post('vehicles/:id/logs')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.fleetManage)
+  createVehicleLog(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateVehicleLogDto,
+  ) {
+    return this.fleetService.createVehicleLog(tenancy.companyId, id, dto);
   }
 
   @Post('vehicles')

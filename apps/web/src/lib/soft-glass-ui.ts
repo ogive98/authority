@@ -50,9 +50,11 @@ export const softTile =
 export const softGhostBtn =
   "a-action-quiet rounded-[var(--a-radius-sm)] px-2.5 py-1.5 text-[length:var(--a-text-sm)] font-medium";
 
-/** Native select aligned Soft Glass. */
-export const softSelect =
-  "flex h-9 w-full rounded-[var(--a-radius-sm)] bg-a-surface-3 px-3 text-[length:var(--a-text-sm)] text-a-fg outline-none ring-a-accent focus:ring-2";
+/** Native select — Soft Glass readable control (`.a-select` in globals.css). */
+export const softSelect = "a-select";
+
+/** Icon + label row for Soft Glass forms. */
+export const softFieldLabel = "a-field-label";
 
 /** Page body padding consistent with shell. */
 export const softPageBody =

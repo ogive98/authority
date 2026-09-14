@@ -3248,7 +3248,7 @@ model AtmRunLog {
 }
 
 /**
- * Fleet Soft Glass V0 (D253) — vehicles + round assignment (free-text driver).
+ * Fleet Soft Glass (D253+) — vehicles + assignment + carnet (D257).
  * Out: GPS · vehicleId on DlvRound · HR driver FK.
  */
 enum FltVehicleStatus {
@@ -3258,29 +3258,63 @@ enum FltVehicleStatus {
   ARCHIVED
 }
 
+enum FltLogKind {
+  ODOMETER
+  OIL_CHANGE
+  TIRES
+  FUEL
+  OTHER
+}
+
 model FltVehicle {
-  id          String           @id @default(uuid()) @db.Uuid
-  companyId   String           @map("company_id") @db.Uuid
-  code        String
-  plate       String
-  capacityKg  Decimal?         @map("capacity_kg") @db.Decimal(18, 3)
-  cold        Boolean          @default(false)
-  odometerKm  Decimal?         @map("odometer_km") @db.Decimal(18, 3)
-  status      FltVehicleStatus @default(ACTIVE)
-  notes       String?
-  version     Int              @default(0)
-  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz(6)
+  id                String           @id @default(uuid()) @db.Uuid
+  companyId         String           @map("company_id") @db.Uuid
+  code              String
+  plate             String
+  capacityKg        Decimal?         @map("capacity_kg") @db.Decimal(18, 3)
+  cold              Boolean          @default(false)
+  odometerKm        Decimal?         @map("odometer_km") @db.Decimal(18, 3)
+  usualDriverLabel  String?          @map("usual_driver_label")
+  nextServiceKm     Decimal?         @map("next_service_km") @db.Decimal(18, 3)
+  nextServiceAt     DateTime?        @map("next_service_at") @db.Date
+  status            FltVehicleStatus @default(ACTIVE)
+  notes             String?
+  version           Int              @default(0)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?        @map("deleted_at") @db.Timestamptz(6)
 
   assignments FltAssignment[]
   maintAssets MntAsset[]
+  logs        FltVehicleLog[]
 
   @@unique([companyId, code])
   @@unique([companyId, plate])
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, status])
   @@map("flt_vehicle")
+}
+
+model FltVehicleLog {
+  id          String     @id @default(uuid()) @db.Uuid
+  companyId   String     @map("company_id") @db.Uuid
+  vehicleId   String     @map("vehicle_id") @db.Uuid
+  kind        FltLogKind
+  occurredAt  DateTime   @map("occurred_at") @db.Timestamptz(6)
+  odometerKm  Decimal?   @map("odometer_km") @db.Decimal(18, 3)
+  liters      Decimal?   @db.Decimal(18, 3)
+  amountTnd   Decimal?   @map("amount_tnd") @db.Decimal(18, 3)
+  notes       String?
+  version     Int        @default(0)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?  @map("deleted_at") @db.Timestamptz(6)
+
+  vehicle FltVehicle @relation(fields: [vehicleId], references: [id])
+
+  @@index([companyId, vehicleId, occurredAt(sort: Desc)])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("flt_vehicle_log")
 }
 
 model FltAssignment {

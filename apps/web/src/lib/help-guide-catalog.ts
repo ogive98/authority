@@ -487,12 +487,12 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/fleet",
     title: { fr: "Flotte", it: "Flotta" },
     summary: {
-      fr: "Véhicules Soft Glass (froid, capacité, odomètre), fiche + historique, affectation tournée avec hint périssable. Badge véhicule lecture seule sur Livraison. Pas de GPS.",
-      it: "Veicoli Soft Glass (freddo, capacità, km), scheda + storico, assegnazione giro con hint deperibili. Badge veicolo sola lettura su Consegne. Niente GPS.",
+      fr: "Véhicules Soft Glass (froid, capacité, odomètre), chauffeur habitué, carnet (vidange/pneus/carburant/km), affectation tournée. Pas de GPS.",
+      it: "Veicoli Soft Glass (freddo, capacità, km), autista abituale, libretto (olio/gomme/carburante/km), assegnazione giro. Niente GPS.",
     },
     when: {
-      fr: "Quand vous planifiez une tournée et devez choisir un véhicule (froid / capacité).",
-      it: "Quando pianificate un giro e dovete scegliere un veicolo (freddo / capacità).",
+      fr: "Quand vous planifiez une tournée ou suivez l’entretien d’un camion.",
+      it: "Quando pianificate un giro o seguite la manutenzione di un camion.",
     },
     features: [
       {
@@ -507,15 +507,41 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Ouvrez `/fleet` (module Flotte ENABLED + `fleet.manage`).",
-            "Chips statut (Tous / Actif / Maintenance / Hors service / Archivé).",
-            "« + Nouveau véhicule » ou ouvrez la fiche via le code / Fiche (`/fleet/[id]`).",
-            "Sur la fiche : Éditer (version optimistic) · historique Ouverte / Annulée.",
+            "Chips statut (Tous / Actif / En atelier / Hors service / Archivé).",
+            "« + Nouveau véhicule » (chauffeur habitué optionnel) ou fiche `/fleet/[id]`.",
+            "Sur la fiche : Éditer · carnet · historique d’affectations.",
           ],
           it: [
             "Apri `/fleet` (modulo Flotta ENABLED + `fleet.manage`).",
-            "Chip stato (Tutti / Attivo / Manutenzione / Fuori servizio / Archiviato).",
-            "« + Nouveau véhicule » o apri la scheda dal codice / Fiche (`/fleet/[id]`).",
-            "In scheda: Éditer (version optimistic) · storico Aperta / Annullata.",
+            "Chip stato (Tutti / Attivo / In officina / Fuori servizio / Archiviato).",
+            "« + Nouveau véhicule » (autista abituale opzionale) o scheda `/fleet/[id]`.",
+            "In scheda: Éditer · libretto · storico assegnazioni.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Carnet véhicule + chauffeur habitué",
+          it: "Libretto veicolo + autista abituale",
+        },
+        when: {
+          fr: "Vidange, pneus, carburant, relevé km ; rappel prochaine vidange.",
+          it: "Olio, gomme, carburante, km; reminder prossimo tagliando.",
+        },
+        steps: {
+          fr: [
+            "Fiche `/fleet/[id]` → Champ « Chauffeur habitué » (texte libre, pas RH).",
+            "« + Entrée carnet » : type (Kilométrage / Vidange / Pneus / Carburant / Autre).",
+            "Une vidange met à jour odomètre + propose prochain km (+10 000) et date (+6 mois).",
+            "Bandeau « Entretien dû » si date ou km dépassés (rappel UI, pas de job Thunder).",
+            "À l’assign planning : préremplit le chauffeur avec le habitué du véhicule si défini.",
+          ],
+          it: [
+            "Scheda `/fleet/[id]` → campo « Chauffeur habitué » (testo libero, non HR).",
+            "« + Entrée carnet »: tipo (Km / Olio / Gomme / Carburante / Altro).",
+            "Un cambio olio aggiorna km + propone prossimo km (+10 000) e data (+6 mesi).",
+            "Banner « Entretien dû » se data o km superati (reminder UI, niente job Thunder).",
+            "In assign planning: precompila l’autista con l’abituale del veicolo se definito.",
           ],
         },
       },
@@ -550,14 +576,16 @@ export const HELP_MODULES: HelpModule[] = [
       fr: [
         "Pas de GPS / POD / mobile livreur (D253/D254).",
         "Pas de FK véhicule sur `dlv_round` — table `flt_assignment` seule.",
-        "Chauffeur flotte ≠ Identity / RH — texte libre.",
+        "Chauffeur flotte / habitué ≠ Identity / RH — texte libre.",
         "Copie chauffeur → tournée = ADV explicite seulement (D255) — pas d’auto-sync.",
+        "Carnet = journal ADV (D257) — pas pompe auto · pas stock pièces · pas GL sur montant TND.",
       ],
       it: [
         "Niente GPS / POD / mobile autista (D253/D254).",
         "Niente FK veicolo su `dlv_round` — solo tabella `flt_assignment`.",
-        "Autista flotta ≠ Identity / HR — testo libero.",
+        "Autista flotta / abituale ≠ Identity / HR — testo libero.",
         "Copia autista → giro = ADV esplicito solo (D255) — niente auto-sync.",
+        "Libretto = diario ADV (D257) — niente pompa auto · pezzi · GL su importo TND.",
       ],
     },
   },

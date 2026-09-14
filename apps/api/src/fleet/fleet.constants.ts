@@ -13,6 +13,9 @@ export const FLEET_ERROR_CODES = {
   INVALID_ODOMETER: 'FLT.INVALID_ODOMETER',
   INVALID_PAYLOAD: 'FLT.INVALID_PAYLOAD',
   INVALID_DRIVER: 'FLT.INVALID_DRIVER',
+  INVALID_LOG_KIND: 'FLT.INVALID_LOG_KIND',
+  INVALID_LITERS: 'FLT.INVALID_LITERS',
+  INVALID_AMOUNT: 'FLT.INVALID_AMOUNT',
 } as const;
 
 export type FleetErrorCode =
@@ -27,10 +30,21 @@ export const FLEET_VEHICLE_STATUSES = [
 
 export type FleetVehicleStatus = (typeof FLEET_VEHICLE_STATUSES)[number];
 
+export const FLEET_LOG_KINDS = [
+  'ODOMETER',
+  'OIL_CHANGE',
+  'TIRES',
+  'FUEL',
+  'OTHER',
+] as const;
+
+export type FleetLogKind = (typeof FLEET_LOG_KINDS)[number];
+
 export const FLEET_EVENT_TYPES = {
   VEHICLE_CREATED: 'fleet.vehicle.created.v1',
   VEHICLE_UPDATED: 'fleet.vehicle.updated.v1',
   ASSIGNMENT_CREATED: 'fleet.assignment.created.v1',
   ASSIGNMENT_CANCELLED: 'fleet.assignment.cancelled.v1',
   ASSIGNMENT_DRIVER_COPIED: 'fleet.assignment.driver_copied.v1',
+  VEHICLE_LOG_CREATED: 'fleet.vehicle.log_created.v1',
 } as const;

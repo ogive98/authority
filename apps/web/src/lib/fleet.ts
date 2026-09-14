@@ -4,11 +4,26 @@ export type FleetVehicleStatus =
   | "OUT"
   | "ARCHIVED";
 
+export type FleetLogKind =
+  | "ODOMETER"
+  | "OIL_CHANGE"
+  | "TIRES"
+  | "FUEL"
+  | "OTHER";
+
 export const FLEET_VEHICLE_STATUS_LABELS: Record<FleetVehicleStatus, string> = {
   ACTIVE: "Actif",
   MAINTENANCE: "En atelier",
   OUT: "Hors service",
   ARCHIVED: "Archivé",
+};
+
+export const FLEET_LOG_KIND_LABELS: Record<FleetLogKind, string> = {
+  ODOMETER: "Kilométrage",
+  OIL_CHANGE: "Vidange",
+  TIRES: "Pneus",
+  FUEL: "Carburant",
+  OTHER: "Autre",
 };
 
 export type FleetVehicle = {
@@ -19,7 +34,26 @@ export type FleetVehicle = {
   capacityKg: string | null;
   cold: boolean;
   odometerKm: string | null;
+  usualDriverLabel: string | null;
+  nextServiceKm: string | null;
+  nextServiceAt: string | null;
+  serviceDue: boolean;
   status: FleetVehicleStatus;
+  notes: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FleetVehicleLog = {
+  id: string;
+  companyId: string;
+  vehicleId: string;
+  kind: FleetLogKind;
+  occurredAt: string;
+  odometerKm: string | null;
+  liters: string | null;
+  amountTnd: string | null;
   notes: string | null;
   version: number;
   createdAt: string;
@@ -114,6 +148,7 @@ export async function createVehicle(body: {
   capacityKg?: number;
   cold?: boolean;
   odometerKm?: number;
+  usualDriverLabel?: string;
   notes?: string;
 }): Promise<{ ok: true; data: FleetVehicle } | ApiFail> {
   const res = await fetch("/api/v1/fleet/vehicles", {
@@ -134,6 +169,9 @@ export async function updateVehicle(
     capacityKg?: number | null;
     cold?: boolean;
     odometerKm?: number | null;
+    usualDriverLabel?: string | null;
+    nextServiceKm?: number | null;
+    nextServiceAt?: string | null;
     notes?: string | null;
     status?: FleetVehicleStatus;
   },
@@ -146,6 +184,49 @@ export async function updateVehicle(
   });
   if (!res.ok) return parseFail(res);
   return { ok: true, data: (await res.json()) as FleetVehicle };
+}
+
+export async function fetchVehicleLogs(
+  vehicleId: string,
+): Promise<{ ok: true; data: { items: FleetVehicleLog[] } } | ApiFail> {
+  const res = await fetch(`/api/v1/fleet/vehicles/${vehicleId}/logs`, {
+    credentials: "include",
+  });
+  if (!res.ok) return parseFail(res);
+  return {
+    ok: true,
+    data: (await res.json()) as { items: FleetVehicleLog[] },
+  };
+}
+
+export async function createVehicleLog(
+  vehicleId: string,
+  body: {
+    kind: FleetLogKind;
+    occurredAt: string;
+    odometerKm?: number;
+    liters?: number;
+    amountTnd?: number;
+    notes?: string;
+  },
+): Promise<
+  | { ok: true; data: { log: FleetVehicleLog; vehicle: FleetVehicle } }
+  | ApiFail
+> {
+  const res = await fetch(`/api/v1/fleet/vehicles/${vehicleId}/logs`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) return parseFail(res);
+  return {
+    ok: true,
+    data: (await res.json()) as {
+      log: FleetVehicleLog;
+      vehicle: FleetVehicle;
+    },
+  };
 }
 
 export async function fetchAssignments(opts?: {

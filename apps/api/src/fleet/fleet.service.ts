@@ -2,7 +2,9 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   DlvRoundStatus,
   FltAssignment,
+  FltLogKind,
   FltVehicle,
+  FltVehicleLog,
   FltVehicleStatus,
   Prisma,
 } from '@prisma/client';
@@ -11,11 +13,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   FLEET_ERROR_CODES,
   FLEET_EVENT_TYPES,
+  FLEET_LOG_KINDS,
   FLEET_VEHICLE_STATUSES,
 } from './fleet.constants';
 import {
   CreateAssignmentDto,
   CreateVehicleDto,
+  CreateVehicleLogDto,
   UpdateVehicleDto,
 } from './fleet.dto';
 import { FleetException } from './fleet.exception';
@@ -28,7 +32,26 @@ export type FleetVehicleDto = {
   capacityKg: string | null;
   cold: boolean;
   odometerKm: string | null;
+  usualDriverLabel: string | null;
+  nextServiceKm: string | null;
+  nextServiceAt: string | null;
+  serviceDue: boolean;
   status: FltVehicleStatus;
+  notes: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FleetVehicleLogDto = {
+  id: string;
+  companyId: string;
+  vehicleId: string;
+  kind: FltLogKind;
+  occurredAt: string;
+  odometerKm: string | null;
+  liters: string | null;
+  amountTnd: string | null;
   notes: string | null;
   version: number;
   createdAt: string;
@@ -161,6 +184,12 @@ export class FleetService {
               dto.odometerKm !== undefined
                 ? new Prisma.Decimal(dto.odometerKm)
                 : null,
+            usualDriverLabel: dto.usualDriverLabel?.trim() || null,
+            nextServiceKm:
+              dto.nextServiceKm !== undefined
+                ? new Prisma.Decimal(dto.nextServiceKm)
+                : null,
+            nextServiceAt: parseOptionalDate(dto.nextServiceAt),
             notes: dto.notes?.trim() || null,
             status: FltVehicleStatus.ACTIVE,
           },
@@ -252,6 +281,22 @@ export class FleetService {
                       : new Prisma.Decimal(dto.odometerKm),
                 }
               : {}),
+            ...(dto.usualDriverLabel !== undefined
+              ? {
+                  usualDriverLabel: dto.usualDriverLabel?.trim() || null,
+                }
+              : {}),
+            ...(dto.nextServiceKm !== undefined
+              ? {
+                  nextServiceKm:
+                    dto.nextServiceKm === null
+                      ? null
+                      : new Prisma.Decimal(dto.nextServiceKm),
+                }
+              : {}),
+            ...(dto.nextServiceAt !== undefined
+              ? { nextServiceAt: parseOptionalDate(dto.nextServiceAt) }
+              : {}),
             ...(dto.notes !== undefined
               ? { notes: dto.notes?.trim() || null }
               : {}),
@@ -286,6 +331,147 @@ export class FleetService {
       throwUniqueDup(err);
       throw err;
     }
+  }
+
+  async listVehicleLogs(
+    companyId: string,
+    vehicleId: string,
+    opts: { limit?: number; cursor?: string } = {},
+  ): Promise<{ items: FleetVehicleLogDto[]; nextCursor: string | null }> {
+    await this.findActiveVehicle(companyId, vehicleId);
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 100);
+    const rows = await this.prisma.fltVehicleLog.findMany({
+      where: { companyId, vehicleId, deletedAt: null },
+      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(opts.cursor
+        ? { cursor: { id: opts.cursor }, skip: 1 }
+        : {}),
+    });
+    const page = rows.slice(0, limit);
+    const nextCursor = rows.length > limit ? page[page.length - 1].id : null;
+    return { items: page.map(serializeLog), nextCursor };
+  }
+
+  async createVehicleLog(
+    companyId: string,
+    vehicleId: string,
+    dto: CreateVehicleLogDto,
+  ): Promise<{ log: FleetVehicleLogDto; vehicle: FleetVehicleDto }> {
+    if (!isLogKind(dto.kind)) {
+      throw new FleetException(
+        FLEET_ERROR_CODES.INVALID_LOG_KIND,
+        'Invalid log kind.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const occurredAt = new Date(dto.occurredAt);
+    if (Number.isNaN(occurredAt.getTime())) {
+      throw new FleetException(
+        FLEET_ERROR_CODES.INVALID_STATUS,
+        'Invalid occurredAt.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (dto.odometerKm !== undefined && dto.odometerKm < 0) {
+      throw new FleetException(
+        FLEET_ERROR_CODES.INVALID_ODOMETER,
+        'odometerKm must be >= 0.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (dto.liters !== undefined && dto.liters < 0) {
+      throw new FleetException(
+        FLEET_ERROR_CODES.INVALID_LITERS,
+        'liters must be >= 0.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (dto.amountTnd !== undefined && dto.amountTnd < 0) {
+      throw new FleetException(
+        FLEET_ERROR_CODES.INVALID_AMOUNT,
+        'amountTnd must be >= 0.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const vehicle = await this.findActiveVehicle(companyId, vehicleId);
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const log = await tx.fltVehicleLog.create({
+        data: {
+          companyId,
+          vehicleId,
+          kind: dto.kind as FltLogKind,
+          occurredAt,
+          odometerKm:
+            dto.odometerKm !== undefined
+              ? new Prisma.Decimal(dto.odometerKm)
+              : null,
+          liters:
+            dto.liters !== undefined ? new Prisma.Decimal(dto.liters) : null,
+          amountTnd:
+            dto.amountTnd !== undefined
+              ? new Prisma.Decimal(dto.amountTnd)
+              : null,
+          notes: dto.notes?.trim() || null,
+        },
+      });
+
+      let nextOdo = vehicle.odometerKm;
+      if (dto.odometerKm !== undefined) {
+        const current = vehicle.odometerKm
+          ? Number(vehicle.odometerKm.toString())
+          : null;
+        if (current === null || dto.odometerKm >= current) {
+          nextOdo = new Prisma.Decimal(dto.odometerKm);
+        }
+      }
+
+      let nextServiceKm = vehicle.nextServiceKm;
+      let nextServiceAt = vehicle.nextServiceAt;
+      if (dto.kind === 'OIL_CHANGE') {
+        if (dto.odometerKm !== undefined) {
+          nextServiceKm = new Prisma.Decimal(dto.odometerKm + 10000);
+        }
+        const base = new Date(occurredAt);
+        base.setUTCMonth(base.getUTCMonth() + 6);
+        nextServiceAt = startOfUtcDay(base);
+      }
+
+      const updatedVehicle = await tx.fltVehicle.update({
+        where: { id: vehicleId },
+        data: {
+          ...(nextOdo !== vehicle.odometerKm
+            ? { odometerKm: nextOdo }
+            : {}),
+          ...(dto.kind === 'OIL_CHANGE'
+            ? { nextServiceKm, nextServiceAt }
+            : {}),
+          version: { increment: 1 },
+        },
+      });
+
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'flt_vehicle_log',
+        aggregateId: log.id,
+        eventType: FLEET_EVENT_TYPES.VEHICLE_LOG_CREATED,
+        payloadJson: {
+          logId: log.id,
+          vehicleId,
+          kind: log.kind,
+          odometerKm: log.odometerKm?.toString() ?? null,
+        },
+      });
+
+      return { log, vehicle: updatedVehicle };
+    });
+
+    return {
+      log: serializeLog(result.log),
+      vehicle: serializeVehicle(result.vehicle),
+    };
   }
 
   async listAssignments(
@@ -655,6 +841,18 @@ export class FleetService {
 }
 
 function serializeVehicle(row: FltVehicle): FleetVehicleDto {
+  const today = startOfUtcDay(new Date());
+  const nextAt = row.nextServiceAt ? startOfUtcDay(row.nextServiceAt) : null;
+  const odo = row.odometerKm ? Number(row.odometerKm.toString()) : null;
+  const nextKm = row.nextServiceKm
+    ? Number(row.nextServiceKm.toString())
+    : null;
+  const dueByDate = nextAt !== null && nextAt.getTime() <= today.getTime();
+  const dueByKm =
+    odo !== null && nextKm !== null && !Number.isNaN(odo) && !Number.isNaN(nextKm)
+      ? odo >= nextKm
+      : false;
+
   return {
     id: row.id,
     companyId: row.companyId,
@@ -663,7 +861,30 @@ function serializeVehicle(row: FltVehicle): FleetVehicleDto {
     capacityKg: row.capacityKg?.toString() ?? null,
     cold: row.cold,
     odometerKm: row.odometerKm?.toString() ?? null,
+    usualDriverLabel: row.usualDriverLabel,
+    nextServiceKm: row.nextServiceKm?.toString() ?? null,
+    nextServiceAt: row.nextServiceAt
+      ? toDateOnly(row.nextServiceAt)
+      : null,
+    serviceDue: dueByDate || dueByKm,
     status: row.status,
+    notes: row.notes,
+    version: row.version,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function serializeLog(row: FltVehicleLog): FleetVehicleLogDto {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    vehicleId: row.vehicleId,
+    kind: row.kind,
+    occurredAt: row.occurredAt.toISOString(),
+    odometerKm: row.odometerKm?.toString() ?? null,
+    liters: row.liters?.toString() ?? null,
+    amountTnd: row.amountTnd?.toString() ?? null,
     notes: row.notes,
     version: row.version,
     createdAt: row.createdAt.toISOString(),
@@ -725,6 +946,33 @@ function normalizePlate(plate: string): string {
 
 function isVehicleStatus(value: string): value is FltVehicleStatus {
   return (FLEET_VEHICLE_STATUSES as readonly string[]).includes(value);
+}
+
+function isLogKind(value: string): value is (typeof FLEET_LOG_KINDS)[number] {
+  return (FLEET_LOG_KINDS as readonly string[]).includes(value);
+}
+
+function parseOptionalDate(raw: string | null | undefined): Date | null {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) {
+    throw new FleetException(
+      FLEET_ERROR_CODES.INVALID_STATUS,
+      'Invalid date.',
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+  return startOfUtcDay(d);
+}
+
+function startOfUtcDay(d: Date): Date {
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+  );
+}
+
+function toDateOnly(d: Date): string {
+  return startOfUtcDay(d).toISOString().slice(0, 10);
 }
 
 function throwUniqueDup(err: unknown): void {

@@ -6,13 +6,13 @@ export const fleetManifest: ModuleManifest = {
   version: '1.0.0',
   apiVersion: '1',
   description:
-    'Fleet Soft Glass V0 — vehicles, cold/capacity, round assignment free-text driver (D253)',
+    'Fleet Soft Glass — vehicles, assignment, carnet (vidange/pneus/carburant), usual driver (D257)',
   capabilities: [
     {
       key: 'fleet.manage',
       moduleId: 'fleet',
       version: '1',
-      description: 'Create and update fleet vehicles',
+      description: 'Create and update fleet vehicles and carnet',
       permissionKey: 'fleet.manage',
       riskLevel: 'medium',
       requiresAudit: true,
@@ -30,16 +30,23 @@ export const fleetManifest: ModuleManifest = {
   commands: [
     'fleet.vehicle.create',
     'fleet.vehicle.patch',
+    'fleet.vehicle.log.create',
     'fleet.assignment.create',
     'fleet.assignment.cancel',
     'fleet.assignment.copy_driver',
   ],
-  queries: ['fleet.vehicles.list', 'fleet.vehicle.get', 'fleet.assignments.list'],
+  queries: [
+    'fleet.vehicles.list',
+    'fleet.vehicle.get',
+    'fleet.vehicle.logs',
+    'fleet.assignments.list',
+  ],
   permissions: ['fleet.manage', 'fleet.assign'],
   dependencies: ['platform', 'organization', 'delivery'],
   publishedEvents: [
     'fleet.vehicle.created.v1',
     'fleet.vehicle.updated.v1',
+    'fleet.vehicle.log_created.v1',
     'fleet.assignment.created.v1',
     'fleet.assignment.cancelled.v1',
     'fleet.assignment.driver_copied.v1',

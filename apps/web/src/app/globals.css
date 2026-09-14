@@ -379,6 +379,173 @@
     cursor: pointer;
   }
 
+  /**
+   * Soft Glass form controls — readable on light/dark glass drawers.
+   * Native <select> options stay OS-styled; closed control must never be white-on-white.
+   */
+  .a-select,
+  select:not([class*="sr-only"]) {
+    appearance: none;
+    -webkit-appearance: none;
+    display: flex;
+    width: 100%;
+    min-height: 2.5rem;
+    align-items: center;
+    border-radius: var(--a-radius-md);
+    border: none;
+    padding: 0 2.25rem 0 0.875rem;
+    font-family: var(--a-font-sans);
+    font-size: var(--a-text-sm);
+    font-weight: 500;
+    letter-spacing: var(--a-tracking-nav);
+    color: var(--a-fg);
+    background-color: color-mix(in srgb, var(--a-surface-1) 72%, var(--a-fg) 8%);
+    background-image:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--a-fg) 6%, transparent),
+        color-mix(in srgb, var(--a-fg) 2%, transparent)
+      ),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat, no-repeat;
+    background-position:
+      0 0,
+      right 0.7rem center;
+    background-size:
+      auto,
+      0.9rem;
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--a-fg) 12%, transparent),
+      0 1px 2px color-mix(in srgb, var(--a-fg) 6%, transparent);
+    outline: none;
+    transition:
+      box-shadow 160ms ease,
+      background-color 160ms ease,
+      color 160ms ease;
+    cursor: pointer;
+  }
+
+  [data-theme="dark"] .a-select,
+  [data-theme="dark"] select:not([class*="sr-only"]) {
+    background-color: color-mix(in srgb, var(--a-surface-1) 55%, #fff 10%);
+    background-image:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, #fff 8%, transparent),
+        color-mix(in srgb, #fff 2%, transparent)
+      ),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, #fff 14%, transparent),
+      0 1px 2px rgb(0 0 0 / 0.25);
+  }
+
+  .a-select:hover,
+  select:not([class*="sr-only"]):hover {
+    background-color: color-mix(in srgb, var(--a-surface-1) 65%, var(--a-accent) 10%);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--a-accent) 35%, transparent),
+      0 2px 8px color-mix(in srgb, var(--a-accent) 12%, transparent);
+  }
+
+  .a-select:focus,
+  .a-select:focus-visible,
+  select:not([class*="sr-only"]):focus,
+  select:not([class*="sr-only"]):focus-visible {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--a-accent) 55%, transparent),
+      0 0 0 3px color-mix(in srgb, var(--a-accent) 22%, transparent);
+  }
+
+  .a-select:disabled,
+  select:not([class*="sr-only"]):disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .a-select option,
+  select option {
+    background-color: var(--a-surface-1);
+    color: var(--a-fg);
+  }
+
+  .a-field-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--a-text-xs);
+    font-weight: 550;
+    letter-spacing: 0.02em;
+    color: var(--a-fg-muted);
+  }
+
+  .a-field-label svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    color: var(--a-orange);
+    flex-shrink: 0;
+  }
+
+  .a-input {
+    display: flex;
+    width: 100%;
+    min-height: 2.5rem;
+    align-items: center;
+    border-radius: var(--a-radius-md);
+    border: none;
+    padding: 0 0.875rem;
+    font-family: var(--a-font-sans);
+    font-size: var(--a-text-sm);
+    font-weight: 500;
+    letter-spacing: var(--a-tracking-nav);
+    color: var(--a-fg);
+    background-color: color-mix(in srgb, var(--a-surface-1) 72%, var(--a-fg) 8%);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--a-fg) 6%, transparent),
+      color-mix(in srgb, var(--a-fg) 2%, transparent)
+    );
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--a-fg) 12%, transparent),
+      0 1px 2px color-mix(in srgb, var(--a-fg) 6%, transparent);
+    outline: none;
+    transition:
+      box-shadow 160ms ease,
+      background-color 160ms ease;
+  }
+
+  [data-theme="dark"] .a-input {
+    background-color: color-mix(in srgb, var(--a-surface-1) 55%, #fff 10%);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in srgb, #fff 8%, transparent),
+      color-mix(in srgb, #fff 2%, transparent)
+    );
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, #fff 14%, transparent),
+      0 1px 2px rgb(0 0 0 / 0.25);
+  }
+
+  .a-input::placeholder {
+    color: var(--a-fg-subtle);
+  }
+
+  .a-input:hover {
+    background-color: color-mix(in srgb, var(--a-surface-1) 65%, var(--a-accent) 10%);
+  }
+
+  .a-input:focus,
+  .a-input:focus-visible {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--a-accent) 55%, transparent),
+      0 0 0 3px color-mix(in srgb, var(--a-accent) 22%, transparent);
+  }
+
+  .a-input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
   .a-canvas {
     background-color: var(--a-gradient-canvas);
     background-image:
