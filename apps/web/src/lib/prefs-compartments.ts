@@ -26,7 +26,7 @@ export const PREFS_COMPARTMENTS: readonly PrefsCompartmentDef[] = [
   {
     id: "poste",
     label: "Poste",
-    subtitle: "Densité, matériau Soft Glass, sidebar, notifications",
+    subtitle: "Densité, Soft Glass, sidebar, centre notifications (mute · audio)",
   },
   {
     id: "societe",
@@ -42,7 +42,7 @@ export const PREFS_COMPARTMENTS: readonly PrefsCompartmentDef[] = [
   {
     id: "expertise",
     label: "Expertise légale",
-    subtitle: "FODEC, timbre, CNSS, IRPP, abattements, TFP, FOPROLOS",
+    subtitle: "FODEC, timbre, RAS, TEJ, CNSS, IRPP, abattements, TFP, FOPROLOS",
     adminOnly: true,
   },
   {

@@ -26,6 +26,7 @@ function labelForPart(
     if (
       parent === "products" ||
       parent === "customers" ||
+      parent === "suppliers" ||
       parent === "employees"
     ) {
       return routeLabel("fiche", locale, "fiche");

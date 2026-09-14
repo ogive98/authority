@@ -59,6 +59,33 @@ model CoreProcessedEvent {
   @@map("core_processed_event")
 }
 
+/**
+ * Soft Glass in-app inbox (D247) — company alerts, VALIDATED-prefs aware sources.
+ * Deduped by companyId+dedupeKey; no WA/CRM messaging.
+ */
+model CoreInAppNotification {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  userId      String?   @map("user_id") @db.Uuid
+  source      String
+  sourceRefId String?   @map("source_ref_id")
+  dedupeKey   String    @map("dedupe_key")
+  type        String
+  priority    String    @default("p2")
+  title       String
+  body        String
+  href        String?
+  readAt      DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, dedupeKey])
+  @@index([companyId, readAt, createdAt(sort: Desc)])
+  @@index([companyId, userId, createdAt(sort: Desc)])
+  @@index([companyId, source])
+  @@map("core_in_app_notification")
+}
+
 model CoreNumberingSeries {
   id        String    @id @default(uuid()) @db.Uuid
   companyId String    @map("company_id") @db.Uuid
@@ -826,6 +853,7 @@ model MdParty {
   deletedAt   DateTime?     @map("deleted_at") @db.Timestamptz(6)
 
   customers CusCustomer[]
+  suppliers SupSupplier[]
 
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, type, status])
@@ -1169,6 +1197,81 @@ model CusContact {
   @@index([companyId, customerId, createdAt(sort: Desc)])
   @@index([companyId, customerId, isPrimary])
   @@map("cus_contact")
+}
+
+// --- sup_* Suppliers master V0 (D250) ---
+
+enum SupSupplierCategory {
+  LAIT
+  EMBALLAGE
+  FOURNITURE
+  IMPORT
+}
+
+enum SupSupplierStatus {
+  ACTIVE
+  ON_HOLD
+  BLOCKED
+  ARCHIVED
+}
+
+/**
+ * Supplier master Soft Glass V0 (D250) — MdParty SUPPLIER|BOTH + domain row.
+ * Out: PO, pricing, stock receipts, supplier portal, item prefs.
+ */
+model SupSupplier {
+  id            String              @id @default(uuid()) @db.Uuid
+  companyId     String              @map("company_id") @db.Uuid
+  partyId       String              @map("party_id") @db.Uuid
+  code          String
+  category      SupSupplierCategory @default(FOURNITURE)
+  leadTimeDays  Int?                @map("lead_time_days")
+  moqDefault    Decimal?            @map("moq_default") @db.Decimal(18, 3)
+  preferred     Boolean             @default(false)
+  qualityHold   Boolean             @default(false) @map("quality_hold")
+  paymentTerms  String?             @map("payment_terms")
+  notes         String?
+  status        SupSupplierStatus   @default(ACTIVE)
+  version       Int                 @default(0)
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime?           @map("deleted_at") @db.Timestamptz(6)
+
+  party    MdParty      @relation(fields: [partyId], references: [id])
+  contacts SupContact[]
+  apBills  FinApBill[]
+
+  @@unique([companyId, code])
+  @@unique([companyId, partyId])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@index([companyId, category])
+  @@index([companyId, preferred])
+  @@map("sup_supplier")
+}
+
+model SupContact {
+  id         String    @id @default(uuid()) @db.Uuid
+  companyId  String    @map("company_id") @db.Uuid
+  supplierId String    @map("supplier_id") @db.Uuid
+  name       String
+  phone      String?
+  whatsapp   String?
+  email      String?
+  role       String?
+  language   String?   @db.VarChar(8)
+  active     Boolean   @default(true)
+  isPrimary  Boolean   @default(false) @map("is_primary")
+  version    Int       @default(0)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  supplier SupSupplier @relation(fields: [supplierId], references: [id])
+
+  @@index([companyId, supplierId, createdAt(sort: Desc)])
+  @@index([companyId, supplierId, isPrimary])
+  @@map("sup_contact")
 }
 
 // --- inv_* Inventory light (MOD-INVENTORY) ---
@@ -1920,14 +2023,16 @@ model FinApPayment {
 }
 
 /**
- * AP vendor bill V0 (D236) — vendorName free text (D205 lock).
- * Payments optional via FinApPayment.apBillId (D237) · Soft Glass `/finance/ap-bills`.
+ * AP vendor bill V0 (D236) — vendorName free text (D205).
+ * Optional supplierId link (D250) — Soft Glass picker; vendorName still required for display.
  */
 model FinApBill {
   id          String         @id @default(uuid()) @db.Uuid
   companyId   String         @map("company_id") @db.Uuid
   number      String
   vendorName  String         @map("vendor_name")
+  /** Optional Soft Glass supplier master (D250) — free-text vendorName remains SoT display. */
+  supplierId  String?        @map("supplier_id") @db.Uuid
   status      FinApBillStatus @default(DRAFT)
   billDate    DateTime       @map("bill_date") @db.Date
   dueDate     DateTime?      @map("due_date") @db.Date
@@ -1943,10 +2048,12 @@ model FinApBill {
   deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz(6)
 
   payments FinApPayment[]
+  supplier SupSupplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, number])
   @@index([companyId, billDate(sort: Desc)])
   @@index([companyId, status])
+  @@index([companyId, supplierId])
   @@map("fin_ap_bill")
 }
 

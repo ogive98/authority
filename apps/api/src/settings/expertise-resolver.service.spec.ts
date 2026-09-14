@@ -64,6 +64,69 @@ describe('ExpertiseResolverService', () => {
     });
   });
 
+  it('RAS/TEJ return null when PENDING — never invents (D246)', async () => {
+    const { resolver } = build([
+      {
+        key: 'tax.ras',
+        domain: 'tax',
+        label: 'RAS',
+        status: 'PENDING_EXPERT',
+        valueSummary: null,
+        lawRef: null,
+        rateBps: null,
+        amountMilli: null,
+        expertValidatedAt: null,
+        writable: true,
+        description: '',
+        manageHref: null,
+        notes: null,
+      },
+      {
+        key: 'tax.tej',
+        domain: 'tax',
+        label: 'TEJ',
+        status: 'PENDING_EXPERT',
+        valueSummary: null,
+        lawRef: null,
+        rateBps: null,
+        amountMilli: null,
+        expertValidatedAt: null,
+        writable: true,
+        description: '',
+        manageHref: null,
+        notes: null,
+      },
+    ]);
+    expect(await resolver.getRas(companyId)).toBeNull();
+    expect(await resolver.getTej(companyId)).toBeNull();
+    const preview = await resolver.previewRas(companyId, 1000);
+    expect(preview).toMatchObject({ applied: false, amount: 0, rateBps: null });
+  });
+
+  it('previewRas applies only when VALIDATED with rateBps (D246)', async () => {
+    const { resolver } = build([
+      {
+        key: 'tax.ras',
+        domain: 'tax',
+        label: 'RAS',
+        status: 'VALIDATED',
+        valueSummary: '1.5 %',
+        lawRef: 'Expert RAS 2026',
+        rateBps: 150,
+        amountMilli: null,
+        expertValidatedAt: '2026-09-14T00:00:00.000Z',
+        writable: true,
+        description: '',
+        manageHref: null,
+        notes: null,
+      },
+    ]);
+    const preview = await resolver.previewRas(companyId, 1000);
+    expect(preview.applied).toBe(true);
+    expect(preview.rateBps).toBe(150);
+    expect(preview.amount).toBe(15);
+  });
+
   it('HR snapshot lists pending CNSS split keys when empty', async () => {
     const { resolver } = build([
       {

@@ -6,9 +6,11 @@ import {
   initialsFromName,
 } from "@/lib/business-auth";
 import { resolveNotificationHref, unreadCount } from "@/lib/notifications";
+import { isNotifSourceKey } from "@/lib/notification-prefs";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
 import { useNotificationsStore } from "@/stores/notifications-store";
+import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 import { ASkeleton } from "@/components/a/a-skeleton";
 import {
@@ -212,8 +214,13 @@ export function ActivityWidget() {
   const { t, unread: unreadLabel } = useShellT();
   const items = useNotificationsStore((s) => s.items);
   const markItemRead = useNotificationsStore((s) => s.markItemRead);
-  const unread = unreadCount(items);
-  const recent = items.slice(0, 5);
+  const notifMuted = usePrefsStore((s) => s.notifMuted);
+  const visible = items.filter((n) => {
+    if (!isNotifSourceKey(n.source)) return true;
+    return !notifMuted[n.source];
+  });
+  const unread = unreadCount(visible);
+  const recent = visible.slice(0, 5);
 
   if (recent.length === 0) {
     return (

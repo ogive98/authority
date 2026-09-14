@@ -164,10 +164,16 @@ describe('SettingsService hierarchy', () => {
     const fodec = catalog.items.find((i) => i.key === 'tax.fodec');
     const cnss = catalog.items.find((i) => i.key === 'hr.cnss.employee');
     const vat = catalog.items.find((i) => i.key === 'tax.vat');
+    const ras = catalog.items.find((i) => i.key === 'tax.ras');
+    const tej = catalog.items.find((i) => i.key === 'tax.tej');
     expect(fodec?.status).toBe('PENDING_EXPERT');
     expect(fodec?.valueSummary).toBeNull();
     expect(cnss?.status).toBe('PENDING_EXPERT');
     expect(vat?.status).toBe('PENDING_EXPERT');
+    expect(ras?.status).toBe('PENDING_EXPERT');
+    expect(ras?.valueSummary).toBeNull();
+    expect(tej?.status).toBe('PENDING_EXPERT');
+    expect(tej?.valueSummary).toBeNull();
     expect(catalog.pendingExpertCount).toBeGreaterThan(0);
   });
 

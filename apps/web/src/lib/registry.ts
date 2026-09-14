@@ -42,6 +42,20 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       ],
     },
     {
+      key: "customers",
+      name: "Clients",
+      features: [
+        { id: "customers", label: "Clients", href: "/customers" },
+      ],
+    },
+    {
+      key: "suppliers",
+      name: "Fournisseurs",
+      features: [
+        { id: "suppliers", label: "Fournisseurs", href: "/suppliers" },
+      ],
+    },
+    {
       key: "inventory",
       name: "Stock",
       features: [
@@ -78,7 +92,14 @@ export const FALLBACK_REGISTRY: MeRegistry = {
     {
       key: "tax",
       name: "Fiscalité",
-      features: [{ id: "tax-catalog", label: "TVA Tunisie", href: "/tax" }],
+      features: [
+        { id: "tax-catalog", label: "Fiscalité / TVA", href: "/tax" },
+        {
+          id: "tax-expertise",
+          label: "Expertise fiscale (Prefs)",
+          href: "/settings#expertise",
+        },
+      ],
     },
     {
       key: "hr",

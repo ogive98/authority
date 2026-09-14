@@ -10,13 +10,13 @@ export const taxManifest: ModuleManifest = {
   version: '1.0.0',
   apiVersion: '1',
   description:
-    'Tax Engine — Tunisia VAT codes/rates (7/13/19/0%); no payroll/CNSS',
+    'Tax Engine — TVA Tunisie + lecture FODEC/timbre/RAS/TEJ Prefs (VALIDATED only); no invented rates; no TEJ transmission',
   capabilities: [
     {
       key: 'tax.read',
       moduleId: 'tax',
       version: '1',
-      description: 'Read VAT tax codes and active rates',
+      description: 'Read VAT tax codes, active rates, and fiscal expertise readiness',
       permissionKey: 'tax.read',
       riskLevel: 'low',
     },
@@ -36,6 +36,11 @@ export const taxManifest: ModuleManifest = {
   dependencies: ['platform', 'organization', 'master_data'],
   publishedEvents: ['tax.rate.published.v1'],
   navigationEntries: [
-    { id: 'tax-catalog', label: 'TVA Tunisie', href: '/tax' },
+    { id: 'tax-catalog', label: 'Fiscalité / TVA', href: '/tax' },
+    {
+      id: 'tax-expertise',
+      label: 'Expertise fiscale (Prefs)',
+      href: '/settings#expertise',
+    },
   ],
 };

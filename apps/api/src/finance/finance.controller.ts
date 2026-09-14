@@ -74,22 +74,37 @@ export class FinanceController {
   ) {}
 
   /**
-   * FODEC / timbre readiness for invoicing (D092).
+   * FODEC / timbre / RAS / TEJ readiness (D092 + D246).
    * Null values = expert not yet entered in Préférences — never invent rates.
+   * TEJ never exposes a transmission API (out: pretend).
    */
   @Get('expertise-hints')
   @RequirePermission(PERMISSION_KEYS.financeArRead)
-  async expertiseHints(@CurrentTenancy() tenancy: TenancyContext) {
-    const [fodec, timbre] = await Promise.all([
+  async expertiseHints(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('rasBase') rasBaseRaw?: string,
+  ) {
+    const [fodec, timbre, ras, tej] = await Promise.all([
       this.expertise.getFodec(tenancy.companyId),
       this.expertise.getTimbre(tenancy.companyId),
+      this.expertise.getRas(tenancy.companyId),
+      this.expertise.getTej(tenancy.companyId),
     ]);
+    const rasBase = rasBaseRaw ? Number(rasBaseRaw) : NaN;
+    const rasPreview = Number.isFinite(rasBase)
+      ? await this.expertise.previewRas(tenancy.companyId, rasBase)
+      : null;
     return {
       companyId: tenancy.companyId,
       fodec,
       timbre,
+      ras,
+      tej,
+      rasPreview,
+      tejTransmission: 'DISABLED' as const,
       prefsHref: '/settings#expertise',
-      note: 'Apply FODEC/timbre only when VALIDATED; otherwise skip — no invented rates.',
+      note:
+        'Apply FODEC/timbre/RAS only when VALIDATED; TEJ params local only — no invented rates, no TEJ transmission.',
     };
   }
 
@@ -620,7 +635,7 @@ export class FinanceController {
     return this.apPaymentService.create(tenancy.companyId, dto);
   }
 
-  /** D236 — AP vendor bills (vendorName free text, no supplier master, no GL). */
+  /** D236 / D250 — AP vendor bills (optional supplier master link, no GL). */
   @Get('ap-bills')
   @RequirePermission(PERMISSION_KEYS.financeArRead)
   listApBills(

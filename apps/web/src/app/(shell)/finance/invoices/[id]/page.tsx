@@ -166,7 +166,7 @@ export default function FinanceInvoiceFichePage() {
       />
 
       <APageBody>
-        <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre"]} />
+        <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre", "tax.ras", "tax.tej"]} />
 
         {actionError ? (
           <p className="text-[length:var(--a-text-sm)] text-a-danger">
@@ -365,6 +365,23 @@ export default function FinanceInvoiceFichePage() {
                       {inv.amountTotal} {inv.currency}
                     </dd>
                   </div>
+                  <p className="pt-2 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Calcul général : HT + TVA + FODEC + timbre. RAS / TEJ →{" "}
+                    <Link
+                      href="/tax"
+                      className="text-a-accent hover:underline"
+                    >
+                      Fiscalité
+                    </Link>{" "}
+                    /{" "}
+                    <Link
+                      href="/settings#expertise"
+                      className="text-a-accent hover:underline"
+                    >
+                      Prefs
+                    </Link>
+                    .
+                  </p>
                 </dl>
               </AContextPanel>
             }

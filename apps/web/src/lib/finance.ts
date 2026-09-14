@@ -313,6 +313,7 @@ export type FinApBill = {
   companyId: string;
   number: string;
   vendorName: string;
+  supplierId?: string | null;
   status: ApBillStatus;
   billDate: string;
   dueDate: string | null;
@@ -1664,6 +1665,46 @@ export async function createApPayment(body: {
   }
 }
 
+export type FinanceExpertiseHints = {
+  companyId: string;
+  fodec: { valueLabel: string; rateBps: number | null; lawRef: string | null } | null;
+  timbre: { valueLabel: string; amountMilli: number | null; lawRef: string | null } | null;
+  ras: { valueLabel: string; rateBps: number | null; lawRef: string | null } | null;
+  tej: { valueLabel: string; lawRef: string | null } | null;
+  rasPreview: {
+    applied: boolean;
+    amount: number;
+    rateBps: number | null;
+  } | null;
+  tejTransmission: "DISABLED";
+  prefsHref: string;
+  note: string;
+};
+
+/** FODEC/timbre/RAS/TEJ readiness — never invents rates (D092/D246). */
+export async function fetchFinanceExpertiseHints(opts?: {
+  rasBase?: number;
+}): Promise<{ ok: true; data: FinanceExpertiseHints } | ApiFail> {
+  try {
+    const sp = new URLSearchParams();
+    if (opts?.rasBase != null && Number.isFinite(opts.rasBase)) {
+      sp.set("rasBase", String(opts.rasBase));
+    }
+    const qs = sp.toString();
+    const res = await fetch(
+      `/api/v1/finance/expertise-hints${qs ? `?${qs}` : ""}`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinanceExpertiseHints };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function fetchApBills(opts?: {
   q?: string;
   status?: string;
@@ -1708,7 +1749,8 @@ export async function fetchApBill(
 }
 
 export async function createApBill(body: {
-  vendorName: string;
+  vendorName?: string;
+  supplierId?: string;
   amountTotal: number;
   billDate: string;
   dueDate?: string;

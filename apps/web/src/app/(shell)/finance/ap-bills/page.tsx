@@ -29,10 +29,13 @@ import {
 } from "@/lib/finance";
 import {
   softChipClass,
+  softSelect,
   softTableWrap,
   softThead,
   softTr,
 } from "@/lib/soft-glass-ui";
+import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
+import { fetchSuppliers, type Supplier } from "@/lib/suppliers";
 
 type LoadState =
   | { kind: "loading" }
@@ -41,6 +44,7 @@ type LoadState =
   | { kind: "error"; message: string };
 
 type FormState = {
+  supplierId: string;
   vendorName: string;
   amountTotal: string;
   billDate: string;
@@ -83,6 +87,7 @@ function FinanceApBillsPageInner() {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const load = useCallback(
     async (query?: string, status?: "" | ApBillStatus) => {
@@ -106,6 +111,10 @@ function FinanceApBillsPageInner() {
 
   useEffect(() => {
     void load("", statusFilter);
+    void (async () => {
+      const res = await fetchSuppliers();
+      if (res.ok) setSuppliers(res.data.items);
+    })();
     // initial hydrate only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
@@ -135,6 +144,7 @@ function FinanceApBillsPageInner() {
   function openCreate() {
     setFormError(null);
     setForm({
+      supplierId: "",
       vendorName: "",
       amountTotal: "",
       billDate: todayIso(),
@@ -149,9 +159,10 @@ function FinanceApBillsPageInner() {
   async function submit() {
     if (!form) return;
     const vendorName = form.vendorName.trim();
+    const supplierId = form.supplierId.trim() || undefined;
     const amountTotal = Number(form.amountTotal.replace(",", "."));
-    if (!vendorName) {
-      setFormError("Saisissez le nom du fournisseur (texte libre).");
+    if (!vendorName && !supplierId) {
+      setFormError("Choisissez un fournisseur master ou saisissez un nom libre.");
       return;
     }
     if (!Number.isFinite(amountTotal) || amountTotal <= 0) {
@@ -165,7 +176,8 @@ function FinanceApBillsPageInner() {
     setBusy(true);
     setFormError(null);
     const res = await createApBill({
-      vendorName,
+      vendorName: vendorName || undefined,
+      supplierId,
       amountTotal,
       billDate: form.billDate,
       dueDate: form.dueDate || undefined,
@@ -188,7 +200,7 @@ function FinanceApBillsPageInner() {
       <AScreenHeader
         kicker="Finance"
         title="Factures fournisseurs"
-        description="Factures AP V0 — fournisseur en texte libre (pas de référentiel). Aucun GL · aucun taux inventé (D236 / D205)."
+        description="Factures AP Soft Glass — lien master `/suppliers` optionnel · vendorName libre sinon · RAS/TEJ si Prefs VALIDATED · pas de GL (D236 / D250 / D246)."
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             {LAYOUT_ACTIONS.newApBill}
@@ -207,11 +219,17 @@ function FinanceApBillsPageInner() {
                 label: "Factures clients",
                 onSelect: () => router.push("/finance/invoices"),
               },
+              {
+                id: "prefs",
+                label: "Préférences Expertise",
+                onSelect: () => router.push("/settings#expertise"),
+              },
             ]}
           />
         }
       />
       <APageBody>
+        <ExpertiseHintsStrip keys={["tax.ras", "tax.tej"]} />
         <AFilterBar
           search={
             <AInput
@@ -348,7 +366,7 @@ function FinanceApBillsPageInner() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title="Nouvelle facture fournisseur"
-        description="vendorName libre — pas de master fournisseurs, pas de TVA inventée, pas de GL."
+        description="Master `/suppliers` optionnel — sinon vendorName libre. Pas de TVA inventée, pas de GL."
       >
         {form ? (
           <div className="space-y-3">
@@ -357,9 +375,38 @@ function FinanceApBillsPageInner() {
                 {formError}
               </p>
             ) : null}
+            {suppliers.length > 0 ? (
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-muted">
+                  Fournisseur (master)
+                </span>
+                <select
+                  className={softSelect}
+                  value={form.supplierId}
+                  onChange={(e) => {
+                    const supplierId = e.target.value;
+                    const match = suppliers.find((s) => s.id === supplierId);
+                    setForm({
+                      ...form,
+                      supplierId,
+                      vendorName: match
+                        ? match.legalName
+                        : form.vendorName,
+                    });
+                  }}
+                >
+                  <option value="">— Texte libre —</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.code} · {s.legalName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label className="block space-y-1">
               <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                Fournisseur *
+                Nom affiché *
               </span>
               <AInput
                 value={form.vendorName}

@@ -186,7 +186,7 @@ const MODULE_RULES: Rule[] = [
     kind: "sales",
   },
   {
-    match: /^hr|rh|payroll|identity|customers$/i,
+    match: /^hr|rh|payroll|identity|customers|suppliers$/i,
     colorClass: "text-[#bf5af2]",
     motion: "people",
     kind: "people",

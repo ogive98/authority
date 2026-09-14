@@ -2,6 +2,7 @@
 export const LAYOUT_ACTIONS = {
   newOrder: "+ Nouvelle commande",
   newCustomer: "+ Nouveau client",
+  newSupplier: "+ Nouveau fournisseur",
   newProduct: "+ Nouveau produit",
   newInvoice: "+ Nouvelle facture",
   newApBill: "+ Nouvelle facture fournisseur",

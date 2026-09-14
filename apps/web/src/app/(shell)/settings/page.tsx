@@ -16,6 +16,7 @@ import {
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { PrefsModesOpsPanel } from "@/components/settings/prefs-modes-ops-panel";
 import { PrefsToggleRow } from "@/components/settings/prefs-toggle-row";
+import { NotifPrefsPanel } from "@/components/settings/notif-prefs-panel";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import {
   fetchGlMapping,
@@ -267,10 +268,6 @@ export default function SettingsPage() {
   const [unlockBusy, setUnlockBusy] = useState(false);
   const [unlockMsg, setUnlockMsg] = useState<string | null>(null);
   const [unlockError, setUnlockError] = useState<string | null>(null);
-  const showSseBanner = usePrefsStore((s) => s.showSseBanner);
-  const setShowSseBanner = usePrefsStore((s) => s.setShowSseBanner);
-  const jobAlerts = usePrefsStore((s) => s.jobAlerts);
-  const setJobAlerts = usePrefsStore((s) => s.setJobAlerts);
   const sidebarAutoCollapseSec = usePrefsStore(
     (s) => s.sidebarAutoCollapseSec,
   );
@@ -771,10 +768,6 @@ export default function SettingsPage() {
     void putUserSetting("ui.density", next);
   }
 
-  function onSseBannerChange(on: boolean) {
-    setShowSseBanner(on);
-  }
-
   async function onSaveGlMapping() {
     if (!canCompanyWrite || glBusy) return;
     setGlBusy(true);
@@ -1157,18 +1150,9 @@ export default function SettingsPage() {
                     </label>
                   ) : null}
                 </div>
-                <PrefsToggleRow
-                  title="Alertes jobs"
-                  description="Afficher shed P4 / files Thunder dans le centre d’activité."
-                  checked={jobAlerts}
-                  onCheckedChange={setJobAlerts}
-                />
-                <PrefsToggleRow
-                  title="Bannière SSE"
-                  description="Afficher « flux temps réel coupé » quand le stream est coupé."
-                  checked={showSseBanner}
-                  onCheckedChange={onSseBannerChange}
-                />
+                <div className="space-y-3 border-t border-transparent pt-4">
+                  <NotifPrefsPanel />
+                </div>
               </section>
             ) : null}
 
@@ -1551,8 +1535,11 @@ export default function SettingsPage() {
                 <p className="max-w-2xl text-[length:var(--a-text-sm)] text-a-fg-muted">
                   Formulaire expert — champs{" "}
                   <span className="font-medium text-a-fg">vides par défaut</span>.
-                  Aucun taux n’est inventé ni seedé. Saisie humaine uniquement ici
-                  (Préférences) ; les modules ne consomment qu’après « Valider ».
+                  Fiscalité : FODEC, timbre, RAS, TEJ (+ lien TVA). RH : CNSS,
+                  IRPP, abattements, TFP, FOPROLOS. Aucun taux n’est inventé ni
+                  seedé. Saisie humaine uniquement ici ; les modules ne
+                  consomment qu’après « Valider ». TEJ = params locaux — pas de
+                  transmission API.
                 </p>
                 {expertise.kind === "loading" ? (
                   <ASkeleton className="h-48 w-full max-w-3xl" />
@@ -1575,7 +1562,35 @@ export default function SettingsPage() {
                 ) : null}
 
                 {expertise.kind === "ok"
-                  ? expertise.items.map((row) => {
+                  ? (() => {
+                      const taxItems = expertise.items.filter(
+                        (i) => i.domain === "tax",
+                      );
+                      const hrItems = expertise.items.filter(
+                        (i) => i.domain === "hr" || i.domain === "payroll",
+                      );
+                      const otherItems = expertise.items.filter(
+                        (i) =>
+                          i.domain !== "tax" &&
+                          i.domain !== "hr" &&
+                          i.domain !== "payroll",
+                      );
+                      const groups: { title: string; items: typeof expertise.items }[] =
+                        [
+                          { title: "Fiscalité (TVA · FODEC · timbre · RAS · TEJ)", items: taxItems },
+                          { title: "RH / Paie (CNSS · IRPP · TFP · FOPROLOS)", items: hrItems },
+                        ];
+                      if (otherItems.length > 0) {
+                        groups.push({ title: "Autres", items: otherItems });
+                      }
+
+                      return groups.map((group) =>
+                        group.items.length === 0 ? null : (
+                          <div key={group.title} className="space-y-4">
+                            <h2 className="text-[length:var(--a-text-sm)] font-medium uppercase tracking-wide text-a-fg-muted">
+                              {group.title}
+                            </h2>
+                            {group.items.map((row) => {
                       if (!row.writable) {
                         return (
                           <div
@@ -1607,7 +1622,9 @@ export default function SettingsPage() {
                                   href={row.manageHref}
                                   className="text-[length:var(--a-text-sm)] text-a-accent hover:underline"
                                 >
-                                  Ouvrir catalogue TVA
+                                  {row.key === "tax.vat"
+                                    ? "Ouvrir catalogue TVA"
+                                    : "Ouvrir"}
                                 </Link>
                               ) : null}
                             </div>
@@ -1710,7 +1727,8 @@ export default function SettingsPage() {
                                 className="a-mono"
                                 disabled={
                                   row.key === "hr.irpp" ||
-                                  row.key.startsWith("hr.irpp.abat.")
+                                  row.key.startsWith("hr.irpp.abat.") ||
+                                  row.key === "tax.tej"
                                 }
                               />
                             </label>
@@ -1730,7 +1748,10 @@ export default function SettingsPage() {
                                 disabled={
                                   row.key === "hr.irpp" ||
                                   row.key === "hr.tfp" ||
-                                  row.key === "hr.foprolos"
+                                  row.key === "hr.foprolos" ||
+                                  row.key === "tax.ras" ||
+                                  row.key === "tax.tej" ||
+                                  row.key === "tax.fodec"
                                 }
                               />
                             </label>
@@ -1904,7 +1925,11 @@ export default function SettingsPage() {
                           ) : null}
                         </div>
                       );
-                    })
+                            })}
+                          </div>
+                        ),
+                      );
+                    })()
                   : null}
               </section>
             ) : null}

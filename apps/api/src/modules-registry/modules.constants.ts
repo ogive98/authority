@@ -16,6 +16,7 @@ export const BUSINESS_MODULE_KEYS = [
   'attendance',
   'tax',
   'customers',
+  'suppliers',
   'master_data',
   'products',
   'portals',

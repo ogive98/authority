@@ -17,6 +17,8 @@ export type NotificationItem = {
   read: boolean;
   priority: NotificationPriority;
   href?: string;
+  /** Métier source key (D247) — optional for legacy/mock. */
+  source?: string;
 };
 
 /** Default SSE endpoint (Next route — not rewritten to Nest). */
@@ -28,14 +30,24 @@ export const NOTIFICATION_SSE_PATH = "/dev/notifications/stream";
  */
 export function resolveNotificationHref(item: NotificationItem): string {
   if (item.href) return item.href;
+  if (item.source === "CREDIT_BREACH") return "/finance";
+  if (item.source === "PROMISE_OVERDUE") return "/finance/promises";
+  if (item.source === "PORTAL_PAYMENT_DECL")
+    return "/finance/payment-declarations";
+  if (item.source === "DUNNING_READY") return "/finance";
+  if (item.source === "TEJ_PENDING") return "/settings#expertise";
+  if (item.source === "ATM_REVIEW") return "/automation";
+  if (item.source === "RAS_PENDING") return "/settings#expertise";
   const hay = `${item.title} ${item.body}`.toLowerCase();
   if (/lot|quarant|stock|invent|ccp|emmental|brie/.test(hay)) return "/inventory";
   if (/commande|order|so-|validation commande|sfax/.test(hay)) return "/sales";
-  if (/facture|invoice|ar |paiement|finance/.test(hay)) return "/finance";
+  if (/facture|invoice|ar |paiement|finance|déclaration|promesse|relance/.test(hay))
+    return "/finance";
   if (/livraison|shipment|bl-|réception|reception/.test(hay)) return "/delivery";
-  if (/patch|spectre|heartbeat|thunder|job|registry|sse/.test(hay)) return "/settings";
-  if (item.type === "task") return "/sales";
-  if (item.type === "warning" || item.type === "danger") return "/inventory";
+  if (/ras|tej|expertise|patch|spectre|heartbeat|thunder|job|registry|sse/.test(hay))
+    return "/settings#expertise";
+  if (item.type === "task") return "/finance";
+  if (item.type === "warning" || item.type === "danger") return "/finance";
   if (item.type === "system") return "/settings";
   return "/";
 }

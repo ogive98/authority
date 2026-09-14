@@ -15,6 +15,7 @@ import { ThunderModule } from './thunder-core/thunder.module';
 import { ProductsModule } from './products/products.module';
 import { MasterDataModule } from './master-data/master-data.module';
 import { CustomersModule } from './customers/customers.module';
+import { SuppliersModule } from './suppliers/suppliers.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { SalesModule } from './sales/sales.module';
 import { DeliveryModule } from './delivery/delivery.module';
@@ -29,6 +30,7 @@ import { TaxModule } from './tax/tax.module';
 import { HrModule } from './hr/hr.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { AutomationModule } from './automation/automation.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -47,6 +49,7 @@ import { AutomationModule } from './automation/automation.module';
     MasterDataModule,
     ProductsModule,
     CustomersModule,
+    SuppliersModule,
     InventoryModule,
     SalesModule,
     DeliveryModule,
@@ -61,6 +64,7 @@ import { AutomationModule } from './automation/automation.module';
     RepairModule,
     ProductionModule,
     AutomationModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

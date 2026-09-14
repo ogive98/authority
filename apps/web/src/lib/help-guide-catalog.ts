@@ -133,15 +133,45 @@ export const HELP_MODULES: HelpModule[] = [
           ],
         },
       },
+      {
+        name: {
+          fr: "Centre de notifications",
+          it: "Centro notifiche",
+        },
+        when: {
+          fr: "Alertes métier : crédit breach, promesse échue, déclaration portail, relance DRAFT, RAS Prefs PENDING.",
+          it: "Avvisi operativi: credito breach, promessa scaduta, dichiarazione portale, sollecito DRAFT, RAS Prefs PENDING.",
+        },
+        steps: {
+          fr: [
+            "Cliquez la cloche topbar — sync API (+ Actualiser).",
+            "Paramètres (drawer ou `/settings#poste`) : mute par source, audio AUTHORITY, animations.",
+            "Variantes audio Soft / Pulse / Carillon + volume + Tester le ton.",
+            "Clic droit sur un chip source = mute / unmute rapide.",
+            "Nouvelle alerte → animation minimale Soft Glass + ton (si non muté).",
+            "Pas de messagerie CRM · pas de WA inbox→order.",
+          ],
+          it: [
+            "Clicca la campana topbar — sync API (+ Aggiorna).",
+            "Parametri (drawer o `/settings#poste`): mute per sorgente, audio AUTHORITY, animazioni.",
+            "Varianti audio Soft / Pulse / Chime + volume + Prova tono.",
+            "Clic destro su un chip sorgente = mute / unmute rapido.",
+            "Nuovo avviso → animazione Soft Glass + tono (se non mutato).",
+            "Niente messaggistica CRM · niente WA inbox→order.",
+          ],
+        },
+      },
     ],
     locks: {
       fr: [
         "Les features ne sont jamais listées dans la sidebar.",
         "Pas de KPI inventés — montants TND uniquement si données API.",
+        "Notifications = inbox Soft Glass (D247–D249) — prefs poste local · pas un CRM.",
       ],
       it: [
         "Le feature non sono mai elencate nella sidebar.",
         "Nessun KPI inventato — importi TND solo se dati API.",
+        "Notifiche = inbox Soft Glass (D247–D249) — prefs postazione local · non un CRM.",
       ],
     },
   },
@@ -350,6 +380,81 @@ export const HELP_MODULES: HelpModule[] = [
     },
   },
   {
+    id: "suppliers",
+    href: "/suppliers",
+    title: { fr: "Fournisseurs", it: "Fornitori" },
+    summary: {
+      fr: "Master Soft Glass : catégorie (lait / emballage / fourniture / import), contacts, délai, MOQ, hold qualité. Lien optionnel sur factures AP.",
+      it: "Anagrafica Soft Glass: categoria (latte / imballo / fornitura / import), contatti, lead time, MOQ, hold qualità. Link opzionale sulle fatture AP.",
+    },
+    when: {
+      fr: "Avant la première facture fournisseur, ou pour standardiser les vendors AP.",
+      it: "Prima della prima fattura fornitore, o per standardizzare i vendor AP.",
+    },
+    features: [
+      {
+        name: {
+          fr: "Créer / rechercher un fournisseur",
+          it: "Creare / cercare un fornitore",
+        },
+        when: {
+          fr: "Nouveau vendor ou recherche rapide.",
+          it: "Nuovo vendor o ricerca rapida.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/suppliers` (module Fournisseurs ENABLED + `suppliers.read`).",
+            "« + Nouveau fournisseur » : code, raison sociale, catégorie, délai, MOQ.",
+            "Contact initial optionnel à la création.",
+            "Ouvrez la fiche via le code ou « Fiche ».",
+          ],
+          it: [
+            "Apri `/suppliers` (modulo Fornitori ENABLED + `suppliers.read`).",
+            "« + Nouveau fournisseur »: codice, ragione sociale, categoria, lead time, MOQ.",
+            "Contatto iniziale opzionale in creazione.",
+            "Apri la scheda dal codice o « Fiche ».",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Fiche fournisseur + hold qualité",
+          it: "Scheda fornitore + hold qualità",
+        },
+        when: {
+          fr: "Mettre à jour le profil ou bloquer temporairement un vendor.",
+          it: "Aggiornare il profilo o sospendere temporaneamente un vendor.",
+        },
+        steps: {
+          fr: [
+            "`/suppliers/[id]` → Éditer (version optimistic).",
+            "••• → Hold qualité (`suppliers.hold`) — peut passer le statut En hold.",
+            "Ajouter des contacts depuis la fiche.",
+            "Factures AP : choisir le master dans `/finance/ap-bills` (vendorName reste affichage).",
+          ],
+          it: [
+            "`/suppliers/[id]` → Éditer (version optimistic).",
+            "••• → Hold qualità (`suppliers.hold`) — può impostare stato En hold.",
+            "Aggiungi contatti dalla scheda.",
+            "Fatture AP: scegli il master in `/finance/ap-bills` (vendorName resta display).",
+          ],
+        },
+      },
+    ],
+    locks: {
+      fr: [
+        "Pas de commandes achat / prix / réceptions stock / portail fournisseur (D250 V0).",
+        "vendorName libre toujours possible sur AP — master optionnel.",
+        "Pas de GL sur AP (D205/D236).",
+      ],
+      it: [
+        "Niente ordini acquisto / prezzi / ricevimenti stock / portale fornitore (D250 V0).",
+        "vendorName libero sempre possibile su AP — master opzionale.",
+        "Niente GL su AP (D205/D236).",
+      ],
+    },
+  },
+  {
     id: "products",
     href: "/products",
     title: { fr: "Produits", it: "Prodotti" },
@@ -509,17 +614,19 @@ export const HELP_MODULES: HelpModule[] = [
             "Ouvrez `/finance/ap-bills` → « + Nouvelle facture fournisseur ».",
             "Chips Tout / Brouillon / Postée / Annulée — URL `?status=` partageable.",
             "Fournisseur = texte libre (D205) — pas de master, pas de TVA inventée, pas de GL.",
+            "Bandeau Expertise RAS/TEJ : consumers seulement si Prefs VALIDATED (D246).",
             "Sur la fiche : Poster (DRAFT → POSTED) ; Annuler via overflow.",
-            "POSTED → « Décaisser » crée un `FinApPayment` lié (partiel OK) — aussi depuis Banque.",
-            "Rapprochement bancaire inchangé · jamais inventer TVA · pas de GL AP.",
+            "POSTED → « Décaisser » crée un `FinApPayment` lié (partiel OK) — RAS indicatif si VALIDATED, non déduit auto.",
+            "Rapprochement bancaire inchangé · jamais inventer TVA/RAS · pas de TEJ transmission · pas de GL AP.",
           ],
           it: [
             "Apri `/finance/ap-bills` → « + Nuova fattura fornitore ».",
             "Chip Tutti / Bozza / Registrata / Annullata — URL `?status=` condividibile.",
             "Fornitore = testo libero (D205) — niente anagrafica, IVA inventata, né GL.",
+            "Fascia Expertise RAS/TEJ: consumer solo se Prefs VALIDATED (D246).",
             "In scheda: Registra (DRAFT → POSTED); Annulla via overflow.",
-            "POSTED → « Pagare » crea un `FinApPayment` collegato (parziale OK) — anche da Banca.",
-            "Riconciliazione banca invariata · mai inventare IVA · niente GL AP.",
+            "POSTED → « Pagare » crea un `FinApPayment` collegato (parziale OK) — RAS indicativo se VALIDATED, non detratto auto.",
+            "Riconciliazione banca invariata · mai inventare IVA/RAS · niente TEJ transmission · niente GL AP.",
           ],
         },
       },
@@ -680,15 +787,17 @@ export const HELP_MODULES: HelpModule[] = [
     ],
     locks: {
       fr: [
-        "FODEC / timbre : Prefs VALIDATED uniquement.",
+        "FODEC / timbre / RAS : Prefs VALIDATED uniquement.",
         "GL via Thunder — Finance ≠ inventer la compta.",
-        "AP bills : vendorName libre · lien payment optionnel · pas de master · pas de GL (D236/D237/D205).",
+        "AP bills : vendorName libre · lien master `/suppliers` optionnel · lien payment optionnel · pas de GL (D236/D237/D250/D205).",
+        "RAS indicatif sur décaissement — non déduit auto · pas de TEJ transmission (D246).",
         "Déclarations portail : pas d’auto FinPayment (D243).",
       ],
       it: [
-        "FODEC / bollo: solo Prefs VALIDATED.",
+        "FODEC / bollo / RAS: solo Prefs VALIDATED.",
         "GL via Thunder — Finanza ≠ inventare la contabilità.",
-        "AP bills: vendorName libero · link payment opzionale · niente anagrafica · niente GL (D236/D237/D205).",
+        "AP bills: vendorName libero · link master `/suppliers` opzionale · link payment opzionale · niente GL (D236/D237/D250/D205).",
+        "RAS indicativo su pagamento — non detratto auto · niente TEJ transmission (D246).",
         "Dichiarazioni portale: niente auto FinPayment (D243).",
       ],
     },
@@ -775,39 +884,53 @@ export const HELP_MODULES: HelpModule[] = [
   {
     id: "tax",
     href: "/tax",
-    title: { fr: "Fiscalité (TVA)", it: "Fiscalità (IVA)" },
+    title: { fr: "Fiscalité", it: "Fiscalità" },
     summary: {
-      fr: "Catalogue codes TVA Tunisie (Tax Engine) — distinct CNSS/IRPP RH.",
-      it: "Catalogo codici IVA Tunisia (Tax Engine) — distinto da CNSS/IRPP RH.",
+      fr: "TVA (Tax Engine) + calcul général FODEC/timbre/RAS/TEJ (Prefs VALIDATED).",
+      it: "IVA (Tax Engine) + calcolo generale FODEC/bollo/RAS/TEJ (Prefs VALIDATED).",
     },
     when: {
-      fr: "Pour vérifier les taux applicables sur factures (lecture catalogue).",
-      it: "Per verificare le aliquote applicabili sulle fatture (lettura catalogo).",
+      fr: "Consulter catalogue TVA et readiness Expertise fiscale.",
+      it: "Consultare catalogo IVA e readiness Expertise fiscale.",
     },
     features: [
       {
         name: {
-          fr: "Catalogue TVA",
-          it: "Catalogo IVA",
+          fr: "Calcul général & catalogue TVA",
+          it: "Calcolo generale e catalogo IVA",
         },
         when: {
-          fr: "Référence légale des codes 7/13/19/0 — pas de saisie inventée.",
-          it: "Riferimento legale codici 7/13/19/0 — nessun inserimento inventato.",
+          fr: "Voir la pile HT→TVA→FODEC→timbre→TTC et RAS/TEJ Prefs.",
+          it: "Vedere la pila HT→IVA→FODEC→bollo→TTC e RAS/TEJ Prefs.",
         },
         steps: {
           fr: [
-            "Ouvrez `/tax`.",
-            "Consultez codes et lawRef.",
-            "Les factures consomment ces codes à l’émission.",
+            "Ouvrez `/tax` — bandeau Expertise FODEC/timbre/RAS/TEJ.",
+            "Section Calcul général : statut Prefs par étape (VALIDATED ou en attente).",
+            "Catalogue codes TVA 7/13/19/0 — consommés à l’émission facture.",
+            "Saisie barèmes : Préférences › Expertise (groupe Fiscalité).",
+            "Jamais inventer taux · TEJ sans transmission API.",
           ],
           it: [
-            "Apri `/tax`.",
-            "Consulta codici e lawRef.",
-            "Le fatture usano questi codici in emissione.",
+            "Apri `/tax` — fascia Expertise FODEC/bollo/RAS/TEJ.",
+            "Sezione Calcolo generale: stato Prefs per passo (VALIDATED o in attesa).",
+            "Catalogo codici IVA 7/13/19/0 — usati in emissione fattura.",
+            "Inserimento aliquote: Preferenze › Expertise (gruppo Fiscalità).",
+            "Mai inventare aliquote · TEJ senza trasmissione API.",
           ],
         },
       },
     ],
+    locks: {
+      fr: [
+        "FODEC / timbre / RAS / TEJ : Prefs VALIDATED only.",
+        "Pas de TEJ transmission pretend.",
+      ],
+      it: [
+        "FODEC / bollo / RAS / TEJ: solo Prefs VALIDATED.",
+        "Niente TEJ transmission pretend.",
+      ],
+    },
   },
   {
     id: "hr",
@@ -1085,19 +1208,21 @@ export const HELP_MODULES: HelpModule[] = [
           it: "Expertise e Invii",
         },
         when: {
-          fr: "Saisie FODEC/timbre/CNSS/… et SMTP / WhatsApp dunning.",
-          it: "Inserimento FODEC/bollo/CNSS/… e SMTP / WhatsApp dunning.",
+          fr: "Saisie FODEC/timbre/RAS/TEJ/CNSS/… et SMTP / WhatsApp dunning.",
+          it: "Inserimento FODEC/bollo/RAS/TEJ/CNSS/… e SMTP / WhatsApp dunning.",
         },
         steps: {
           fr: [
             "Ouvrez `/settings` — compartiments Soft Glass.",
-            "Expertise : renseigner puis VALIDATED — jamais seed agent.",
+            "Expertise : renseigner puis VALIDATED — jamais seed agent (FODEC, timbre, RAS, TEJ…).",
+            "RAS = retenue à la source (rateBps) ; TEJ = params locaux seulement — pas de transmission API.",
             "Envois : host SMTP, tester l’envoi si configuré.",
             "Modes : code unlock SPECTRE/PATCH/GHOST.",
           ],
           it: [
             "Apri `/settings` — compartimenti Soft Glass.",
-            "Expertise: compilare poi VALIDATED — mai seed agent.",
+            "Expertise: compilare poi VALIDATED — mai seed agent (FODEC, bollo, RAS, TEJ…).",
+            "RAS = ritenuta alla fonte (rateBps); TEJ = params locali only — nessuna trasmissione API.",
             "Invii: host SMTP, testa invio se configurato.",
             "Modalità: codice unlock SPECTRE/PATCH/GHOST.",
           ],
@@ -1108,10 +1233,12 @@ export const HELP_MODULES: HelpModule[] = [
       fr: [
         "Ne jamais inventer ni seed de taux tunisiens.",
         "Consumers métier seulement si VALIDATED.",
+        "TEJ : pas de transmission pretend ni XML API.",
       ],
       it: [
         "Mai inventare né seed di aliquote tunisine.",
         "Consumer operativi solo se VALIDATED.",
+        "TEJ: nessuna trasmissione pretend né XML API.",
       ],
     },
   },

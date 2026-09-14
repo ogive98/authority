@@ -24,6 +24,7 @@ export type ApBillDto = {
   companyId: string;
   number: string;
   vendorName: string;
+  supplierId: string | null;
   status: FinApBillStatus;
   billDate: string;
   dueDate: string | null;
@@ -104,11 +105,29 @@ export class ApBillService {
   async create(companyId: string, dto: CreateApBillDto): Promise<ApBillDto> {
     assertPositiveAmount(dto.amountTotal);
     const amountTotal = round3(dto.amountTotal);
-    const vendorName = dto.vendorName.trim();
+
+    let supplierId: string | null = dto.supplierId?.trim() || null;
+    let vendorName = dto.vendorName?.trim() ?? '';
+
+    if (supplierId) {
+      const supplier = await this.prisma.supSupplier.findFirst({
+        where: { id: supplierId, companyId, deletedAt: null },
+        include: { party: true },
+      });
+      if (!supplier) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_POLICY,
+          'Supplier not found.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (!vendorName) vendorName = supplier.party.legalName;
+    }
+
     if (!vendorName) {
       throw new FinanceException(
         FINANCE_ERROR_CODES.INVALID_POLICY,
-        'vendorName is required.',
+        'vendorName is required (or link a supplier).',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -125,6 +144,7 @@ export class ApBillService {
           companyId,
           number,
           vendorName,
+          supplierId,
           status: FinApBillStatus.DRAFT,
           billDate,
           dueDate,
@@ -144,6 +164,7 @@ export class ApBillService {
           billId: bill.id,
           number: bill.number,
           vendorName: bill.vendorName,
+          supplierId: bill.supplierId,
           amountTotal: bill.amountTotal.toString(),
         },
       });
@@ -278,6 +299,7 @@ function serializeApBill(
     companyId: string;
     number: string;
     vendorName: string;
+    supplierId?: string | null;
     status: FinApBillStatus;
     billDate: Date;
     dueDate: Date | null;
@@ -307,6 +329,7 @@ function serializeApBill(
     companyId: row.companyId,
     number: row.number,
     vendorName: row.vendorName,
+    supplierId: row.supplierId ?? null,
     status: row.status,
     billDate: row.billDate.toISOString().slice(0, 10),
     dueDate: row.dueDate ? row.dueDate.toISOString().slice(0, 10) : null,

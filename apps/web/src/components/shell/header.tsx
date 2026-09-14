@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Bell,
   Eye,
@@ -12,7 +12,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useNotificationsStore } from "@/stores/notifications-store";
-import { unreadCount } from "@/lib/notifications";
+import { usePrefsStore } from "@/stores/prefs-store";
+import { isNotifSourceKey } from "@/lib/notification-prefs";
 import { useShellStore } from "@/stores/shell-store";
 import { useLocaleStore, useShellT } from "@/stores/locale-store";
 import { CompanyBrandPlate } from "./company-brand-plate";
@@ -103,7 +104,27 @@ export function ShellHeader() {
   const enterGhost = useShellStore((s) => s.enterGhost);
   const setInboxOpen = useNotificationsStore((s) => s.setInboxOpen);
   const items = useNotificationsStore((s) => s.items);
-  const unread = unreadCount(items);
+  const notifMuted = usePrefsStore((s) => s.notifMuted);
+  const unread = useMemo(
+    () =>
+      items.filter((n) => {
+        if (n.read) return false;
+        if (isNotifSourceKey(n.source) && notifMuted[n.source]) return false;
+        return true;
+      }).length,
+    [items, notifMuted],
+  );
+  const [bellPulse, setBellPulse] = useState(false);
+
+  useEffect(() => {
+    const onPulse = () => {
+      setBellPulse(true);
+      window.setTimeout(() => setBellPulse(false), 3200);
+    };
+    window.addEventListener("authority:notif-bell-pulse", onPulse);
+    return () =>
+      window.removeEventListener("authority:notif-bell-pulse", onPulse);
+  }, []);
 
   useEffect(() => {
     const current =
@@ -179,7 +200,7 @@ export function ShellHeader() {
         <IconBtn
           label={unread > 0 ? unreadLabel(unread) : t("notifications")}
           onClick={() => setInboxOpen(true)}
-          className="relative"
+          className={cn("relative", bellPulse && "a-notif-bell-pulse")}
         >
           <Bell className="h-4 w-4" strokeWidth={1.5} />
           {unread > 0 ? (

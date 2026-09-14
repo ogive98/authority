@@ -147,7 +147,7 @@ export default function FinanceCreditNoteFichePage() {
       />
 
       <APageBody>
-        <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre"]} />
+        <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre", "tax.ras", "tax.tej"]} />
 
         {actionError ? (
           <p className="text-[length:var(--a-text-sm)] text-a-danger">

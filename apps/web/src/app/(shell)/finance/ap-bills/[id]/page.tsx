@@ -26,10 +26,12 @@ import {
   cancelApBill,
   createApPayment,
   fetchApBill,
+  fetchFinanceExpertiseHints,
   postApBill,
   type FinApBill,
 } from "@/lib/finance";
 import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 
 type Load =
   | { kind: "loading" }
@@ -53,6 +55,7 @@ export default function FinanceApBillFichePage() {
   const [payOpen, setPayOpen] = useState(false);
   const [payForm, setPayForm] = useState<PayForm | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
+  const [rasHint, setRasHint] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -118,6 +121,7 @@ export default function FinanceApBillFichePage() {
     const bill = state.kind === "ok" ? state.data : null;
     if (!bill || bill.status !== "POSTED") return;
     setPayError(null);
+    setRasHint(null);
     setPayForm({
       amount: bill.amountTotal,
       method: "BANK_TRANSFER",
@@ -125,6 +129,22 @@ export default function FinanceApBillFichePage() {
       reference: bill.reference ?? "",
     });
     setPayOpen(true);
+    const base = Number(bill.amountTotal);
+    void (async () => {
+      const res = await fetchFinanceExpertiseHints({
+        rasBase: Number.isFinite(base) ? base : undefined,
+      });
+      if (!res.ok) return;
+      if (res.data.rasPreview?.applied) {
+        setRasHint(
+          `RAS indicatif (Prefs VALIDATED) : ${res.data.rasPreview.amount.toFixed(3)} TND — non déduit auto · pas de TEJ transmission.`,
+        );
+      } else if (!res.data.ras) {
+        setRasHint(
+          "RAS en attente expert (Préférences) — aucun taux inventé.",
+        );
+      }
+    })();
   }
 
   async function submitPay() {
@@ -189,7 +209,7 @@ export default function FinanceApBillFichePage() {
         }
         kicker="Finance"
         title={bill ? bill.number : "Facture fournisseur"}
-        description="AP bill Soft Glass — lien décaissement optionnel (D237) · pas de GL."
+        description="AP bill Soft Glass — lien décaissement optionnel (D237) · RAS/TEJ Prefs VALIDATED only (D246) · pas de GL."
         status={
           bill ? (
             <ABadge tone={apBillBadgeTone(bill.status)}>
@@ -226,6 +246,7 @@ export default function FinanceApBillFichePage() {
       />
 
       <APageBody>
+        <ExpertiseHintsStrip keys={["tax.ras", "tax.tej"]} />
         {actionError ? (
           <p className="text-[length:var(--a-text-sm)] text-a-danger">
             {actionError}
@@ -410,6 +431,17 @@ export default function FinanceApBillFichePage() {
             {payError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {payError}
+              </p>
+            ) : null}
+            {rasHint ? (
+              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                {rasHint}{" "}
+                <Link
+                  href="/settings#expertise"
+                  className="text-a-accent hover:underline"
+                >
+                  Préférences
+                </Link>
               </p>
             ) : null}
             <label className="block space-y-1">

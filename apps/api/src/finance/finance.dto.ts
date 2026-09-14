@@ -512,11 +512,17 @@ export class CreateApPaymentDto {
   apBillId?: string;
 }
 
-/** D236 — AP vendor bill V0 (vendorName free text, no supplier master, no GL). */
+/** D236 — AP vendor bill V0. D250 optional supplierId (vendorName still display SoT). */
 export class CreateApBillDto {
+  @IsOptional()
   @IsString()
   @MaxLength(160)
-  vendorName!: string;
+  vendorName?: string;
+
+  /** Soft Glass supplier master link (optional). Fills vendorName from legalName when omitted. */
+  @IsOptional()
+  @IsUUID()
+  supplierId?: string;
 
   @Type(() => Number)
   @IsNumber()

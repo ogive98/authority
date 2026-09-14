@@ -321,7 +321,7 @@ function FinanceInvoicesPageInner() {
         }
       />
       <APageBody>
-        <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre"]} />
+        <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre", "tax.ras", "tax.tej"]} />
 
         <AFilterBar
           search={

@@ -178,6 +178,8 @@ export const EXPERTISE_SLOT_KEYS = [
   'tax.vat',
   'tax.fodec',
   'tax.timbre',
+  'tax.ras',
+  'tax.tej',
   'hr.cnss.employee',
   'hr.cnss.employer',
   'hr.cnss.ceiling',
@@ -237,6 +239,26 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     defaultStatus: 'PENDING_EXPERT',
     lawRefHint: null,
     manageHref: null,
+  },
+  {
+    key: 'tax.ras',
+    domain: 'tax',
+    label: 'RAS (retenue à la source)',
+    description:
+      'Taux retenue à la source (rateBps) — vide jusqu’à saisie expert. Jamais seedé. Consumers AP seulement si VALIDATED.',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: '/finance/ap-bills',
+  },
+  {
+    key: 'tax.tej',
+    domain: 'tax',
+    label: 'TEJ (déclaration fiscale)',
+    description:
+      'Paramètres TEJ / déclaration (libellé, régime, réf.) — vide jusqu’à expert. Pas de transmission API ni XML pretend.',
+    defaultStatus: 'PENDING_EXPERT',
+    lawRefHint: null,
+    manageHref: '/settings#expertise',
   },
   {
     key: 'hr.cnss.employee',
@@ -324,6 +346,8 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
 export const EXPERTISE_WRITABLE_KEYS = [
   'tax.fodec',
   'tax.timbre',
+  'tax.ras',
+  'tax.tej',
   'hr.cnss.employee',
   'hr.cnss.employer',
   'hr.cnss.ceiling',

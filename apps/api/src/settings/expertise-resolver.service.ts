@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { taxFromHt } from '../tax/tax.service';
 import {
   EXPERTISE_CATALOG,
   isExpertiseWritableKey,
@@ -57,6 +58,40 @@ export class ExpertiseResolverService {
   /** Convenience: timbre — null if expert not yet entered. */
   async getTimbre(companyId: string): Promise<ValidatedExpertise | null> {
     return this.getValidated(companyId, 'tax.timbre');
+  }
+
+  /** RAS (retenue à la source) — null unless Prefs VALIDATED (D246). */
+  async getRas(companyId: string): Promise<ValidatedExpertise | null> {
+    return this.getValidated(companyId, 'tax.ras');
+  }
+
+  /**
+   * TEJ déclaration params — null unless Prefs VALIDATED (D246).
+   * Never implies transmission API availability.
+   */
+  async getTej(companyId: string): Promise<ValidatedExpertise | null> {
+    return this.getValidated(companyId, 'tax.tej');
+  }
+
+  /**
+   * Preview RAS withholding on a base amount — 0 / applied:false when PENDING.
+   * Does not invent rates; does not persist; no TEJ XML/transmission.
+   */
+  async previewRas(
+    companyId: string,
+    baseAmount: number,
+  ): Promise<{
+    applied: boolean;
+    amount: number;
+    rateBps: number | null;
+    ras: ValidatedExpertise | null;
+  }> {
+    const ras = await this.getRas(companyId);
+    if (!ras || ras.rateBps == null || !Number.isFinite(baseAmount) || baseAmount <= 0) {
+      return { applied: false, amount: 0, rateBps: null, ras };
+    }
+    const amount = taxFromHt(baseAmount, ras.rateBps);
+    return { applied: true, amount, rateBps: ras.rateBps, ras };
   }
 
   /** HR contribution slots — all PENDING until expert (D195 split CNSS). */

@@ -143,6 +143,7 @@ async function main() {
     'attendance',
     'tax',
     'customers',
+    'suppliers',
     'master_data',
     'products',
     'portals',
@@ -158,6 +159,7 @@ async function main() {
       moduleKey === 'master_data' ||
       moduleKey === 'products' ||
       moduleKey === 'customers' ||
+      moduleKey === 'suppliers' ||
       moduleKey === 'inventory' ||
       moduleKey === 'sales' ||
       moduleKey === 'delivery' ||
@@ -476,6 +478,24 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'customers.credit.set',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'suppliers.read',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'suppliers.write',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'suppliers.hold',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,
