@@ -38,7 +38,9 @@ export function resolveNotificationHref(item: NotificationItem): string {
   if (item.source === "TEJ_PENDING") return "/settings#expertise";
   if (item.source === "ATM_REVIEW") return "/automation";
   if (item.source === "RAS_PENDING") return "/settings#expertise";
+  if (item.source === "WA_INBOX") return "/sales/wa-inbox";
   const hay = `${item.title} ${item.body}`.toLowerCase();
+  if (/whatsapp|wa inbox|wamid/.test(hay)) return "/sales/wa-inbox";
   if (/lot|quarant|stock|invent|ccp|emmental|brie/.test(hay)) return "/inventory";
   if (/commande|order|so-|validation commande|sfax/.test(hay)) return "/sales";
   if (/facture|invoice|ar |paiement|finance|déclaration|promesse|relance/.test(hay))

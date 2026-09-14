@@ -48,8 +48,17 @@ export const salesManifest: ModuleManifest = {
     'sales.order.update',
     'sales.order.confirm',
     'sales.order.cancel',
+    'sales.wa_inbox.match',
+    'sales.wa_inbox.dismiss',
+    'sales.wa_inbox.draft',
   ],
-  queries: ['sales.ping', 'sales.orders.list', 'sales.orders.get'],
+  queries: [
+    'sales.ping',
+    'sales.orders.list',
+    'sales.orders.get',
+    'sales.wa_inbox.list',
+    'sales.wa_inbox.get',
+  ],
   permissions: ['sales.read', 'sales.write', 'sales.confirm'],
   dependencies: [
     'platform',
@@ -63,10 +72,14 @@ export const salesManifest: ModuleManifest = {
     'sales.order.created.v1',
     'sales.order.confirmed.v1',
     'sales.order.cancelled.v1',
+    'sales.wa_inbox.matched.v1',
+    'sales.wa_inbox.dismissed.v1',
+    'sales.wa_inbox.draft_created.v1',
   ],
   consumedEvents: [],
   navigationEntries: [
     { id: 'orders', label: 'Commandes', href: '/sales' },
     { id: 'sales-form', label: 'Prise de commande', href: '/sales' },
+    { id: 'wa-inbox', label: 'Inbox WhatsApp', href: '/sales/wa-inbox' },
   ],
 };

@@ -7,6 +7,15 @@ export type WaStatusEvent = {
   error: string | null;
 };
 
+export type WaInboundEvent = {
+  wamid: string;
+  fromPhone: string;
+  profileName: string | null;
+  bodyText: string | null;
+  messageType: string;
+  receivedAt: Date;
+};
+
 const RANK: Record<FinDunningWaDeliveryStatus, number> = {
   NONE: 0,
   SENT: 1,
@@ -100,6 +109,92 @@ export function extractWhatsAppStatuses(payload: unknown): WaStatusEvent[] {
             null;
         }
         out.push({ wamid: id.trim(), status: mapped, error });
+      }
+    }
+  }
+  return out;
+}
+
+/** Digits-only WhatsApp id (country code included when present). */
+export function normalizeWhatsappDigits(
+  raw: string | null | undefined,
+): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, '');
+  return digits.length >= 8 ? digits : null;
+}
+
+/** Meta inbound messages[] — text body preferred; non-text stored as type hint. */
+export function extractWhatsAppInboundMessages(
+  payload: unknown,
+): WaInboundEvent[] {
+  if (!payload || typeof payload !== 'object') return [];
+  const entry = (payload as { entry?: unknown }).entry;
+  if (!Array.isArray(entry)) return [];
+  const out: WaInboundEvent[] = [];
+  for (const item of entry) {
+    if (!item || typeof item !== 'object') continue;
+    const changes = (item as { changes?: unknown }).changes;
+    if (!Array.isArray(changes)) continue;
+    for (const change of changes) {
+      if (!change || typeof change !== 'object') continue;
+      const value = (change as { value?: unknown }).value;
+      if (!value || typeof value !== 'object') continue;
+      const contacts = (value as { contacts?: unknown }).contacts;
+      let profileName: string | null = null;
+      if (Array.isArray(contacts) && contacts[0] && typeof contacts[0] === 'object') {
+        const profile = (contacts[0] as { profile?: unknown }).profile;
+        if (profile && typeof profile === 'object') {
+          const name = (profile as { name?: unknown }).name;
+          if (typeof name === 'string' && name.trim()) {
+            profileName = name.trim().slice(0, 120);
+          }
+        }
+      }
+      const messages = (value as { messages?: unknown }).messages;
+      if (!Array.isArray(messages)) continue;
+      for (const row of messages) {
+        if (!row || typeof row !== 'object') continue;
+        const id = (row as { id?: unknown }).id;
+        const from = (row as { from?: unknown }).from;
+        if (typeof id !== 'string' || !id.trim()) continue;
+        const fromPhone = normalizeWhatsappDigits(
+          typeof from === 'string' ? from : null,
+        );
+        if (!fromPhone) continue;
+        const typeRaw = (row as { type?: unknown }).type;
+        const messageType =
+          typeof typeRaw === 'string' && typeRaw.trim()
+            ? typeRaw.trim().slice(0, 32)
+            : 'text';
+        let bodyText: string | null = null;
+        if (messageType === 'text') {
+          const text = (row as { text?: unknown }).text;
+          if (text && typeof text === 'object') {
+            const body = (text as { body?: unknown }).body;
+            if (typeof body === 'string') {
+              bodyText = body.trim().slice(0, 4000) || null;
+            }
+          }
+        } else {
+          bodyText = `[${messageType}]`;
+        }
+        let receivedAt = new Date();
+        const ts = (row as { timestamp?: unknown }).timestamp;
+        if (typeof ts === 'string' || typeof ts === 'number') {
+          const n = Number(ts);
+          if (Number.isFinite(n) && n > 0) {
+            receivedAt = new Date(n * 1000);
+          }
+        }
+        out.push({
+          wamid: id.trim(),
+          fromPhone,
+          profileName,
+          bodyText,
+          messageType,
+          receivedAt,
+        });
       }
     }
   }

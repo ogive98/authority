@@ -8,6 +8,7 @@ export const NOTIF_SOURCE_KEYS = [
   "RAS_PENDING",
   "TEJ_PENDING",
   "ATM_REVIEW",
+  "WA_INBOX",
 ] as const;
 
 export type NotifSourceKey = (typeof NOTIF_SOURCE_KEYS)[number];
@@ -62,6 +63,12 @@ export const NOTIF_SOURCE_META: Record<
     hintFr: "Runs ASSISTED / PENDING_APPROVAL.",
     hintIt: "Run ASSISTED / PENDING_APPROVAL.",
   },
+  WA_INBOX: {
+    fr: "Inbox WhatsApp",
+    it: "Inbox WhatsApp",
+    hintFr: "Messages OPEN/MATCHED → brouillon Soft Glass (humain).",
+    hintIt: "Messaggi OPEN/MATCHED → bozza Soft Glass (umano).",
+  },
 };
 
 export function defaultMutedMap(): NotifMutedMap {
@@ -73,6 +80,7 @@ export function defaultMutedMap(): NotifMutedMap {
     RAS_PENDING: false,
     TEJ_PENDING: false,
     ATM_REVIEW: false,
+    WA_INBOX: false,
   };
 }
 

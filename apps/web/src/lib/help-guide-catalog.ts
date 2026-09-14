@@ -262,15 +262,43 @@ export const HELP_MODULES: HelpModule[] = [
           ],
         },
       },
+      {
+        name: {
+          fr: "Inbox WhatsApp → brouillon",
+          it: "Inbox WhatsApp → bozza",
+        },
+        when: {
+          fr: "Un client écrit sur WhatsApp Business ; ADV crée un brouillon Soft Glass.",
+          it: "Un cliente scrive su WhatsApp Business; ADV crea una bozza Soft Glass.",
+        },
+        steps: {
+          fr: [
+            "Prefs → Relances : webhook Meta (verify_token + app_secret) déjà utilisés pour dunning.",
+            "Ouvrez `/sales/wa-inbox` (feature Ventes) — ou cloche → source WA.",
+            "Message OPEN/MATCHED : lier le client si besoin (contact.whatsapp).",
+            "« Créer brouillon » : chips suggestions produit (assistées) ou saisie manuelle → DRAFT.",
+            "Confirmer ensuite via `/sales/[id]` (`sales.confirm`) — jamais auto.",
+          ],
+          it: [
+            "Prefs → Solleciti: webhook Meta (verify_token + app_secret) già usati per dunning.",
+            "Apri `/sales/wa-inbox` (feature Vendite) — o campana → fonte WA.",
+            "Messaggio OPEN/MATCHED: collega il cliente se serve (contact.whatsapp).",
+            "« Créer brouillon »: chip suggerimenti prodotto (assistiti) o inserimento manuale → DRAFT.",
+            "Conferma poi da `/sales/[id]` (`sales.confirm`) — mai auto.",
+          ],
+        },
+      },
     ],
     locks: {
       fr: [
         "Pas de devis / remises inventées hors Prefs.",
         "FEFO / lots : allocation à la confirmation si suivi lot.",
+        "WA→order = human-gated — suggestions assistées OK · pas d’auto-confirm · pas de CRM chat (D251/D252).",
       ],
       it: [
         "Nessun preventivo / sconto inventato fuori Prefs.",
         "FEFO / lotti: allocazione in conferma se tracking lotto.",
+        "WA→order = human-gated — suggerimenti assistiti OK · niente auto-confirm · niente CRM chat (D251/D252).",
       ],
     },
   },

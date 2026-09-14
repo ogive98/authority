@@ -38,6 +38,7 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       features: [
         { id: "orders", label: "Commandes", href: "/preview/commandes" },
         { id: "sales-form", label: "Prise de commande", href: "/sales" },
+        { id: "wa-inbox", label: "Inbox WhatsApp", href: "/sales/wa-inbox" },
         { id: "customers", label: "Clients", href: "/customers" },
       ],
     },

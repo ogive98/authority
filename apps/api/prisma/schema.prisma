@@ -1544,6 +1544,39 @@ model SalOrderLine {
   @@map("sal_order_line")
 }
 
+/** D251 — inbound WhatsApp message (human-gated → Soft Glass draft order). Not a CRM chat SoT. */
+enum WaInboundStatus {
+  OPEN
+  MATCHED
+  DRAFT_CREATED
+  DISMISSED
+}
+
+model WaInboundMessage {
+  id          String          @id @default(uuid()) @db.Uuid
+  companyId   String          @map("company_id") @db.Uuid
+  wamid       String
+  fromPhone   String          @map("from_phone")
+  profileName String?         @map("profile_name")
+  bodyText    String?         @map("body_text")
+  messageType String          @default("text") @map("message_type")
+  contactId   String?         @map("contact_id") @db.Uuid
+  customerId  String?         @map("customer_id") @db.Uuid
+  status      WaInboundStatus @default(OPEN)
+  orderId     String?         @map("order_id") @db.Uuid
+  receivedAt  DateTime        @map("received_at") @db.Timestamptz(6)
+  version     Int             @default(0)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?       @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, wamid])
+  @@index([companyId, status, receivedAt(sort: Desc)])
+  @@index([companyId, fromPhone])
+  @@index([companyId, customerId])
+  @@map("wa_inbound_message")
+}
+
 // --- dlv_* Delivery light ---
 
 enum DlvShipmentStatus {

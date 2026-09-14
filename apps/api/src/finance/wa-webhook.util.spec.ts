@@ -1,6 +1,7 @@
 import { createHmac } from 'crypto';
 import { FinDunningWaDeliveryStatus } from '@prisma/client';
 import {
+  extractWhatsAppInboundMessages,
   extractWhatsAppStatuses,
   mapMetaWaStatus,
   shouldAdvanceWaDelivery,
@@ -88,5 +89,44 @@ describe('wa-webhook.util (D206)', () => {
         error: 'Undeliverable — 131026',
       },
     ]);
+  });
+
+  it('extracts inbound text messages (D251)', () => {
+    const events = extractWhatsAppInboundMessages({
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                contacts: [{ profile: { name: 'Café Atlas' } }],
+                messages: [
+                  {
+                    id: 'wamid.in.1',
+                    from: '21620123456',
+                    timestamp: '1700000000',
+                    type: 'text',
+                    text: { body: '2 kg mozzarella demain' },
+                  },
+                  {
+                    id: 'wamid.in.2',
+                    from: 'bad',
+                    type: 'text',
+                    text: { body: 'ignored' },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      wamid: 'wamid.in.1',
+      fromPhone: '21620123456',
+      profileName: 'Café Atlas',
+      bodyText: '2 kg mozzarella demain',
+      messageType: 'text',
+    });
   });
 });

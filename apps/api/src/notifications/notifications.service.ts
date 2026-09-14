@@ -5,6 +5,7 @@ import {
   FinPromiseStatus,
   PtlPaymentDeclarationStatus,
   ThuSignalStatus,
+  WaInboundStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
@@ -41,8 +42,9 @@ type UpsertCandidate = {
 };
 
 /**
- * Soft Glass in-app inbox (D247/D248).
- * Sync materializes métier sources + reconciles stale unread — never invents rates; no WA/CRM.
+ * Soft Glass in-app inbox (D247/D248/D252).
+ * Sync materializes métier sources + reconciles stale unread — never invents rates;
+ * WA_INBOX = human-gated draft only (no NLP auto-order / CRM).
  */
 @Injectable()
 export class NotificationsService {
@@ -180,7 +182,7 @@ export class NotificationsService {
   ): Promise<UpsertCandidate[]> {
     const out: UpsertCandidate[] = [];
 
-    const [decls, promises, dunnings, signals, ras, tej, atmRuns] =
+    const [decls, promises, dunnings, signals, ras, tej, atmRuns, waInbox] =
       await Promise.all([
         this.prisma.ptlPaymentDeclaration.findMany({
           where: {
@@ -273,6 +275,25 @@ export class NotificationsService {
             profile: { select: { code: true, name: true } },
           },
         }),
+        this.prisma.waInboundMessage.findMany({
+          where: {
+            companyId,
+            deletedAt: null,
+            status: {
+              in: [WaInboundStatus.OPEN, WaInboundStatus.MATCHED],
+            },
+          },
+          orderBy: { receivedAt: 'desc' },
+          take: 30,
+          select: {
+            id: true,
+            fromPhone: true,
+            profileName: true,
+            bodyText: true,
+            status: true,
+            receivedAt: true,
+          },
+        }),
       ]);
 
     const customerIds = new Set<string>();
@@ -296,13 +317,13 @@ export class NotificationsService {
             select: {
               id: true,
               code: true,
-              party: { select: { displayName: true } },
+              party: { select: { legalName: true } },
             },
           });
     const custLabel = new Map(
       customers.map((c) => [
         c.id,
-        `${c.code}${c.party?.displayName ? ` · ${c.party.displayName}` : ''}`,
+        `${c.code}${c.party?.legalName ? ` · ${c.party.legalName}` : ''}`,
       ]),
     );
 
@@ -412,6 +433,23 @@ export class NotificationsService {
         title: `Automation à revoir — ${label}`,
         body: `Statut ${run.status}. ASSISTED / REQUIRES_APPROVAL — pas de FULL_AUTO.`,
         href: `/automation`,
+      });
+    }
+
+    for (const msg of waInbox) {
+      const snippet = (msg.bodyText ?? msg.profileName ?? msg.fromPhone)
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120);
+      out.push({
+        source: 'WA_INBOX',
+        sourceRefId: msg.id,
+        dedupeKey: `wa_inbox:${msg.id}`,
+        type: 'task',
+        priority: msg.status === WaInboundStatus.OPEN ? 'p1' : 'p2',
+        title: `WhatsApp ${msg.fromPhone}`,
+        body: `${snippet || 'Message entrant'} — créer brouillon Soft Glass (humain).`,
+        href: `/sales/wa-inbox`,
       });
     }
 

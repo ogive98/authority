@@ -262,9 +262,11 @@ export function AActivityCenter({
                           : "Crédit"
                         : key === "ATM_REVIEW"
                           ? "Auto"
-                          : key === "RAS_PENDING"
-                            ? "RAS"
-                            : "TEJ";
+                          : key === "WA_INBOX"
+                            ? "WA"
+                            : key === "RAS_PENDING"
+                              ? "RAS"
+                              : "TEJ";
               return (
                 <button
                   key={key}

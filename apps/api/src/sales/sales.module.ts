@@ -8,6 +8,8 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
+import { WaInboxController } from './wa-inbox.controller';
+import { WaInboxService } from './wa-inbox.service';
 
 @Module({
   imports: [
@@ -19,8 +21,8 @@ import { SalesService } from './sales.service';
     InventoryModule,
     FinanceModule,
   ],
-  controllers: [SalesController],
-  providers: [SalesService],
+  controllers: [SalesController, WaInboxController],
+  providers: [SalesService, WaInboxService],
   exports: [SalesService],
 })
 export class SalesModule {}
