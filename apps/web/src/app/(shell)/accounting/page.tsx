@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   CalendarRange,
@@ -17,6 +18,7 @@ import {
   AErrorState,
   AFilterBar,
   AForbiddenState,
+  AInput,
   AOverflowMenu,
   APageBody,
   APageSection,
@@ -27,6 +29,8 @@ import {
   ASoftTr,
 } from "@/components/a";
 import {
+  ENTRY_STATUS_FILTERS,
+  entryBadgeTone,
   fetchAccounts,
   fetchEntries,
   fetchGlMapping,
@@ -39,6 +43,7 @@ import {
   reverseEntry,
   updatePeriodStatus,
   type AccAccount,
+  type AccEntryStatus,
   type AccJournal,
   type AccJournalEntry,
   type AccPeriod,
@@ -48,9 +53,14 @@ import {
 import { putCompanySetting } from "@/lib/settings";
 import { isAccountingPartialMode } from "@/lib/ops-visibility";
 import { localizeUiString } from "@/lib/i18n/route-labels";
+import { useStatusLabel } from "@/hooks/use-status-label";
 import { useLocaleStore } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
-import { softSelect, softUnderlineTabClass } from "@/lib/soft-glass-ui";
+import {
+  softChipClass,
+  softSelect,
+  softUnderlineTabClass,
+} from "@/lib/soft-glass-ui";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 
@@ -82,15 +92,6 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-function entryTone(
-  status: string,
-): "success" | "warning" | "neutral" | "danger" {
-  if (status === "POSTED") return "success";
-  if (status === "DRAFT") return "warning";
-  if (status === "REVERSED") return "danger";
-  return "neutral";
-}
-
 function periodTone(
   status: string,
 ): "success" | "warning" | "neutral" | "danger" {
@@ -100,11 +101,31 @@ function periodTone(
   return "neutral";
 }
 
-export default function AccountingPage() {
+function periodStatusLabel(status: string, locale: "fr" | "it"): string {
+  const fr: Record<string, string> = {
+    OPEN: "Ouverte",
+    SOFT_CLOSED: "Soft close",
+    CLOSED: "Clôturée",
+    LOCKED: "Verrouillée",
+  };
+  const it: Record<string, string> = {
+    OPEN: "Aperta",
+    SOFT_CLOSED: "Soft close",
+    CLOSED: "Chiusa",
+    LOCKED: "Bloccata",
+  };
+  return (locale === "it" ? it : fr)[status] ?? status;
+}
+
+function AccountingPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const locale = useLocaleStore((s) => s.locale);
+  const { label: st } = useStatusLabel();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [tab, setTab] = useState<Tab>("coa");
+  const [coaQ, setCoaQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | AccEntryStatus>("");
   const [mapDraft, setMapDraft] = useState<GlMapForm | null>(null);
   const [mapBusy, setMapBusy] = useState(false);
   const [mapMsg, setMapMsg] = useState<string | null>(null);
@@ -119,82 +140,106 @@ export default function AccountingPage() {
     prefs: opsVisibility,
   });
 
-  const load = useCallback(async (periodId?: string) => {
-    setState({ kind: "loading" });
-    const [acc, per, jou, mapRes] = await Promise.all([
-      fetchAccounts(),
-      fetchPeriods(),
-      fetchJournals(),
-      fetchGlMapping(),
-    ]);
-    if (!acc.ok) {
-      if (acc.status === 403) {
-        setState({ kind: "forbidden", message: acc.message });
+  const syncUrl = useCallback(
+    (next: { tab?: Tab; status?: "" | AccEntryStatus }) => {
+      const sp = new URLSearchParams(searchParams.toString());
+      const t = next.tab ?? tab;
+      if (t === "coa") sp.delete("tab");
+      else sp.set("tab", t);
+      const stFilter = next.status !== undefined ? next.status : statusFilter;
+      if (t === "entries" && stFilter) sp.set("status", stFilter);
+      else sp.delete("status");
+      const q = sp.toString();
+      router.replace(q ? `/accounting?${q}` : "/accounting", { scroll: false });
+    },
+    [router, searchParams, statusFilter, tab],
+  );
+
+  const load = useCallback(
+    async (periodId?: string, entryStatus?: "" | AccEntryStatus) => {
+      setState({ kind: "loading" });
+      const status =
+        entryStatus !== undefined ? entryStatus : statusFilter || undefined;
+      const [acc, per, jou, mapRes] = await Promise.all([
+        fetchAccounts(),
+        fetchPeriods(),
+        fetchJournals(),
+        fetchGlMapping(),
+      ]);
+      if (!acc.ok) {
+        if (acc.status === 403) {
+          setState({ kind: "forbidden", message: acc.message });
+          return;
+        }
+        setState({ kind: "error", message: acc.message });
         return;
       }
-      setState({ kind: "error", message: acc.message });
-      return;
-    }
-    if (!per.ok) {
-      setState({ kind: "error", message: per.message });
-      return;
-    }
-    const journals = jou.ok ? jou.data.items : [];
-    const selected =
-      periodId ||
-      per.data.items.find((p) => p.status === "OPEN")?.id ||
-      per.data.items[0]?.id ||
-      "";
+      if (!per.ok) {
+        setState({ kind: "error", message: per.message });
+        return;
+      }
+      const journals = jou.ok ? jou.data.items : [];
+      const selected =
+        periodId ||
+        per.data.items.find((p) => p.status === "OPEN")?.id ||
+        per.data.items[0]?.id ||
+        "";
 
-    const mapping: GlMapForm = mapRes.ok
-      ? {
-          ...GL_MAPPING_DEFAULTS,
-          ...mapRes.data.codes,
-          bankFee: mapRes.data.codes.bankFee ?? "",
+      const mapping: GlMapForm = mapRes.ok
+        ? {
+            ...GL_MAPPING_DEFAULTS,
+            ...mapRes.data.codes,
+            bankFee: mapRes.data.codes.bankFee ?? "",
+          }
+        : { ...GL_MAPPING_DEFAULTS };
+
+      let trial: TrialBalanceRow[] = [];
+      let entries: AccJournalEntry[] = [];
+      let patchSample: PatchSampleMeta | undefined;
+      const entryOpts = {
+        limit: 50,
+        ...(status ? { status } : {}),
+      };
+      if (selected) {
+        const [tb, en] = await Promise.all([
+          fetchTrialBalance(selected),
+          fetchEntries({ periodId: selected, ...entryOpts }),
+        ]);
+        if (tb.ok) trial = tb.data.items;
+        if (en.ok) {
+          entries = en.data.items;
+          patchSample = en.data.patchSample;
         }
-      : { ...GL_MAPPING_DEFAULTS };
-
-    let trial: TrialBalanceRow[] = [];
-    let entries: AccJournalEntry[] = [];
-    let patchSample: PatchSampleMeta | undefined;
-    if (selected) {
-      const [tb, en] = await Promise.all([
-        fetchTrialBalance(selected),
-        fetchEntries({ periodId: selected, limit: 50 }),
-      ]);
-      if (tb.ok) trial = tb.data.items;
-      if (en.ok) {
-        entries = en.data.items;
-        patchSample = en.data.patchSample;
+      } else {
+        const en = await fetchEntries(entryOpts);
+        if (en.ok) {
+          entries = en.data.items;
+          patchSample = en.data.patchSample;
+        }
       }
-    } else {
-      const en = await fetchEntries({ limit: 50 });
-      if (en.ok) {
-        entries = en.data.items;
-        patchSample = en.data.patchSample;
-      }
-    }
 
-    setMapDraft(mapping);
-    setState({
-      kind: "ok",
-      accounts: acc.data.items,
-      journals,
-      periods: per.data.items,
-      trial,
-      entries,
-      patchSample,
-      periodId: selected,
-      mapping,
-    });
-  }, [patchEnabled]);
+      setMapDraft(mapping);
+      setState({
+        kind: "ok",
+        accounts: acc.data.items,
+        journals,
+        periods: per.data.items,
+        trial,
+        entries,
+        patchSample,
+        periodId: selected,
+        mapping,
+      });
+    },
+    [patchEnabled, statusFilter],
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get("tab");
+    const t = searchParams.get("tab");
     if (
       t === "trial" ||
       t === "entries" ||
@@ -204,7 +249,13 @@ export default function AccountingPage() {
     ) {
       setTab(t);
     }
-  }, []);
+    const s = searchParams.get("status");
+    if (s === "DRAFT" || s === "POSTED" || s === "REVERSED") {
+      setStatusFilter(s);
+    } else if (!s) {
+      setStatusFilter("");
+    }
+  }, [searchParams]);
 
   const accountOptions = useMemo(() => {
     if (state.kind !== "ok") return [];
@@ -215,6 +266,26 @@ export default function AccountingPage() {
     if (state.kind !== "ok") return [];
     return state.journals.filter((j) => j.active);
   }, [state]);
+
+  const filteredAccounts = useMemo(() => {
+    if (state.kind !== "ok") return [];
+    const q = coaQ.trim().toLowerCase();
+    if (!q) return state.accounts;
+    return state.accounts.filter(
+      (a) =>
+        a.code.toLowerCase().includes(q) || a.name.toLowerCase().includes(q),
+    );
+  }, [state, coaQ]);
+
+  function selectTab(next: Tab) {
+    setTab(next);
+    syncUrl({ tab: next });
+  }
+
+  function selectStatus(next: "" | AccEntryStatus) {
+    setStatusFilter(next);
+    syncUrl({ tab: "entries", status: next });
+  }
 
   async function saveMapping() {
     if (!mapDraft) return;
@@ -370,7 +441,7 @@ export default function AccountingPage() {
                     key={id}
                     type="button"
                     className={softUnderlineTabClass(active)}
-                    onClick={() => setTab(id)}
+                    onClick={() => selectTab(id)}
                   >
                     <Icon
                       className={cn(
@@ -394,10 +465,25 @@ export default function AccountingPage() {
 
             {tab === "coa" ? (
               <APageSection bare>
-                {state.accounts.length === 0 ? (
+                <AFilterBar
+                  filters={
+                    <AInput
+                      value={coaQ}
+                      onChange={(e) => setCoaQ(e.target.value)}
+                      placeholder="Rechercher code ou nom…"
+                      className="min-w-[14rem] max-w-sm"
+                      aria-label="Filtrer plan comptable"
+                    />
+                  }
+                />
+                {filteredAccounts.length === 0 ? (
                   <AEmptyState
                     title="Aucun compte"
-                    description="Les comptes seed apparaissent après seed."
+                    description={
+                      coaQ.trim()
+                        ? "Aucun compte ne correspond au filtre."
+                        : "Les comptes seed apparaissent après seed."
+                    }
                   />
                 ) : (
                   <ASoftTable>
@@ -415,7 +501,7 @@ export default function AccountingPage() {
                       </tr>
                     </ASoftThead>
                     <tbody>
-                      {state.accounts.map((a) => (
+                      {filteredAccounts.map((a) => (
                         <ASoftTr key={a.id}>
                           <td className="a-mono a-table-cell">{a.code}</td>
                           <td className="a-table-cell">{a.name}</td>
@@ -477,6 +563,22 @@ export default function AccountingPage() {
                   filters={
                     <>
                       {periodSelect}
+                      <div className="flex flex-wrap gap-2">
+                        {ENTRY_STATUS_FILTERS.map((chip) => {
+                          const active = statusFilter === chip.id;
+                          return (
+                            <button
+                              key={chip.id || "all"}
+                              type="button"
+                              className={softChipClass(active)}
+                              onClick={() => selectStatus(chip.id)}
+                            >
+                              {localizeUiString(chip.label, locale) ??
+                                chip.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                       {state.patchSample?.applied ? (
                         <ABadge tone="warning">
                           PATCH échantillon {state.patchSample.kept}/
@@ -508,8 +610,21 @@ export default function AccountingPage() {
                     </ASoftThead>
                     <tbody>
                       {state.entries.map((e) => (
-                        <ASoftTr key={e.id}>
-                          <td className="a-mono a-table-cell">{e.number}</td>
+                        <ASoftTr
+                          key={e.id}
+                          onClick={() =>
+                            router.push(`/accounting/entries/${e.id}`)
+                          }
+                        >
+                          <td className="a-mono a-table-cell">
+                            <Link
+                              href={`/accounting/entries/${e.id}`}
+                              className="text-a-accent hover:underline"
+                              onClick={(ev) => ev.stopPropagation()}
+                            >
+                              {e.number}
+                            </Link>
+                          </td>
                           <td className="a-mono a-table-cell">
                             {e.entryDate}
                           </td>
@@ -517,15 +632,18 @@ export default function AccountingPage() {
                             {e.journalCode ?? "—"}
                           </td>
                           <td className="a-table-cell">
-                            <ABadge tone={entryTone(e.status)}>
-                              {e.status}
+                            <ABadge tone={entryBadgeTone(e.status)}>
+                              {st(e.status)}
                             </ABadge>
                           </td>
                           <td className="a-mono a-table-cell text-a-fg-muted">
                             {e.sourceType ?? "—"}
                           </td>
                           <td className="a-table-cell text-right">
-                            <div className="flex flex-wrap justify-end gap-1">
+                            <div
+                              className="flex flex-wrap justify-end gap-1"
+                              onClick={(ev) => ev.stopPropagation()}
+                            >
                               {e.status === "DRAFT" ? (
                                 <AButton
                                   type="button"
@@ -549,6 +667,16 @@ export default function AccountingPage() {
                                     : "Décomptabiliser"}
                                 </AButton>
                               ) : null}
+                              <AButton
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() =>
+                                  router.push(`/accounting/entries/${e.id}`)
+                                }
+                              >
+                                Ouvrir
+                              </AButton>
                             </div>
                           </td>
                         </ASoftTr>
@@ -590,7 +718,7 @@ export default function AccountingPage() {
                           <td className="a-mono a-table-cell">{p.endDate}</td>
                           <td className="a-table-cell">
                             <ABadge tone={periodTone(p.status)}>
-                              {p.status}
+                              {periodStatusLabel(p.status, locale)}
                             </ABadge>
                           </td>
                           <td className="a-table-cell">
@@ -743,5 +871,13 @@ export default function AccountingPage() {
         ) : null}
       </APageBody>
     </>
+  );
+}
+
+export default function AccountingPage() {
+  return (
+    <Suspense fallback={<ASkeleton className="m-6 h-32 w-full" />}>
+      <AccountingPageInner />
+    </Suspense>
   );
 }

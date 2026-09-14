@@ -8,6 +8,7 @@ import {
   confirmTransferOrder,
   createTransferOrder,
   downloadTransferOrderPdf,
+  downloadTransferOrderSepa,
   fetchTransferBankAccounts,
   fetchTransferOrders,
   type TransferBankAccountOption,
@@ -110,6 +111,15 @@ export function HrTransferOrderPanel({ bulletinId }: { bulletinId: string }) {
     if (!res.ok) setError(res.message);
   }
 
+  async function onSepa() {
+    if (!order) return;
+    setBusy(true);
+    setError(null);
+    const res = await downloadTransferOrderSepa(order.id);
+    setBusy(false);
+    if (!res.ok) setError(res.message);
+  }
+
   return (
     <section className={`${softPanel} print:hidden space-y-3 p-5`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -119,10 +129,12 @@ export function HrTransferOrderPanel({ bulletinId }: { bulletinId: string }) {
           </h2>
           <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
             Montant = net bulletin figé · confirm ADV · décaissement AP Banking ·
-            PDF ordre. Pas d’auto-virement.
+            PDF / SEPA pain.001. Pas d’auto-virement · pas de BIC inventé.
           </p>
         </div>
-        {order ? <ABadge tone={statusTone(order.status)}>{order.status}</ABadge> : null}
+        {order ? (
+          <ABadge tone={statusTone(order.status)}>{order.status}</ABadge>
+        ) : null}
       </div>
 
       {loading ? <ASkeleton className="h-16 w-full" /> : null}
@@ -142,12 +154,15 @@ export function HrTransferOrderPanel({ bulletinId }: { bulletinId: string }) {
               disabled={banks.length === 0 || busy}
             >
               {banks.length === 0 ? (
-                <option value="">Aucun compte actif — créer dans Finance › Banking</option>
+                <option value="">
+                  Aucun compte actif — créer dans Finance › Banking
+                </option>
               ) : (
                 banks.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.code} · {b.label}
                     {b.isDefault ? " (défaut)" : ""}
+                    {!b.rib ? " — RIB manquant" : ""}
                   </option>
                 ))
               )}
@@ -192,6 +207,15 @@ export function HrTransferOrderPanel({ bulletinId }: { bulletinId: string }) {
                 <span className="a-mono text-a-fg-muted">
                   ({order.companyBankCode})
                 </span>
+                {order.companyBankRib ? (
+                  <span className="a-mono ml-2 text-a-fg-muted">
+                    {order.companyBankRib}
+                  </span>
+                ) : (
+                  <span className="ml-2 text-a-warning">
+                    RIB société manquant
+                  </span>
+                )}
               </dd>
             </div>
             {order.apPaymentNumber ? (
@@ -230,6 +254,17 @@ export function HrTransferOrderPanel({ bulletinId }: { bulletinId: string }) {
               <FileDown className="mr-1.5 h-4 w-4" strokeWidth={1.75} />
               PDF ordre
             </AButton>
+            {order.status === "CONFIRMED" ? (
+              <AButton
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => void onSepa()}
+              >
+                <FileDown className="mr-1.5 h-4 w-4" strokeWidth={1.75} />
+                Export SEPA
+              </AButton>
+            ) : null}
           </div>
         </div>
       ) : null}

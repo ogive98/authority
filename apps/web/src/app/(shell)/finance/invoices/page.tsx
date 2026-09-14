@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   ABadge,
   AButton,
@@ -80,10 +80,30 @@ function emptyLine(taxCodeId = ""): LineDraft {
 }
 
 export default function FinanceInvoicesPage() {
+  return (
+    <Suspense
+      fallback={
+        <APageBody>
+          <ASkeleton className="h-10 w-48" />
+          <ASkeleton className="h-10 w-full" />
+        </APageBody>
+      }
+    >
+      <FinanceInvoicesPageInner />
+    </Suspense>
+  );
+}
+
+function FinanceInvoicesPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | InvoiceStatus>("");
+  const [statusFilter, setStatusFilter] = useState<"" | InvoiceStatus>(() => {
+    const s = searchParams.get("status");
+    if (s === "DRAFT" || s === "ISSUED" || s === "CANCELLED") return s;
+    return "";
+  });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -114,8 +134,32 @@ export default function FinanceInvoicesPage() {
   );
 
   useEffect(() => {
-    void load("", "");
+    void load("", statusFilter);
+    // initial hydrate only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
+
+  function syncStatusUrl(next: "" | InvoiceStatus) {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (next) sp.set("status", next);
+    else sp.delete("status");
+    const qs = sp.toString();
+    router.replace(qs ? `/finance/invoices?${qs}` : "/finance/invoices", {
+      scroll: false,
+    });
+  }
+
+  useEffect(() => {
+    const s = searchParams.get("status");
+    const next: "" | InvoiceStatus =
+      s === "DRAFT" || s === "ISSUED" || s === "CANCELLED" ? s : "";
+    if (next !== statusFilter) {
+      setStatusFilter(next);
+      void load(q, next);
+    }
+    // sync from URL only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     void (async () => {
@@ -308,6 +352,7 @@ export default function FinanceInvoicesPage() {
                     aria-selected={active}
                     onClick={() => {
                       setStatusFilter(chip.id);
+                      syncStatusUrl(chip.id);
                       void load(q, chip.id);
                     }}
                     className={softChipClass(active)}

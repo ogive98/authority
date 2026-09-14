@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ABadge,
   AButton,
-  ADrawer,
   AEmptyState,
   AErrorState,
   AFilterBar,
@@ -17,8 +16,8 @@ import {
   ASkeleton,
 } from "@/components/a";
 import {
+  PROMISE_STATUS_FILTERS,
   PROMISE_STATUS_LABELS,
-  cancelPromise,
   fetchPromises,
   promiseBadgeTone,
   type FinPromise,
@@ -37,27 +36,44 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-type FilterMode = "" | PromiseStatus;
-
-const STATUS_FILTERS: Array<{ id: FilterMode; label: string }> = [
-  { id: "", label: "Tous" },
-  { id: "OPEN", label: "Ouvertes" },
-  { id: "KEPT", label: "Tenues" },
-  { id: "BROKEN", label: "Rompues" },
-  { id: "CANCELLED", label: "Annulées" },
-];
+function parseStatus(raw: string | null): "" | PromiseStatus {
+  if (
+    raw === "OPEN" ||
+    raw === "KEPT" ||
+    raw === "BROKEN" ||
+    raw === "CANCELLED"
+  ) {
+    return raw;
+  }
+  return "";
+}
 
 export default function FinancePromisesPage() {
+  return (
+    <Suspense
+      fallback={
+        <APageBody>
+          <ASkeleton className="h-10 w-48" />
+          <ASkeleton className="h-10 w-full" />
+        </APageBody>
+      }
+    >
+      <FinancePromisesPageInner />
+    </Suspense>
+  );
+}
+
+function FinancePromisesPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState<FilterMode>("");
-  const [selected, setSelected] = useState<FinPromise | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"" | PromiseStatus>(() =>
+    parseStatus(searchParams.get("status")),
+  );
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async (query?: string, filter?: FilterMode) => {
+  const load = useCallback(async (query?: string, filter?: "" | PromiseStatus) => {
     setState({ kind: "loading" });
     const res = await fetchPromises({
       q: query,
@@ -74,9 +90,29 @@ export default function FinancePromisesPage() {
     setState({ kind: "ok", items: res.data.items });
   }, []);
 
+  function syncStatusUrl(next: "" | PromiseStatus) {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (next) sp.set("status", next);
+    else sp.delete("status");
+    const qs = sp.toString();
+    router.replace(qs ? `/finance/promises?${qs}` : "/finance/promises", {
+      scroll: false,
+    });
+  }
+
   useEffect(() => {
-    void load("", "");
+    void load("", statusFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
+
+  useEffect(() => {
+    const next = parseStatus(searchParams.get("status"));
+    if (next !== statusFilter) {
+      setStatusFilter(next);
+      void load(q, next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -87,20 +123,6 @@ export default function FinancePromisesPage() {
       if (searchTimer.current) clearTimeout(searchTimer.current);
     };
   }, [q, statusFilter, load]);
-
-  async function onCancel() {
-    if (!selected || selected.status !== "OPEN") return;
-    setBusy(true);
-    setActionError(null);
-    const res = await cancelPromise(selected.id);
-    setBusy(false);
-    if (!res.ok) {
-      setActionError(res.message);
-      return;
-    }
-    setSelected(null);
-    void load(q, statusFilter);
-  }
 
   return (
     <>
@@ -148,7 +170,7 @@ export default function FinancePromisesPage() {
               role="tablist"
               aria-label="Filtrer par statut"
             >
-              {STATUS_FILTERS.map((chip) => {
+              {PROMISE_STATUS_FILTERS.map((chip) => {
                 const active = statusFilter === chip.id;
                 return (
                   <button
@@ -156,7 +178,10 @@ export default function FinancePromisesPage() {
                     type="button"
                     role="tab"
                     aria-selected={active}
-                    onClick={() => setStatusFilter(chip.id)}
+                    onClick={() => {
+                      setStatusFilter(chip.id);
+                      syncStatusUrl(chip.id);
+                    }}
                     className={softChipClass(active)}
                   >
                     {chip.label}
@@ -205,12 +230,15 @@ export default function FinancePromisesPage() {
                   <th className="px-2 py-2 font-medium text-right">Montant</th>
                   <th className="px-2 py-2 font-medium">Échéance</th>
                   <th className="px-2 py-2 font-medium">Statut</th>
-                  <th className="px-2 py-2 font-medium" />
                 </tr>
               </thead>
               <tbody>
                 {state.items.map((row) => (
-                  <tr key={row.id} className={softTr}>
+                  <tr
+                    key={row.id}
+                    className={`${softTr} cursor-pointer`}
+                    onClick={() => router.push(`/finance/promises/${row.id}`)}
+                  >
                     <td className="a-mono px-2 py-2">{row.number}</td>
                     <td className="px-2 py-2">
                       {row.customerName ?? row.customerCode ?? "—"}
@@ -227,19 +255,6 @@ export default function FinancePromisesPage() {
                         {PROMISE_STATUS_LABELS[row.status]}
                       </ABadge>
                     </td>
-                    <td className="px-2 py-2 text-right">
-                      <AButton
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          setActionError(null);
-                          setSelected(row);
-                        }}
-                      >
-                        Détail
-                      </AButton>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -247,69 +262,6 @@ export default function FinancePromisesPage() {
           </div>
         ) : null}
       </APageBody>
-
-      <ADrawer
-        open={!!selected}
-        onOpenChange={(open) => {
-          if (!open) setSelected(null);
-        }}
-        title={selected?.number ?? "Promesse"}
-        description="Engagement de paiement sur créance."
-      >
-        {selected ? (
-          <div className="space-y-4">
-            <dl className="space-y-2 text-[length:var(--a-text-sm)]">
-              <div className="flex justify-between gap-4">
-                <dt className="text-a-fg-muted">Client</dt>
-                <dd>{selected.customerName ?? selected.customerCode ?? "—"}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-a-fg-muted">Créance</dt>
-                <dd className="a-mono">{selected.openItemNumber ?? "—"}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-a-fg-muted">Montant</dt>
-                <dd className="a-mono">
-                  {selected.amount} {selected.currency}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-a-fg-muted">Promis pour</dt>
-                <dd className="a-mono">{selected.promisedDate}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-a-fg-muted">Statut</dt>
-                <dd>
-                  <ABadge tone={promiseBadgeTone(selected.status)}>
-                    {PROMISE_STATUS_LABELS[selected.status]}
-                  </ABadge>
-                </dd>
-              </div>
-              {selected.notes ? (
-                <div>
-                  <dt className="mb-1 text-a-fg-muted">Note</dt>
-                  <dd>{selected.notes}</dd>
-                </div>
-              ) : null}
-            </dl>
-            {actionError ? (
-              <p className="text-[length:var(--a-text-sm)] text-a-danger-fg">
-                {actionError}
-              </p>
-            ) : null}
-            {selected.status === "OPEN" ? (
-              <AButton
-                type="button"
-                variant="secondary"
-                disabled={busy}
-                onClick={() => void onCancel()}
-              >
-                Annuler la promesse
-              </AButton>
-            ) : null}
-          </div>
-        ) : null}
-      </ADrawer>
     </>
   );
 }

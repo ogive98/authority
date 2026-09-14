@@ -23,6 +23,7 @@ export const BUSINESS_MODULE_KEYS = [
   'documents',
   'accounting',
   'repair',
+  'automation',
 ] as const;
 
 export const FLAG_KEYS = {

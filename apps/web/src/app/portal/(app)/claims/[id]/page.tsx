@@ -3,7 +3,13 @@ import { notFound } from "next/navigation";
 import { ABadge } from "@/components/a/a-badge";
 import { AEmptyState } from "@/components/a/a-empty-state";
 import { AErrorState } from "@/components/a/a-error-state";
+import { APageBody } from "@/components/a/a-page-body";
 import { AScreenHeader } from "@/components/a/a-screen-header";
+import {
+  ASoftTable,
+  ASoftThead,
+  ASoftTr,
+} from "@/components/a/a-soft-table";
 import { PortalDocumentDownloadButton } from "@/components/portal/portal-document-download-button";
 import { PortalClaimDocumentUpload } from "@/components/portal/portal-claim-document-upload";
 import {
@@ -35,12 +41,12 @@ export default async function PortalClaimDetailPage({
     return (
       <div>
         <AScreenHeader kicker="Customer Portal" title="Réclamation" />
-        <div className="px-[var(--a-space-6)] py-[var(--a-space-5)]">
+        <APageBody>
           <AErrorState
             message="Impossible de charger cette réclamation."
             retryable={false}
           />
-        </div>
+        </APageBody>
       </div>
     );
   }
@@ -68,7 +74,7 @@ export default async function PortalClaimDetailPage({
           </Link>
         }
       />
-      <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
+      <APageBody>
         <div className="flex flex-wrap items-center gap-3">
           <ABadge tone={portalClaimBadgeTone(data.status)}>
             {portalClaimStatusLabel(data.status)}
@@ -104,7 +110,7 @@ export default async function PortalClaimDetailPage({
             ) : null}
           </div>
           {data.resolutionNote ? (
-            <p className="border-t border-a-border-subtle pt-3 text-[length:var(--a-text-sm)] text-a-fg-muted">
+            <p className="pt-3 text-[length:var(--a-text-sm)] text-a-fg-muted">
               Résolution : {data.resolutionNote}
             </p>
           ) : null}
@@ -133,35 +139,30 @@ export default async function PortalClaimDetailPage({
               canAct={false}
             />
           ) : (
-            <div className="a-underlay overflow-hidden rounded-md">
-              <table className="w-full border-collapse text-left text-[length:var(--a-text-sm)]">
-                <thead className="bg-a-surface-3/80 text-a-fg-muted">
-                  <tr>
-                    <th className="a-table-cell font-medium">N°</th>
-                    <th className="a-table-cell font-medium">Titre</th>
-                    <th className="a-table-cell font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {docs.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-t border-a-border-subtle"
-                    >
-                      <td className="a-mono a-table-cell">{row.number}</td>
-                      <td className="a-table-cell">{row.title}</td>
-                      <td className="a-table-cell">
-                        <PortalDocumentDownloadButton id={row.id} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ASoftTable>
+              <ASoftThead>
+                <tr>
+                  <th className="a-table-cell font-medium">N°</th>
+                  <th className="a-table-cell font-medium">Titre</th>
+                  <th className="a-table-cell font-medium">Actions</th>
+                </tr>
+              </ASoftThead>
+              <tbody>
+                {docs.map((row) => (
+                  <ASoftTr key={row.id}>
+                    <td className="a-mono a-table-cell">{row.number}</td>
+                    <td className="a-table-cell">{row.title}</td>
+                    <td className="a-table-cell">
+                      <PortalDocumentDownloadButton id={row.id} />
+                    </td>
+                  </ASoftTr>
+                ))}
+              </tbody>
+            </ASoftTable>
           )}
           <PortalClaimDocumentUpload claimId={data.id} />
         </section>
-      </div>
+      </APageBody>
     </div>
   );
 }

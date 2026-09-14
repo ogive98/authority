@@ -42,6 +42,7 @@ export class DocumentsController {
     @CurrentTenancy() tenancy: TenancyContext,
     @Query('q') q?: string,
     @Query('visibility') visibility?: string,
+    @Query('customerId') customerId?: string,
     @Query('linkType') linkType?: string,
     @Query('linkId') linkId?: string,
     @Query('limit') limitRaw?: string,
@@ -51,6 +52,7 @@ export class DocumentsController {
     return this.documents.list(tenancy.companyId, {
       q,
       visibility,
+      customerId,
       linkType,
       linkId,
       limit: Number.isFinite(limit) ? limit : undefined,

@@ -438,7 +438,12 @@ export class DunningService {
 
   async list(
     companyId: string,
-    opts?: { status?: string; openItemId?: string; limit?: number },
+    opts?: {
+      status?: string;
+      openItemId?: string;
+      customerId?: string;
+      limit?: number;
+    },
   ): Promise<{ items: DunningDraftDto[] }> {
     const limit = Math.min(Math.max(opts?.limit ?? 50, 1), 100);
     const status = opts?.status?.trim().toUpperCase();
@@ -447,6 +452,7 @@ export class DunningService {
         companyId,
         deletedAt: null,
         ...(opts?.openItemId ? { openItemId: opts.openItemId } : {}),
+        ...(opts?.customerId ? { customerId: opts.customerId } : {}),
         ...(status &&
         Object.values(FinDunningStatus).includes(status as FinDunningStatus)
           ? { status: status as FinDunningStatus }

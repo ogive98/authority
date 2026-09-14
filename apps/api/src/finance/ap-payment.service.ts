@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  FinApBillStatus,
   FinPaymentMethod,
   FinPaymentStatus,
   Prisma,
@@ -26,6 +27,8 @@ export type ApPaymentDto = {
   accountingDate: string;
   reference: string | null;
   notes: string | null;
+  apBillId: string | null;
+  apBillNumber: string | null;
   version: number;
   matched: boolean;
   createdAt: string;
@@ -41,15 +44,17 @@ export class ApPaymentService {
 
   async list(
     companyId: string,
-    opts?: { q?: string; status?: string; limit?: number },
+    opts?: { q?: string; status?: string; apBillId?: string; limit?: number },
   ): Promise<{ items: ApPaymentDto[] }> {
     const limit = Math.min(Math.max(opts?.limit ?? 50, 1), 100);
     const q = opts?.q?.trim();
     const status = opts?.status?.trim().toUpperCase();
+    const apBillId = opts?.apBillId?.trim();
     const rows = await this.prisma.finApPayment.findMany({
       where: {
         companyId,
         deletedAt: null,
+        ...(apBillId ? { apBillId } : {}),
         ...(status &&
         Object.values(FinPaymentStatus).includes(status as FinPaymentStatus)
           ? { status: status as FinPaymentStatus }
@@ -64,7 +69,10 @@ export class ApPaymentService {
             }
           : {}),
       },
-      include: { bankMatches: { select: { id: true } } },
+      include: {
+        bankMatches: { select: { id: true } },
+        apBill: { select: { number: true } },
+      },
       orderBy: [{ paymentDate: 'desc' }, { createdAt: 'desc' }],
       take: limit,
     });
@@ -77,11 +85,36 @@ export class ApPaymentService {
   ): Promise<ApPaymentDto> {
     assertPositiveApAmount(dto.amount);
     const amount = round3(dto.amount);
-    const vendorName = dto.vendorName.trim();
+
+    let apBillId: string | null = null;
+    let vendorName = dto.vendorName?.trim() ?? '';
+
+    if (dto.apBillId) {
+      const bill = await this.prisma.finApBill.findFirst({
+        where: { id: dto.apBillId, companyId, deletedAt: null },
+      });
+      if (!bill) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.AP_BILL_NOT_FOUND,
+          'AP bill not found.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      if (bill.status !== FinApBillStatus.POSTED) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_STATUS,
+          'Only POSTED AP bills can be linked to a disbursement.',
+          HttpStatus.CONFLICT,
+        );
+      }
+      apBillId = bill.id;
+      if (!vendorName) vendorName = bill.vendorName;
+    }
+
     if (!vendorName) {
       throw new FinanceException(
-        FINANCE_ERROR_CODES.INVALID_AMOUNT,
-        'vendorName is required.',
+        FINANCE_ERROR_CODES.INVALID_POLICY,
+        'vendorName is required (or link a POSTED AP bill).',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -107,8 +140,12 @@ export class ApPaymentService {
           accountingDate,
           reference: dto.reference?.trim() || null,
           notes: dto.notes?.trim() || null,
+          apBillId,
         },
-        include: { bankMatches: { select: { id: true } } },
+        include: {
+          bankMatches: { select: { id: true } },
+          apBill: { select: { number: true } },
+        },
       });
       await this.outbox.enqueue(tx, {
         companyId,
@@ -122,6 +159,7 @@ export class ApPaymentService {
           amount: amount.toFixed(3),
           currency,
           paymentDate: paymentDate.toISOString().slice(0, 10),
+          apBillId,
         },
       });
       return payment;
@@ -163,10 +201,12 @@ function serializeApPayment(row: {
   accountingDate: Date;
   reference: string | null;
   notes: string | null;
+  apBillId: string | null;
   version: number;
   createdAt: Date;
   updatedAt: Date;
   bankMatches: { id: string }[];
+  apBill: { number: string } | null;
 }): ApPaymentDto {
   return {
     id: row.id,
@@ -181,6 +221,8 @@ function serializeApPayment(row: {
     accountingDate: row.accountingDate.toISOString().slice(0, 10),
     reference: row.reference,
     notes: row.notes,
+    apBillId: row.apBillId,
+    apBillNumber: row.apBill?.number ?? null,
     version: row.version,
     matched: row.bankMatches.length > 0,
     createdAt: row.createdAt.toISOString(),

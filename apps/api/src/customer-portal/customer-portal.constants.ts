@@ -15,6 +15,7 @@ export const CUSTOMER_PORTAL_ERROR_CODES = {
   /** No active warehouse for company — cannot create Sales draft. */
   WAREHOUSE_UNAVAILABLE: 'POR.WAREHOUSE_UNAVAILABLE',
   VALIDATION: 'POR.VALIDATION',
+  DECLARATION_INVALID: 'POR.DECLARATION_INVALID',
 } as const;
 
 export type CustomerPortalErrorCode =

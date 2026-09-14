@@ -72,6 +72,7 @@ export const FALLBACK_REGISTRY: MeRegistry = {
         { id: "instruments", label: "Instruments", href: "/finance/instruments" },
         { id: "promises", label: "Promesses", href: "/finance/promises" },
         { id: "banking", label: "Banque", href: "/finance/banking" },
+        { id: "ap-bills", label: "Factures fournisseurs", href: "/finance/ap-bills" },
       ],
     },
     {

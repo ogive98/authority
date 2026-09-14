@@ -15,6 +15,7 @@ import { CustomerPortalController } from './customer-portal.controller';
 import { CustomerPortalInsightsService } from './customer-portal-insights.service';
 import { CustomerPortalModuleGuard } from './customer-portal-module.guard';
 import { CustomerPortalOrdersService } from './customer-portal-orders.service';
+import { CustomerPortalPaymentDeclarationService } from './customer-portal-payment-declaration.service';
 import { CustomerPortalSessionGuard } from './customer-portal-session.guard';
 
 @Module({
@@ -36,6 +37,7 @@ import { CustomerPortalSessionGuard } from './customer-portal-session.guard';
     CustomerPortalOrdersService,
     CustomerPortalClaimsService,
     CustomerPortalInsightsService,
+    CustomerPortalPaymentDeclarationService,
     CustomerPortalSessionGuard,
     CustomerPortalModuleGuard,
   ],

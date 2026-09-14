@@ -54,6 +54,7 @@ const VIS_FILTERS: Array<{
 
 const LINK_TYPES = [
   "NONE",
+  "CUSTOMER",
   "CLAIM",
   "ORDER",
   "SHIPMENT",
@@ -210,7 +211,7 @@ export default function DocumentsPage() {
       <AScreenHeader
         kicker="Documents"
         title="Bibliothèque"
-        description="Fichiers SOC-09 · lien CLAIM/ORDER/SHIPMENT/HR_EMPLOYEE/HR_BULLETIN · signed URL portal."
+        description="Fichiers SOC-09 · lien CUSTOMER/CLAIM/ORDER/SHIPMENT/HR · signed URL portal."
         primary={
           <AButton type="button" size="sm" onClick={() => setDrawerOpen(true)}>
             Déposer un fichier
@@ -408,7 +409,12 @@ export default function DocumentsPage() {
                 const next = e.target.value as (typeof LINK_TYPES)[number];
                 setLinkType(next);
                 setLinkId("");
-                if (next === "CLAIM" || next === "ORDER" || next === "SHIPMENT") {
+                if (
+                  next === "CLAIM" ||
+                  next === "ORDER" ||
+                  next === "SHIPMENT" ||
+                  next === "CUSTOMER"
+                ) {
                   setVisibility("CUSTOMER_PORTAL");
                 }
               }}

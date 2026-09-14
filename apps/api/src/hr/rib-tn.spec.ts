@@ -5,6 +5,7 @@ import {
   isValidTunisianRibDigits,
   normalizeOptionalTunisianRib,
   parseTunisianRib,
+  toTunisianIban,
 } from './rib-tn';
 
 describe('rib-tn (D232)', () => {
@@ -42,18 +43,14 @@ describe('rib-tn (D232)', () => {
   });
 
   it('accepts valid TN IBAN for Amen RIB', () => {
-    // Build IBAN check for TN + amen
-    const bban = amen;
-    const rearr = `${bban}TN00`;
-    let exp = '';
-    for (const ch of rearr) {
-      if (ch >= 'A' && ch <= 'Z') exp += String(ch.charCodeAt(0) - 55);
-      else exp += ch;
-    }
-    const rem = Number(BigInt(exp) % 97n);
-    const check = String(98 - rem).padStart(2, '0');
-    const iban = `TN${check}${bban}`;
+    const iban = toTunisianIban(amen);
     expect(isValidTunisianIban(iban)).toBe(true);
     expect(assertTunisianRib(iban)).toBe(amen);
+  });
+
+  it('toTunisianIban is stable and round-trips', () => {
+    const iban = toTunisianIban(amen);
+    expect(iban).toMatch(/^TN\d{22}$/);
+    expect(toTunisianIban(iban)).toBe(iban);
   });
 });

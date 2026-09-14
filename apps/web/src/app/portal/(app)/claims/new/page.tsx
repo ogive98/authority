@@ -1,4 +1,5 @@
 import { AErrorState } from "@/components/a/a-error-state";
+import { APageBody } from "@/components/a/a-page-body";
 import { PortalNewClaimForm } from "@/components/portal/portal-new-claim-form";
 import { fetchDeliveries, fetchOrders } from "@/lib/customer-portal";
 
@@ -11,7 +12,7 @@ export default async function PortalNewClaimPage() {
 
   if (oStatus !== 200 || dStatus !== 200 || !orders || !deliveries) {
     return (
-      <div className="px-[var(--a-space-6)] py-[var(--a-space-5)]">
+      <APageBody>
         <AErrorState
           message={
             oStatus === 401 ||
@@ -23,7 +24,7 @@ export default async function PortalNewClaimPage() {
           }
           retryable={false}
         />
-      </div>
+      </APageBody>
     );
   }
 

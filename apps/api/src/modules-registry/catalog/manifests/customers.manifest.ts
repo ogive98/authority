@@ -6,7 +6,7 @@ export const customersManifest: ModuleManifest = {
   version: '1.1.0',
   apiVersion: '1',
   description:
-    'Customers V1b — party link, profile, contacts, zones, credit, block',
+    'Customers V1b + Customer 360 — party, contacts, addresses, credit, block, portal memberships',
   capabilities: [
     {
       key: 'customers.read',
@@ -52,8 +52,18 @@ export const customersManifest: ModuleManifest = {
     'customers.block',
     'customers.unblock',
     'customers.credit.set',
+    'customers.portal_membership.link',
   ],
-  queries: ['customers.list', 'customers.get', 'customers.zones.list'],
+  queries: [
+    'customers.list',
+    'customers.get',
+    'customers.summary',
+    'customers.timeline',
+    'customers.documents',
+    'customers.communications',
+    'customers.zones.list',
+    'customers.portal_memberships.list',
+  ],
   permissions: [
     'customers.read',
     'customers.write',
@@ -61,7 +71,14 @@ export const customersManifest: ModuleManifest = {
     'customers.credit.set',
   ],
   dependencies: ['platform', 'organization', 'master_data'],
-  publishedEvents: [],
+  publishedEvents: [
+    'customers.customer.created.v1',
+    'customers.customer.updated.v1',
+    'customers.customer.blocked.v1',
+    'customers.customer.unblocked.v1',
+    'customers.credit.changed.v1',
+    'customers.portal_membership.changed.v1',
+  ],
   navigationEntries: [
     { id: 'customers', label: 'Clients', href: '/customers' },
   ],

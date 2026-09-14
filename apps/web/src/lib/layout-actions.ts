@@ -4,6 +4,7 @@ export const LAYOUT_ACTIONS = {
   newCustomer: "+ Nouveau client",
   newProduct: "+ Nouveau produit",
   newInvoice: "+ Nouvelle facture",
+  newApBill: "+ Nouvelle facture fournisseur",
   newEmployee: "+ Nouvel employé",
   newCreditNote: "+ Nouvel avoir",
   save: "Enregistrer",

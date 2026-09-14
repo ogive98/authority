@@ -450,6 +450,28 @@ export class HrController {
     return new StreamableFile(result.buffer);
   }
 
+  @Get('transfer-orders/:id/sepa')
+  @RequirePermission(PERMISSION_KEYS.hrWageRead)
+  async getTransferOrderSepa(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const result = await this.transferOrders.exportSepa(
+      tenancy.companyId,
+      id,
+      user.id,
+    );
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.filename}"`,
+    );
+    res.setHeader('X-Authority-Sepa-Msg-Id', result.msgId);
+    return new StreamableFile(Buffer.from(result.xml, 'utf8'));
+  }
+
   @Get('employees')
   @RequirePermission(PERMISSION_KEYS.hrEmployeeRead)
   async listEmployees(

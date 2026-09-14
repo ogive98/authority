@@ -21,6 +21,7 @@ import {
   bankLineBadgeTone,
   createApPayment,
   createBankAccount,
+  fetchApBills,
   fetchApPayments,
   fetchBankAccounts,
   fetchBankLines,
@@ -39,6 +40,7 @@ import {
   type BankMatchCandidates,
   type BankOfxPreview,
   type BankTreasury,
+  type FinApBill,
   type FinApPayment,
   type FinBankAccount,
   type FinBankStatementLine,
@@ -92,6 +94,7 @@ export default function FinanceBankingPage() {
     null,
   );
   const [apPayments, setApPayments] = useState<FinApPayment[]>([]);
+  const [postedBills, setPostedBills] = useState<FinApBill[]>([]);
   const [apOpen, setApOpen] = useState(false);
   const [apForm, setApForm] = useState<{
     vendorName: string;
@@ -99,6 +102,7 @@ export default function FinanceBankingPage() {
     method: string;
     paymentDate: string;
     reference: string;
+    apBillId: string;
   } | null>(null);
 
   const [csvOpen, setCsvOpen] = useState(false);
@@ -110,8 +114,12 @@ export default function FinanceBankingPage() {
   const [ofxPreview, setOfxPreview] = useState<BankOfxPreview | null>(null);
 
   const loadAp = useCallback(async () => {
-    const res = await fetchApPayments();
-    if (res.ok) setApPayments(res.data.items);
+    const [payRes, billRes] = await Promise.all([
+      fetchApPayments(),
+      fetchApBills({ status: "POSTED", limit: 50 }),
+    ]);
+    if (payRes.ok) setApPayments(payRes.data.items);
+    if (billRes.ok) setPostedBills(billRes.data.items);
   }, []);
 
   const loadAccounts = useCallback(async () => {
@@ -266,18 +274,23 @@ export default function FinanceBankingPage() {
   async function onCreateAp() {
     if (!apForm) return;
     const amount = Number(apForm.amount.replace(",", "."));
-    if (!apForm.vendorName.trim() || !Number.isFinite(amount) || amount <= 0) {
-      setFormError("Fournisseur et montant TND > 0 requis.");
+    if (
+      (!apForm.vendorName.trim() && !apForm.apBillId) ||
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      setFormError("Fournisseur (ou facture AP) et montant TND > 0 requis.");
       return;
     }
     setBusy(true);
     setFormError(null);
     const res = await createApPayment({
-      vendorName: apForm.vendorName.trim(),
+      vendorName: apForm.vendorName.trim() || undefined,
       amount,
       method: apForm.method,
       paymentDate: apForm.paymentDate,
       reference: apForm.reference || undefined,
+      apBillId: apForm.apBillId || undefined,
     });
     setBusy(false);
     if (!res.ok) {
@@ -590,6 +603,7 @@ export default function FinanceBankingPage() {
                       method: "BANK_TRANSFER",
                       paymentDate: new Date().toISOString().slice(0, 10),
                       reference: "",
+                      apBillId: "",
                     });
                     setFormError(null);
                     setApOpen(true);
@@ -600,8 +614,8 @@ export default function FinanceBankingPage() {
               </div>
               {apPayments.length === 0 ? (
                 <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                  Saisir un décaissement (nom fournisseur libre) puis rapprocher
-                  une ligne débit (−). Pas de facture AP ni de GL.
+                  Saisir un décaissement (nom libre ou facture AP postée) puis
+                  rapprocher une ligne débit (−). Aucun GL.
                 </p>
               ) : (
                 <div className={softTableWrap}>
@@ -610,6 +624,7 @@ export default function FinanceBankingPage() {
                       <tr>
                         <th className="px-3 py-2 font-medium">N°</th>
                         <th className="px-3 py-2 font-medium">Fournisseur</th>
+                        <th className="px-3 py-2 font-medium">Facture</th>
                         <th className="px-3 py-2 font-medium">Montant</th>
                         <th className="px-3 py-2 font-medium">Date</th>
                         <th className="px-3 py-2 font-medium">Banque</th>
@@ -620,6 +635,9 @@ export default function FinanceBankingPage() {
                         <tr key={p.id} className={softTr}>
                           <td className="px-3 py-2 a-mono">{p.number}</td>
                           <td className="px-3 py-2">{p.vendorName}</td>
+                          <td className="px-3 py-2 a-mono">
+                            {p.apBillNumber ?? "—"}
+                          </td>
                           <td className="px-3 py-2 a-mono tabular-nums">
                             {p.amount} {p.currency}
                           </td>
@@ -1207,10 +1225,41 @@ export default function FinanceBankingPage() {
         open={apOpen}
         onOpenChange={setApOpen}
         title="Décaissement AP"
-        description="Nom fournisseur libre · montant TND positif · aucun GL."
+        description="Nom libre ou facture AP postée · montant TND · aucun GL (D237)."
       >
         {apForm ? (
           <div className="space-y-3">
+            <label className="block space-y-1">
+              <span className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                Facture AP (optionnel)
+              </span>
+              <select
+                className="a-underlay w-full rounded-md px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg"
+                value={apForm.apBillId}
+                onChange={(e) => {
+                  const apBillId = e.target.value;
+                  const bill = postedBills.find((b) => b.id === apBillId);
+                  setApForm({
+                    ...apForm,
+                    apBillId,
+                    vendorName: bill
+                      ? bill.vendorName
+                      : apForm.vendorName,
+                    amount:
+                      bill && !apForm.amount
+                        ? bill.amountTotal
+                        : apForm.amount,
+                  });
+                }}
+              >
+                <option value="">— Aucune —</option>
+                {postedBills.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.number} — {b.vendorName} ({b.amountTotal} {b.currency})
+                  </option>
+                ))}
+              </select>
+            </label>
             <Field
               label="Fournisseur"
               value={apForm.vendorName}

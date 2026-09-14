@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -468,11 +469,12 @@ export class MatchBankLineDto {
   note?: string;
 }
 
-/** D205 — AP disbursement (vendorName free text, no supplier master). */
+/** D205 — AP disbursement (vendorName free text, no supplier master). D237 optional apBillId. */
 export class CreateApPaymentDto {
+  @IsOptional()
   @IsString()
   @MaxLength(160)
-  vendorName!: string;
+  vendorName?: string;
 
   @Type(() => Number)
   @IsNumber()
@@ -488,6 +490,50 @@ export class CreateApPaymentDto {
   @IsOptional()
   @IsDateString()
   accountingDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  reference?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  notes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  currency?: string;
+
+  /** D237 — link to POSTED FinApBill (optional). */
+  @IsOptional()
+  @IsUUID()
+  apBillId?: string;
+}
+
+/** D236 — AP vendor bill V0 (vendorName free text, no supplier master, no GL). */
+export class CreateApBillDto {
+  @IsString()
+  @MaxLength(160)
+  vendorName!: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  amountTotal!: number;
+
+  @IsDateString()
+  billDate!: string;
+
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  label?: string;
 
   @IsOptional()
   @IsString()
@@ -537,4 +583,16 @@ export class PrepareDunningDto {
 
   @IsEnum(['EMAIL', 'WHATSAPP'])
   channel!: 'EMAIL' | 'WHATSAPP';
+}
+
+/** D243 — ADV review of portal payment declaration (no FinPayment create). */
+export class ReviewPaymentDeclarationDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reviewNote?: string;
+
+  @IsInt()
+  @Min(0)
+  version!: number;
 }

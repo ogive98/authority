@@ -1,4 +1,5 @@
 import { AErrorState } from "@/components/a/a-error-state";
+import { APageBody } from "@/components/a/a-page-body";
 import { PortalNewOrderForm } from "@/components/portal/portal-new-order-form";
 import { fetchCatalog, fetchPortalMe } from "@/lib/customer-portal";
 
@@ -8,7 +9,7 @@ export default async function PortalNewOrderPage() {
 
   if (catStatus !== 200 || !catalog) {
     return (
-      <div className="px-[var(--a-space-6)] py-[var(--a-space-5)]">
+      <APageBody>
         <AErrorState
           message={
             catStatus === 401 || catStatus === 403
@@ -17,7 +18,7 @@ export default async function PortalNewOrderPage() {
           }
           retryable={false}
         />
-      </div>
+      </APageBody>
     );
   }
 

@@ -5,6 +5,7 @@ export const CUSTOMERS_ERROR_CODES = {
   VERSION_CONFLICT: 'CUS.VERSION_CONFLICT',
   PARTY_NOT_FOUND: 'CUS.PARTY_NOT_FOUND',
   CONTACT_NOT_FOUND: 'CUS.CONTACT_NOT_FOUND',
+  ADDRESS_NOT_FOUND: 'CUS.ADDRESS_NOT_FOUND',
   ZONE_NOT_FOUND: 'CUS.ZONE_NOT_FOUND',
   ZONE_CODE_DUP: 'CUS.ZONE_CODE_DUP',
   ALREADY_BLOCKED: 'CUS.ALREADY_BLOCKED',
@@ -12,7 +13,25 @@ export const CUSTOMERS_ERROR_CODES = {
   PRICE_INVALID: 'CUS.PRICE_INVALID',
   PRICE_NOT_FOUND: 'CUS.PRICE_NOT_FOUND',
   PRODUCT_NOT_FOUND: 'CUS.PRODUCT_NOT_FOUND',
+  INVALID_STATUS: 'CUS.INVALID_STATUS',
+  MEMBERSHIP_NOT_FOUND: 'CUS.MEMBERSHIP_NOT_FOUND',
+  MEMBERSHIP_DUP: 'CUS.MEMBERSHIP_DUP',
+  USER_INVALID: 'CUS.USER_INVALID',
+  PORTALS_DISABLED: 'CUS.PORTALS_DISABLED',
+  INVALID_ROLE: 'CUS.INVALID_ROLE',
 } as const;
 
 export type CustomersErrorCode =
   (typeof CUSTOMERS_ERROR_CODES)[keyof typeof CUSTOMERS_ERROR_CODES];
+
+export const PORTAL_MEMBERSHIP_ROLES = ['buyer', 'viewer', 'admin'] as const;
+export type PortalMembershipRole = (typeof PORTAL_MEMBERSHIP_ROLES)[number];
+
+export const CUSTOMERS_EVENT_TYPES = {
+  CUSTOMER_CREATED: 'customers.customer.created.v1',
+  CUSTOMER_UPDATED: 'customers.customer.updated.v1',
+  CUSTOMER_BLOCKED: 'customers.customer.blocked.v1',
+  CUSTOMER_UNBLOCKED: 'customers.customer.unblocked.v1',
+  CREDIT_CHANGED: 'customers.credit.changed.v1',
+  PORTAL_MEMBERSHIP_CHANGED: 'customers.portal_membership.changed.v1',
+} as const;

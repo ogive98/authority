@@ -8,6 +8,7 @@ import { TaxModule } from '../tax/tax.module';
 import { SettingsModule } from '../settings/settings.module';
 import { AccountingModule } from '../accounting/accounting.module';
 import { MailModule } from '../mail/mail.module';
+import { ApBillService } from './ap-bill.service';
 import { ApPaymentService } from './ap-payment.service';
 import { AllocationEngineService } from './allocation-engine.service';
 import { BankingService } from './banking.service';
@@ -19,6 +20,7 @@ import { DunningService } from './dunning.service';
 import { FinanceController } from './finance.controller';
 import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
+import { PaymentDeclarationService } from './payment-declaration.service';
 import { PaymentService } from './payment.service';
 import { PromiseService } from './promise.service';
 import { WhatsAppCloudService } from './whatsapp-cloud.service';
@@ -44,8 +46,10 @@ import { WaWebhookService } from './wa-webhook.service';
     CreditNoteService,
     PaymentService,
     ApPaymentService,
+    ApBillService,
     AllocationEngineService,
     PromiseService,
+    PaymentDeclarationService,
     BankingService,
     DunningService,
     DunningSettingsResolver,
@@ -60,7 +64,9 @@ import { WaWebhookService } from './wa-webhook.service';
     CreditNoteService,
     PaymentService,
     ApPaymentService,
+    ApBillService,
     PromiseService,
+    PaymentDeclarationService,
     BankingService,
     DunningService,
     CollectionScheduleResolver,

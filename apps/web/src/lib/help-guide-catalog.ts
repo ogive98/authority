@@ -170,13 +170,13 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Ouvrez `/sales`.",
-            "Filtrez par statut (Tout / Brouillon / Confirmée / Annulée).",
+            "Filtrez par statut (Tout / Brouillon / Confirmée / Annulée) — URL `?status=` partageable.",
             "Recherchez par N°, client, surnom ou notes puis Filtrer.",
             "Cliquez le numéro pour ouvrir la fiche.",
           ],
           it: [
             "Apri `/sales`.",
-            "Filtra per stato (Tutto / Bozza / Confermato / Annullato).",
+            "Filtra per stato (Tutto / Bozza / Confermato / Annullato) — URL `?status=` condividibile.",
             "Cerca per N°, cliente, nickname o note poi Filtra.",
             "Clicca il numero per aprire la scheda.",
           ],
@@ -249,8 +249,8 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/customers",
     title: { fr: "Clients", it: "Clienti" },
     summary: {
-      fr: "Fiches clients B2B, tarifs négociés, hub financier (créances / aging).",
-      it: "Schede clienti B2B, prezzi negoziati, hub finanziario (crediti / aging).",
+      fr: "Fiche 360 Soft Glass, tarifs négociés, hub financier (créances / aging).",
+      it: "Scheda 360 Soft Glass, prezzi negoziati, hub finanziario (crediti / aging).",
     },
     when: {
       fr: "Avant la première commande, ou pour piloter le risque crédit / relances.",
@@ -271,17 +271,83 @@ export const HELP_MODULES: HelpModule[] = [
             "Ouvrez `/customers`.",
             "« + Nouveau client » ou recherche par code / nom.",
             "Renseignez identité et paramètres commerciaux.",
-            "Consultez le hub financier dans la fiche (encours, aging).",
+            "Ouvrez la fiche 360 via le code client ou « Fiche ».",
           ],
           it: [
             "Apri `/customers`.",
             "« + Nuovo cliente » o cerca per codice / nome.",
             "Compila identità e parametri commerciali.",
-            "Consulta l’hub finanziario nella scheda (esposizione, aging).",
+            "Apri la scheda 360 dal codice cliente o « Fiche ».",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Fiche client 360",
+          it: "Scheda cliente 360",
+        },
+        when: {
+          fr: "Pilotage quotidien : encours, actions requises, documents, communication.",
+          it: "Gestione quotidiana: esposizione, azioni richieste, documenti, comunicazione.",
+        },
+        steps: {
+          fr: [
+            "Depuis `/customers`, cliquez le code ou « Fiche » → `/customers/[id]`.",
+            "Onglets Synthèse / Documents / Communication (chargement à la demande).",
+            "Synthèse : KPI, aging, Action requise, contacts / adresses / tarifs / timeline.",
+            "Documents : fichiers liés · dépôt via `/documents` (lien CUSTOMER).",
+            "Communication : canaux · contacts · dunning · déclarations portail (pas de CRM chat).",
+            "« Éditer » + Portail (D242) ; overflow pour commande / bloquer.",
+          ],
+          it: [
+            "Da `/customers`, clicca il codice o « Fiche » → `/customers/[id]`.",
+            "Tab Sintesi / Documenti / Comunicazione (caricamento on-demand).",
+            "Sintesi: KPI, aging, Azioni richieste, contatti / indirizzi / tariffe / timeline.",
+            "Documenti: file collegati · upload via `/documents` (link CUSTOMER).",
+            "Comunicazione: canali · contatti · solleciti · dichiarazioni portale (niente CRM chat).",
+            "« Éditer » + Portale (D242); overflow per ordine / blocco.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Portail — utilisateurs liés",
+          it: "Portale — utenti collegati",
+        },
+        when: {
+          fr: "Donner ou retirer l’accès `/portal` à un compte Identity de la société.",
+          it: "Dare o revocare l’accesso `/portal` a un account Identity della società.",
+        },
+        steps: {
+          fr: [
+            "Fiche client → section Portail → « + Utilisateur portail ».",
+            "Choisissez un utilisateur Identity (Filtrer) et un rôle (Acheteur / Lecture / Admin).",
+            "Révoquer coupe le login portail (status REVOKED) ; Réactiver le rétablit.",
+            "Création de compte = module Identité — pas depuis Clients.",
+          ],
+          it: [
+            "Scheda cliente → sezione Portale → « + Utilisateur portail ».",
+            "Scegli un utente Identity (Filtrer) e un ruolo (Acquirente / Lettura / Admin).",
+            "Révoquer blocca il login portale (REVOKED); Réactiver lo ripristina.",
+            "Creazione account = modulo Identità — non da Clienti.",
           ],
         },
       },
     ],
+    locks: {
+      fr: [
+        "Pas de module CRM parallèle — Soft Glass only (D161/D241/D244).",
+        "Communication = dunning + déclarations — pas de messagerie SoT (D244).",
+        "WA→commande, TEJ/RAS et automations FULL_AUTO reportés (Prefs VALIDATED pour tax).",
+        "Module Portails ENABLED requis pour lier / révoquer (D242).",
+      ],
+      it: [
+        "Nessun modulo CRM parallelo — Soft Glass only (D161/D241/D244).",
+        "Comunicazione = solleciti + dichiarazioni — niente messaging SoT (D244).",
+        "WA→ordine, TEJ/RAS e automazioni FULL_AUTO differiti (Prefs VALIDATED per tax).",
+        "Modulo Portali ENABLED richiesto per collegare / revocare (D242).",
+      ],
+    },
   },
   {
     id: "products",
@@ -421,14 +487,42 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/finance",
     title: { fr: "Finance", it: "Finanza" },
     summary: {
-      fr: "Créances AR, factures, avoirs, encaissements, instruments, promesses, banque, relances.",
-      it: "Crediti AR, fatture, note di credito, incassi, strumenti, promesse, banca, solleciti.",
+      fr: "Créances AR, factures, avoirs, encaissements, instruments, promesses, banque, factures fournisseurs AP, relances.",
+      it: "Crediti AR, fatture, note di credito, incassi, strumenti, promesse, banca, fatture fornitori AP, solleciti.",
     },
     when: {
       fr: "Après livraison / facturation, pour encaisser et piloter le cash.",
       it: "Dopo consegna / fatturazione, per incassare e governare il cash.",
     },
     features: [
+      {
+        name: {
+          fr: "Factures fournisseurs (AP)",
+          it: "Fatture fornitori (AP)",
+        },
+        when: {
+          fr: "Enregistrer une facture fournisseur sans référentiel (texte libre).",
+          it: "Registrare una fattura fornitore senza anagrafica (testo libero).",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/finance/ap-bills` → « + Nouvelle facture fournisseur ».",
+            "Chips Tout / Brouillon / Postée / Annulée — URL `?status=` partageable.",
+            "Fournisseur = texte libre (D205) — pas de master, pas de TVA inventée, pas de GL.",
+            "Sur la fiche : Poster (DRAFT → POSTED) ; Annuler via overflow.",
+            "POSTED → « Décaisser » crée un `FinApPayment` lié (partiel OK) — aussi depuis Banque.",
+            "Rapprochement bancaire inchangé · jamais inventer TVA · pas de GL AP.",
+          ],
+          it: [
+            "Apri `/finance/ap-bills` → « + Nuova fattura fornitore ».",
+            "Chip Tutti / Bozza / Registrata / Annullata — URL `?status=` condividibile.",
+            "Fornitore = testo libero (D205) — niente anagrafica, IVA inventata, né GL.",
+            "In scheda: Registra (DRAFT → POSTED); Annulla via overflow.",
+            "POSTED → « Pagare » crea un `FinApPayment` collegato (parziale OK) — anche da Banca.",
+            "Riconciliazione banca invariata · mai inventare IVA · niente GL AP.",
+          ],
+        },
+      },
       {
         name: {
           fr: "Factures",
@@ -441,15 +535,119 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Ouvrez `/finance/invoices` → « + Nouvelle facture ».",
+            "Chips Tout / Brouillon / Émise / Annulée — URL `?status=` partageable.",
             "Client, lignes, codes TVA, échéance.",
             "Sur la fiche : Émettre (DRAFT → ISSUED) ; Annuler / Avoir via overflow.",
             "Jamais inventer FODEC/timbre — Prefs Expertise seulement.",
           ],
           it: [
             "Apri `/finance/invoices` → « + Nuova fattura ».",
+            "Chip Tutti / Bozza / Emessa / Annullata — URL `?status=` condividibile.",
             "Cliente, righe, codici IVA, scadenza.",
             "In scheda: Emetti (DRAFT → ISSUED); Annulla / Nota via overflow.",
             "Mai inventare FODEC/bollo — solo Prefs Expertise.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Encaissements",
+          it: "Incassi",
+        },
+        when: {
+          fr: "Enregistrer un paiement client, l’affecter aux créances, contrepasser.",
+          it: "Registrare un pagamento cliente, allocarlo ai crediti, stornare.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/finance/payments` → « Nouveau paiement ».",
+            "Chips Tout / Brouillon / Posté / Contrepassé — URL `?status=` partageable.",
+            "Ligne → fiche Soft Glass : montants, instruments, affectations.",
+            "Sur la fiche : Affecter (politiques A–G) ; Contrepasser via overflow.",
+            "GL via Thunder — ne jamais inventer de taux.",
+          ],
+          it: [
+            "Apri `/finance/payments` → « Nuovo pagamento ».",
+            "Chip Tutti / Bozza / Registrato / Stornato — URL `?status=` condividibile.",
+            "Riga → scheda Soft Glass: importi, strumenti, allocazioni.",
+            "In scheda: Allocare (politiche A–G); Storna via overflow.",
+            "GL via Thunder — non inventare tassi.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Déclarations portail",
+          it: "Dichiarazioni portale",
+        },
+        when: {
+          fr: "Le client a signalé un paiement depuis le portail — revue ADV avant encaissement.",
+          it: "Il cliente ha segnalato un pagamento dal portale — revisione ADV prima dell’incasso.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/finance/payment-declarations` (chips statut + recherche).",
+            "Ouvrez la fiche → vérifiez montant / mode / référence.",
+            "« Prendre en compte » ou « Refuser » (note optionnelle) — version optimistic lock.",
+            "Ensuite créez l’encaissement dans `/finance/payments` si besoin.",
+            "Jamais d’auto-création FinPayment depuis la déclaration (D243).",
+          ],
+          it: [
+            "Apri `/finance/payment-declarations` (chip stato + ricerca).",
+            "Apri la scheda → verifica importo / modo / riferimento.",
+            "« Prendi in carico » o « Rifiuta » (nota opzionale) — lock versione.",
+            "Poi crea l’incasso in `/finance/payments` se serve.",
+            "Mai auto-creare FinPayment dalla dichiarazione (D243).",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Avoirs",
+          it: "Note di credito",
+        },
+        when: {
+          fr: "Réduire une facture émise (partiel / total) sans restaurer le stock.",
+          it: "Ridurre una fattura emessa (parziale / totale) senza ripristinare stock.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/finance/credit-notes` → « + Nouvel avoir ».",
+            "Chips Tout / Brouillon / Émis / Annulé — URL `?status=` partageable.",
+            "Ligne → fiche Soft Glass : lignes, HT/TVA/TTC, AR appliqué / non appliqué.",
+            "Sur la fiche : Émettre (DRAFT) ; Annuler via overflow.",
+            "FODEC/timbre seulement si Prefs VALIDATED — jamais inventer.",
+          ],
+          it: [
+            "Apri `/finance/credit-notes` → « + Nuova nota ».",
+            "Chip Tutti / Bozza / Emessa / Annullata — URL `?status=` condividibile.",
+            "Riga → scheda Soft Glass: righe, HT/IVA/TTC, AR applicato / non applicato.",
+            "In scheda: Emetti (DRAFT); Annulla via overflow.",
+            "FODEC/bollo solo se Prefs VALIDATED — non inventare.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Promesses & instruments",
+          it: "Promesse e strumenti",
+        },
+        when: {
+          fr: "Suivre un engagement client ou le cycle chèque/traite.",
+          it: "Seguire un impegno cliente o il ciclo assegno/tratta.",
+        },
+        steps: {
+          fr: [
+            "`/finance/promises` — chips statut `?status=` · ligne → fiche · Annuler si OPEN.",
+            "`/finance/instruments` — chips statut · ligne → fiche Soft Glass (`GET /instruments/:id`).",
+            "Sur la fiche instrument : transitions (déposé / présenté / encaissé / rejeté).",
+            "Rejet = restauration AR — pas de blocage ventes sur promesse rompue.",
+          ],
+          it: [
+            "`/finance/promises` — chip stato `?status=` · riga → scheda · Annulla se OPEN.",
+            "`/finance/instruments` — chip stato · riga → scheda Soft Glass (`GET /instruments/:id`).",
+            "In scheda strumento: transizioni (depositato / presentato / incassato / rifiutato).",
+            "Rifiuto = ripristino AR — niente blocco vendite su promessa rotta.",
           ],
         },
       },
@@ -465,14 +663,16 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "`/finance` — créances ouvertes / échues.",
-            "`/finance/payments` — enregistrer et affecter.",
+            "`/finance/payments` — liste + fiche Soft Glass (`?status=`) · Affecter / Contrepasser.",
             "`/finance/banking` — comptes, relevés CSV/OFX, rapprocher / ignorer.",
+            "Décaissement AP : nom libre **ou** facture AP postée (lien D237).",
             "Relancer : dunning human-gated (mailto / WA selon Prefs).",
           ],
           it: [
             "`/finance` — crediti aperti / scaduti.",
-            "`/finance/payments` — registra e alloca.",
+            "`/finance/payments` — lista + scheda Soft Glass (`?status=`) · Allocare / Storna.",
             "`/finance/banking` — conti, estratti CSV/OFX, riconcilia / ignora.",
+            "Pagamento AP: nome libero **o** fattura AP registrata (link D237).",
             "Sollecito: dunning human-gated (mailto / WA secondo Prefs).",
           ],
         },
@@ -482,10 +682,14 @@ export const HELP_MODULES: HelpModule[] = [
       fr: [
         "FODEC / timbre : Prefs VALIDATED uniquement.",
         "GL via Thunder — Finance ≠ inventer la compta.",
+        "AP bills : vendorName libre · lien payment optionnel · pas de master · pas de GL (D236/D237/D205).",
+        "Déclarations portail : pas d’auto FinPayment (D243).",
       ],
       it: [
         "FODEC / bollo: solo Prefs VALIDATED.",
         "GL via Thunder — Finanza ≠ inventare la contabilità.",
+        "AP bills: vendorName libero · link payment opzionale · niente anagrafica · niente GL (D236/D237/D205).",
+        "Dichiarazioni portale: niente auto FinPayment (D243).",
       ],
     },
   },
@@ -501,6 +705,18 @@ export const HELP_MODULES: HelpModule[] = [
       fr: "Contrôle GL, clôture de période, mapping comptes Prefs.",
       it: "Controllo GL, chiusura periodo, mapping conti Prefs.",
     },
+    locks: {
+      fr: [
+        "Soft Glass D161 + Layout D225 — underlays, pas de cadres.",
+        "Prefs GL mapping : jamais inventer / seed de codes métier.",
+        "Finance ≠ Accounting (D072) — pont Thunder, pas de double saisie.",
+      ],
+      it: [
+        "Soft Glass D161 + Layout D225 — underlay, niente cornici.",
+        "Prefs mapping GL: non inventare / seed codici.",
+        "Finance ≠ Accounting (D072) — ponte Thunder, niente doppia imputazione.",
+      ],
+    },
     features: [
       {
         name: {
@@ -514,15 +730,43 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Ouvrez `/accounting`.",
-            "Consultez CoA, balance, écritures filtrées par période.",
+            "Plan comptable : filtrez par code ou nom.",
+            "Écritures : chips Tout / Brouillon / Postée / Contrepassée (`?status=`) + période.",
+            "Ouvrez une fiche `/accounting/entries/:id` (lignes, poster / décomptabiliser).",
             "Mapping GL : Prefs sièges vides jusqu’à saisie humaine.",
             "Clôture / réouverture de période selon droits.",
           ],
           it: [
             "Apri `/accounting`.",
-            "Consulta CoA, bilancio, registrazioni filtrate per periodo.",
+            "Piano dei conti: filtra per codice o nome.",
+            "Registrazioni: chip Tutti / Bozza / Contabilizzata / Stornata (`?status=`) + periodo.",
+            "Apri una scheda `/accounting/entries/:id` (righe, contabilizza / storna).",
             "Mapping GL: Prefs vuoti fino a inserimento umano.",
             "Chiusura / riapertura periodo secondo permessi.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Fiche écriture Soft Glass",
+          it: "Scheda registrazione Soft Glass",
+        },
+        when: {
+          fr: "Contrôle détail lignes débit/crédit et actions post/reverse.",
+          it: "Controllo dettaglio righe dare/avere e azioni contabilizza/storna.",
+        },
+        steps: {
+          fr: [
+            "Depuis la liste Écritures, cliquez N° ou Ouvrir.",
+            "Consultez identité, source (lien facture si `fin_invoice`), totaux.",
+            "Brouillon → Poster (primary). Postée → Décomptabiliser (crée reverse).",
+            "Retour via overflow « Retour écritures ».",
+          ],
+          it: [
+            "Dalla lista Registrazioni, clicca N° o Apri.",
+            "Consulta identità, origine (link fattura se `fin_invoice`), totali.",
+            "Bozza → Contabilizza (primary). Contabilizzata → Storna (crea reverse).",
+            "Ritorno via overflow « Torna alle registrazioni ».",
           ],
         },
       },
@@ -613,12 +857,16 @@ export const HELP_MODULES: HelpModule[] = [
           fr: [
             "Générez / consultez le bulletin ; PDF serveur si disponible.",
             "Ordre de virement : DRAFT → confirm ADV → paiement bancaire soft.",
-            "Jamais inventer taux CNSS/IRPP/TFP.",
+            "CONFIRMED → « Export SEPA » = pain.001.001.03 (RIB→IBAN TN, BIC NOTPROVIDED).",
+            "RIB société obligatoire sur le compte banque pour l’export.",
+            "Jamais inventer taux CNSS/IRPP/TFP · pas d’auto-envoi banque.",
           ],
           it: [
             "Genera / consulta la busta; PDF server se disponibile.",
             "Ordine bonifico: DRAFT → conferma ADV → pagamento bancario soft.",
-            "Mai inventare aliquote CNSS/IRPP/TFP.",
+            "CONFIRMED → « Export SEPA » = pain.001.001.03 (RIB→IBAN TN, BIC NOTPROVIDED).",
+            "RIB azienda obbligatorio sul conto banca per l’export.",
+            "Mai inventare aliquote CNSS/IRPP/TFP · niente invio automatico banca.",
           ],
         },
       },
@@ -692,6 +940,59 @@ export const HELP_MODULES: HelpModule[] = [
         },
       },
     ],
+  },
+  {
+    id: "automation",
+    href: "/automation",
+    title: { fr: "Automatisation", it: "Automazione" },
+    summary: {
+      fr: "Profils ASSISTED / Approbation — suggestions human-gated, pas de FULL_AUTO critique.",
+      it: "Profili ASSISTED / Approvazione — suggerimenti human-gated, niente FULL_AUTO critico.",
+    },
+    when: {
+      fr: "Piloter des suggestions (créances échues, déclarations portail, brouillons stale).",
+      it: "Guidare suggerimenti (crediti scaduti, dichiarazioni portale, bozze stale).",
+    },
+    features: [
+      {
+        name: {
+          fr: "Profils et exécutions",
+          it: "Profili ed esecuzioni",
+        },
+        when: {
+          fr: "Créer un profil, l’exécuter, approuver / refuser une suggestion.",
+          it: "Creare un profilo, eseguirlo, approvare / rifiutare un suggerimento.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/automation` → « Nouveau profil ».",
+            "Choisissez mode Assisté ou Approbation (FULL_AUTO bloqué).",
+            "« Exécuter » crée un run SUGGESTED / PENDING — aucune mutation métier.",
+            "Sur la fiche : Approuver / Refuser (acknowledgement seulement).",
+            "Shadow = log SKIPPED sans suggestion active.",
+          ],
+          it: [
+            "Apri `/automation` → « Nuovo profilo ».",
+            "Scegli Assistito o Approvazione (FULL_AUTO bloccato).",
+            "« Esegui » crea un run SUGGESTED / PENDING — nessuna mutazione.",
+            "In scheda: Approva / Rifiuta (solo acknowledgement).",
+            "Shadow = log SKIPPED senza suggerimento attivo.",
+          ],
+        },
+      },
+    ],
+    locks: {
+      fr: [
+        "FULL_AUTO interdit V0 (D245).",
+        "Pas de confirm commande / FinPayment / draft dunning auto.",
+        "Approuver ≠ exécuter la mutation métier.",
+      ],
+      it: [
+        "FULL_AUTO vietato V0 (D245).",
+        "Niente confirm ordine / FinPayment / draft sollecito auto.",
+        "Approvare ≠ eseguire la mutazione business.",
+      ],
+    },
   },
   {
     id: "documents",
@@ -895,17 +1196,73 @@ export const HELP_MODULES: HelpModule[] = [
           ],
         },
       },
+      {
+        name: {
+          fr: "Customer Portal Soft Glass",
+          it: "Customer Portal Soft Glass",
+        },
+        when: {
+          fr: "Self-service client B2B — commandes, livraisons, finance, docs.",
+          it: "Self-service cliente B2B — ordini, consegne, finanza, documenti.",
+        },
+        steps: {
+          fr: [
+            "Connexion `/portal/login` (cookie realm distinct).",
+            "Accueil : KPI Soft Glass + alertes.",
+            "Commandes / Livraisons / Finance / Réclamations / Documents / Salubrité.",
+            "Finance → « Déclarer un paiement » : signalement ADV (pas d’encaissement auto).",
+            "Nouvelle commande = CTA primary ; listes = ASoftTable (zéro cadre).",
+            "Nav shell = underline quiet (aligné Employee Portal / D228).",
+          ],
+          it: [
+            "Login `/portal/login` (cookie realm distinto).",
+            "Home: KPI Soft Glass + avvisi.",
+            "Ordini / Consegne / Finanza / Reclami / Documenti / Salubrità.",
+            "Finanza → « Dichiarare un pagamento »: segnalazione ADV (niente incasso auto).",
+            "Nuovo ordine = CTA primary; liste = ASoftTable (zero cornici).",
+            "Nav shell = underline quiet (allineato Employee Portal / D228).",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Déclaration de paiement (portail)",
+          it: "Dichiarazione di pagamento (portale)",
+        },
+        when: {
+          fr: "Vous avez déjà payé et voulez informer l’ADV.",
+          it: "Hai già pagato e vuoi informare l’ADV.",
+        },
+        steps: {
+          fr: [
+            "`/portal/finance` → « Déclarer un paiement » (ou `/portal/finance/payment-declarations/new`).",
+            "Montant TND, mode, date, référence / notes optionnels, créance optionnelle.",
+            "Soumettre → statut Soumise ; annulation possible tant que Soumise.",
+            "L’ADV prend en compte ou refuse — l’encaissement se fait côté ADV séparément.",
+          ],
+          it: [
+            "`/portal/finance` → « Dichiarare un pagamento » (o `/portal/finance/payment-declarations/new`).",
+            "Importo TND, modo, data, riferimento / note opzionali, credito opzionale.",
+            "Invia → stato Inviata; annullabile finché Inviata.",
+            "L’ADV prende in carico o rifiuta — l’incasso è separato lato ADV.",
+          ],
+        },
+      },
     ],
     locks: {
       fr: [
         "Pas de soldes / quotas inventés.",
         "Pas de pointage ni virement depuis le portail (lots ultérieurs).",
+        "Déclaration paiement : pas d’auto FinPayment / allocation (D243).",
         "RIB : checksum structurel seulement (pas d’existence compte inventée).",
+        "Customer Portal : Soft Glass D161 + Layout D225 — pas de second look.",
       ],
       it: [
         "Nessun saldo / quota inventato.",
         "Niente timbratura né bonifico dal portale (lotti successivi).",
+        "Dichiarazione pagamento: niente auto FinPayment / allocazione (D243).",
         "RIB: solo checksum strutturale (nessuna esistenza conto inventata).",
+        "Customer Portal: Soft Glass D161 + Layout D225 — niente secondo look.",
       ],
     },
   },

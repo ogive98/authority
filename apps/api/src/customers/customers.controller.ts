@@ -23,22 +23,32 @@ import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
   BlockCustomerDto,
+  CreateAddressDto,
   CreateContactDto,
   CreateCustomerDto,
+  CreatePortalMembershipDto,
   CreateZoneDto,
   SetCreditDto,
   UnblockCustomerDto,
+  UpdateAddressDto,
   UpdateContactDto,
   UpdateCustomerDto,
+  UpdatePortalMembershipDto,
   UpsertCustomerPriceDto,
 } from './customers.dto';
+import { Customer360Service } from './customer-360.service';
 import { CustomersService } from './customers.service';
+import { PortalMembershipService } from './portal-membership.service';
 
 @Controller('api/v1/customers')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
 @RequireModule('customers')
 export class CustomersController {
-  constructor(private readonly customersService: CustomersService) {}
+  constructor(
+    private readonly customersService: CustomersService,
+    private readonly customer360: Customer360Service,
+    private readonly portalMemberships: PortalMembershipService,
+  ) {}
 
   @Get()
   @RequirePermission(PERMISSION_KEYS.customersRead)
@@ -79,6 +89,160 @@ export class CustomersController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.customersService.get(tenancy.companyId, id);
+  }
+
+  @Get(':id/summary')
+  @RequirePermission(PERMISSION_KEYS.customersRead)
+  summary(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.customer360.summary(tenancy.companyId, id);
+  }
+
+  @Get(':id/timeline')
+  @RequirePermission(PERMISSION_KEYS.customersRead)
+  timeline(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.customer360.timeline(tenancy.companyId, id, {
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor,
+    });
+  }
+
+  @Get(':id/documents')
+  @RequirePermission(PERMISSION_KEYS.customersRead)
+  documents(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.customer360.documents(tenancy.companyId, id, {
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor,
+    });
+  }
+
+  @Get(':id/communications')
+  @RequirePermission(PERMISSION_KEYS.customersRead)
+  communications(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.customer360.communications(tenancy.companyId, id, {
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Get(':id/portal-memberships')
+  @RequirePermission(PERMISSION_KEYS.customersRead)
+  listPortalMemberships(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.portalMemberships.list(tenancy.companyId, id);
+  }
+
+  @Get(':id/portal-linkable-users')
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  listPortalLinkableUsers(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('q') q?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.portalMemberships.listLinkableUsers(tenancy.companyId, id, {
+      q,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Post(':id/portal-memberships')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  createPortalMembership(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreatePortalMembershipDto,
+  ) {
+    return this.portalMemberships.create(tenancy.companyId, id, dto);
+  }
+
+  @Patch(':id/portal-memberships/:membershipId')
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  updatePortalMembership(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('membershipId', ParseUUIDPipe) membershipId: string,
+    @Body() dto: UpdatePortalMembershipDto,
+  ) {
+    return this.portalMemberships.update(
+      tenancy.companyId,
+      id,
+      membershipId,
+      dto,
+    );
+  }
+
+  @Get(':id/addresses')
+  @RequirePermission(PERMISSION_KEYS.customersRead)
+  listAddresses(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.customersService.listAddresses(tenancy.companyId, id);
+  }
+
+  @Post(':id/addresses')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  addAddress(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateAddressDto,
+  ) {
+    return this.customersService.addAddress(tenancy.companyId, id, dto);
+  }
+
+  @Patch(':id/addresses/:addressId')
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  updateAddress(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('addressId', ParseUUIDPipe) addressId: string,
+    @Body() dto: UpdateAddressDto,
+  ) {
+    return this.customersService.updateAddress(
+      tenancy.companyId,
+      id,
+      addressId,
+      dto,
+    );
+  }
+
+  @Delete(':id/addresses/:addressId')
+  @HttpCode(204)
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  async removeAddress(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('addressId', ParseUUIDPipe) addressId: string,
+  ) {
+    await this.customersService.removeAddress(
+      tenancy.companyId,
+      id,
+      addressId,
+    );
   }
 
   @Get(':id/prices')

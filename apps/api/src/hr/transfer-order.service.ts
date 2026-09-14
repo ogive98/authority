@@ -10,6 +10,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { HR_ERROR_CODES, HR_EVENT_TYPES } from './hr.constants';
 import { HrException } from './hr.exception';
 import { assertTunisianRib } from './rib-tn';
+import {
+  buildSepaFromTransferFacts,
+  type SepaExportResult,
+} from './sepa-pain001';
 
 export type TransferBankAccountOption = {
   id: string;
@@ -391,6 +395,106 @@ export class TransferOrderService {
     });
 
     return serializeTransfer(row);
+  }
+
+  /**
+   * D240 — pain.001.001.03 XML from CONFIRMED order (frozen RIB → IBAN TN).
+   * No BIC invent · no auto-send · company RIB required on the order snapshot.
+   */
+  async exportSepa(
+    companyId: string,
+    id: string,
+    actorUserId: string,
+  ): Promise<SepaExportResult> {
+    const row = await this.prisma.hrTransferOrder.findFirst({
+      where: { id, companyId, deletedAt: null },
+      include: {
+        bulletin: { select: { number: true, periodYm: true } },
+      },
+    });
+    if (!row) {
+      throw new HrException(
+        HR_ERROR_CODES.TRANSFER_NOT_FOUND,
+        'Transfer order not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (row.status !== HrTransferOrderStatus.CONFIRMED) {
+      throw new HrException(
+        HR_ERROR_CODES.TRANSFER_SEPA_STATUS,
+        'Only CONFIRMED transfer orders can export SEPA / pain.001.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const companyRibRaw = row.companyBankRib?.trim();
+    if (!companyRibRaw) {
+      throw new HrException(
+        HR_ERROR_CODES.TRANSFER_SEPA_DEBTOR_RIB,
+        'Company bank RIB is required on the transfer order to export SEPA. Set RIB on the société bank account and recreate the order if needed.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    try {
+      assertTunisianRib(companyRibRaw);
+      assertTunisianRib(row.beneficiaryBankAccount);
+    } catch (e) {
+      throw new HrException(
+        HR_ERROR_CODES.RIB_INVALID,
+        e instanceof Error ? e.message : 'RIB on the transfer order is invalid.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const company = await this.prisma.orgCompany.findFirst({
+      where: { id: companyId, deletedAt: null },
+      select: { legalName: true },
+    });
+    if (!company) {
+      throw new HrException(
+        HR_ERROR_CODES.NOT_FOUND,
+        'Company not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const remittance = [
+      'Salaire',
+      row.number,
+      row.bulletin.number,
+      row.bulletin.periodYm,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
+    const result = buildSepaFromTransferFacts({
+      transferNumber: row.number,
+      companyLegalName: company.legalName,
+      companyBankRib: companyRibRaw,
+      beneficiaryName: row.beneficiaryName,
+      beneficiaryBankAccount: row.beneficiaryBankAccount,
+      amount: row.amount.toFixed(3),
+      currency: row.currency,
+      remittance,
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'hr_transfer_order',
+        aggregateId: row.id,
+        eventType: HR_EVENT_TYPES.TRANSFER_SEPA_EXPORTED,
+        payloadJson: {
+          transferOrderId: row.id,
+          number: row.number,
+          msgId: result.msgId,
+          filename: result.filename,
+          exportedByUserId: actorUserId,
+        },
+      });
+    });
+
+    return result;
   }
 
   private async nextNumber(companyId: string): Promise<string> {

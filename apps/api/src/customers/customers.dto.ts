@@ -3,6 +3,7 @@ import {
   IsArray,
   IsBoolean,
   IsEmail,
+  IsIn,
   IsInt,
   IsNumber,
   IsNumberString,
@@ -40,6 +41,39 @@ export class CreateContactDto {
   @IsString()
   @MaxLength(64)
   role?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  language?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPrimary?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  canOrder?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  receiveInvoices?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  receiveDeliveryNotes?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  receiveNotifications?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  receiveDunning?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  portalAccess?: boolean;
 }
 
 export class CreateCustomerDto {
@@ -149,6 +183,34 @@ export class UpdateCustomerDto {
   @IsBoolean()
   salubritaPortal?: boolean;
 
+  @IsOptional()
+  @IsIn(['ACTIVE', 'INACTIVE', 'PROSPECT', 'ON_HOLD', 'ARCHIVED'])
+  status?: 'ACTIVE' | 'INACTIVE' | 'PROSPECT' | 'ON_HOLD' | 'ARCHIVED';
+
+  @IsOptional()
+  @IsBoolean()
+  enableCreditControl?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  alertBeforeCreditLimit?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  blockOnCreditLimit?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  allowExceptionalOverride?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  blockOnCriticalOverdue?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyResponsible?: boolean;
+
   @IsInt()
   @Min(0)
   version!: number;
@@ -220,8 +282,155 @@ export class UpdateContactDto {
   role?: string | null;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  language?: string | null;
+
+  @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isPrimary?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  canOrder?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  receiveInvoices?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  receiveDeliveryNotes?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  receiveNotifications?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  receiveDunning?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  portalAccess?: boolean;
+
+  @IsInt()
+  @Min(0)
+  version!: number;
+}
+
+export class CreateAddressDto {
+  @IsIn(['HQ', 'BILLING', 'SHIPPING', 'WAREHOUSE', 'STORE', 'POS'])
+  type!: 'HQ' | 'BILLING' | 'SHIPPING' | 'WAREHOUSE' | 'STORE' | 'POS';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  label?: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(240)
+  line1!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  line2?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  governorate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  postalCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  instructions?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  contactName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  contactPhone?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPrimary?: boolean;
+}
+
+export class UpdateAddressDto {
+  @IsOptional()
+  @IsIn(['HQ', 'BILLING', 'SHIPPING', 'WAREHOUSE', 'STORE', 'POS'])
+  type?: 'HQ' | 'BILLING' | 'SHIPPING' | 'WAREHOUSE' | 'STORE' | 'POS';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  label?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(240)
+  line1?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  line2?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  city?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  governorate?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  postalCode?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  instructions?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  contactName?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  contactPhone?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  isPrimary?: boolean;
 
   @IsInt()
   @Min(0)
@@ -242,4 +451,28 @@ export class UpsertCustomerPriceDto {
   @IsString()
   @MaxLength(8)
   currency?: string;
+}
+
+/** D242 — ADV portal membership link. */
+export class CreatePortalMembershipDto {
+  @IsUUID()
+  userId!: string;
+
+  @IsOptional()
+  @IsIn(['buyer', 'viewer', 'admin'])
+  role?: 'buyer' | 'viewer' | 'admin';
+}
+
+export class UpdatePortalMembershipDto {
+  @IsOptional()
+  @IsIn(['buyer', 'viewer', 'admin'])
+  role?: 'buyer' | 'viewer' | 'admin';
+
+  @IsOptional()
+  @IsIn(['ACTIVE', 'REVOKED'])
+  status?: 'ACTIVE' | 'REVOKED';
+
+  @IsInt()
+  @Min(0)
+  version!: number;
 }

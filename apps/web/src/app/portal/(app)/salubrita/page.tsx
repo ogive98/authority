@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { AEmptyState } from "@/components/a/a-empty-state";
 import { AErrorState } from "@/components/a/a-error-state";
+import { APageBody } from "@/components/a/a-page-body";
 import { AScreenHeader } from "@/components/a/a-screen-header";
 import {
   fetchPortalSalubritaHistory,
   PORTAL_SALUBRITA_PATH,
 } from "@/lib/customer-portal";
+import { softList, softListRow } from "@/lib/soft-glass-ui";
 
 function fmtFr(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
@@ -18,12 +20,12 @@ export default async function PortalSalubritaPage() {
 
   if (status !== 200 || !data) {
     return (
-      <div>
+      <>
         <AScreenHeader
-          kicker="Portail client"
+          kicker="Customer Portal"
           title="Certificats de salubrité"
         />
-        <div className="px-[var(--a-space-6)] py-[var(--a-space-5)]">
+        <APageBody>
           <AErrorState
             message={
               status === 401 || status === 403
@@ -32,21 +34,21 @@ export default async function PortalSalubritaPage() {
             }
             retryable={false}
           />
-        </div>
-      </div>
+        </APageBody>
+      </>
     );
   }
 
   const items = data.items;
 
   return (
-    <div>
+    <>
       <AScreenHeader
-        kicker="Portail client"
+        kicker="Customer Portal"
         title="Certificats de salubrité"
         description={`Historique ${data.days} j · consultation, impression, e-mail / WhatsApp`}
       />
-      <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
+      <APageBody>
         {items.length === 0 ? (
           <AEmptyState
             title="Aucun certificat"
@@ -54,14 +56,14 @@ export default async function PortalSalubritaPage() {
             canAct={false}
           />
         ) : (
-          <ul className="space-y-1">
+          <ul className={softList}>
             {items.map((row) => (
               <li key={row.packDate}>
                 <Link
                   href={`${PORTAL_SALUBRITA_PATH}/${row.packDate}`}
-                  className="flex items-center justify-between rounded-[var(--a-radius-sm)] px-3 py-3 hover:bg-a-surface-3/70"
+                  className={softListRow}
                 >
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="a-mono text-[13px] font-semibold text-a-fg">
                       {fmtFr(row.packDate)}
                     </p>
@@ -79,7 +81,7 @@ export default async function PortalSalubritaPage() {
             ))}
           </ul>
         )}
-      </div>
-    </div>
+      </APageBody>
+    </>
   );
 }

@@ -119,3 +119,27 @@ export function isValidTunisianIban(iban: string): boolean {
   }
   return BigInt(expanded) % 97n === 1n;
 }
+
+/**
+ * Build IBAN TN + check + 20-digit RIB (ISO 7064).
+ * Does not invent BIC or prove the account exists.
+ */
+export function toTunisianIban(ribRaw: string | null | undefined): string {
+  const bban = assertTunisianRib(ribRaw);
+  const rearr = `${bban}TN00`;
+  let expanded = '';
+  for (const ch of rearr) {
+    if (ch >= 'A' && ch <= 'Z') {
+      expanded += String(ch.charCodeAt(0) - 55);
+    } else {
+      expanded += ch;
+    }
+  }
+  const rem = Number(BigInt(expanded) % 97n);
+  const check = String(98 - rem).padStart(2, '0');
+  const iban = `TN${check}${bban}`;
+  if (!isValidTunisianIban(iban)) {
+    throw new TunisianRibError('Failed to compute Tunisian IBAN checksum.');
+  }
+  return iban;
+}

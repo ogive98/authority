@@ -838,6 +838,25 @@ model MdParty {
 enum CusCustomerStatus {
   ACTIVE
   INACTIVE
+  PROSPECT
+  ON_HOLD
+  ARCHIVED
+}
+
+enum CusAddressType {
+  HQ
+  BILLING
+  SHIPPING
+  WAREHOUSE
+  STORE
+  POS
+}
+
+enum CusCreditStatus {
+  NORMAL
+  WATCH
+  RISK
+  BLOCKED
 }
 
 model CusZone {
@@ -875,6 +894,14 @@ model CusCustomer {
   salubritaEmail    Boolean @default(false) @map("salubrita_email")
   salubritaWhatsapp Boolean @default(false) @map("salubrita_whatsapp")
   salubritaPortal   Boolean @default(true) @map("salubrita_portal")
+  /** D241 — credit control toggles (defaults safe / off). */
+  enableCreditControl       Boolean @default(false) @map("enable_credit_control")
+  alertBeforeCreditLimit    Boolean @default(true) @map("alert_before_credit_limit")
+  blockOnCreditLimit        Boolean @default(false) @map("block_on_credit_limit")
+  allowExceptionalOverride  Boolean @default(false) @map("allow_exceptional_override")
+  blockOnCriticalOverdue    Boolean @default(false) @map("block_on_critical_overdue")
+  notifyResponsible         Boolean @default(false) @map("notify_responsible")
+  creditStatus              CusCreditStatus @default(NORMAL) @map("credit_status")
   status         CusCustomerStatus @default(ACTIVE)
   version        Int               @default(0)
   createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -884,6 +911,7 @@ model CusCustomer {
   party             MdParty         @relation(fields: [partyId], references: [id])
   zone              CusZone?        @relation(fields: [zoneId], references: [id])
   contacts          CusContact[]
+  addresses         CusAddress[]
   prices            CusCustomerPrice[]
   portalMemberships PtlMembership[]
 
@@ -895,6 +923,40 @@ model CusCustomer {
   @@index([companyId, blocked])
   @@index([companyId, zoneId])
   @@map("cus_customer")
+}
+
+/** D241 — multi-address customer sites (HQ / billing / shipping / …). */
+model CusAddress {
+  id               String         @id @default(uuid()) @db.Uuid
+  companyId        String         @map("company_id") @db.Uuid
+  customerId       String         @map("customer_id") @db.Uuid
+  type             CusAddressType @default(SHIPPING)
+  label            String?
+  line1            String         @map("line1")
+  line2            String?        @map("line2")
+  city             String?
+  governorate      String?
+  postalCode       String?        @map("postal_code")
+  lat              Decimal?       @db.Decimal(10, 7)
+  lng              Decimal?       @db.Decimal(10, 7)
+  zoneHint         String?        @map("zone_hint")
+  instructions     String?
+  hours            String?
+  contactName      String?        @map("contact_name")
+  contactPhone     String?        @map("contact_phone")
+  routeHint        String?        @map("route_hint")
+  habitualDriver   String?        @map("habitual_driver")
+  isPrimary        Boolean        @default(false) @map("is_primary")
+  version          Int            @default(0)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  customer CusCustomer @relation(fields: [customerId], references: [id])
+
+  @@index([companyId, customerId, type])
+  @@index([companyId, customerId, isPrimary])
+  @@map("cus_address")
 }
 
 /** Negotiated HT unit prices per customer × product (D174). TND Decimal(18,3). */
@@ -980,6 +1042,46 @@ model PtlClaim {
   @@map("ptl_claim")
 }
 
+enum PtlPaymentDeclarationStatus {
+  SUBMITTED
+  ACKNOWLEDGED
+  REJECTED
+  CANCELLED
+}
+
+/**
+ * D243 — customer declares a payment from the portal (human-gated).
+ * Does NOT create FinPayment / allocate AR — ADV acknowledges then posts payment separately.
+ */
+model PtlPaymentDeclaration {
+  id               String                      @id @default(uuid()) @db.Uuid
+  companyId        String                      @map("company_id") @db.Uuid
+  customerId       String                      @map("customer_id") @db.Uuid
+  number           String
+  amount           Decimal                     @db.Decimal(18, 3)
+  currency         String                      @default("TND")
+  method           FinPaymentMethod            @default(BANK_TRANSFER)
+  paymentDate      DateTime                    @map("payment_date") @db.Date
+  reference        String?
+  notes            String?
+  openItemId       String?                     @map("open_item_id") @db.Uuid
+  status           PtlPaymentDeclarationStatus @default(SUBMITTED)
+  createdByUserId  String                      @map("created_by_user_id") @db.Uuid
+  reviewedAt       DateTime?                   @map("reviewed_at") @db.Timestamptz(6)
+  reviewedByUserId String?                     @map("reviewed_by_user_id") @db.Uuid
+  reviewNote       String?                     @map("review_note")
+  version          Int                         @default(0)
+  createdAt        DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?                   @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, number])
+  @@index([companyId, customerId, createdAt(sort: Desc)])
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@index([companyId, openItemId])
+  @@map("ptl_payment_declaration")
+}
+
 // --- doc_* Documents light V0 (metadata over SOC-09 core_file) ---
 
 enum DocVisibility {
@@ -992,6 +1094,8 @@ enum DocLinkType {
   CLAIM
   ORDER
   SHIPMENT
+  /** Direct customer dossier attachment (D244). */
+  CUSTOMER
   /** HR bulletin PDF (D202). */
   HR_BULLETIN
   /** Employee dossier file (D209) — INTERNAL only. */
@@ -1046,7 +1150,15 @@ model CusContact {
   whatsapp   String?
   email      String?
   role       String?
+  language   String?   @db.VarChar(8)
   active     Boolean   @default(true)
+  isPrimary            Boolean @default(false) @map("is_primary")
+  canOrder             Boolean @default(false) @map("can_order")
+  receiveInvoices      Boolean @default(false) @map("receive_invoices")
+  receiveDeliveryNotes Boolean @default(false) @map("receive_delivery_notes")
+  receiveNotifications Boolean @default(true) @map("receive_notifications")
+  receiveDunning       Boolean @default(true) @map("receive_dunning")
+  portalAccess         Boolean @default(false) @map("portal_access")
   version    Int       @default(0)
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -1055,6 +1167,7 @@ model CusContact {
   customer CusCustomer @relation(fields: [customerId], references: [id])
 
   @@index([companyId, customerId, createdAt(sort: Desc)])
+  @@index([companyId, customerId, isPrimary])
   @@map("cus_contact")
 }
 
@@ -1434,6 +1547,12 @@ enum FinPaymentStatus {
   REVERSED
 }
 
+enum FinApBillStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
 /** A–G allocation policies (simulate then confirm). */
 enum FinAllocationPolicy {
   OLDEST_FIRST      // A
@@ -1768,7 +1887,7 @@ model FinBankStatementLine {
 
 /**
  * AP disbursement V0 (D205) — vendorName free text.
- * No supplier master, no AP bill, no GL on post or bank match.
+ * Optional link to FinApBill (D237) · no supplier master · no GL on post or bank match.
  */
 model FinApPayment {
   id             String           @id @default(uuid()) @db.Uuid
@@ -1783,18 +1902,52 @@ model FinApPayment {
   accountingDate DateTime         @map("accounting_date") @db.Date
   reference      String?
   notes          String?
+  apBillId       String?          @map("ap_bill_id") @db.Uuid
   version        Int              @default(0)
   createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt      DateTime?        @map("deleted_at") @db.Timestamptz(6)
 
+  apBill         FinApBill?       @relation(fields: [apBillId], references: [id], onDelete: SetNull)
   bankMatches FinBankMatch[]
   transferOrders HrTransferOrder[]
 
   @@unique([companyId, number])
   @@index([companyId, paymentDate(sort: Desc)])
   @@index([companyId, status])
+  @@index([companyId, apBillId])
   @@map("fin_ap_payment")
+}
+
+/**
+ * AP vendor bill V0 (D236) — vendorName free text (D205 lock).
+ * Payments optional via FinApPayment.apBillId (D237) · Soft Glass `/finance/ap-bills`.
+ */
+model FinApBill {
+  id          String         @id @default(uuid()) @db.Uuid
+  companyId   String         @map("company_id") @db.Uuid
+  number      String
+  vendorName  String         @map("vendor_name")
+  status      FinApBillStatus @default(DRAFT)
+  billDate    DateTime       @map("bill_date") @db.Date
+  dueDate     DateTime?      @map("due_date") @db.Date
+  amountTotal Decimal        @map("amount_total") @db.Decimal(18, 3)
+  currency    String         @default("TND")
+  label       String?
+  reference   String?
+  notes       String?
+  version     Int            @default(0)
+  postedAt    DateTime?      @map("posted_at") @db.Timestamptz(6)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  payments FinApPayment[]
+
+  @@unique([companyId, number])
+  @@index([companyId, billDate(sort: Desc)])
+  @@index([companyId, status])
+  @@map("fin_ap_bill")
 }
 
 /**
@@ -2860,4 +3013,95 @@ model AttRhEvent {
   @@index([companyId, kind])
   @@index([companyId, startDate])
   @@map("att_rh_event")
+}
+
+// --- atm_* Automation ASSISTED profiles (D245) ---
+
+enum AtmProfileMode {
+  ASSISTED
+  REQUIRES_APPROVAL
+  /** Reserved — rejected for critical action kinds in V0. */
+  FULL_AUTO
+}
+
+enum AtmTriggerKind {
+  FINANCE_OVERDUE_OPEN_ITEMS
+  PORTAL_PAYMENT_DECLARATION_SUBMITTED
+  SALES_DRAFT_ORDER_STALE
+}
+
+enum AtmActionKind {
+  /** Emit suggestion event + run log only. */
+  NOTIFY
+  /** Hint to prepare dunning — no FinDunningDraft create. */
+  PREPARE_DUNNING_HINT
+  /** Hint only — no sales confirm. */
+  ORDER_REVIEW_HINT
+}
+
+enum AtmRunStatus {
+  SUGGESTED
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SKIPPED
+  FAILED
+}
+
+/**
+ * D245 — company automation profile (human-gated).
+ * FULL_AUTO is enum-only; service rejects it for mutating hints.
+ * Never auto-confirms orders / FinPayment / GL.
+ */
+model AtmProfile {
+  id          String         @id @default(uuid()) @db.Uuid
+  companyId   String         @map("company_id") @db.Uuid
+  code        String
+  name        String
+  description String?
+  mode        AtmProfileMode @default(ASSISTED)
+  triggerKind AtmTriggerKind @map("trigger_kind")
+  actionKind  AtmActionKind  @map("action_kind")
+  enabled     Boolean        @default(true)
+  shadowMode  Boolean        @default(false) @map("shadow_mode")
+  /** Limited config (thresholds) — no eval / arbitrary JS. */
+  configJson  Json           @default("{}") @map("config_json")
+  version     Int            @default(0)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  runs AtmRunLog[]
+
+  @@unique([companyId, code])
+  @@index([companyId, enabled, updatedAt(sort: Desc)])
+  @@index([companyId, triggerKind])
+  @@map("atm_profile")
+}
+
+model AtmRunLog {
+  id               String       @id @default(uuid()) @db.Uuid
+  companyId        String       @map("company_id") @db.Uuid
+  profileId        String       @map("profile_id") @db.Uuid
+  number           String
+  status           AtmRunStatus @default(SUGGESTED)
+  triggerRef       String?      @map("trigger_ref")
+  summary          String
+  payloadJson      Json         @default("{}") @map("payload_json")
+  resultJson       Json         @default("{}") @map("result_json")
+  createdByUserId  String?      @map("created_by_user_id") @db.Uuid
+  reviewedByUserId String?      @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt       DateTime?    @map("reviewed_at") @db.Timestamptz(6)
+  reviewNote       String?      @map("review_note")
+  version          Int          @default(0)
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  profile AtmProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, number])
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@index([companyId, profileId, createdAt(sort: Desc)])
+  @@map("atm_run_log")
 }

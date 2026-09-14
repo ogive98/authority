@@ -2,7 +2,13 @@ import Link from "next/link";
 import { ABadge } from "@/components/a/a-badge";
 import { AEmptyState } from "@/components/a/a-empty-state";
 import { AErrorState } from "@/components/a/a-error-state";
+import { APageBody } from "@/components/a/a-page-body";
 import { AScreenHeader } from "@/components/a/a-screen-header";
+import {
+  ASoftTable,
+  ASoftThead,
+  ASoftTr,
+} from "@/components/a/a-soft-table";
 import {
   fetchDeliveries,
   portalDeliveryBadgeTone,
@@ -10,15 +16,16 @@ import {
   PORTAL_DELIVERIES_PATH,
   PORTAL_ORDERS_PATH,
 } from "@/lib/customer-portal";
+import { softGhostBtn } from "@/lib/soft-glass-ui";
 
 export default async function PortalDeliveriesPage() {
   const { status, data } = await fetchDeliveries({ limit: 50 });
 
   if (status !== 200 || !data) {
     return (
-      <div>
+      <>
         <AScreenHeader kicker="Customer Portal" title="Livraisons" />
-        <div className="px-[var(--a-space-6)] py-[var(--a-space-5)]">
+        <APageBody>
           <AErrorState
             message={
               status === 401 || status === 403
@@ -27,29 +34,26 @@ export default async function PortalDeliveriesPage() {
             }
             retryable={false}
           />
-        </div>
-      </div>
+        </APageBody>
+      </>
     );
   }
 
   const items = data.items;
 
   return (
-    <div>
+    <>
       <AScreenHeader
         kicker="Customer Portal"
         title="Livraisons"
         description={`${items.length} expédition${items.length === 1 ? "" : "s"} · ouvrez une ligne pour le parcours interactif`}
         actions={
-          <Link
-            href="/portal/preview/journey"
-            className="text-[length:var(--a-text-sm)] text-a-accent hover:underline"
-          >
+          <Link href="/portal/preview/journey" className={softGhostBtn}>
             Voir un exemple →
           </Link>
         }
       />
-      <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
+      <APageBody>
         {items.length === 0 ? (
           <div className="space-y-3">
             <AEmptyState
@@ -67,63 +71,54 @@ export default async function PortalDeliveriesPage() {
             </p>
           </div>
         ) : (
-          <div className="a-underlay rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] border-collapse text-left text-[length:var(--a-text-sm)]">
-                <thead className="bg-a-surface-3/80 text-a-fg-muted">
-                  <tr>
-                    <th className="a-table-cell font-medium">N°</th>
-                    <th className="a-table-cell font-medium">Commande</th>
-                    <th className="a-table-cell font-medium">Statut</th>
-                    <th className="a-table-cell font-medium">Livreur</th>
-                    <th className="a-table-cell font-medium">Créée</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-t border-a-border-subtle transition-colors hover:bg-a-surface-3/50"
+          <ASoftTable className="min-w-[560px]">
+            <ASoftThead>
+              <tr>
+                <th className="a-table-cell font-medium">N°</th>
+                <th className="a-table-cell font-medium">Commande</th>
+                <th className="a-table-cell font-medium">Statut</th>
+                <th className="a-table-cell font-medium">Livreur</th>
+                <th className="a-table-cell font-medium">Créée</th>
+              </tr>
+            </ASoftThead>
+            <tbody>
+              {items.map((row) => (
+                <ASoftTr key={row.id}>
+                  <td className="a-table-cell">
+                    <Link
+                      href={`${PORTAL_DELIVERIES_PATH}/${row.id}`}
+                      className="a-mono font-medium text-a-accent hover:underline"
                     >
-                      <td className="a-table-cell">
-                        <Link
-                          href={`${PORTAL_DELIVERIES_PATH}/${row.id}`}
-                          className="a-mono font-medium text-a-accent hover:underline"
-                        >
-                          {row.number}
-                        </Link>
-                      </td>
-                      <td className="a-table-cell">
-                        {row.orderNumber ? (
-                          <Link
-                            href={`${PORTAL_ORDERS_PATH}/${row.orderId}`}
-                            className="a-mono text-a-fg hover:underline"
-                          >
-                            {row.orderNumber}
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="a-table-cell">
-                        <ABadge tone={portalDeliveryBadgeTone(row.status)}>
-                          {portalDeliveryStatusLabel(row.status)}
-                        </ABadge>
-                      </td>
-                      <td className="a-table-cell">
-                        {row.driverLabel ?? "—"}
-                      </td>
-                      <td className="a-mono a-table-cell text-a-fg-muted">
-                        {row.createdAt.slice(0, 10)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                      {row.number}
+                    </Link>
+                  </td>
+                  <td className="a-table-cell">
+                    {row.orderNumber ? (
+                      <Link
+                        href={`${PORTAL_ORDERS_PATH}/${row.orderId}`}
+                        className="a-mono text-a-fg hover:underline"
+                      >
+                        {row.orderNumber}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="a-table-cell">
+                    <ABadge tone={portalDeliveryBadgeTone(row.status)}>
+                      {portalDeliveryStatusLabel(row.status)}
+                    </ABadge>
+                  </td>
+                  <td className="a-table-cell">{row.driverLabel ?? "—"}</td>
+                  <td className="a-mono a-table-cell text-a-fg-muted">
+                    {row.createdAt.slice(0, 10)}
+                  </td>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         )}
-      </div>
-    </div>
+      </APageBody>
+    </>
   );
 }

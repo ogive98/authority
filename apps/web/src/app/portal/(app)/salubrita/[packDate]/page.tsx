@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AButton } from "@/components/a/a-button";
 import { AEmptyState } from "@/components/a/a-empty-state";
 import { AErrorState } from "@/components/a/a-error-state";
+import { APageBody } from "@/components/a/a-page-body";
 import { AScreenHeader } from "@/components/a/a-screen-header";
 import { ASkeleton } from "@/components/a/a-skeleton";
 import {
@@ -101,7 +102,7 @@ export default function PortalSalubritaDetailPage() {
           </Link>
         }
       />
-      <div className="space-y-4 px-[var(--a-space-6)] py-[var(--a-space-5)] print:px-0">
+      <APageBody className="print:px-0">
         <div className="flex flex-wrap gap-2 print:hidden">
           <AButton type="button" size="sm" onClick={onPrint}>
             Imprimer
@@ -147,7 +148,7 @@ export default function PortalSalubritaDetailPage() {
             />
           </div>
         ) : null}
-      </div>
+      </APageBody>
       <style>{`
         @media print {
           body * { visibility: hidden !important; }

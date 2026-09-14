@@ -484,6 +484,23 @@ export class PaymentService {
     return { items: rows.map(serializeInstrument) };
   }
 
+  async getInstrument(
+    companyId: string,
+    instrumentId: string,
+  ): Promise<InstrumentDto> {
+    const row = await this.prisma.finPaymentInstrument.findFirst({
+      where: { id: instrumentId, companyId, deletedAt: null },
+    });
+    if (!row) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.INSTRUMENT_NOT_FOUND,
+        'Instrument not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return serializeInstrument(row);
+  }
+
   /**
    * Public reverse (D187) — POSTED → REVERSED, restore AR allocations,
    * cancel non-terminal instruments, emit payment.reversed for Thunder GL.

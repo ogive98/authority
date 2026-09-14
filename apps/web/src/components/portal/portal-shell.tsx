@@ -17,16 +17,38 @@ import {
   PORTAL_ORDERS_PATH,
   PORTAL_SALUBRITA_PATH,
 } from "@/lib/customer-portal";
-import { cn } from "@/lib/utils";
+
+function navClass(active: boolean): string {
+  return [
+    "a-action-quiet rounded-[var(--a-radius-sm)] px-2.5 py-1.5 text-[length:var(--a-text-sm)] font-medium sm:px-3",
+    active ? "bg-a-surface-3 text-a-fg" : "text-a-fg hover:bg-a-surface-3",
+  ].join(" ");
+}
 
 const NAV = [
-  { href: PORTAL_HOME_PATH, label: "Accueil" },
-  { href: PORTAL_ORDERS_PATH, label: "Commandes" },
-  { href: PORTAL_DELIVERIES_PATH, label: "Livraisons" },
-  { href: PORTAL_FINANCE_PATH, label: "Finance" },
-  { href: PORTAL_SALUBRITA_PATH, label: "Salubrité" },
-  { href: PORTAL_CLAIMS_PATH, label: "Réclamations" },
-  { href: PORTAL_DOCUMENTS_PATH, label: "Documents" },
+  { href: PORTAL_HOME_PATH, label: "Accueil", match: "exact" as const },
+  { href: PORTAL_ORDERS_PATH, label: "Commandes", match: "prefix" as const },
+  {
+    href: PORTAL_DELIVERIES_PATH,
+    label: "Livraisons",
+    match: "prefix" as const,
+  },
+  { href: PORTAL_FINANCE_PATH, label: "Finance", match: "prefix" as const },
+  {
+    href: PORTAL_SALUBRITA_PATH,
+    label: "Salubrité",
+    match: "prefix" as const,
+  },
+  {
+    href: PORTAL_CLAIMS_PATH,
+    label: "Réclamations",
+    match: "prefix" as const,
+  },
+  {
+    href: PORTAL_DOCUMENTS_PATH,
+    label: "Documents",
+    match: "prefix" as const,
+  },
 ] as const;
 
 export function PortalShell({
@@ -56,7 +78,7 @@ export function PortalShell({
   return (
     <div className="flex min-h-screen flex-col bg-a-surface-1 text-a-fg">
       <ASkipLink />
-      <header className="flex h-14 shrink-0 items-center justify-between bg-a-surface-2/80 px-[var(--a-space-5)] backdrop-blur-[20px] backdrop-saturate-[180%]">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-2 bg-a-surface-2/80 px-[var(--a-space-5)] backdrop-blur-[20px] backdrop-saturate-[180%]">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link
             href={PORTAL_HOME_PATH}
@@ -76,47 +98,42 @@ export function PortalShell({
             </span>
           </Link>
           {customerLabel ? (
-            <span className="hidden max-w-[10rem] truncate text-[length:var(--a-text-xs)] text-a-fg-muted lg:inline xl:max-w-[14rem]">
+            <span className="hidden max-w-[14rem] truncate text-[length:var(--a-text-xs)] text-a-fg-muted lg:inline">
               {customerLabel}
             </span>
           ) : null}
-          <nav
-            className="flex min-w-0 items-center gap-0.5 overflow-x-auto"
-            aria-label="Navigation portail"
-          >
-            {NAV.map((item) => {
-              const active =
-                item.href === PORTAL_HOME_PATH
-                  ? pathname === PORTAL_HOME_PATH
-                  : pathname === item.href ||
-                    pathname.startsWith(`${item.href}/`);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "shrink-0 rounded-[8px] px-2.5 py-1 text-[length:var(--a-text-sm)] font-normal transition-colors",
-                    active
-                      ? "bg-a-accent-muted text-a-accent"
-                      : "text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
-                  )}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
         </div>
-        <AButton
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => void logout()}
+        <nav
+          className="flex min-w-0 flex-wrap items-center justify-end gap-1 overflow-x-auto sm:gap-2"
+          aria-label="Navigation portail"
         >
-          Déconnexion
-        </AButton>
+          {NAV.map((item) => {
+            const active =
+              item.match === "exact"
+                ? pathname === item.href
+                : pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={navClass(active)}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+          <AButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => void logout()}
+          >
+            Déconnexion
+          </AButton>
+        </nav>
       </header>
-      <main id="main" className="min-h-0 flex-1 overflow-auto">
+      <main id="main" className="min-h-0 flex-1 overflow-auto px-[var(--a-space-5)] py-[var(--a-space-5)]">
         {children}
       </main>
     </div>

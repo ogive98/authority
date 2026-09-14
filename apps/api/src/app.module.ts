@@ -28,6 +28,7 @@ import { ProductionModule } from './production/production.module';
 import { TaxModule } from './tax/tax.module';
 import { HrModule } from './hr/hr.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { AutomationModule } from './automation/automation.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { AttendanceModule } from './attendance/attendance.module';
     EmployeePortalModule,
     RepairModule,
     ProductionModule,
+    AutomationModule,
   ],
 })
 export class AppModule {}

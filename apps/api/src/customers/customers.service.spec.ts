@@ -51,6 +51,13 @@ describe('CustomersService', () => {
       salubritaEmail: false,
       salubritaWhatsapp: false,
       salubritaPortal: true,
+      enableCreditControl: false,
+      alertBeforeCreditLimit: true,
+      blockOnCreditLimit: false,
+      allowExceptionalOverride: false,
+      blockOnCriticalOverdue: false,
+      notifyResponsible: false,
+      creditStatus: 'NORMAL',
       status: CusCustomerStatus.ACTIVE,
       version: opts?.version ?? 0,
       createdAt: new Date(),
@@ -96,6 +103,14 @@ describe('CustomersService', () => {
         findFirst: jest.fn().mockResolvedValue(zone),
         create: jest.fn().mockResolvedValue(zone),
       },
+      cusAddress: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
+      },
       mdParty: {
         update: jest.fn(),
       },
@@ -116,8 +131,16 @@ describe('CustomersService', () => {
       requireParty: jest.fn().mockResolvedValue(party),
     };
 
-    const service = new CustomersService(prisma as never, masterData as never);
-    return { service, prisma, masterData, customer, party, zone };
+    const outbox = {
+      enqueue: jest.fn().mockResolvedValue({ id: 'outbox-1' }),
+    };
+
+    const service = new CustomersService(
+      prisma as never,
+      masterData as never,
+      outbox as never,
+    );
+    return { service, prisma, masterData, outbox, customer, party, zone };
   }
 
   it('lists customers with party legalName', async () => {

@@ -1223,3 +1223,29 @@ export async function downloadTransferOrderPdf(
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
 }
+
+export async function downloadTransferOrderSepa(
+  id: string,
+): Promise<{ ok: true } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/hr/transfer-orders/${encodeURIComponent(id)}/sepa`,
+      { credentials: "include" },
+    );
+    if (!res.ok) {
+      return { ok: false, status: res.status, message: await parseError(res) };
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download =
+      res.headers.get("Content-Disposition")?.match(/filename="?([^"]+)"?/)?.[1] ??
+      `sepa-${id}.xml`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { ok: true };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}

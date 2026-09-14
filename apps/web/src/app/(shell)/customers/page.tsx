@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   ABadge,
@@ -42,7 +43,6 @@ import {
   type CustomerFinancialOverview,
 } from "@/lib/finance";
 import { softSelect } from "@/lib/soft-glass-ui";
-import Link from "next/link";
 
 type LoadState =
   | { kind: "loading" }
@@ -444,13 +444,12 @@ export default function CustomersPage() {
               {state.items.map((row) => (
                 <ASoftTr key={row.id}>
                     <td className="a-mono a-table-cell">
-                      <button
-                        type="button"
-                        className="text-left text-a-accent hover:underline"
-                        onClick={() => void openEdit(row)}
+                      <Link
+                        href={`/customers/${row.id}`}
+                        className="text-a-accent hover:underline"
                       >
                         {row.code}
-                      </button>
+                      </Link>
                     </td>
                     <td className="a-table-cell text-a-fg-muted">
                       {row.nickname ?? "—"}
@@ -473,6 +472,12 @@ export default function CustomersPage() {
                     </td>
                     <td className="a-table-cell">
                       <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/customers/${row.id}`}
+                          className="inline-flex items-center rounded-[var(--a-radius-sm)] px-2.5 py-1 text-[length:var(--a-text-sm)] text-a-accent underline-offset-4 hover:underline"
+                        >
+                          Fiche
+                        </Link>
                         <AButton
                           type="button"
                           variant="secondary"

@@ -286,13 +286,44 @@ export class DocumentsService {
     ) {
       throw new DocumentsException(
         DOCUMENTS_ERROR_CODES.INVALID_META,
-        'linkType must be CLAIM, ORDER, SHIPMENT, HR_BULLETIN, HR_EMPLOYEE, HR_CONTRACT, or HR_ATTESTATION.',
+        'linkType must be CLAIM, ORDER, SHIPMENT, CUSTOMER, HR_BULLETIN, HR_EMPLOYEE, HR_CONTRACT, or HR_ATTESTATION.',
         HttpStatus.BAD_REQUEST,
       );
     }
 
     const limit = Math.min(Math.max(opts.limit ?? 30, 1), 50);
     const q = opts.q?.trim();
+
+    if (linkType === DocLinkType.CUSTOMER) {
+      const rows = await this.prisma.cusCustomer.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          ...(q
+            ? {
+                OR: [
+                  { code: { contains: q, mode: 'insensitive' } },
+                  {
+                    party: {
+                      legalName: { contains: q, mode: 'insensitive' },
+                    },
+                  },
+                ],
+              }
+            : {}),
+        },
+        orderBy: [{ code: 'asc' }],
+        take: limit,
+        include: { party: { select: { legalName: true } } },
+      });
+      return {
+        items: rows.map((r) => ({
+          id: r.id,
+          number: r.code,
+          label: `${r.code} · ${r.party.legalName}`,
+        })),
+      };
+    }
 
     if (linkType === DocLinkType.CLAIM) {
       const rows = await this.prisma.ptlClaim.findMany({
@@ -440,7 +471,7 @@ export class DocumentsService {
     if (linkType !== DocLinkType.SHIPMENT) {
       throw new DocumentsException(
         DOCUMENTS_ERROR_CODES.INVALID_META,
-        'linkType must be CLAIM, ORDER, SHIPMENT, HR_BULLETIN, HR_EMPLOYEE, HR_CONTRACT, or HR_ATTESTATION.',
+        'linkType must be CLAIM, ORDER, SHIPMENT, CUSTOMER, HR_BULLETIN, HR_EMPLOYEE, HR_CONTRACT, or HR_ATTESTATION.',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -658,6 +689,21 @@ export class DocumentsService {
         );
       }
       return shipment.customerId;
+    }
+
+    if (linkType === DocLinkType.CUSTOMER) {
+      const customer = await this.prisma.cusCustomer.findFirst({
+        where: { id: linkId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!customer) {
+        throw new DocumentsException(
+          DOCUMENTS_ERROR_CODES.LINK_NOT_FOUND,
+          'Customer not found for link.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      return customer.id;
     }
 
     if (linkType === DocLinkType.HR_BULLETIN) {

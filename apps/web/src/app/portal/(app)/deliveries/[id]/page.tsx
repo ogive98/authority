@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ABadge } from "@/components/a/a-badge";
 import { AErrorState } from "@/components/a/a-error-state";
+import { APageBody } from "@/components/a/a-page-body";
 import { AScreenHeader } from "@/components/a/a-screen-header";
 import { PortalPackageJourney } from "@/components/portal/portal-package-journey";
 import {
@@ -28,7 +29,7 @@ export default async function PortalDeliveryDetailPage({
     return (
       <div>
         <AScreenHeader kicker="Customer Portal" title="Livraison" />
-        <div className="px-[var(--a-space-6)] py-[var(--a-space-5)]">
+        <APageBody>
           <AErrorState
             message="Impossible de charger cette livraison."
             retryable={false}
@@ -41,7 +42,7 @@ export default async function PortalDeliveryDetailPage({
               ← Retour aux livraisons
             </Link>
           </p>
-        </div>
+        </APageBody>
       </div>
     );
   }
@@ -60,7 +61,7 @@ export default async function PortalDeliveryDetailPage({
           </Link>
         }
       />
-      <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
+      <APageBody>
         <PortalPackageJourney delivery={delivery} />
 
         <div className="a-underlay rounded-md grid gap-4 p-[var(--a-space-5)] sm:grid-cols-2 lg:grid-cols-3">
@@ -135,7 +136,7 @@ export default async function PortalDeliveryDetailPage({
             </p>
           </div>
         ) : null}
-      </div>
+      </APageBody>
     </div>
   );
 }

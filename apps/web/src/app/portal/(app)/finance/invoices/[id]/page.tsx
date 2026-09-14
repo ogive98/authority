@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ABadge } from "@/components/a/a-badge";
 import { AErrorState } from "@/components/a/a-error-state";
+import { APageBody } from "@/components/a/a-page-body";
 import { AScreenHeader } from "@/components/a/a-screen-header";
 import {
   fetchPortalInvoice,
@@ -27,12 +28,12 @@ export default async function PortalInvoiceDetailPage({
     return (
       <div>
         <AScreenHeader kicker="Customer Portal" title="Facture" />
-        <div className="px-[var(--a-space-6)] py-[var(--a-space-5)]">
+        <APageBody>
           <AErrorState
             message="Impossible de charger cette facture."
             retryable={false}
           />
-        </div>
+        </APageBody>
       </div>
     );
   }
@@ -52,7 +53,7 @@ export default async function PortalInvoiceDetailPage({
           </Link>
         }
       />
-      <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
+      <APageBody>
         <div className="flex flex-wrap items-center gap-3">
           <ABadge tone={portalInvoiceBadgeTone(data.status)}>
             {portalInvoiceStatusLabel(data.status)}
@@ -82,7 +83,7 @@ export default async function PortalInvoiceDetailPage({
             </Link>
           </p>
         ) : null}
-      </div>
+      </APageBody>
     </div>
   );
 }

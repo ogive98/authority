@@ -13,7 +13,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { PtlClaimType } from '@prisma/client';
+import { PtlClaimType, FinPaymentMethod } from '@prisma/client';
 
 /** Portal create line — qty only; unitPrice resolved server-side (last customer price). */
 export class PortalCreateOrderLineDto {
@@ -70,4 +70,31 @@ export class PortalCreateClaimDto {
   @IsOptional()
   @IsUUID()
   shipmentId?: string;
+}
+
+export class PortalCreatePaymentDeclarationDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  amount!: number;
+
+  @IsEnum(FinPaymentMethod)
+  method!: FinPaymentMethod;
+
+  @IsDateString()
+  paymentDate!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  reference?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
+
+  @IsOptional()
+  @IsUUID()
+  openItemId?: string;
 }

@@ -35,8 +35,10 @@ import { CUSTOMER_PORTAL_COOKIE_NAME } from './customer-portal.constants';
 import {
   PortalCreateClaimDto,
   PortalCreateOrderDto,
+  PortalCreatePaymentDeclarationDto,
   PortalReorderDto,
 } from './customer-portal.dto';
+import { CustomerPortalPaymentDeclarationService } from './customer-portal-payment-declaration.service';
 
 const maxUploadBytes =
   Number(process.env.MAX_UPLOAD_MB ?? DEFAULT_MAX_UPLOAD_MB) * 1024 * 1024;
@@ -48,6 +50,7 @@ export class CustomerPortalController {
     private readonly portalOrdersService: CustomerPortalOrdersService,
     private readonly portalClaimsService: CustomerPortalClaimsService,
     private readonly portalInsightsService: CustomerPortalInsightsService,
+    private readonly paymentDeclarations: CustomerPortalPaymentDeclarationService,
     private readonly documentsService: DocumentsService,
     private readonly inventoryService: InventoryService,
     private readonly sessionService: SessionService,
@@ -326,6 +329,68 @@ export class CustomerPortalController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.portalOrdersService.getInvoice(
+      req.companyId!,
+      req.customerId!,
+      id,
+    );
+  }
+
+  @Get('finance/payment-declarations')
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('finance')
+  listPaymentDeclarations(
+    @Req() req: CustomerPortalRequest,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.paymentDeclarations.list(req.companyId!, req.customerId!, {
+      status,
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor,
+    });
+  }
+
+  @Get('finance/payment-declarations/:id')
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('finance')
+  getPaymentDeclaration(
+    @Req() req: CustomerPortalRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.paymentDeclarations.get(
+      req.companyId!,
+      req.customerId!,
+      id,
+    );
+  }
+
+  @Post('finance/payment-declarations')
+  @HttpCode(201)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('finance')
+  createPaymentDeclaration(
+    @Req() req: CustomerPortalRequest,
+    @Body() dto: PortalCreatePaymentDeclarationDto,
+  ) {
+    return this.paymentDeclarations.create(
+      req.companyId!,
+      req.customerId!,
+      req.user!.id,
+      dto,
+    );
+  }
+
+  @Post('finance/payment-declarations/:id/cancel')
+  @HttpCode(200)
+  @UseGuards(CustomerPortalSessionGuard, CustomerPortalModuleGuard)
+  @RequireModule('finance')
+  cancelPaymentDeclaration(
+    @Req() req: CustomerPortalRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.paymentDeclarations.cancel(
       req.companyId!,
       req.customerId!,
       id,

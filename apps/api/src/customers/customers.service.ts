@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  CusAddress,
   CusContact,
   CusCustomer,
   CusCustomerStatus,
@@ -8,17 +9,23 @@ import {
   MdPartyType,
   Prisma,
 } from '@prisma/client';
+import { OutboxService } from '../audit/outbox.service';
 import { MasterDataService } from '../master-data/master-data.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { CUSTOMERS_ERROR_CODES } from './customers.constants';
+import {
+  CUSTOMERS_ERROR_CODES,
+  CUSTOMERS_EVENT_TYPES,
+} from './customers.constants';
 import { CustomersException } from './customers.exception';
 import {
   BlockCustomerDto,
+  CreateAddressDto,
   CreateContactDto,
   CreateCustomerDto,
   CreateZoneDto,
   SetCreditDto,
   UnblockCustomerDto,
+  UpdateAddressDto,
   UpdateContactDto,
   UpdateCustomerDto,
   UpsertCustomerPriceDto,
@@ -32,7 +39,40 @@ export type ContactDto = {
   whatsapp: string | null;
   email: string | null;
   role: string | null;
+  language: string | null;
   active: boolean;
+  isPrimary: boolean;
+  canOrder: boolean;
+  receiveInvoices: boolean;
+  receiveDeliveryNotes: boolean;
+  receiveNotifications: boolean;
+  receiveDunning: boolean;
+  portalAccess: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AddressDto = {
+  id: string;
+  customerId: string;
+  type: string;
+  label: string | null;
+  line1: string;
+  line2: string | null;
+  city: string | null;
+  governorate: string | null;
+  postalCode: string | null;
+  lat: string | null;
+  lng: string | null;
+  zoneHint: string | null;
+  instructions: string | null;
+  hours: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
+  routeHint: string | null;
+  habitualDriver: string | null;
+  isPrimary: boolean;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -69,11 +109,19 @@ export type CustomerDto = {
   salubritaEmail: boolean;
   salubritaWhatsapp: boolean;
   salubritaPortal: boolean;
+  enableCreditControl: boolean;
+  alertBeforeCreditLimit: boolean;
+  blockOnCreditLimit: boolean;
+  allowExceptionalOverride: boolean;
+  blockOnCriticalOverdue: boolean;
+  notifyResponsible: boolean;
+  creditStatus: string;
   status: CusCustomerStatus;
   version: number;
   createdAt: string;
   updatedAt: string;
   contacts?: ContactDto[];
+  addresses?: AddressDto[];
   prices?: CustomerPriceDto[];
 };
 
@@ -99,6 +147,7 @@ export class CustomersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly masterData: MasterDataService,
+    private readonly outbox: OutboxService,
   ) {}
 
   async list(
@@ -140,16 +189,21 @@ export class CustomersService {
 
   async get(companyId: string, id: string): Promise<CustomerDto> {
     const row = await this.findActive(companyId, id);
-    const [contacts, prices] = await Promise.all([
+    const [contacts, addresses, prices] = await Promise.all([
       this.prisma.cusContact.findMany({
         where: { companyId, customerId: id, deletedAt: null },
-        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }],
+      }),
+      this.prisma.cusAddress.findMany({
+        where: { companyId, customerId: id, deletedAt: null },
+        orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }],
       }),
       this.listPrices(companyId, id),
     ]);
     return {
       ...serializeCustomer(row),
       contacts: contacts.map(serializeContact),
+      addresses: addresses.map(serializeAddress),
       prices,
     };
   }
@@ -479,9 +533,29 @@ export class CustomersService {
               whatsapp: c.whatsapp?.trim() || null,
               email: c.email?.trim() || null,
               role: c.role?.trim() || null,
+              language: c.language?.trim() || null,
+              isPrimary: c.isPrimary ?? false,
+              canOrder: c.canOrder ?? false,
+              receiveInvoices: c.receiveInvoices ?? false,
+              receiveDeliveryNotes: c.receiveDeliveryNotes ?? false,
+              receiveNotifications: c.receiveNotifications ?? true,
+              receiveDunning: c.receiveDunning ?? true,
+              portalAccess: c.portalAccess ?? false,
             })),
           });
         }
+
+        await this.outbox.enqueue(tx, {
+          companyId,
+          aggregateType: 'cus_customer',
+          aggregateId: customer.id,
+          eventType: CUSTOMERS_EVENT_TYPES.CUSTOMER_CREATED,
+          payloadJson: {
+            customerId: customer.id,
+            code: customer.code,
+            status: customer.status,
+          },
+        });
 
         return customer;
       });
@@ -569,6 +643,25 @@ export class CustomersService {
           ...(dto.salubritaPortal !== undefined
             ? { salubritaPortal: dto.salubritaPortal }
             : {}),
+          ...(dto.status !== undefined ? { status: dto.status } : {}),
+          ...(dto.enableCreditControl !== undefined
+            ? { enableCreditControl: dto.enableCreditControl }
+            : {}),
+          ...(dto.alertBeforeCreditLimit !== undefined
+            ? { alertBeforeCreditLimit: dto.alertBeforeCreditLimit }
+            : {}),
+          ...(dto.blockOnCreditLimit !== undefined
+            ? { blockOnCreditLimit: dto.blockOnCreditLimit }
+            : {}),
+          ...(dto.allowExceptionalOverride !== undefined
+            ? { allowExceptionalOverride: dto.allowExceptionalOverride }
+            : {}),
+          ...(dto.blockOnCriticalOverdue !== undefined
+            ? { blockOnCriticalOverdue: dto.blockOnCriticalOverdue }
+            : {}),
+          ...(dto.notifyResponsible !== undefined
+            ? { notifyResponsible: dto.notifyResponsible }
+            : {}),
           version: { increment: 1 },
         },
       });
@@ -612,6 +705,18 @@ export class CustomersService {
         HttpStatus.CONFLICT,
       );
     }
+    await this.prisma.$transaction(async (tx) => {
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'cus_customer',
+        aggregateId: id,
+        eventType: CUSTOMERS_EVENT_TYPES.CREDIT_CHANGED,
+        payloadJson: {
+          customerId: id,
+          creditLimit: dto.creditLimit,
+        },
+      });
+    });
     return this.get(companyId, id);
   }
 
@@ -658,6 +763,18 @@ export class CustomersService {
         HttpStatus.CONFLICT,
       );
     }
+    await this.prisma.$transaction(async (tx) => {
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'cus_customer',
+        aggregateId: id,
+        eventType: CUSTOMERS_EVENT_TYPES.CUSTOMER_BLOCKED,
+        payloadJson: {
+          customerId: id,
+          reason: dto.reason?.trim() || null,
+        },
+      });
+    });
     return this.get(companyId, id);
   }
 
@@ -704,6 +821,15 @@ export class CustomersService {
         HttpStatus.CONFLICT,
       );
     }
+    await this.prisma.$transaction(async (tx) => {
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'cus_customer',
+        aggregateId: id,
+        eventType: CUSTOMERS_EVENT_TYPES.CUSTOMER_UNBLOCKED,
+        payloadJson: { customerId: id },
+      });
+    });
     return this.get(companyId, id);
   }
 
@@ -712,7 +838,144 @@ export class CustomersService {
     await this.prisma.cusCustomer.update({
       where: { id: row.id },
       data: {
-        status: CusCustomerStatus.INACTIVE,
+        status: CusCustomerStatus.ARCHIVED,
+        deletedAt: new Date(),
+        version: { increment: 1 },
+      },
+    });
+  }
+
+  async listAddresses(
+    companyId: string,
+    customerId: string,
+  ): Promise<AddressDto[]> {
+    await this.findActive(companyId, customerId);
+    const rows = await this.prisma.cusAddress.findMany({
+      where: { companyId, customerId, deletedAt: null },
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }],
+    });
+    return rows.map(serializeAddress);
+  }
+
+  async addAddress(
+    companyId: string,
+    customerId: string,
+    dto: CreateAddressDto,
+  ): Promise<AddressDto> {
+    await this.findActive(companyId, customerId);
+    const row = await this.prisma.cusAddress.create({
+      data: {
+        companyId,
+        customerId,
+        type: dto.type,
+        label: dto.label?.trim() || null,
+        line1: dto.line1.trim(),
+        line2: dto.line2?.trim() || null,
+        city: dto.city?.trim() || null,
+        governorate: dto.governorate?.trim() || null,
+        postalCode: dto.postalCode?.trim() || null,
+        instructions: dto.instructions?.trim() || null,
+        contactName: dto.contactName?.trim() || null,
+        contactPhone: dto.contactPhone?.trim() || null,
+        isPrimary: dto.isPrimary ?? false,
+      },
+    });
+    return serializeAddress(row);
+  }
+
+  async updateAddress(
+    companyId: string,
+    customerId: string,
+    addressId: string,
+    dto: UpdateAddressDto,
+  ): Promise<AddressDto> {
+    await this.findActive(companyId, customerId);
+    const existing = await this.prisma.cusAddress.findFirst({
+      where: { id: addressId, companyId, customerId, deletedAt: null },
+    });
+    if (!existing) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.ADDRESS_NOT_FOUND,
+        'Address not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (existing.version !== dto.version) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.VERSION_CONFLICT,
+        'Address version conflict.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    const updated = await this.prisma.cusAddress.updateMany({
+      where: {
+        id: addressId,
+        companyId,
+        customerId,
+        version: dto.version,
+        deletedAt: null,
+      },
+      data: {
+        ...(dto.type !== undefined ? { type: dto.type } : {}),
+        ...(dto.label !== undefined
+          ? { label: dto.label?.trim() || null }
+          : {}),
+        ...(dto.line1 !== undefined ? { line1: dto.line1.trim() } : {}),
+        ...(dto.line2 !== undefined
+          ? { line2: dto.line2?.trim() || null }
+          : {}),
+        ...(dto.city !== undefined ? { city: dto.city?.trim() || null } : {}),
+        ...(dto.governorate !== undefined
+          ? { governorate: dto.governorate?.trim() || null }
+          : {}),
+        ...(dto.postalCode !== undefined
+          ? { postalCode: dto.postalCode?.trim() || null }
+          : {}),
+        ...(dto.instructions !== undefined
+          ? { instructions: dto.instructions?.trim() || null }
+          : {}),
+        ...(dto.contactName !== undefined
+          ? { contactName: dto.contactName?.trim() || null }
+          : {}),
+        ...(dto.contactPhone !== undefined
+          ? { contactPhone: dto.contactPhone?.trim() || null }
+          : {}),
+        ...(dto.isPrimary !== undefined ? { isPrimary: dto.isPrimary } : {}),
+        version: { increment: 1 },
+      },
+    });
+    if (updated.count !== 1) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.VERSION_CONFLICT,
+        'Address version conflict.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    const row = await this.prisma.cusAddress.findUniqueOrThrow({
+      where: { id: addressId },
+    });
+    return serializeAddress(row);
+  }
+
+  async removeAddress(
+    companyId: string,
+    customerId: string,
+    addressId: string,
+  ): Promise<void> {
+    await this.findActive(companyId, customerId);
+    const existing = await this.prisma.cusAddress.findFirst({
+      where: { id: addressId, companyId, customerId, deletedAt: null },
+    });
+    if (!existing) {
+      throw new CustomersException(
+        CUSTOMERS_ERROR_CODES.ADDRESS_NOT_FOUND,
+        'Address not found.',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    await this.prisma.cusAddress.update({
+      where: { id: addressId },
+      data: {
         deletedAt: new Date(),
         version: { increment: 1 },
       },
@@ -734,6 +997,14 @@ export class CustomersService {
         whatsapp: dto.whatsapp?.trim() || null,
         email: dto.email?.trim() || null,
         role: dto.role?.trim() || null,
+        language: dto.language?.trim() || null,
+        isPrimary: dto.isPrimary ?? false,
+        canOrder: dto.canOrder ?? false,
+        receiveInvoices: dto.receiveInvoices ?? false,
+        receiveDeliveryNotes: dto.receiveDeliveryNotes ?? false,
+        receiveNotifications: dto.receiveNotifications ?? true,
+        receiveDunning: dto.receiveDunning ?? true,
+        portalAccess: dto.portalAccess ?? false,
       },
     });
     return serializeContact(row);
@@ -780,7 +1051,27 @@ export class CustomersService {
           : {}),
         ...(dto.email !== undefined ? { email: dto.email?.trim() || null } : {}),
         ...(dto.role !== undefined ? { role: dto.role?.trim() || null } : {}),
+        ...(dto.language !== undefined
+          ? { language: dto.language?.trim() || null }
+          : {}),
         ...(dto.active !== undefined ? { active: dto.active } : {}),
+        ...(dto.isPrimary !== undefined ? { isPrimary: dto.isPrimary } : {}),
+        ...(dto.canOrder !== undefined ? { canOrder: dto.canOrder } : {}),
+        ...(dto.receiveInvoices !== undefined
+          ? { receiveInvoices: dto.receiveInvoices }
+          : {}),
+        ...(dto.receiveDeliveryNotes !== undefined
+          ? { receiveDeliveryNotes: dto.receiveDeliveryNotes }
+          : {}),
+        ...(dto.receiveNotifications !== undefined
+          ? { receiveNotifications: dto.receiveNotifications }
+          : {}),
+        ...(dto.receiveDunning !== undefined
+          ? { receiveDunning: dto.receiveDunning }
+          : {}),
+        ...(dto.portalAccess !== undefined
+          ? { portalAccess: dto.portalAccess }
+          : {}),
         version: { increment: 1 },
       },
     });
@@ -877,6 +1168,13 @@ function serializeCustomer(row: CustomerWithParty): CustomerDto {
     salubritaEmail: row.salubritaEmail,
     salubritaWhatsapp: row.salubritaWhatsapp,
     salubritaPortal: row.salubritaPortal,
+    enableCreditControl: row.enableCreditControl,
+    alertBeforeCreditLimit: row.alertBeforeCreditLimit,
+    blockOnCreditLimit: row.blockOnCreditLimit,
+    allowExceptionalOverride: row.allowExceptionalOverride,
+    blockOnCriticalOverdue: row.blockOnCriticalOverdue,
+    notifyResponsible: row.notifyResponsible,
+    creditStatus: row.creditStatus,
     status: row.status,
     version: row.version,
     createdAt: row.createdAt.toISOString(),
@@ -906,7 +1204,42 @@ function serializeContact(row: CusContact): ContactDto {
     whatsapp: row.whatsapp,
     email: row.email,
     role: row.role,
+    language: row.language,
     active: row.active,
+    isPrimary: row.isPrimary,
+    canOrder: row.canOrder,
+    receiveInvoices: row.receiveInvoices,
+    receiveDeliveryNotes: row.receiveDeliveryNotes,
+    receiveNotifications: row.receiveNotifications,
+    receiveDunning: row.receiveDunning,
+    portalAccess: row.portalAccess,
+    version: row.version,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function serializeAddress(row: CusAddress): AddressDto {
+  return {
+    id: row.id,
+    customerId: row.customerId,
+    type: row.type,
+    label: row.label,
+    line1: row.line1,
+    line2: row.line2,
+    city: row.city,
+    governorate: row.governorate,
+    postalCode: row.postalCode,
+    lat: row.lat != null ? row.lat.toString() : null,
+    lng: row.lng != null ? row.lng.toString() : null,
+    zoneHint: row.zoneHint,
+    instructions: row.instructions,
+    hours: row.hours,
+    contactName: row.contactName,
+    contactPhone: row.contactPhone,
+    routeHint: row.routeHint,
+    habitualDriver: row.habitualDriver,
+    isPrimary: row.isPrimary,
     version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

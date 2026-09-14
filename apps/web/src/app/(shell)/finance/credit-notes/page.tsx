@@ -21,18 +21,19 @@ import {
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
+  CREDIT_NOTE_STATUS_FILTERS,
   CREDIT_NOTE_STATUS_LABELS,
-  cancelCreditNote,
   createCreditNote,
   creditNoteBadgeTone,
   fetchCreditNotes,
   fetchInvoices,
-  issueCreditNote,
+  type CreditNoteStatus,
   type FinCreditNote,
   type FinInvoice,
 } from "@/lib/finance";
 import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
 import {
+  softChipClass,
   softSelect,
   softTableWrap,
   softThead,
@@ -70,6 +71,11 @@ function emptyLine(taxCodeId = ""): LineDraft {
   };
 }
 
+function parseStatus(raw: string | null): "" | CreditNoteStatus {
+  if (raw === "DRAFT" || raw === "ISSUED" || raw === "CANCELLED") return raw;
+  return "";
+}
+
 function FinanceCreditNotesPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -77,8 +83,10 @@ function FinanceCreditNotesPageInner() {
 
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | CreditNoteStatus>(() =>
+    parseStatus(searchParams.get("status")),
+  );
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [detail, setDetail] = useState<FinCreditNote | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
@@ -89,26 +97,57 @@ function FinanceCreditNotesPageInner() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prefillDone = useRef(false);
 
-  const load = useCallback(async (query?: string, invoiceId?: string | null) => {
-    setState({ kind: "loading" });
-    const res = await fetchCreditNotes({
-      q: query,
-      invoiceId: invoiceId || undefined,
-    });
-    if (!res.ok) {
-      if (res.status === 403) {
-        setState({ kind: "forbidden", message: res.message });
+  const load = useCallback(
+    async (
+      query?: string,
+      invoiceId?: string | null,
+      status?: "" | CreditNoteStatus,
+    ) => {
+      setState({ kind: "loading" });
+      const res = await fetchCreditNotes({
+        q: query,
+        invoiceId: invoiceId || undefined,
+        status: status || undefined,
+      });
+      if (!res.ok) {
+        if (res.status === 403) {
+          setState({ kind: "forbidden", message: res.message });
+          return;
+        }
+        setState({ kind: "error", message: res.message });
         return;
       }
-      setState({ kind: "error", message: res.message });
-      return;
-    }
-    setState({ kind: "ok", items: res.data.items });
-  }, []);
+      setState({ kind: "ok", items: res.data.items });
+    },
+    [],
+  );
+
+  function syncStatusUrl(next: "" | CreditNoteStatus) {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (next) sp.set("status", next);
+    else sp.delete("status");
+    const qs = sp.toString();
+    router.replace(
+      qs ? `/finance/credit-notes?${qs}` : "/finance/credit-notes",
+      { scroll: false },
+    );
+  }
 
   useEffect(() => {
-    void load(q, prefillInvoiceId);
+    void load(q, prefillInvoiceId, statusFilter);
+    // initial hydrate only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load, prefillInvoiceId]);
+
+  useEffect(() => {
+    const next = parseStatus(searchParams.get("status"));
+    if (next !== statusFilter) {
+      setStatusFilter(next);
+      void load(q, prefillInvoiceId, next);
+    }
+    // sync from URL only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     void (async () => {
@@ -238,30 +277,7 @@ function FinanceCreditNotesPageInner() {
       return;
     }
     setDrawerOpen(false);
-    await load(q, prefillInvoiceId);
-  }
-
-  async function onIssue(id: string) {
-    setBusy(true);
-    const res = await issueCreditNote(id);
-    setBusy(false);
-    if (!res.ok) {
-      setState({ kind: "error", message: res.message });
-      return;
-    }
-    await load(q, prefillInvoiceId);
-  }
-
-  async function onCancel(id: string) {
-    if (!window.confirm("Annuler ce brouillon d’avoir ?")) return;
-    setBusy(true);
-    const res = await cancelCreditNote(id);
-    setBusy(false);
-    if (!res.ok) {
-      setState({ kind: "error", message: res.message });
-      return;
-    }
-    await load(q, prefillInvoiceId);
+    router.push(`/finance/credit-notes/${res.data.id}`);
   }
 
   function selectInvoice(opt: AComboboxOption) {
@@ -327,16 +343,44 @@ function FinanceCreditNotesPageInner() {
               placeholder="N° / motif"
               aria-label="Recherche"
               onKeyDown={(e) => {
-                if (e.key === "Enter") void load(q, prefillInvoiceId);
+                if (e.key === "Enter")
+                  void load(q, prefillInvoiceId, statusFilter);
               }}
             />
+          }
+          filters={
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filtrer par statut"
+            >
+              {CREDIT_NOTE_STATUS_FILTERS.map((chip) => {
+                const active = statusFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id || "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => {
+                      setStatusFilter(chip.id);
+                      syncStatusUrl(chip.id);
+                      void load(q, prefillInvoiceId, chip.id);
+                    }}
+                    className={softChipClass(active)}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
           }
           utilities={
             <AButton
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() => void load(q, prefillInvoiceId)}
+              onClick={() => void load(q, prefillInvoiceId, statusFilter)}
             >
               Filtrer
             </AButton>
@@ -356,7 +400,7 @@ function FinanceCreditNotesPageInner() {
           <AErrorState
             message={state.message}
             retryable
-            onRetry={() => void load(q, prefillInvoiceId)}
+            onRetry={() => void load(q, prefillInvoiceId, statusFilter)}
           />
         ) : null}
         {state.kind === "ok" && state.items.length === 0 ? (
@@ -381,12 +425,17 @@ function FinanceCreditNotesPageInner() {
                   <th className="a-table-cell font-medium text-right">
                     Non appliqué
                   </th>
-                  <th className="a-table-cell font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {state.items.map((cn) => (
-                  <tr key={cn.id} className={softTr}>
+                  <tr
+                    key={cn.id}
+                    className={`${softTr} cursor-pointer`}
+                    onClick={() =>
+                      router.push(`/finance/credit-notes/${cn.id}`)
+                    }
+                  >
                     <td className="a-mono a-table-cell">{cn.number}</td>
                     <td className="a-mono a-table-cell">
                       {cn.invoiceNumber ?? "—"}
@@ -407,40 +456,6 @@ function FinanceCreditNotesPageInner() {
                     </td>
                     <td className="a-mono a-table-cell tabular-nums text-right">
                       {cn.amountUnapplied}
-                    </td>
-                    <td className="a-table-cell">
-                      <div className="flex flex-wrap gap-2">
-                        <AButton
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setDetail(cn)}
-                        >
-                          Détail
-                        </AButton>
-                        {cn.status === "DRAFT" ? (
-                          <>
-                            <AButton
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              disabled={busy}
-                              onClick={() => void onIssue(cn.id)}
-                            >
-                              Émettre
-                            </AButton>
-                            <AButton
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={busy}
-                              onClick={() => void onCancel(cn.id)}
-                            >
-                              Annuler
-                            </AButton>
-                          </>
-                        ) : null}
-                      </div>
                     </td>
                   </tr>
                 ))}
@@ -623,68 +638,6 @@ function FinanceCreditNotesPageInner() {
               >
                 {busy ? "Création…" : "Créer"}
               </AButton>
-            </div>
-          </div>
-        ) : null}
-      </ADrawer>
-
-      <ADrawer
-        open={!!detail}
-        onOpenChange={(open) => {
-          if (!open) setDetail(null);
-        }}
-        title={detail ? `Avoir ${detail.number}` : "Avoir"}
-        description={
-          detail
-            ? `${detail.invoiceNumber ?? "—"} · ${CREDIT_NOTE_STATUS_LABELS[detail.status]}`
-            : undefined
-        }
-      >
-        {detail ? (
-          <div className="space-y-3 text-[length:var(--a-text-sm)]">
-            <p>
-              Client: {detail.customerName ?? detail.customerCode ?? "—"}
-            </p>
-            <p className="a-mono tabular-nums">
-              HT {detail.amountHt} · TVA {detail.amountTax} · TTC{" "}
-              {detail.amountTotal} {detail.currency}
-            </p>
-            <p className="a-mono tabular-nums">
-              Appliqué AR {detail.amountAppliedToAr} · Non appliqué{" "}
-              {detail.amountUnapplied}
-            </p>
-            {detail.reason ? <p>Motif: {detail.reason}</p> : null}
-            <div className={softTableWrap}>
-              <table className="w-full border-collapse text-left">
-                <thead className={softThead}>
-                  <tr>
-                    <th className="a-table-cell">Description</th>
-                    <th className="a-table-cell text-right">Qté</th>
-                    <th className="a-table-cell text-right">PU HT</th>
-                    <th className="a-table-cell">TVA</th>
-                    <th className="a-table-cell text-right">TTC</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detail.lines.map((l) => (
-                    <tr key={l.id} className={softTr}>
-                      <td className="a-table-cell">{l.description}</td>
-                      <td className="a-mono a-table-cell tabular-nums text-right">
-                        {l.qty}
-                      </td>
-                      <td className="a-mono a-table-cell tabular-nums text-right">
-                        {l.unitPriceHt}
-                      </td>
-                      <td className="a-mono a-table-cell">
-                        {l.taxCode ?? "—"}
-                      </td>
-                      <td className="a-mono a-table-cell tabular-nums text-right">
-                        {l.amountTtc}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
         ) : null}

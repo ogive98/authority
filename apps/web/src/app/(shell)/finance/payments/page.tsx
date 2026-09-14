@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ABadge,
   AButton,
@@ -20,18 +21,23 @@ import {
 } from "@/components/a";
 import { fetchCustomers } from "@/lib/customers";
 import {
+  PAYMENT_STATUS_FILTERS,
+  PAYMENT_STATUS_LABELS,
   POLICY_LABELS,
   confirmAllocation,
   createPayment,
   fetchPayments,
+  paymentBadgeTone,
   reversePayment,
   simulateAllocation,
   type AllocationPlan,
   type AllocationPolicy,
   type FinPayment,
   type PaymentMethod,
+  type PaymentStatus,
 } from "@/lib/finance";
 import {
+  softChipClass,
   softSelect,
   softTableWrap,
   softThead,
@@ -56,9 +62,30 @@ const METHODS: { id: PaymentMethod; label: string }[] = [
 const POLICIES = Object.keys(POLICY_LABELS) as AllocationPolicy[];
 
 export default function FinancePaymentsPage() {
+  return (
+    <Suspense
+      fallback={
+        <APageBody>
+          <ASkeleton className="h-10 w-48" />
+          <ASkeleton className="h-10 w-full" />
+        </APageBody>
+      }
+    >
+      <FinancePaymentsPageInner />
+    </Suspense>
+  );
+}
+
+function FinancePaymentsPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | PaymentStatus>(() => {
+    const s = searchParams.get("status");
+    if (s === "DRAFT" || s === "POSTED" || s === "REVERSED") return s;
+    return "";
+  });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [allocOpen, setAllocOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -81,19 +108,35 @@ export default function FinancePaymentsPage() {
   const [plan, setPlan] = useState<AllocationPlan | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async (query?: string) => {
-    setState({ kind: "loading" });
-    const res = await fetchPayments({ q: query });
-    if (!res.ok) {
-      if (res.status === 403) {
-        setState({ kind: "forbidden", message: res.message });
+  const load = useCallback(
+    async (query?: string, status?: "" | PaymentStatus) => {
+      setState({ kind: "loading" });
+      const res = await fetchPayments({
+        q: query,
+        status: status || undefined,
+      });
+      if (!res.ok) {
+        if (res.status === 403) {
+          setState({ kind: "forbidden", message: res.message });
+          return;
+        }
+        setState({ kind: "error", message: res.message });
         return;
       }
-      setState({ kind: "error", message: res.message });
-      return;
-    }
-    setState({ kind: "ok", items: res.data.items });
-  }, []);
+      setState({ kind: "ok", items: res.data.items });
+    },
+    [],
+  );
+
+  function syncStatusUrl(next: "" | PaymentStatus) {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (next) sp.set("status", next);
+    else sp.delete("status");
+    const qs = sp.toString();
+    router.replace(qs ? `/finance/payments?${qs}` : "/finance/payments", {
+      scroll: false,
+    });
+  }
 
   async function onReverse(id: string) {
     if (
@@ -110,12 +153,26 @@ export default function FinancePaymentsPage() {
       setState({ kind: "error", message: res.message });
       return;
     }
-    await load(q);
+    await load(q, statusFilter);
   }
 
   useEffect(() => {
-    void load(q);
+    void load("", statusFilter);
+    // initial hydrate only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
+
+  useEffect(() => {
+    const s = searchParams.get("status");
+    const next: "" | PaymentStatus =
+      s === "DRAFT" || s === "POSTED" || s === "REVERSED" ? s : "";
+    if (next !== statusFilter) {
+      setStatusFilter(next);
+      void load(q, next);
+    }
+    // sync from URL only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const refreshCustomers = useCallback(async (query: string) => {
     setCustomerLoading(true);
@@ -180,7 +237,7 @@ export default function FinancePaymentsPage() {
       return;
     }
     setDrawerOpen(false);
-    await load(q);
+    router.push(`/finance/payments/${res.data.id}`);
   }
 
   async function onSimulate() {
@@ -208,7 +265,7 @@ export default function FinancePaymentsPage() {
     setAllocOpen(false);
     setAllocTarget(null);
     setPlan(null);
-    await load(q);
+    await load(q, statusFilter);
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -234,7 +291,7 @@ export default function FinancePaymentsPage() {
       <AScreenHeader
         kicker="Finance"
         title="Encaissements"
-        description="Paiements + Allocation Engine (politiques A–G) — Utility Cube."
+        description="Paiements AR Soft Glass — affectation A–G · fiche détail · GL via Thunder (D238)."
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             Nouveau paiement
@@ -277,18 +334,45 @@ export default function FinancePaymentsPage() {
               placeholder="N° / client / référence"
               aria-label="Recherche"
               onKeyDown={(e) => {
-                if (e.key === "Enter") void load(q);
+                if (e.key === "Enter") void load(q, statusFilter);
               }}
             />
+          }
+          filters={
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filtrer par statut"
+            >
+              {PAYMENT_STATUS_FILTERS.map((chip) => {
+                const active = statusFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id || "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => {
+                      setStatusFilter(chip.id);
+                      syncStatusUrl(chip.id);
+                      void load(q, chip.id);
+                    }}
+                    className={softChipClass(active)}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
           }
           utilities={
             <AButton
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() => void load(q)}
+              onClick={() => void load(q, statusFilter)}
             >
-              Filtrer
+              Actualiser
             </AButton>
           }
         />
@@ -300,10 +384,19 @@ export default function FinancePaymentsPage() {
           <AForbiddenState message={state.message} />
         ) : null}
         {state.kind === "error" ? (
-          <AErrorState message={state.message} retryable onRetry={() => void load(q)} />
+          <AErrorState
+            message={state.message}
+            retryable
+            onRetry={() => void load(q, statusFilter)}
+          />
         ) : null}
         {state.kind === "ok" && state.items.length === 0 ? (
-          <AEmptyState title="Aucun paiement" description="Enregistrez un encaissement puis simulez l’affectation." />
+          <AEmptyState
+            title="Aucun paiement"
+            description="Enregistrez un encaissement puis ouvrez la fiche pour affecter."
+            actionLabel="Nouveau paiement"
+            onAction={openCreate}
+          />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
           <div className={softTableWrap}>
@@ -321,8 +414,20 @@ export default function FinancePaymentsPage() {
               </thead>
               <tbody>
                 {state.items.map((p) => (
-                  <tr key={p.id} className={softTr}>
-                    <td className="a-mono a-table-cell">{p.number}</td>
+                  <tr
+                    key={p.id}
+                    className={`${softTr} cursor-pointer`}
+                    onClick={() => router.push(`/finance/payments/${p.id}`)}
+                  >
+                    <td className="a-mono a-table-cell">
+                      <Link
+                        href={`/finance/payments/${p.id}`}
+                        className="text-a-accent hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {p.number}
+                      </Link>
+                    </td>
                     <td className="a-table-cell">
                       {p.customerName ?? p.customerCode ?? "—"}
                     </td>
@@ -334,19 +439,14 @@ export default function FinancePaymentsPage() {
                       {p.amountUnallocated}
                     </td>
                     <td className="a-table-cell">
-                      <ABadge
-                        tone={
-                          p.status === "POSTED"
-                            ? "accent"
-                            : p.status === "REVERSED"
-                              ? "warning"
-                              : "neutral"
-                        }
-                      >
-                        {p.status}
+                      <ABadge tone={paymentBadgeTone(p.status)}>
+                        {PAYMENT_STATUS_LABELS[p.status]}
                       </ABadge>
                     </td>
-                    <td className="a-table-cell">
+                    <td
+                      className="a-table-cell"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex flex-wrap gap-1.5">
                         {p.status === "POSTED" &&
                         Number(p.amountUnallocated) > 0 ? (

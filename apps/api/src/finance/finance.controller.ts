@@ -22,6 +22,7 @@ import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
   AllocateOpenItemDto,
   ConfirmAllocationDto,
+  CreateApBillDto,
   CreateApPaymentDto,
   CreateBankAccountDto,
   CreateBankStatementLinesDto,
@@ -35,19 +36,24 @@ import {
   ImportBankOfxDto,
   MatchBankLineDto,
   PrepareDunningDto,
+  ReviewPaymentDeclarationDto,
   SimulateAllocationDto,
   TransitionInstrumentDto,
   UpdateBankAccountDto,
 } from './finance.dto';
+import { ApBillService } from './ap-bill.service';
 import { ApPaymentService } from './ap-payment.service';
 import { BankingService } from './banking.service';
 import { CreditNoteService } from './credit-note.service';
 import { DunningService } from './dunning.service';
 import { FinanceService } from './finance.service';
 import { InvoiceService } from './invoice.service';
+import { PaymentDeclarationService } from './payment-declaration.service';
 import { PaymentService } from './payment.service';
 import { PromiseService } from './promise.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
+import { CurrentUser } from '../identity/identity.decorators';
+import type { IamUser } from '@prisma/client';
 
 @Controller('api/v1/finance')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
@@ -59,7 +65,9 @@ export class FinanceController {
     private readonly creditNoteService: CreditNoteService,
     private readonly paymentService: PaymentService,
     private readonly apPaymentService: ApPaymentService,
+    private readonly apBillService: ApBillService,
     private readonly promiseService: PromiseService,
+    private readonly paymentDeclarations: PaymentDeclarationService,
     private readonly bankingService: BankingService,
     private readonly dunningService: DunningService,
     private readonly expertise: ExpertiseResolverService,
@@ -384,6 +392,15 @@ export class FinanceController {
     });
   }
 
+  @Get('instruments/:id')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  getInstrument(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.paymentService.getInstrument(tenancy.companyId, id);
+  }
+
   @Patch('instruments/:id/status')
   @HttpCode(200)
   @RequirePermission(PERMISSION_KEYS.financeAllocate)
@@ -456,6 +473,70 @@ export class FinanceController {
     return this.promiseService.cancel(tenancy.companyId, id);
   }
 
+  /** D243 — portal payment declarations (ADV review; no FinPayment auto-create). */
+  @Get('payment-declarations')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  listPaymentDeclarations(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('customerId') customerId?: string,
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.paymentDeclarations.list(tenancy.companyId, {
+      q,
+      status,
+      customerId,
+      limit: Number.isFinite(limit) ? limit : undefined,
+      cursor,
+    });
+  }
+
+  @Get('payment-declarations/:id')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  getPaymentDeclaration(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.paymentDeclarations.get(tenancy.companyId, id);
+  }
+
+  @Post('payment-declarations/:id/acknowledge')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  acknowledgePaymentDeclaration(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReviewPaymentDeclarationDto,
+  ) {
+    return this.paymentDeclarations.acknowledge(
+      tenancy.companyId,
+      id,
+      user.id,
+      dto,
+    );
+  }
+
+  @Post('payment-declarations/:id/reject')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  rejectPaymentDeclaration(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReviewPaymentDeclarationDto,
+  ) {
+    return this.paymentDeclarations.reject(
+      tenancy.companyId,
+      id,
+      user.id,
+      dto,
+    );
+  }
+
   /** D189 — multi-bank accounts + soft statement match (no GL). */
   @Get('bank-accounts')
   @RequirePermission(PERMISSION_KEYS.financeArRead)
@@ -517,12 +598,14 @@ export class FinanceController {
     @CurrentTenancy() tenancy: TenancyContext,
     @Query('q') q?: string,
     @Query('status') status?: string,
+    @Query('apBillId') apBillId?: string,
     @Query('limit') limitRaw?: string,
   ) {
     const limit = limitRaw ? Number(limitRaw) : undefined;
     return this.apPaymentService.list(tenancy.companyId, {
       q,
       status,
+      apBillId,
       limit: Number.isFinite(limit) ? limit : undefined,
     });
   }
@@ -535,6 +618,62 @@ export class FinanceController {
     @Body() dto: CreateApPaymentDto,
   ) {
     return this.apPaymentService.create(tenancy.companyId, dto);
+  }
+
+  /** D236 — AP vendor bills (vendorName free text, no supplier master, no GL). */
+  @Get('ap-bills')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  listApBills(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.apBillService.list(tenancy.companyId, {
+      q,
+      status,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Get('ap-bills/:id')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  getApBill(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.apBillService.get(tenancy.companyId, id);
+  }
+
+  @Post('ap-bills')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  createApBill(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateApBillDto,
+  ) {
+    return this.apBillService.create(tenancy.companyId, dto);
+  }
+
+  @Post('ap-bills/:id/post')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  postApBill(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.apBillService.post(tenancy.companyId, id);
+  }
+
+  @Post('ap-bills/:id/cancel')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.financeArWrite)
+  cancelApBill(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.apBillService.cancel(tenancy.companyId, id);
   }
 
   @Get('bank-treasury')
@@ -664,12 +803,14 @@ export class FinanceController {
     @CurrentTenancy() tenancy: TenancyContext,
     @Query('status') status?: string,
     @Query('openItemId') openItemId?: string,
+    @Query('customerId') customerId?: string,
     @Query('limit') limitRaw?: string,
   ) {
     const limit = limitRaw ? Number(limitRaw) : undefined;
     return this.dunningService.list(tenancy.companyId, {
       status,
       openItemId,
+      customerId,
       limit: Number.isFinite(limit) ? limit : undefined,
     });
   }

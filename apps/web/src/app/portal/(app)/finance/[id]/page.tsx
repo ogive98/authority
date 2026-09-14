@@ -2,7 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ABadge } from "@/components/a/a-badge";
 import { AErrorState } from "@/components/a/a-error-state";
+import { APageBody } from "@/components/a/a-page-body";
 import { AScreenHeader } from "@/components/a/a-screen-header";
+import {
+  ASoftTable,
+  ASoftThead,
+  ASoftTr,
+} from "@/components/a/a-soft-table";
 import {
   fetchPortalOpenItem,
   portalOpenItemBadgeTone,
@@ -27,12 +33,12 @@ export default async function PortalFinanceDetailPage({
     return (
       <div>
         <AScreenHeader kicker="Customer Portal" title="Créance" />
-        <div className="px-[var(--a-space-6)] py-[var(--a-space-5)]">
+        <APageBody>
           <AErrorState
             message="Impossible de charger cette créance."
             retryable={false}
           />
-        </div>
+        </APageBody>
       </div>
     );
   }
@@ -52,7 +58,7 @@ export default async function PortalFinanceDetailPage({
           </Link>
         }
       />
-      <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
+      <APageBody>
         <div className="flex flex-wrap items-center gap-3">
           <ABadge tone={portalOpenItemBadgeTone(data.status)}>
             {portalOpenItemStatusLabel(data.status)}
@@ -67,29 +73,26 @@ export default async function PortalFinanceDetailPage({
           ) : null}
         </div>
 
-        <div className="a-underlay overflow-hidden rounded-md">
-          <div className="border-b border-a-border-subtle px-4 py-2 text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
+        <section className="space-y-2">
+          <h2 className="px-1 text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
             Encaissements
-          </div>
+          </h2>
           {data.allocations.length === 0 ? (
-            <p className="px-4 py-3 text-[length:var(--a-text-sm)] text-a-fg-muted">
+            <p className="a-underlay rounded-md px-4 py-3 text-[length:var(--a-text-sm)] text-a-fg-muted">
               Aucun encaissement enregistré.
             </p>
           ) : (
-            <table className="w-full border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="bg-a-surface-3/80 text-a-fg-muted">
+            <ASoftTable>
+              <ASoftThead>
                 <tr>
                   <th className="a-table-cell font-medium">Date</th>
                   <th className="a-table-cell font-medium">Montant</th>
                   <th className="a-table-cell font-medium">Note</th>
                 </tr>
-              </thead>
+              </ASoftThead>
               <tbody>
                 {data.allocations.map((a, i) => (
-                  <tr
-                    key={`${a.paidAt}-${i}`}
-                    className="border-t border-a-border-subtle"
-                  >
+                  <ASoftTr key={`${a.paidAt}-${i}`}>
                     <td className="a-mono a-table-cell text-a-fg-muted">
                       {a.paidAt.slice(0, 10)}
                     </td>
@@ -99,13 +102,13 @@ export default async function PortalFinanceDetailPage({
                     <td className="a-table-cell text-a-fg-muted">
                       {a.note ?? "—"}
                     </td>
-                  </tr>
+                  </ASoftTr>
                 ))}
               </tbody>
-            </table>
+            </ASoftTable>
           )}
-        </div>
-      </div>
+        </section>
+      </APageBody>
     </div>
   );
 }

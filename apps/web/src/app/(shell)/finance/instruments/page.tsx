@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ABadge,
   AButton,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AOverflowMenu,
   APageBody,
@@ -14,13 +15,15 @@ import {
   ASkeleton,
 } from "@/components/a";
 import {
+  INSTRUMENT_STATUS_FILTERS,
   INSTRUMENT_STATUS_LABELS,
   fetchInstruments,
-  transitionInstrument,
+  instrumentBadgeTone,
   type FinInstrument,
   type InstrumentStatus,
 } from "@/lib/finance";
 import {
+  softChipClass,
   softTableWrap,
   softThead,
   softTr,
@@ -32,20 +35,53 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-const NEXT: Partial<Record<InstrumentStatus, InstrumentStatus[]>> = {
-  RECEIVED: ["DEPOSITED", "PRESENTED", "REJECTED"],
-  DEPOSITED: ["PRESENTED", "CLEARED", "REJECTED"],
-  PRESENTED: ["CLEARED", "REJECTED"],
+const TYPE_LABELS: Record<FinInstrument["type"], string> = {
+  CHEQUE: "Chèque",
+  BILL_OF_EXCHANGE: "Traite",
 };
 
-export default function FinanceInstrumentsPage() {
-  const router = useRouter();
-  const [state, setState] = useState<LoadState>({ kind: "loading" });
-  const [busy, setBusy] = useState(false);
+function parseStatus(raw: string | null): "" | InstrumentStatus {
+  if (
+    raw === "RECEIVED" ||
+    raw === "DEPOSITED" ||
+    raw === "PRESENTED" ||
+    raw === "CLEARED" ||
+    raw === "REJECTED" ||
+    raw === "CANCELLED"
+  ) {
+    return raw;
+  }
+  return "";
+}
 
-  const load = useCallback(async () => {
+export default function FinanceInstrumentsPage() {
+  return (
+    <Suspense
+      fallback={
+        <APageBody>
+          <ASkeleton className="h-10 w-48" />
+          <ASkeleton className="h-10 w-full" />
+        </APageBody>
+      }
+    >
+      <FinanceInstrumentsPageInner />
+    </Suspense>
+  );
+}
+
+function FinanceInstrumentsPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const [statusFilter, setStatusFilter] = useState<"" | InstrumentStatus>(() =>
+    parseStatus(searchParams.get("status")),
+  );
+
+  const load = useCallback(async (status?: "" | InstrumentStatus) => {
     setState({ kind: "loading" });
-    const res = await fetchInstruments();
+    const res = await fetchInstruments({
+      status: status || undefined,
+    });
     if (!res.ok) {
       if (res.status === 403) {
         setState({ kind: "forbidden", message: res.message });
@@ -57,27 +93,30 @@ export default function FinanceInstrumentsPage() {
     setState({ kind: "ok", items: res.data.items });
   }, []);
 
+  function syncStatusUrl(next: "" | InstrumentStatus) {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (next) sp.set("status", next);
+    else sp.delete("status");
+    const qs = sp.toString();
+    router.replace(
+      qs ? `/finance/instruments?${qs}` : "/finance/instruments",
+      { scroll: false },
+    );
+  }
+
   useEffect(() => {
-    void load();
+    void load(statusFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
-  async function onTransition(id: string, status: InstrumentStatus) {
-    setBusy(true);
-    const reason =
-      status === "REJECTED"
-        ? window.prompt("Motif de rejet (optionnel)") ?? undefined
-        : undefined;
-    const res = await transitionInstrument(id, {
-      status,
-      rejectReason: reason || undefined,
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setState({ kind: "error", message: res.message });
-      return;
+  useEffect(() => {
+    const next = parseStatus(searchParams.get("status"));
+    if (next !== statusFilter) {
+      setStatusFilter(next);
+      void load(next);
     }
-    await load();
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   return (
     <>
@@ -108,6 +147,46 @@ export default function FinanceInstrumentsPage() {
         }
       />
       <APageBody>
+        <AFilterBar
+          filters={
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filtrer par statut"
+            >
+              {INSTRUMENT_STATUS_FILTERS.map((chip) => {
+                const active = statusFilter === chip.id;
+                return (
+                  <button
+                    key={chip.id || "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => {
+                      setStatusFilter(chip.id);
+                      syncStatusUrl(chip.id);
+                      void load(chip.id);
+                    }}
+                    className={softChipClass(active)}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          }
+          utilities={
+            <AButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => void load(statusFilter)}
+            >
+              Filtrer
+            </AButton>
+          }
+        />
+
         {state.kind === "loading" ? (
           <ASkeleton className="h-24 w-full" />
         ) : null}
@@ -118,7 +197,7 @@ export default function FinanceInstrumentsPage() {
           <AErrorState
             message={state.message}
             retryable
-            onRetry={() => void load()}
+            onRetry={() => void load(statusFilter)}
           />
         ) : null}
         {state.kind === "ok" && state.items.length === 0 ? (
@@ -137,13 +216,18 @@ export default function FinanceInstrumentsPage() {
                   <th className="a-table-cell font-medium">Montant</th>
                   <th className="a-table-cell font-medium">Échéance</th>
                   <th className="a-table-cell font-medium">Statut</th>
-                  <th className="a-table-cell font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {state.items.map((row) => (
-                  <tr key={row.id} className={softTr}>
-                    <td className="a-table-cell">{row.type}</td>
+                  <tr
+                    key={row.id}
+                    className={`${softTr} cursor-pointer`}
+                    onClick={() =>
+                      router.push(`/finance/instruments/${row.id}`)
+                    }
+                  >
+                    <td className="a-table-cell">{TYPE_LABELS[row.type]}</td>
                     <td className="a-mono a-table-cell">{row.number}</td>
                     <td className="a-mono a-table-cell tabular-nums">
                       {row.amount}
@@ -152,33 +236,9 @@ export default function FinanceInstrumentsPage() {
                       {row.dueDate ?? "—"}
                     </td>
                     <td className="a-table-cell">
-                      <ABadge
-                        tone={
-                          row.status === "CLEARED"
-                            ? "success"
-                            : row.status === "REJECTED"
-                              ? "warning"
-                              : "accent"
-                        }
-                      >
+                      <ABadge tone={instrumentBadgeTone(row.status)}>
                         {INSTRUMENT_STATUS_LABELS[row.status]}
                       </ABadge>
-                    </td>
-                    <td className="a-table-cell">
-                      <div className="flex flex-wrap gap-1">
-                        {(NEXT[row.status] ?? []).map((s) => (
-                          <AButton
-                            key={s}
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            disabled={busy}
-                            onClick={() => void onTransition(row.id, s)}
-                          >
-                            {INSTRUMENT_STATUS_LABELS[s]}
-                          </AButton>
-                        ))}
-                      </div>
                     </td>
                   </tr>
                 ))}

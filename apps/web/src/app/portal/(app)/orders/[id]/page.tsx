@@ -2,7 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ABadge } from "@/components/a/a-badge";
 import { AErrorState } from "@/components/a/a-error-state";
+import { APageBody } from "@/components/a/a-page-body";
 import { AScreenHeader } from "@/components/a/a-screen-header";
+import {
+  ASoftTable,
+  ASoftThead,
+  ASoftTr,
+} from "@/components/a/a-soft-table";
 import { PortalPackageJourney } from "@/components/portal/portal-package-journey";
 import { PortalReorderButton } from "@/components/portal/portal-reorder-button";
 import {
@@ -31,9 +37,9 @@ export default async function PortalOrderDetailPage({
 
   if (status !== 200 || !order) {
     return (
-      <div>
+      <>
         <AScreenHeader kicker="Customer Portal" title="Commande" />
-        <div className="px-[var(--a-space-6)] py-[var(--a-space-5)]">
+        <APageBody>
           <AErrorState
             message="Impossible de charger cette commande."
             retryable={false}
@@ -46,8 +52,8 @@ export default async function PortalOrderDetailPage({
               ← Retour aux commandes
             </Link>
           </p>
-        </div>
-      </div>
+        </APageBody>
+      </>
     );
   }
 
@@ -73,7 +79,7 @@ export default async function PortalOrderDetailPage({
           </div>
         }
       />
-      <div className="space-y-[var(--a-space-5)] px-[var(--a-space-6)] py-[var(--a-space-5)]">
+      <APageBody>
         {linkedDelivery ? (
           <div className="space-y-2">
             <PortalPackageJourney delivery={linkedDelivery} />
@@ -139,47 +145,40 @@ export default async function PortalOrderDetailPage({
           </div>
         </div>
 
-        <div className="a-underlay overflow-hidden rounded-md">
-          <div className="border-b border-a-border-subtle px-4 py-3">
-            <h2 className="text-[length:var(--a-text-sm)] font-medium">
-              Lignes
-            </h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className="bg-a-surface-3/80 text-a-fg-muted">
-                <tr>
-                  <th className="a-table-cell font-medium">SKU</th>
-                  <th className="a-table-cell font-medium">Produit</th>
-                  <th className="a-table-cell text-right font-medium">Qté</th>
-                  <th className="a-table-cell text-right font-medium">P.U.</th>
-                  <th className="a-table-cell text-right font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.lines.map((line, idx) => (
-                  <tr
-                    key={`${line.sku ?? "line"}-${idx}`}
-                    className="border-t border-a-border-subtle"
-                  >
-                    <td className="a-mono a-table-cell">{line.sku ?? "—"}</td>
-                    <td className="a-table-cell">{line.name ?? "—"}</td>
-                    <td className="a-mono a-tabular a-table-cell text-right">
-                      {line.qty}
-                    </td>
-                    <td className="a-mono a-tabular a-table-cell text-right">
-                      {line.unitPrice}
-                    </td>
-                    <td className="a-mono a-tabular a-table-cell text-right">
-                      {line.lineTotal}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+        <section className="space-y-2">
+          <h2 className="text-[length:var(--a-text-sm)] font-medium">
+            Lignes
+          </h2>
+          <ASoftTable className="min-w-[480px]">
+            <ASoftThead>
+              <tr>
+                <th className="a-table-cell font-medium">SKU</th>
+                <th className="a-table-cell font-medium">Produit</th>
+                <th className="a-table-cell text-right font-medium">Qté</th>
+                <th className="a-table-cell text-right font-medium">P.U.</th>
+                <th className="a-table-cell text-right font-medium">Total</th>
+              </tr>
+            </ASoftThead>
+            <tbody>
+              {order.lines.map((line, idx) => (
+                <ASoftTr key={`${line.sku ?? "line"}-${idx}`}>
+                  <td className="a-mono a-table-cell">{line.sku ?? "—"}</td>
+                  <td className="a-table-cell">{line.name ?? "—"}</td>
+                  <td className="a-mono a-tabular a-table-cell text-right">
+                    {line.qty}
+                  </td>
+                  <td className="a-mono a-tabular a-table-cell text-right">
+                    {line.unitPrice}
+                  </td>
+                  <td className="a-mono a-tabular a-table-cell text-right">
+                    {line.lineTotal}
+                  </td>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
+        </section>
+      </APageBody>
     </div>
   );
 }

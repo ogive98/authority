@@ -5,6 +5,8 @@ export const PORTAL_ORDERS_NEW_PATH = "/portal/orders/new";
 export const PORTAL_DELIVERIES_PATH = "/portal/deliveries";
 export const PORTAL_FINANCE_PATH = "/portal/finance";
 export const PORTAL_FINANCE_INVOICES_PATH = "/portal/finance/invoices";
+export const PORTAL_FINANCE_PAYMENT_DECLARATIONS_PATH =
+  "/portal/finance/payment-declarations";
 export const PORTAL_CLAIMS_PATH = "/portal/claims";
 export const PORTAL_DOCUMENTS_PATH = "/portal/documents";
 export const PORTAL_SALUBRITA_PATH = "/portal/salubrita";
@@ -22,6 +24,8 @@ export const PORTAL_API = {
   financeOpenItems: "/api/v1/customer-portal/finance/open-items",
   financeInvoices: "/api/v1/customer-portal/finance/invoices",
   financeCredit: "/api/v1/customer-portal/finance/credit",
+  financePaymentDeclarations:
+    "/api/v1/customer-portal/finance/payment-declarations",
   claims: "/api/v1/customer-portal/claims",
   documents: "/api/v1/customer-portal/documents",
   salubritaCertificates: "/api/v1/customer-portal/salubrita/certificates",
@@ -193,6 +197,43 @@ export type PortalInvoice = {
 
 export type PortalInvoiceList = {
   items: PortalInvoice[];
+  nextCursor: string | null;
+};
+
+export type PortalPaymentDeclarationStatus =
+  | "SUBMITTED"
+  | "ACKNOWLEDGED"
+  | "REJECTED"
+  | "CANCELLED";
+
+export type PortalPaymentMethod =
+  | "CASH"
+  | "BANK_TRANSFER"
+  | "CARD"
+  | "CHEQUE"
+  | "BILL_OF_EXCHANGE"
+  | "OTHER";
+
+export type PortalPaymentDeclaration = {
+  id: string;
+  number: string;
+  amount: string;
+  currency: string;
+  method: PortalPaymentMethod;
+  paymentDate: string;
+  reference: string | null;
+  notes: string | null;
+  openItemId: string | null;
+  status: PortalPaymentDeclarationStatus;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+};
+
+export type PortalPaymentDeclarationList = {
+  items: PortalPaymentDeclaration[];
   nextCursor: string | null;
 };
 
@@ -409,6 +450,29 @@ export async function fetchPortalInvoice(
   id: string,
 ): Promise<{ status: number; data: PortalInvoice | null }> {
   return portalFetch<PortalInvoice>(`${PORTAL_API.financeInvoices}/${id}`);
+}
+
+export async function fetchPortalPaymentDeclarations(opts?: {
+  status?: string;
+  limit?: number;
+  cursor?: string;
+}): Promise<{ status: number; data: PortalPaymentDeclarationList | null }> {
+  const params = new URLSearchParams();
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.cursor) params.set("cursor", opts.cursor);
+  const qs = params.toString();
+  return portalFetch<PortalPaymentDeclarationList>(
+    `${PORTAL_API.financePaymentDeclarations}${qs ? `?${qs}` : ""}`,
+  );
+}
+
+export async function fetchPortalPaymentDeclaration(
+  id: string,
+): Promise<{ status: number; data: PortalPaymentDeclaration | null }> {
+  return portalFetch<PortalPaymentDeclaration>(
+    `${PORTAL_API.financePaymentDeclarations}/${id}`,
+  );
 }
 
 export async function fetchClaims(opts?: {
@@ -632,6 +696,33 @@ export function portalInvoiceBadgeTone(
 ): "success" | "warning" | "neutral" {
   if (status === "CANCELLED") return "warning";
   return "success";
+}
+
+export function portalPaymentDeclarationStatusLabel(
+  status: PortalPaymentDeclarationStatus,
+): string {
+  if (status === "ACKNOWLEDGED") return "Prise en compte";
+  if (status === "REJECTED") return "Refusée";
+  if (status === "CANCELLED") return "Annulée";
+  return "Soumise";
+}
+
+export function portalPaymentDeclarationBadgeTone(
+  status: PortalPaymentDeclarationStatus,
+): "success" | "warning" | "accent" | "neutral" | "danger" {
+  if (status === "ACKNOWLEDGED") return "success";
+  if (status === "SUBMITTED") return "accent";
+  if (status === "REJECTED") return "danger";
+  return "neutral";
+}
+
+export function portalPaymentMethodLabel(method: PortalPaymentMethod): string {
+  if (method === "CASH") return "Espèces";
+  if (method === "BANK_TRANSFER") return "Virement";
+  if (method === "CARD") return "Carte";
+  if (method === "CHEQUE") return "Chèque";
+  if (method === "BILL_OF_EXCHANGE") return "Traite";
+  return "Autre";
 }
 
 export function portalInsightSeverityLabel(

@@ -122,7 +122,11 @@ function SalesPageInner() {
   const { label: st } = useStatusLabel();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | SalesOrderStatus>("");
+  const [statusFilter, setStatusFilter] = useState<"" | SalesOrderStatus>(() => {
+    const s = searchParams.get("status");
+    if (s === "DRAFT" || s === "CONFIRMED" || s === "CANCELLED") return s;
+    return "";
+  });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -161,7 +165,7 @@ function SalesPageInner() {
   }, []);
 
   useEffect(() => {
-    void load("", "");
+    void load("", statusFilter);
     void (async () => {
       const [w, s] = await Promise.all([
         fetchWarehouses(),
@@ -178,7 +182,29 @@ function SalesPageInner() {
       }
       if (s.ok) setSettings(s.data);
     })();
+    // initial hydrate only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
+
+  function syncStatusUrl(next: "" | SalesOrderStatus) {
+    const sp = new URLSearchParams(searchParams.toString());
+    if (next) sp.set("status", next);
+    else sp.delete("status");
+    const qs = sp.toString();
+    router.replace(qs ? `/sales?${qs}` : "/sales", { scroll: false });
+  }
+
+  useEffect(() => {
+    const s = searchParams.get("status");
+    const next: "" | SalesOrderStatus =
+      s === "DRAFT" || s === "CONFIRMED" || s === "CANCELLED" ? s : "";
+    if (next !== statusFilter) {
+      setStatusFilter(next);
+      void load(q, next);
+    }
+    // sync from URL only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const refreshCustomers = useCallback((qText: string) => {
     setCustomerLoading(true);
@@ -379,6 +405,7 @@ function SalesPageInner() {
                     aria-selected={active}
                     onClick={() => {
                       setStatusFilter(chip.id);
+                      syncStatusUrl(chip.id);
                       void load(q, chip.id);
                     }}
                     className={softChipClass(active)}

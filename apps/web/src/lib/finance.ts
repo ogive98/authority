@@ -9,6 +9,30 @@ export type PaymentMethod =
   | "BILL_OF_EXCHANGE"
   | "OTHER";
 export type PaymentStatus = "DRAFT" | "POSTED" | "REVERSED";
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  DRAFT: "Brouillon",
+  POSTED: "Posté",
+  REVERSED: "Contrepassé",
+};
+
+export const PAYMENT_STATUS_FILTERS: {
+  id: "" | PaymentStatus;
+  label: string;
+}[] = [
+  { id: "", label: "Tout" },
+  { id: "DRAFT", label: "Brouillon" },
+  { id: "POSTED", label: "Posté" },
+  { id: "REVERSED", label: "Contrepassé" },
+];
+
+export function paymentBadgeTone(
+  status: PaymentStatus,
+): "success" | "warning" | "accent" | "neutral" {
+  if (status === "POSTED") return "success";
+  if (status === "DRAFT") return "warning";
+  return "neutral";
+}
 export type AllocationPolicy =
   | "OLDEST_FIRST"
   | "NEWEST_FIRST"
@@ -248,6 +272,63 @@ export const CREDIT_NOTE_STATUS_LABELS: Record<CreditNoteStatus, string> = {
   CANCELLED: "Annulé",
 };
 
+export const CREDIT_NOTE_STATUS_FILTERS: {
+  id: "" | CreditNoteStatus;
+  label: string;
+}[] = [
+  { id: "", label: "Tout" },
+  { id: "DRAFT", label: "Brouillon" },
+  { id: "ISSUED", label: "Émis" },
+  { id: "CANCELLED", label: "Annulé" },
+];
+
+export type ApBillStatus = "DRAFT" | "POSTED" | "CANCELLED";
+
+export const AP_BILL_STATUS_LABELS: Record<ApBillStatus, string> = {
+  DRAFT: "Brouillon",
+  POSTED: "Postée",
+  CANCELLED: "Annulée",
+};
+
+export const AP_BILL_STATUS_FILTERS: { id: "" | ApBillStatus; label: string }[] =
+  [
+    { id: "", label: "Tout" },
+    { id: "DRAFT", label: "Brouillon" },
+    { id: "POSTED", label: "Postée" },
+    { id: "CANCELLED", label: "Annulée" },
+  ];
+
+export type FinApBillPayment = {
+  id: string;
+  number: string;
+  amount: string;
+  currency: string;
+  method: string;
+  paymentDate: string;
+  matched: boolean;
+};
+
+export type FinApBill = {
+  id: string;
+  companyId: string;
+  number: string;
+  vendorName: string;
+  status: ApBillStatus;
+  billDate: string;
+  dueDate: string | null;
+  amountTotal: string;
+  currency: string;
+  label: string | null;
+  reference: string | null;
+  notes: string | null;
+  version: number;
+  postedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  payments?: FinApBillPayment[];
+  amountPaid?: string;
+};
+
 export const POLICY_LABELS: Record<AllocationPolicy, string> = {
   OLDEST_FIRST: "A — Plus anciennes",
   NEWEST_FIRST: "B — Plus récentes",
@@ -266,6 +347,27 @@ export const INSTRUMENT_STATUS_LABELS: Record<InstrumentStatus, string> = {
   REJECTED: "Rejeté",
   CANCELLED: "Annulé",
 };
+
+export const INSTRUMENT_STATUS_FILTERS: {
+  id: "" | InstrumentStatus;
+  label: string;
+}[] = [
+  { id: "", label: "Tout" },
+  { id: "RECEIVED", label: "Reçu" },
+  { id: "DEPOSITED", label: "Déposé" },
+  { id: "PRESENTED", label: "Présenté" },
+  { id: "CLEARED", label: "Encaissé" },
+  { id: "REJECTED", label: "Rejeté" },
+  { id: "CANCELLED", label: "Annulé" },
+];
+
+export function instrumentBadgeTone(
+  status: InstrumentStatus,
+): "success" | "warning" | "accent" | "neutral" {
+  if (status === "CLEARED") return "success";
+  if (status === "REJECTED" || status === "CANCELLED") return "warning";
+  return "accent";
+}
 
 type ApiFail = { ok: false; status: number; code?: string; message: string };
 
@@ -551,6 +653,22 @@ export async function fetchCreditNotes(opts?: {
   }
 }
 
+export async function fetchCreditNote(
+  id: string,
+): Promise<{ ok: true; data: FinCreditNote } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/credit-notes/${id}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinCreditNote };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function createCreditNote(body: {
   sourceInvoiceId: string;
   lines?: {
@@ -616,6 +734,7 @@ export async function cancelCreditNote(
 
 export async function fetchPayments(opts?: {
   q?: string;
+  status?: string;
 }): Promise<
   | { ok: true; data: { items: FinPayment[]; nextCursor: string | null } }
   | ApiFail
@@ -623,6 +742,7 @@ export async function fetchPayments(opts?: {
   try {
     const params = new URLSearchParams();
     if (opts?.q?.trim()) params.set("q", opts.q.trim());
+    if (opts?.status) params.set("status", opts.status);
     const qs = params.toString();
     const res = await fetch(`/api/v1/finance/payments${qs ? `?${qs}` : ""}`, {
       credentials: "include",
@@ -637,6 +757,22 @@ export async function fetchPayments(opts?: {
         nextCursor: string | null;
       },
     };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchPayment(
+  id: string,
+): Promise<{ ok: true; data: FinPayment } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/payments/${id}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinPayment };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
@@ -775,6 +911,22 @@ export async function fetchInstruments(opts?: {
   }
 }
 
+export async function fetchInstrument(
+  id: string,
+): Promise<{ ok: true; data: FinInstrument } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/instruments/${id}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinInstrument };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export async function transitionInstrument(
   id: string,
   body: { status: InstrumentStatus; rejectReason?: string },
@@ -824,6 +976,17 @@ export const PROMISE_STATUS_LABELS: Record<PromiseStatus, string> = {
   CANCELLED: "Annulée",
 };
 
+export const PROMISE_STATUS_FILTERS: {
+  id: "" | PromiseStatus;
+  label: string;
+}[] = [
+  { id: "", label: "Tout" },
+  { id: "OPEN", label: "Ouvertes" },
+  { id: "KEPT", label: "Tenues" },
+  { id: "BROKEN", label: "Rompues" },
+  { id: "CANCELLED", label: "Annulées" },
+];
+
 export async function fetchPromises(opts?: {
   q?: string;
   status?: PromiseStatus | "";
@@ -849,6 +1012,22 @@ export async function fetchPromises(opts?: {
       ok: true,
       data: (await res.json()) as { items: FinPromise[] },
     };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchPromise(
+  id: string,
+): Promise<{ ok: true; data: FinPromise } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/promises/${id}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinPromise };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
@@ -902,6 +1081,172 @@ export function promiseBadgeTone(
   return "neutral";
 }
 
+/** D243 — portal payment declarations (ADV review; no FinPayment auto-create). */
+export type PaymentDeclarationStatus =
+  | "SUBMITTED"
+  | "ACKNOWLEDGED"
+  | "REJECTED"
+  | "CANCELLED";
+
+export type FinPaymentDeclaration = {
+  id: string;
+  number: string;
+  customerId: string;
+  customerCode: string | null;
+  customerName: string | null;
+  amount: string;
+  currency: string;
+  method: PaymentMethod;
+  paymentDate: string;
+  reference: string | null;
+  notes: string | null;
+  openItemId: string | null;
+  status: PaymentDeclarationStatus;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  createdByUserId: string;
+};
+
+export const PAYMENT_DECLARATION_STATUS_LABELS: Record<
+  PaymentDeclarationStatus,
+  string
+> = {
+  SUBMITTED: "Soumise",
+  ACKNOWLEDGED: "Prise en compte",
+  REJECTED: "Refusée",
+  CANCELLED: "Annulée",
+};
+
+export const PAYMENT_DECLARATION_STATUS_FILTERS: {
+  id: "" | PaymentDeclarationStatus;
+  label: string;
+}[] = [
+  { id: "", label: "Tout" },
+  { id: "SUBMITTED", label: "Soumises" },
+  { id: "ACKNOWLEDGED", label: "Prises en compte" },
+  { id: "REJECTED", label: "Refusées" },
+  { id: "CANCELLED", label: "Annulées" },
+];
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CASH: "Espèces",
+  BANK_TRANSFER: "Virement",
+  CARD: "Carte",
+  CHEQUE: "Chèque",
+  BILL_OF_EXCHANGE: "Traite",
+  OTHER: "Autre",
+};
+
+export function paymentDeclarationBadgeTone(
+  status: PaymentDeclarationStatus,
+): "success" | "warning" | "accent" | "neutral" | "danger" {
+  if (status === "ACKNOWLEDGED") return "success";
+  if (status === "SUBMITTED") return "accent";
+  if (status === "REJECTED") return "danger";
+  return "neutral";
+}
+
+export async function fetchPaymentDeclarations(opts?: {
+  q?: string;
+  status?: PaymentDeclarationStatus | "";
+  customerId?: string;
+}): Promise<
+  { ok: true; data: { items: FinPaymentDeclaration[]; nextCursor: string | null } } | ApiFail
+> {
+  try {
+    const params = new URLSearchParams();
+    if (opts?.q) params.set("q", opts.q);
+    if (opts?.status) params.set("status", opts.status);
+    if (opts?.customerId) params.set("customerId", opts.customerId);
+    const qs = params.toString();
+    const res = await fetch(
+      `/api/v1/finance/payment-declarations${qs ? `?${qs}` : ""}`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as {
+        items: FinPaymentDeclaration[];
+        nextCursor: string | null;
+      },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchPaymentDeclaration(
+  id: string,
+): Promise<{ ok: true; data: FinPaymentDeclaration } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/payment-declarations/${id}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinPaymentDeclaration };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function acknowledgePaymentDeclaration(
+  id: string,
+  body: { version: number; reviewNote?: string },
+): Promise<{ ok: true; data: FinPaymentDeclaration } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/payment-declarations/${id}/acknowledge`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinPaymentDeclaration };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function rejectPaymentDeclaration(
+  id: string,
+  body: { version: number; reviewNote?: string },
+): Promise<{ ok: true; data: FinPaymentDeclaration } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/payment-declarations/${id}/reject`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinPaymentDeclaration };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export function openItemBadgeTone(
   status: OpenItemStatus,
 ): "success" | "warning" | "accent" | "neutral" {
@@ -936,6 +1281,14 @@ export function creditNoteBadgeTone(
   status: CreditNoteStatus,
 ): "success" | "warning" | "accent" | "neutral" {
   if (status === "ISSUED") return "success";
+  if (status === "DRAFT") return "warning";
+  return "neutral";
+}
+
+export function apBillBadgeTone(
+  status: ApBillStatus,
+): "success" | "warning" | "accent" | "neutral" {
+  if (status === "POSTED") return "success";
   if (status === "DRAFT") return "warning";
   return "neutral";
 }
@@ -1096,6 +1449,8 @@ export type FinApPayment = {
   accountingDate: string;
   reference: string | null;
   notes: string | null;
+  apBillId: string | null;
+  apBillNumber: string | null;
   version: number;
   matched: boolean;
   createdAt: string;
@@ -1284,12 +1639,13 @@ export async function fetchApPayments(): Promise<
 }
 
 export async function createApPayment(body: {
-  vendorName: string;
+  vendorName?: string;
   amount: number;
   method: string;
   paymentDate: string;
   reference?: string;
   notes?: string;
+  apBillId?: string;
 }): Promise<{ ok: true; data: FinApPayment } | ApiFail> {
   try {
     const res = await fetch("/api/v1/finance/ap-payments", {
@@ -1303,6 +1659,108 @@ export async function createApPayment(body: {
     });
     if (!res.ok) return parseFail(res);
     return { ok: true, data: (await res.json()) as FinApPayment };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchApBills(opts?: {
+  q?: string;
+  status?: string;
+  limit?: number;
+}): Promise<{ ok: true; data: { items: FinApBill[] } } | ApiFail> {
+  try {
+    const sp = new URLSearchParams();
+    if (opts?.q?.trim()) sp.set("q", opts.q.trim());
+    if (opts?.status) sp.set("status", opts.status);
+    if (opts?.limit) sp.set("limit", String(opts.limit));
+    const qs = sp.toString();
+    const res = await fetch(
+      `/api/v1/finance/ap-bills${qs ? `?${qs}` : ""}`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return {
+      ok: true,
+      data: (await res.json()) as { items: FinApBill[] },
+    };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchApBill(
+  id: string,
+): Promise<{ ok: true; data: FinApBill } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/ap-bills/${id}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinApBill };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function createApBill(body: {
+  vendorName: string;
+  amountTotal: number;
+  billDate: string;
+  dueDate?: string;
+  label?: string;
+  reference?: string;
+  notes?: string;
+  currency?: string;
+}): Promise<{ ok: true; data: FinApBill } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/finance/ap-bills", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinApBill };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function postApBill(
+  id: string,
+): Promise<{ ok: true; data: FinApBill } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/ap-bills/${id}/post`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinApBill };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function cancelApBill(
+  id: string,
+): Promise<{ ok: true; data: FinApBill } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/finance/ap-bills/${id}/cancel`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as FinApBill };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }

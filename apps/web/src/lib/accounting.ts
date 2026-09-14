@@ -49,18 +49,43 @@ export type AccJournalEntryLine = {
   lineNo: number;
 };
 
+export type AccEntryStatus = "DRAFT" | "POSTED" | "REVERSED";
+
 export type AccJournalEntry = {
   id: string;
   number: string;
-  status: string;
+  status: AccEntryStatus | string;
   entryDate: string;
   description: string | null;
+  journalId?: string;
   journalCode: string | null;
+  periodId?: string;
   periodCode: string | null;
   sourceType: string | null;
   sourceId: string | null;
+  postedAt?: string | null;
+  version?: number;
   lines: AccJournalEntryLine[];
 };
+
+export function entryBadgeTone(
+  status: string,
+): "success" | "warning" | "neutral" | "danger" {
+  if (status === "POSTED") return "success";
+  if (status === "DRAFT") return "warning";
+  if (status === "REVERSED") return "danger";
+  return "neutral";
+}
+
+export const ENTRY_STATUS_FILTERS: {
+  id: "" | AccEntryStatus;
+  label: string;
+}[] = [
+  { id: "", label: "Tout" },
+  { id: "DRAFT", label: "Brouillon" },
+  { id: "POSTED", label: "Postée" },
+  { id: "REVERSED", label: "Contrepassée" },
+];
 
 export type PatchSampleMeta = {
   declared: true;
@@ -109,20 +134,44 @@ async function parseFail(res: Response): Promise<ApiFail> {
   };
 }
 
-export async function fetchAccounts(): Promise<
-  { ok: true; data: { items: AccAccount[] } } | ApiFail
-> {
+export async function fetchAccounts(opts?: {
+  q?: string;
+}): Promise<{ ok: true; data: { items: AccAccount[] } } | ApiFail> {
   try {
-    const res = await fetch("/api/v1/accounting/accounts", {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-    });
+    const q = new URLSearchParams();
+    if (opts?.q?.trim()) q.set("q", opts.q.trim());
+    const res = await fetch(
+      `/api/v1/accounting/accounts${q.size ? `?${q}` : ""}`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
     if (!res.ok) return parseFail(res);
     return {
       ok: true,
       data: (await res.json()) as { items: AccAccount[] },
     };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchEntry(
+  id: string,
+): Promise<{ ok: true; data: AccJournalEntry } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/accounting/entries/${encodeURIComponent(id)}`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json", ...opsModesHeaders() },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as AccJournalEntry };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
