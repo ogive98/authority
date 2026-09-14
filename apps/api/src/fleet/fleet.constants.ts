@@ -1,0 +1,36 @@
+export const FLEET_ERROR_CODES = {
+  NOT_FOUND: 'FLT.NOT_FOUND',
+  CODE_DUP: 'FLT.CODE_DUP',
+  PLATE_DUP: 'FLT.PLATE_DUP',
+  VERSION_CONFLICT: 'FLT.VERSION_CONFLICT',
+  INVALID_STATUS: 'FLT.INVALID_STATUS',
+  VEHICLE_NOT_ACTIVE: 'FLT.VEHICLE_NOT_ACTIVE',
+  ROUND_NOT_FOUND: 'FLT.ROUND_NOT_FOUND',
+  ROUND_DONE: 'FLT.ROUND_DONE',
+  NOT_COLD: 'FLT.NOT_COLD',
+  CAPACITY: 'FLT.CAPACITY',
+  INVALID_CAPACITY: 'FLT.INVALID_CAPACITY',
+  INVALID_ODOMETER: 'FLT.INVALID_ODOMETER',
+  INVALID_PAYLOAD: 'FLT.INVALID_PAYLOAD',
+  INVALID_DRIVER: 'FLT.INVALID_DRIVER',
+} as const;
+
+export type FleetErrorCode =
+  (typeof FLEET_ERROR_CODES)[keyof typeof FLEET_ERROR_CODES];
+
+export const FLEET_VEHICLE_STATUSES = [
+  'ACTIVE',
+  'MAINTENANCE',
+  'OUT',
+  'ARCHIVED',
+] as const;
+
+export type FleetVehicleStatus = (typeof FLEET_VEHICLE_STATUSES)[number];
+
+export const FLEET_EVENT_TYPES = {
+  VEHICLE_CREATED: 'fleet.vehicle.created.v1',
+  VEHICLE_UPDATED: 'fleet.vehicle.updated.v1',
+  ASSIGNMENT_CREATED: 'fleet.assignment.created.v1',
+  ASSIGNMENT_CANCELLED: 'fleet.assignment.cancelled.v1',
+  ASSIGNMENT_DRIVER_COPIED: 'fleet.assignment.driver_copied.v1',
+} as const;

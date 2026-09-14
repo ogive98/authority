@@ -483,6 +483,158 @@ export const HELP_MODULES: HelpModule[] = [
     },
   },
   {
+    id: "fleet",
+    href: "/fleet",
+    title: { fr: "Flotte", it: "Flotta" },
+    summary: {
+      fr: "Véhicules Soft Glass (froid, capacité, odomètre), fiche + historique, affectation tournée avec hint périssable. Badge véhicule lecture seule sur Livraison. Pas de GPS.",
+      it: "Veicoli Soft Glass (freddo, capacità, km), scheda + storico, assegnazione giro con hint deperibili. Badge veicolo sola lettura su Consegne. Niente GPS.",
+    },
+    when: {
+      fr: "Quand vous planifiez une tournée et devez choisir un véhicule (froid / capacité).",
+      it: "Quando pianificate un giro e dovete scegliere un veicolo (freddo / capacità).",
+    },
+    features: [
+      {
+        name: {
+          fr: "Liste, chips statut et fiche véhicule",
+          it: "Lista, chip stato e scheda veicolo",
+        },
+        when: {
+          fr: "Nouveau camion, filtre statut, ou consultation historique.",
+          it: "Nuovo camion, filtro stato, o consultazione storico.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/fleet` (module Flotte ENABLED + `fleet.manage`).",
+            "Chips statut (Tous / Actif / Maintenance / Hors service / Archivé).",
+            "« + Nouveau véhicule » ou ouvrez la fiche via le code / Fiche (`/fleet/[id]`).",
+            "Sur la fiche : Éditer (version optimistic) · historique Ouverte / Annulée.",
+          ],
+          it: [
+            "Apri `/fleet` (modulo Flotta ENABLED + `fleet.manage`).",
+            "Chip stato (Tutti / Attivo / Manutenzione / Fuori servizio / Archiviato).",
+            "« + Nouveau véhicule » o apri la scheda dal codice / Fiche (`/fleet/[id]`).",
+            "In scheda: Éditer (version optimistic) · storico Aperta / Annullata.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Affecter avec hint froid + strip Livraison",
+          it: "Assegnare con hint freddo + strip Consegne",
+        },
+        when: {
+          fr: "Tournée Delivery à pourvoir ; contrôle périssable avant assign.",
+          it: "Giro Delivery da assegnare; controllo deperibili prima dell’assegnazione.",
+        },
+        steps: {
+          fr: [
+            "`/fleet?tab=planning` (`fleet.assign` + Delivery).",
+            "Assigner → bandeau si produits périssables · select préfiltré véhicules froids.",
+            "`FLT.NOT_COLD` / `FLT.CAPACITY` si règles violées.",
+            "Sur `/delivery` : badge lecture seule « Véhicule · CODE · PLAQUE » (silencieux si Flotte off).",
+            "ADV « Copier chauffeur → tournée » : copie le chauffeur d’affectation vers `dlv_round.driverLabel` (jamais auto à l’assign).",
+          ],
+          it: [
+            "`/fleet?tab=planning` (`fleet.assign` + Delivery).",
+            "Assegna → banner se prodotti deperibili · select prefiltrato veicoli freddi.",
+            "`FLT.NOT_COLD` / `FLT.CAPACITY` se regole violate.",
+            "Su `/delivery`: badge sola lettura « Véhicule · CODE · PLAQUE » (silenzioso se Flotta off).",
+            "ADV « Copier chauffeur → tournée »: copia l’autista assegnazione su `dlv_round.driverLabel` (mai auto all’assegnazione).",
+          ],
+        },
+      },
+    ],
+    locks: {
+      fr: [
+        "Pas de GPS / POD / mobile livreur (D253/D254).",
+        "Pas de FK véhicule sur `dlv_round` — table `flt_assignment` seule.",
+        "Chauffeur flotte ≠ Identity / RH — texte libre.",
+        "Copie chauffeur → tournée = ADV explicite seulement (D255) — pas d’auto-sync.",
+      ],
+      it: [
+        "Niente GPS / POD / mobile autista (D253/D254).",
+        "Niente FK veicolo su `dlv_round` — solo tabella `flt_assignment`.",
+        "Autista flotta ≠ Identity / HR — testo libero.",
+        "Copia autista → giro = ADV esplicito solo (D255) — niente auto-sync.",
+      ],
+    },
+  },
+  {
+    id: "maintenance",
+    href: "/maintenance",
+    title: { fr: "Maintenance", it: "Manutenzione" },
+    summary: {
+      fr: "Équipements Soft Glass (online/down), OT panne/préventif, lien optionnel véhicule flotte, date préventive UI. Pas de job Thunder ni pièces Inventory.",
+      it: "Attrezzature Soft Glass (online/down), OT guasto/preventivo, link opzionale veicolo flotta, data preventivo UI. Niente job Thunder né pezzi Inventory.",
+    },
+    when: {
+      fr: "Quand une cuve, presse, chambre froide ou camion est en panne ou dû en préventif.",
+      it: "Quando una vasca, pressa, cella o camion è in guasto o in scadenza preventivo.",
+    },
+    features: [
+      {
+        name: {
+          fr: "Équipements + lien flotte + préventif dû",
+          it: "Attrezzature + link flotta + preventivo scaduto",
+        },
+        when: {
+          fr: "Créer / éditer un asset ; filtrer préventif dû.",
+          it: "Creare / modificare un asset; filtrare preventivo scaduto.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/maintenance` (module Maintenance ENABLED + `maintenance.asset`).",
+            "« + Nouvel équipement » : code, libellé, type, véhicule flotte optionnel, date préventive.",
+            "Chips statut · chip « Préventif dû ».",
+            "Down / Up ADV (events `maintenance.asset.down|up.v1`) — pas d’auto.",
+          ],
+          it: [
+            "Apri `/maintenance` (modulo Manutenzione ENABLED + `maintenance.asset`).",
+            "« + Nouvel équipement »: codice, etichetta, tipo, veicolo flotta opzionale, data preventivo.",
+            "Chip stato · chip « Préventif dû ».",
+            "Down / Up ADV (eventi `maintenance.asset.down|up.v1`) — niente auto.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Ordres de travail (OT)",
+          it: "Ordini di lavoro (OT)",
+        },
+        when: {
+          fr: "Ouvrir un OT panne ou préventif puis le terminer.",
+          it: "Aprire un OT guasto o preventivo e completarlo.",
+        },
+        steps: {
+          fr: [
+            "`/maintenance?tab=wo` (`maintenance.wo`).",
+            "Créer OT depuis la liste ou le bouton OT sur une ligne équipement.",
+            "« Terminer » → status DONE (pas d’auto Up de l’équipement).",
+          ],
+          it: [
+            "`/maintenance?tab=wo` (`maintenance.wo`).",
+            "Crea OT dalla lista o dal bottone OT su una riga attrezzatura.",
+            "« Terminer » → status DONE (niente Up automatico dell’asset).",
+          ],
+        },
+      },
+    ],
+    locks: {
+      fr: [
+        "Lien flotte = `vehicleId` optionnel seulement (1A) — pas de sync statut camion.",
+        "Date préventive = rappel UI (2B) — pas de job `maintenance.preventive_due`.",
+        "Pas de pièces Inventory · pas de blocage OF Production · pas de full CMMS.",
+      ],
+      it: [
+        "Link flotta = solo `vehicleId` opzionale (1A) — niente sync stato camion.",
+        "Data preventivo = reminder UI (2B) — niente job `maintenance.preventive_due`.",
+        "Niente pezzi Inventory · niente blocco OF Produzione · niente full CMMS.",
+      ],
+    },
+  },
+  {
     id: "products",
     href: "/products",
     title: { fr: "Produits", it: "Prodotti" },

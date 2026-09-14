@@ -77,6 +77,30 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       ],
     },
     {
+      key: "fleet",
+      name: "Flotte",
+      features: [
+        { id: "fleet-vehicles", label: "Flotte", href: "/fleet" },
+        {
+          id: "fleet-planning",
+          label: "Planning flotte",
+          href: "/fleet?tab=planning",
+        },
+      ],
+    },
+    {
+      key: "maintenance",
+      name: "Maintenance",
+      features: [
+        { id: "mnt-assets", label: "Maintenance", href: "/maintenance" },
+        {
+          id: "mnt-wo",
+          label: "OT maintenance",
+          href: "/maintenance?tab=wo",
+        },
+      ],
+    },
+    {
       key: "finance",
       name: "Finance",
       features: [

@@ -16,6 +16,8 @@ import { ProductsModule } from './products/products.module';
 import { MasterDataModule } from './master-data/master-data.module';
 import { CustomersModule } from './customers/customers.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
+import { FleetModule } from './fleet/fleet.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { SalesModule } from './sales/sales.module';
 import { DeliveryModule } from './delivery/delivery.module';
@@ -50,6 +52,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     ProductsModule,
     CustomersModule,
     SuppliersModule,
+    FleetModule,
+    MaintenanceModule,
     InventoryModule,
     SalesModule,
     DeliveryModule,

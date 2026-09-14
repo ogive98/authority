@@ -75,6 +75,16 @@ export function SyncModuleFromRoute() {
       setFeatureMenuOpen(false);
       return;
     }
+    if (pathname.startsWith("/fleet")) {
+      if (has("fleet")) setSelectedModuleId("fleet");
+      setFeatureMenuOpen(false);
+      return;
+    }
+    if (pathname.startsWith("/maintenance")) {
+      if (has("maintenance")) setSelectedModuleId("maintenance");
+      setFeatureMenuOpen(false);
+      return;
+    }
     if (pathname.startsWith("/finance")) {
       if (has("finance")) setSelectedModuleId("finance");
       setFeatureMenuOpen(false);

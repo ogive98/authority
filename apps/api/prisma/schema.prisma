@@ -1605,7 +1605,8 @@ model DlvRound {
   updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt    DateTime?      @map("deleted_at") @db.Timestamptz(6)
 
-  shipments DlvShipment[]
+  shipments   DlvShipment[]
+  assignments FltAssignment[]
 
   @@index([companyId, date(sort: Desc)])
   @@index([companyId, status])
@@ -3244,4 +3245,131 @@ model AtmRunLog {
   @@index([companyId, status, createdAt(sort: Desc)])
   @@index([companyId, profileId, createdAt(sort: Desc)])
   @@map("atm_run_log")
+}
+
+/**
+ * Fleet Soft Glass V0 (D253) — vehicles + round assignment (free-text driver).
+ * Out: GPS · vehicleId on DlvRound · HR driver FK.
+ */
+enum FltVehicleStatus {
+  ACTIVE
+  MAINTENANCE
+  OUT
+  ARCHIVED
+}
+
+model FltVehicle {
+  id          String           @id @default(uuid()) @db.Uuid
+  companyId   String           @map("company_id") @db.Uuid
+  code        String
+  plate       String
+  capacityKg  Decimal?         @map("capacity_kg") @db.Decimal(18, 3)
+  cold        Boolean          @default(false)
+  odometerKm  Decimal?         @map("odometer_km") @db.Decimal(18, 3)
+  status      FltVehicleStatus @default(ACTIVE)
+  notes       String?
+  version     Int              @default(0)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz(6)
+
+  assignments FltAssignment[]
+  maintAssets MntAsset[]
+
+  @@unique([companyId, code])
+  @@unique([companyId, plate])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@map("flt_vehicle")
+}
+
+model FltAssignment {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  roundId     String    @map("round_id") @db.Uuid
+  vehicleId   String    @map("vehicle_id") @db.Uuid
+  driverLabel String    @map("driver_label")
+  payloadKg   Decimal?  @map("payload_kg") @db.Decimal(18, 3)
+  notes       String?
+  assignedAt  DateTime  @default(now()) @map("assigned_at") @db.Timestamptz(6)
+  version     Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  round   DlvRound   @relation(fields: [roundId], references: [id])
+  vehicle FltVehicle @relation(fields: [vehicleId], references: [id])
+
+  @@index([companyId, assignedAt(sort: Desc)])
+  @@index([companyId, roundId])
+  @@index([companyId, vehicleId])
+  @@map("flt_assignment")
+}
+
+/**
+ * Maintenance Soft Glass V0 (D256) — assets + WO · optional fleet vehicle (1A) ·
+ * preventive date UI (2B). Out: Thunder preventive job · parts · OF block · full CMMS.
+ */
+enum MntAssetStatus {
+  ONLINE
+  DOWN
+}
+
+enum MntWoStatus {
+  OPEN
+  DONE
+}
+
+enum MntWoType {
+  BREAKDOWN
+  PREVENTIVE
+}
+
+model MntAsset {
+  id               String         @id @default(uuid()) @db.Uuid
+  companyId        String         @map("company_id") @db.Uuid
+  code             String
+  label            String
+  type             String
+  status           MntAssetStatus @default(ONLINE)
+  vehicleId        String?        @map("vehicle_id") @db.Uuid
+  nextPreventiveAt DateTime?      @map("next_preventive_at") @db.Date
+  notes            String?
+  version          Int            @default(0)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  vehicle FltVehicle? @relation(fields: [vehicleId], references: [id])
+  workOrders MntWo[]
+
+  @@unique([companyId, code])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@index([companyId, nextPreventiveAt])
+  @@index([companyId, vehicleId])
+  @@map("mnt_asset")
+}
+
+model MntWo {
+  id          String      @id @default(uuid()) @db.Uuid
+  companyId   String      @map("company_id") @db.Uuid
+  assetId     String      @map("asset_id") @db.Uuid
+  type        MntWoType
+  status      MntWoStatus @default(OPEN)
+  title       String
+  notes       String?
+  openedAt    DateTime    @default(now()) @map("opened_at") @db.Timestamptz(6)
+  doneAt      DateTime?   @map("done_at") @db.Timestamptz(6)
+  version     Int         @default(0)
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?   @map("deleted_at") @db.Timestamptz(6)
+
+  asset MntAsset @relation(fields: [assetId], references: [id])
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@index([companyId, assetId])
+  @@map("mnt_wo")
 }

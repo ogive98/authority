@@ -137,6 +137,8 @@ async function main() {
     'sales',
     'inventory',
     'delivery',
+    'fleet',
+    'maintenance',
     'production',
     'payroll',
     'hr',
@@ -163,6 +165,8 @@ async function main() {
       moduleKey === 'inventory' ||
       moduleKey === 'sales' ||
       moduleKey === 'delivery' ||
+      moduleKey === 'fleet' ||
+      moduleKey === 'maintenance' ||
       moduleKey === 'portals' ||
       moduleKey === 'finance' ||
       moduleKey === 'documents' ||
@@ -496,6 +500,30 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'suppliers.hold',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'fleet.manage',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'fleet.assign',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'maintenance.asset',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'maintenance.wo',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,

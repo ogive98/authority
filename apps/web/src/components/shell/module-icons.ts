@@ -43,6 +43,8 @@ const ICONS: Record<string, LucideIcon> = {
   inventory: Package,
   stock: Package,
   delivery: Truck,
+  fleet: Truck,
+  maintenance: Wrench,
   supply: Truck,
   production: Factory,
   usine: Factory,

@@ -34,6 +34,7 @@ import {
   type EligibleOrder,
   type ShipmentStatus,
 } from "@/lib/delivery";
+import { fetchAssignments } from "@/lib/fleet";
 import { softChipClass, softList, softListRow } from "@/lib/soft-glass-ui";
 import { cn } from "@/lib/utils";
 import { useStatusLabel } from "@/hooks/use-status-label";
@@ -151,7 +152,32 @@ export default function DeliveryPage() {
   const [completeDraft, setCompleteDraft] = useState<CompleteDraft | null>(
     null,
   );
+  const [fleetByRound, setFleetByRound] = useState<
+    Map<string, { code: string; plate: string; cold: boolean }>
+  >(() => new Map());
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const loadFleetStrip = useCallback(async () => {
+    const res = await fetchAssignments();
+    if (!res.ok) {
+      // Module off / no perm — silent
+      setFleetByRound(new Map());
+      return;
+    }
+    const map = new Map<
+      string,
+      { code: string; plate: string; cold: boolean }
+    >();
+    for (const a of res.data.items) {
+      if (a.cancelledAt || !a.vehicle) continue;
+      map.set(a.roundId, {
+        code: a.vehicle.code,
+        plate: a.vehicle.plate,
+        cold: a.vehicle.cold,
+      });
+    }
+    setFleetByRound(map);
+  }, []);
 
   const load = useCallback(async (query?: string, status?: "" | ShipmentStatus) => {
     setState({ kind: "loading" });
@@ -168,7 +194,8 @@ export default function DeliveryPage() {
       return;
     }
     setState({ kind: "ok", items: res.data.items });
-  }, []);
+    void loadFleetStrip();
+  }, [loadFleetStrip]);
 
   useEffect(() => {
     void load(q, statusFilter);
@@ -507,13 +534,22 @@ export default function DeliveryPage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0
-          ? tourneeGroups.map(([groupLabel, rows]) => (
+          ? tourneeGroups.map(([groupLabel, rows]) => {
+              const roundId = rows.find((r) => r.roundId)?.roundId ?? null;
+              const fleet = roundId ? fleetByRound.get(roundId) : undefined;
+              return (
               <div key={groupLabel} className="space-y-2">
                 <p className="text-[11px] font-medium uppercase tracking-wider text-a-fg-subtle">
                   Tournée · {groupLabel}
                   <span className="a-mono ml-2 font-normal normal-case tracking-normal text-a-fg-muted">
                     {rows.length}
                   </span>
+                  {fleet ? (
+                    <ABadge tone="info" className="ml-2 normal-case tracking-normal">
+                      Véhicule · {fleet.code} · {fleet.plate}
+                      {fleet.cold ? " · froid" : ""}
+                    </ABadge>
+                  ) : null}
                 </p>
                 <ul className={softList}>
                   {rows.map((row) => (
@@ -620,7 +656,8 @@ export default function DeliveryPage() {
                   ))}
                 </ul>
               </div>
-            ))
+              );
+            })
           : null}
       </APageBody>
 

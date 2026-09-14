@@ -10,6 +10,8 @@ export const BUSINESS_MODULE_KEYS = [
   'sales',
   'inventory',
   'delivery',
+  'fleet',
+  'maintenance',
   'production',
   'payroll',
   'hr',

@@ -7,7 +7,9 @@ import { deliveryManifest } from './delivery.manifest';
 import { suppliersManifest } from './suppliers.manifest';
 import { documentsManifest } from './documents.manifest';
 import { financeManifest } from './finance.manifest';
+import { fleetManifest } from './fleet.manifest';
 import { hrManifest } from './hr.manifest';
+import { maintenanceManifest } from './maintenance.manifest';
 import { identityManifest } from './identity.manifest';
 import { inventoryManifest } from './inventory.manifest';
 import { masterDataManifest } from './master-data.manifest';
@@ -34,6 +36,8 @@ export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   inventoryManifest,
   deliveryManifest,
   financeManifest,
+  fleetManifest,
+  maintenanceManifest,
   documentsManifest,
   accountingManifest,
   productionManifest,

@@ -15,7 +15,7 @@ describe('CAP-01 catalog stress simulations', () => {
       assertModuleManifest({ ...m }),
     );
     expect(() => assertCatalogIntegrity(manifests)).not.toThrow();
-    expect(manifests).toHaveLength(23);
+    expect(manifests).toHaveLength(25);
   });
 
   it('rejects injecting an extra module without dropping coverage rule', () => {
@@ -31,16 +31,16 @@ describe('CAP-01 catalog stress simulations', () => {
       catalog.load([
         ...STATIC_MODULE_MANIFESTS,
         {
-          id: 'fleet',
-          name: 'Fleet',
+          id: 'telemetry',
+          name: 'Telemetry',
           version: '1.0.0',
           apiVersion: '1',
           capabilities: [
-            { key: 'fleet.discover', moduleId: 'fleet', version: '1' },
+            { key: 'telemetry.discover', moduleId: 'telemetry', version: '1' },
           ],
         },
       ]),
-    ).toThrow(/exactly 22/);
+    ).toThrow(/exactly 25/);
   });
 
   it('detects dependency cycle candidates among the catalog (none expected)', () => {
