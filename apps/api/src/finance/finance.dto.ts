@@ -524,6 +524,14 @@ export class CreateApPaymentDto {
   @IsOptional()
   @IsUUID()
   apBillId?: string;
+
+  /**
+   * D264 — when true (default) and tax.ras Prefs VALIDATED, withhold RAS from amount.
+   * Set false for exceptional gross disbursement (audit via notes recommended).
+   */
+  @IsOptional()
+  @IsBoolean()
+  applyRas?: boolean;
 }
 
 /** D236 — AP vendor bill V0. D250 optional supplierId (vendorName still display SoT). */

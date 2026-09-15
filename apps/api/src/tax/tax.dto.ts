@@ -123,8 +123,16 @@ export class CalculateTaxDto {
   lines!: CalculateTaxLineDto[];
 }
 
+/** D265 — generate local TEJ XML draft (Prefs tax.tej VALIDATED required). */
+export class GenerateTejLocalDto {
+  @IsString()
+  @MaxLength(64)
+  periodLabel!: string;
+}
+
 export type FiscalDecision = {
   applicable: boolean;
+  /** Tax code id (same as ruleId for SYSTEM_RULE). */
   ruleId: string | null;
   ruleVersion: number | null;
   taxRateId: string | null;

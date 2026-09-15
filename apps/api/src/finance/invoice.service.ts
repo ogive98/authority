@@ -219,6 +219,17 @@ export class InvoiceService {
       });
 
       if (issue) {
+        const createdLines = await tx.finInvoiceLine.findMany({
+          where: { invoiceId: invoice.id, companyId },
+          orderBy: { lineNo: 'asc' },
+        });
+        await this.tax.freezeDocumentLines(tx, companyId, {
+          sourceType: 'fin_invoice',
+          sourceId: invoice.id,
+          customerId: dto.customerId,
+          currency,
+          lines: createdLines,
+        });
         await this.createOrLinkOpenItem(tx, companyId, invoice);
         await this.outbox.enqueue(tx, {
           companyId,
@@ -270,6 +281,18 @@ export class InvoiceService {
           include: invoiceInclude,
         });
       }
+
+      const draftLines = await tx.finInvoiceLine.findMany({
+        where: { invoiceId: id, companyId },
+        orderBy: { lineNo: 'asc' },
+      });
+      await this.tax.freezeDocumentLines(tx, companyId, {
+        sourceType: 'fin_invoice',
+        sourceId: id,
+        customerId: existing.customerId,
+        currency: existing.currency,
+        lines: draftLines,
+      });
 
       await tx.finInvoice.update({
         where: { id },

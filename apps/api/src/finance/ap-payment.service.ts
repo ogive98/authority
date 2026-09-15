@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
 import {
   FINANCE_ERROR_CODES,
   FINANCE_EVENT_TYPES,
@@ -20,6 +21,11 @@ export type ApPaymentDto = {
   number: string;
   vendorName: string;
   amount: string;
+  amountRas: string;
+  rasRateBps: number | null;
+  rasApplied: boolean;
+  /** Gross base before RAS (= amount + amountRas). */
+  amountGross: string;
   currency: string;
   method: FinPaymentMethod;
   status: FinPaymentStatus;
@@ -40,6 +46,7 @@ export class ApPaymentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly expertise: ExpertiseResolverService,
   ) {}
 
   async list(
@@ -84,7 +91,7 @@ export class ApPaymentService {
     dto: CreateApPaymentDto,
   ): Promise<ApPaymentDto> {
     assertPositiveApAmount(dto.amount);
-    const amount = round3(dto.amount);
+    const gross = round3(dto.amount);
 
     let apBillId: string | null = null;
     let vendorName = dto.vendorName?.trim() ?? '';
@@ -119,6 +126,29 @@ export class ApPaymentService {
       );
     }
 
+    const applyRas = dto.applyRas !== false;
+    let amountRas = 0;
+    let rasRateBps: number | null = null;
+    let rasApplied = false;
+    let net = gross;
+
+    if (applyRas) {
+      const preview = await this.expertise.previewRas(companyId, gross);
+      if (preview.applied && preview.amount > 0) {
+        amountRas = round3(preview.amount);
+        rasRateBps = preview.rateBps;
+        rasApplied = true;
+        net = round3(gross - amountRas);
+        if (net <= 0) {
+          throw new FinanceException(
+            FINANCE_ERROR_CODES.INVALID_AMOUNT,
+            'RAS withholding would leave a non-positive net disbursement.',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+      }
+    }
+
     const number = await this.nextNumber(companyId);
     const paymentDate = new Date(dto.paymentDate);
     const accountingDate = dto.accountingDate
@@ -132,7 +162,10 @@ export class ApPaymentService {
           companyId,
           number,
           vendorName,
-          amount,
+          amount: net,
+          amountRas,
+          rasRateBps,
+          rasApplied,
           currency,
           method: dto.method,
           status: FinPaymentStatus.POSTED,
@@ -156,7 +189,10 @@ export class ApPaymentService {
           apPaymentId: payment.id,
           number,
           vendorName,
-          amount: amount.toFixed(3),
+          amount: net.toFixed(3),
+          amountRas: amountRas.toFixed(3),
+          rasApplied,
+          rasRateBps,
           currency,
           paymentDate: paymentDate.toISOString().slice(0, 10),
           apBillId,
@@ -194,6 +230,9 @@ function serializeApPayment(row: {
   number: string;
   vendorName: string;
   amount: Prisma.Decimal;
+  amountRas?: Prisma.Decimal | number | null;
+  rasRateBps?: number | null;
+  rasApplied?: boolean | null;
   currency: string;
   method: FinPaymentMethod;
   status: FinPaymentStatus;
@@ -208,12 +247,18 @@ function serializeApPayment(row: {
   bankMatches: { id: string }[];
   apBill: { number: string } | null;
 }): ApPaymentDto {
+  const net = Number(row.amount);
+  const ras = Number(row.amountRas ?? 0);
   return {
     id: row.id,
     companyId: row.companyId,
     number: row.number,
     vendorName: row.vendorName,
-    amount: row.amount.toFixed(3),
+    amount: net.toFixed(3),
+    amountRas: ras.toFixed(3),
+    rasRateBps: row.rasRateBps ?? null,
+    rasApplied: row.rasApplied === true,
+    amountGross: round3(net + ras).toFixed(3),
     currency: row.currency,
     method: row.method,
     status: row.status,

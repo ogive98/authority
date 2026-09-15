@@ -216,6 +216,17 @@ export class CreditNoteService {
       });
 
       if (issue) {
+        const createdLines = await tx.finCreditNoteLine.findMany({
+          where: { creditNoteId: creditNote.id, companyId },
+          orderBy: { lineNo: 'asc' },
+        });
+        await this.tax.freezeDocumentLines(tx, companyId, {
+          sourceType: 'fin_credit_note',
+          sourceId: creditNote.id,
+          customerId: invoice.customerId,
+          currency,
+          lines: createdLines,
+        });
         await this.applyOnIssue(tx, companyId, creditNote);
       }
 
@@ -271,6 +282,18 @@ export class CreditNoteService {
         id,
         tx,
       );
+
+      const draftLines = await tx.finCreditNoteLine.findMany({
+        where: { creditNoteId: id, companyId },
+        orderBy: { lineNo: 'asc' },
+      });
+      await this.tax.freezeDocumentLines(tx, companyId, {
+        sourceType: 'fin_credit_note',
+        sourceId: id,
+        customerId: existing.customerId,
+        currency: existing.currency,
+        lines: draftLines,
+      });
 
       await tx.finCreditNote.update({
         where: { id },

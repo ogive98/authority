@@ -15,6 +15,8 @@ export const TAX_EVENT_TYPES = {
   RATE_PUBLISHED: 'tax.rate.published.v1',
   /** CDC alias — emitted alongside RATE_PUBLISHED on create/patch. */
   RATE_CHANGED: 'tax.rate.changed.v1',
+  /** D265 — local TEJ draft generated (hash history; never transmitted). */
+  TEJ_LOCAL_GENERATED: 'tax.tej.local_generated.v1',
 } as const;
 
 export const TAX_LAW_REF_TN =

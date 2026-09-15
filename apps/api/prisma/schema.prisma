@@ -1910,7 +1910,7 @@ model FinInvoiceLine {
   taxCodeId   String             @map("tax_code_id") @db.Uuid
   /** Set on PRODUCT lines when the SKU is known — nullable for legacy invoices. */
   productId   String?            @map("product_id") @db.Uuid
-  /** Immutable fiscal snapshot row — filled when document is ISSUED (later lot). */
+  /** Immutable fiscal snapshot — filled when document is ISSUED (D263). */
   taxLineId   String?            @map("tax_line_id") @db.Uuid
   amountHt    Decimal            @map("amount_ht") @db.Decimal(18, 3)
   amountTax   Decimal            @map("amount_tax") @db.Decimal(18, 3)
@@ -2186,7 +2186,12 @@ model FinApPayment {
   companyId      String           @map("company_id") @db.Uuid
   number         String
   vendorName     String           @map("vendor_name")
+  /** Net amount disbursed (after RAS when applied). */
   amount         Decimal          @db.Decimal(18, 3)
+  /** D264 — RAS withheld when tax.ras Prefs VALIDATED; 0 otherwise. */
+  amountRas      Decimal          @default(0) @map("amount_ras") @db.Decimal(18, 3)
+  rasRateBps     Int?             @map("ras_rate_bps")
+  rasApplied     Boolean          @default(false) @map("ras_applied")
   currency       String           @default("TND")
   method         FinPaymentMethod @default(OTHER)
   status         FinPaymentStatus @default(POSTED)
@@ -2525,6 +2530,31 @@ model TaxLine {
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, frozen])
   @@map("tax_line")
+}
+
+/**
+ * D265 — Local TEJ XML draft + SHA-256 history.
+ * NOT an official schema · NEVER transmitted · Prefs tax.tej VALIDATED required.
+ */
+model TaxTejExport {
+  id              String    @id @default(uuid()) @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
+  periodLabel     String    @map("period_label")
+  contentSha256   String    @map("content_sha256")
+  xmlContent      String    @map("xml_content") @db.Text
+  prefsValueLabel String    @map("prefs_value_label")
+  lawRef          String?   @map("law_ref")
+  schemaNote      String    @map("schema_note")
+  transmission    String    @default("DISABLED")
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  version         Int       @default(0)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, contentSha256])
+  @@map("tax_tej_export")
 }
 
 // --- acc_* Accounting GL V0 (D072) — no invented tax rates ---

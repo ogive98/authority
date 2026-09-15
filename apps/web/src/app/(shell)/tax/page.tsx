@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   ABadge,
+  AButton,
   AEmptyState,
   AErrorState,
   AForbiddenState,
+  AInput,
   AOverflowMenu,
   APageBody,
   APageSection,
@@ -18,7 +20,16 @@ import {
   ASoftTr,
 } from "@/components/a";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
-import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
+import {
+  downloadTejXml,
+  fetchTaxCodes,
+  fetchTejExport,
+  fetchTejExports,
+  formatRateBps,
+  generateTejExport,
+  type TaxCode,
+  type TejExport,
+} from "@/lib/tax";
 import {
   fetchExpertiseCatalog,
   type ExpertiseSlot,
@@ -65,14 +76,14 @@ const CALC_ROWS: {
   {
     key: "tax.ras",
     step: "RAS",
-    formula: "Base × rateBps Prefs (si VALIDATED) — indicatif AP",
-    applies: "Décaissements AP (non déduit auto)",
+    formula: "Base × rateBps Prefs (si VALIDATED) — déduit net AP",
+    applies: "Décaissements AP (D264)",
   },
   {
     key: "tax.tej",
     step: "TEJ",
-    formula: "Params déclaration Prefs (si VALIDATED)",
-    applies: "Local only — pas de transmission API",
+    formula: "Brouillon XML local + SHA-256 (Prefs VALIDATED)",
+    applies: "Local only — transmission DISABLED",
   },
 ];
 
@@ -94,6 +105,10 @@ export default function TaxCatalogPage() {
   const router = useRouter();
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [expertise, setExpertise] = useState<ExpertiseSlot[] | null>(null);
+  const [tejItems, setTejItems] = useState<TejExport[] | null>(null);
+  const [periodLabel, setPeriodLabel] = useState("");
+  const [tejBusy, setTejBusy] = useState(false);
+  const [tejError, setTejError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -119,12 +134,51 @@ export default function TaxCatalogPage() {
     setExpertise(res.data.items.filter((i) => wanted.has(i.key)));
   }, []);
 
+  const loadTej = useCallback(async () => {
+    const res = await fetchTejExports();
+    if (!res.ok) {
+      setTejItems([]);
+      return;
+    }
+    setTejItems(res.data.items);
+  }, []);
+
   useEffect(() => {
     void load();
     void loadExpertise();
-  }, [load, loadExpertise]);
+    void loadTej();
+  }, [load, loadExpertise, loadTej]);
 
   const byKey = new Map((expertise ?? []).map((s) => [s.key, s]));
+  const tejSlot = byKey.get("tax.tej");
+  const tejReady = tejSlot?.status === "VALIDATED";
+
+  async function onGenerateTej() {
+    setTejError(null);
+    setTejBusy(true);
+    try {
+      const res = await generateTejExport(periodLabel.trim());
+      if (!res.ok) {
+        setTejError(res.message);
+        return;
+      }
+      downloadTejXml(res.data);
+      setPeriodLabel("");
+      await loadTej();
+    } finally {
+      setTejBusy(false);
+    }
+  }
+
+  async function onDownloadTej(id: string) {
+    setTejError(null);
+    const res = await fetchTejExport(id);
+    if (!res.ok) {
+      setTejError(res.message);
+      return;
+    }
+    downloadTejXml(res.data);
+  }
 
   return (
     <>
@@ -166,7 +220,7 @@ export default function TaxCatalogPage() {
 
         <APageSection
           title="Calcul général"
-          description="Pile fiscale AUTHORITY — chaque ligne hors TVA lit Prefs Expertise. PENDING = montant 0 / indicatif off. TEJ = params locaux uniquement (pas de transmission)."
+          description="Pile fiscale AUTHORITY — chaque ligne hors TVA lit Prefs Expertise. PENDING = montant 0 / indicatif off. TEJ = brouillon local uniquement (transmission DISABLED)."
           bare
         >
           {expertise === null ? (
@@ -250,6 +304,106 @@ export default function TaxCatalogPage() {
             {" "}
             (siège unique — D098 / D246).
           </p>
+        </APageSection>
+
+        <APageSection
+          title="TEJ — brouillon local"
+          description="Génère un XML draft AUTHORITY (non officiel) + historique SHA-256. Jamais d’envoi API. Prefs tax.tej VALIDATED obligatoire."
+          bare
+          action={
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Période
+                </span>
+                <AInput
+                  value={periodLabel}
+                  onChange={(e) => setPeriodLabel(e.target.value)}
+                  placeholder="2026-Q3"
+                  className="w-40"
+                  disabled={tejBusy || !tejReady}
+                />
+              </label>
+              <AButton
+                type="button"
+                size="sm"
+                disabled={tejBusy || !tejReady || !periodLabel.trim()}
+                onClick={() => void onGenerateTej()}
+              >
+                Générer brouillon
+              </AButton>
+            </div>
+          }
+        >
+          {!tejReady ? (
+            <p className="mb-3 text-[length:var(--a-text-sm)] text-a-fg-muted">
+              Validez d’abord{" "}
+              <Link
+                href="/settings#expertise"
+                className="text-a-accent hover:underline"
+              >
+                tax.tej
+              </Link>{" "}
+              dans Préférences Expertise — aucun paramètre inventé.
+            </p>
+          ) : null}
+          {tejError ? (
+            <p className="mb-3 text-[length:var(--a-text-sm)] text-a-danger">
+              {tejError}
+            </p>
+          ) : null}
+          <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
+            Transmission :{" "}
+            <ABadge tone="warning">DISABLED</ABadge>
+            {" · "}schéma officiel XSD non fourni — brouillon local seulement.
+          </p>
+          {tejItems === null ? (
+            <ASkeleton className="h-24 w-full" />
+          ) : tejItems.length === 0 ? (
+            <AEmptyState
+              title="Aucun brouillon TEJ"
+              description="Générez un export local après validation Prefs tax.tej."
+            />
+          ) : (
+            <ASoftTable className="min-w-[40rem]">
+              <ASoftThead>
+                <tr>
+                  <th className="a-table-cell font-medium">Période</th>
+                  <th className="a-table-cell font-medium">SHA-256</th>
+                  <th className="a-table-cell font-medium">Prefs</th>
+                  <th className="a-table-cell font-medium">Créé</th>
+                  <th className="a-table-cell font-medium">Action</th>
+                </tr>
+              </ASoftThead>
+              <tbody>
+                {tejItems.map((row) => (
+                  <ASoftTr key={row.id}>
+                    <td className="a-table-cell font-medium">
+                      {row.periodLabel}
+                    </td>
+                    <td className="a-mono a-table-cell text-[length:var(--a-text-xs)]">
+                      {row.contentSha256.slice(0, 16)}…
+                    </td>
+                    <td className="a-table-cell text-a-fg-muted">
+                      {row.prefsValueLabel}
+                    </td>
+                    <td className="a-table-cell text-a-fg-muted">
+                      {new Date(row.createdAt).toLocaleString("fr-TN")}
+                    </td>
+                    <td className="a-table-cell">
+                      <button
+                        type="button"
+                        className="text-a-accent underline-offset-2 hover:underline"
+                        onClick={() => void onDownloadTej(row.id)}
+                      >
+                        Télécharger XML
+                      </button>
+                    </td>
+                  </ASoftTr>
+                ))}
+              </tbody>
+            </ASoftTable>
+          )}
         </APageSection>
 
         {state.kind === "loading" ? <ASkeleton className="h-40" /> : null}

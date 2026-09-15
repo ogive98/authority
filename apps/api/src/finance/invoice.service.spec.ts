@@ -30,6 +30,9 @@ describe('InvoiceService expertise surcharges (D093)', () => {
         findFirst: jest.fn(),
         findMany: jest.fn(),
       },
+      finInvoiceLine: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       prdProduct: {
         findFirst: jest.fn().mockResolvedValue(null),
       },
@@ -53,6 +56,7 @@ describe('InvoiceService expertise surcharges (D093)', () => {
           },
         ],
       }),
+      freezeDocumentLines: jest.fn().mockResolvedValue(0),
     };
     const expertise = {
       getFodec: jest.fn().mockResolvedValue(

@@ -98,6 +98,17 @@ describe('TaxService', () => {
       prdFiscalProfile: {
         findFirst: jest.fn().mockResolvedValue(null),
       },
+      taxLine: {
+        create: jest.fn().mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+          Promise.resolve({ id: 'tax-line-1', ...data }),
+        ),
+      },
+      finInvoiceLine: {
+        update: jest.fn().mockResolvedValue({}),
+      },
+      finCreditNoteLine: {
+        update: jest.fn().mockResolvedValue({}),
+      },
       $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
         fn(prisma),
       ),
@@ -401,5 +412,72 @@ describe('TaxService', () => {
     expect(prisma.taxCode.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: codeId }) }),
     );
+  });
+
+  it('freezeDocumentLines persists frozen tax_line and links invoice line (D263)', async () => {
+    const { service, prisma } = build();
+    const lineId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    const sourceId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+    const customerId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    const n = await service.freezeDocumentLines(prisma, companyId, {
+      sourceType: 'fin_invoice',
+      sourceId,
+      customerId,
+      lines: [
+        {
+          id: lineId,
+          lineNo: 1,
+          taxCodeId: codeId,
+          productId: null,
+          qty: 1,
+          unitPriceHt: 100,
+          amountHt: 100,
+          description: 'Fromage',
+        },
+      ],
+    });
+    expect(n).toBe(1);
+    expect(prisma.taxLine.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          frozen: true,
+          sourceType: 'fin_invoice',
+          sourceId,
+          taxCode: 'TVA19',
+          calculatedAmount: 19,
+          applicable: true,
+        }),
+      }),
+    );
+    expect(prisma.finInvoiceLine.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: lineId },
+        data: { taxLineId: 'tax-line-1' },
+      }),
+    );
+  });
+
+  it('freezeDocumentLines skips lines already linked', async () => {
+    const { service, prisma } = build();
+    const n = await service.freezeDocumentLines(prisma, companyId, {
+      sourceType: 'fin_invoice',
+      sourceId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      customerId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+      lines: [
+        {
+          id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          lineNo: 1,
+          taxCodeId: codeId,
+          productId: null,
+          qty: 1,
+          unitPriceHt: 100,
+          amountHt: 100,
+          description: 'Fromage',
+          taxLineId: 'already',
+        },
+      ],
+    });
+    expect(n).toBe(0);
+    expect(prisma.taxLine.create).not.toHaveBeenCalled();
   });
 });

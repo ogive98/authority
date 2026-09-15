@@ -1450,6 +1450,10 @@ export type FinApPayment = {
   number: string;
   vendorName: string;
   amount: string;
+  amountRas?: string;
+  rasRateBps?: number | null;
+  rasApplied?: boolean;
+  amountGross?: string;
   currency: string;
   method: string;
   status: string;
@@ -1654,6 +1658,7 @@ export async function createApPayment(body: {
   reference?: string;
   notes?: string;
   apBillId?: string;
+  applyRas?: boolean;
 }): Promise<{ ok: true; data: FinApPayment } | ApiFail> {
   try {
     const res = await fetch("/api/v1/finance/ap-payments", {

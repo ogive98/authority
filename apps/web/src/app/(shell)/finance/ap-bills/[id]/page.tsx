@@ -17,6 +17,7 @@ import {
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASwitch,
   type AOverflowItem,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
@@ -44,6 +45,7 @@ type PayForm = {
   method: string;
   paymentDate: string;
   reference: string;
+  applyRas: boolean;
 };
 
 export default function FinanceApBillFichePage() {
@@ -56,6 +58,7 @@ export default function FinanceApBillFichePage() {
   const [payForm, setPayForm] = useState<PayForm | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
   const [rasHint, setRasHint] = useState<string | null>(null);
+  const [rasPreviewAmount, setRasPreviewAmount] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -122,11 +125,13 @@ export default function FinanceApBillFichePage() {
     if (!bill || bill.status !== "POSTED") return;
     setPayError(null);
     setRasHint(null);
+    setRasPreviewAmount(null);
     setPayForm({
       amount: bill.amountTotal,
       method: "BANK_TRANSFER",
       paymentDate: new Date().toISOString().slice(0, 10),
       reference: bill.reference ?? "",
+      applyRas: true,
     });
     setPayOpen(true);
     const base = Number(bill.amountTotal);
@@ -136,12 +141,14 @@ export default function FinanceApBillFichePage() {
       });
       if (!res.ok) return;
       if (res.data.rasPreview?.applied) {
+        setRasPreviewAmount(res.data.rasPreview.amount);
         setRasHint(
-          `RAS indicatif (Prefs VALIDATED) : ${res.data.rasPreview.amount.toFixed(3)} TND — non déduit auto · pas de TEJ transmission.`,
+          `RAS Prefs VALIDATED (${res.data.rasPreview.rateBps ?? "—"} bps) : ${res.data.rasPreview.amount.toFixed(3)} TND déduit auto du décaissement (net = montant − RAS). Pas de TEJ transmission.`,
         );
       } else if (!res.data.ras) {
+        setRasPreviewAmount(null);
         setRasHint(
-          "RAS en attente expert (Préférences) — aucun taux inventé.",
+          "RAS en attente expert (Préférences) — aucun taux inventé, pas de déduction.",
         );
       }
     })();
@@ -162,6 +169,7 @@ export default function FinanceApBillFichePage() {
       method: payForm.method,
       paymentDate: payForm.paymentDate,
       reference: payForm.reference.trim() || undefined,
+      applyRas: payForm.applyRas,
     });
     setBusy(false);
     if (!res.ok) {
@@ -209,7 +217,7 @@ export default function FinanceApBillFichePage() {
         }
         kicker="Finance"
         title={bill ? bill.number : "Facture fournisseur"}
-        description="AP bill Soft Glass — lien décaissement optionnel (D237) · RAS/TEJ Prefs VALIDATED only (D246) · pas de GL."
+        description="AP bill Soft Glass — décaissement · RAS auto si Prefs VALIDATED (D264) · pas de GL."
         status={
           bill ? (
             <ABadge tone={apBillBadgeTone(bill.status)}>
@@ -444,9 +452,33 @@ export default function FinanceApBillFichePage() {
                 </Link>
               </p>
             ) : null}
+            {rasPreviewAmount != null && payForm.applyRas ? (
+              <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                Net estimé :{" "}
+                {(
+                  Number(payForm.amount.replace(",", ".")) - rasPreviewAmount
+                ).toFixed(3)}{" "}
+                TND
+              </p>
+            ) : null}
+            {rasPreviewAmount != null ? (
+              <div className="flex items-center gap-3">
+                <ASwitch
+                  size="sm"
+                  label="Déduire RAS automatiquement"
+                  checked={payForm.applyRas}
+                  onCheckedChange={(on) =>
+                    setPayForm({ ...payForm, applyRas: on })
+                  }
+                />
+                <span className="text-[length:var(--a-text-sm)]">
+                  Déduire RAS automatiquement
+                </span>
+              </div>
+            ) : null}
             <label className="block space-y-1">
               <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                Montant TND *
+                Montant base TND * (avant RAS)
               </span>
               <AInput
                 value={payForm.amount}

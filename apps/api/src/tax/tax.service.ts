@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  Prisma,
   TaxCalcMethod,
   TaxCode,
   TaxDecisionSource,
@@ -191,7 +192,7 @@ export class TaxService {
 
   /**
    * Fiscal Rule Engine — returns why each tax applies (or not).
-   * Does not persist tax_line (snapshot on ISSUED is a later lot).
+   * Preview does not persist. Call freezeDocumentLines on ISSUED (D263).
    * Does not read FODEC/timbre/RAS Prefs (D090/D092 stay outside the engine).
    */
   async calculate(
@@ -223,6 +224,103 @@ export class TaxService {
       );
     }
     return { decisions };
+  }
+
+  /**
+   * D263 — immutable tax_line snapshot + link to document lines.
+   * Idempotent: skips lines that already have taxLineId.
+   */
+  async freezeDocumentLines(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    input: {
+      sourceType: 'fin_invoice' | 'fin_credit_note';
+      sourceId: string;
+      customerId: string;
+      currency?: string;
+      lines: Array<{
+        id: string;
+        lineNo: number;
+        taxCodeId: string;
+        productId: string | null;
+        qty: number | Prisma.Decimal;
+        unitPriceHt: number | Prisma.Decimal;
+        amountHt: number | Prisma.Decimal;
+        description: string;
+        taxLineId?: string | null;
+      }>;
+    },
+  ): Promise<number> {
+    let frozen = 0;
+    const currency = (input.currency?.trim() || 'TND').toUpperCase();
+    for (const line of input.lines) {
+      if (line.taxLineId) continue;
+      const qty = Number(line.qty);
+      const unitPriceHt = Number(line.unitPriceHt);
+      const amountHt = Number(line.amountHt);
+      const { decisions } = await this.calculate(companyId, {
+        currency,
+        customerId: input.customerId,
+        lines: [
+          {
+            lineNo: line.lineNo,
+            taxCodeId: line.taxCodeId,
+            productId: line.productId ?? undefined,
+            qty,
+            unitPriceHt,
+            amountHt,
+            description: line.description,
+          },
+        ],
+      });
+      const decision =
+        decisions.find((d) => d.kind === TaxKind.VAT) ?? decisions[0];
+      if (!decision?.ruleId || !decision.taxCode || !decision.kind || !decision.calcMethod) {
+        continue;
+      }
+      const row = await tx.taxLine.create({
+        data: {
+          companyId,
+          sourceType: input.sourceType,
+          sourceId: input.sourceId,
+          lineNo: line.lineNo,
+          taxCodeId: decision.ruleId,
+          taxRateId: decision.taxRateId,
+          ruleVersion: decision.ruleVersion ?? 0,
+          taxCode: decision.taxCode,
+          taxName: decision.taxName ?? decision.taxCode,
+          kind: decision.kind,
+          calcMethod: decision.calcMethod,
+          rateBps: decision.rateBps,
+          amountMilli: decision.fixedAmountMilli,
+          base: decision.base,
+          taxableQuantity: decision.quantity,
+          unit: decision.unit,
+          calculatedAmount: decision.calculatedAmount,
+          currency: decision.currency,
+          applicable: decision.applicable,
+          reason: decision.reason,
+          source: decision.source,
+          lawRef: decision.lawRef,
+          effectiveFrom: new Date(decision.effectiveDate),
+          calculatedAt: new Date(),
+          frozen: true,
+        },
+      });
+      if (input.sourceType === 'fin_invoice') {
+        await tx.finInvoiceLine.update({
+          where: { id: line.id },
+          data: { taxLineId: row.id },
+        });
+      } else {
+        await tx.finCreditNoteLine.update({
+          where: { id: line.id },
+          data: { taxLineId: row.id },
+        });
+      }
+      frozen += 1;
+    }
+    return frozen;
   }
 
   async createRate(

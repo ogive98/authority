@@ -10,6 +10,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import type { IamUser } from '@prisma/client';
+import { CurrentUser } from '../identity/identity.decorators';
 import { CurrentTenancy } from '../organization/organization.decorators';
 import type { TenancyContext } from '../organization/organization.constants';
 import { TenancyGuard } from '../organization/tenancy.guard';
@@ -19,14 +21,23 @@ import { RequireModule } from '../modules-registry/modules.decorators';
 import { PermissionGuard } from '../permissions/permission.guard';
 import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
-import { CreateTaxRateDto, PatchTaxRateDto, CalculateTaxDto } from './tax.dto';
+import {
+  CalculateTaxDto,
+  CreateTaxRateDto,
+  GenerateTejLocalDto,
+  PatchTaxRateDto,
+} from './tax.dto';
 import { TaxService } from './tax.service';
+import { TejLocalService } from './tej-local.service';
 
 @Controller('api/v1/tax')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
 @RequireModule('tax')
 export class TaxController {
-  constructor(private readonly taxService: TaxService) {}
+  constructor(
+    private readonly taxService: TaxService,
+    private readonly tejLocal: TejLocalService,
+  ) {}
 
   @Get('codes')
   @RequirePermission(PERMISSION_KEYS.taxRead)
@@ -81,5 +92,41 @@ export class TaxController {
     @Body() dto: CalculateTaxDto,
   ) {
     return this.taxService.calculate(tenancy.companyId, dto);
+  }
+
+  /** D265 — local TEJ draft history (hash only; transmission always DISABLED). */
+  @Get('tej/exports')
+  @RequirePermission(PERMISSION_KEYS.taxRead)
+  listTejExports(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('limit') limit?: string,
+  ) {
+    const n = limit ? Number(limit) : undefined;
+    return this.tejLocal.list(tenancy.companyId, {
+      limit: Number.isFinite(n) ? n : undefined,
+    });
+  }
+
+  @Get('tej/exports/:id')
+  @RequirePermission(PERMISSION_KEYS.taxRead)
+  getTejExport(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.tejLocal.get(tenancy.companyId, id);
+  }
+
+  @Post('tej/exports')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.taxRateManage)
+  generateTejExport(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Body() dto: GenerateTejLocalDto,
+  ) {
+    return this.tejLocal.generate(tenancy.companyId, {
+      periodLabel: dto.periodLabel,
+      createdByUserId: user.id,
+    });
   }
 }

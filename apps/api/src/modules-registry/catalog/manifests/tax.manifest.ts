@@ -13,7 +13,7 @@ export const taxManifest: ModuleManifest = {
   version: '1.1.0',
   apiVersion: '1',
   description:
-    'Tax Engine — TVA Tunisie + POST /tax/calculate; FODEC/timbre/RAS/TEJ Prefs VALIDATED only; no invented rates; no TEJ transmission',
+    'Tax Engine — TVA Tunisie + POST /tax/calculate; FODEC/timbre/RAS/TEJ Prefs VALIDATED only; local TEJ XML draft+hash (D265); no invented rates; no TEJ transmission',
   capabilities: [
     {
       key: 'tax.read',
@@ -55,11 +55,16 @@ export const taxManifest: ModuleManifest = {
     'tax.rate.patch',
     'tax.calculate',
     'tax.compute',
+    'tax.tej.export.generate',
   ],
-  queries: ['tax.codes.list', 'tax.rates.list'],
+  queries: ['tax.codes.list', 'tax.rates.list', 'tax.tej.exports.list'],
   permissions: ['tax.read', 'tax.rate.manage'],
-  dependencies: ['platform', 'organization', 'master_data'],
-  publishedEvents: ['tax.rate.published.v1', 'tax.rate.changed.v1'],
+  dependencies: ['platform', 'organization', 'master_data', 'settings'],
+  publishedEvents: [
+    'tax.rate.published.v1',
+    'tax.rate.changed.v1',
+    'tax.tej.local_generated.v1',
+  ],
   navigationEntries: [
     { id: 'tax-catalog', label: 'Fiscalité / TVA', href: '/tax' },
     {
