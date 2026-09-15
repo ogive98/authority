@@ -20,6 +20,7 @@ import {
   ASwitch,
   type AOverflowItem,
 } from "@/components/a";
+import { FulfillmentDocToggle } from "@/components/fulfillment-doc-toggle";
 import {
   ADDRESS_TYPE_LABELS,
   PORTAL_ROLE_LABELS,
@@ -29,9 +30,11 @@ import {
   createCustomerAddress,
   createPortalMembership,
   deleteCustomerAddress,
+  deleteCustomerFiscalOverride,
   deleteCustomerPrice,
   fetchCustomerCommunications,
   fetchCustomerDocuments,
+  fetchCustomerFiscal,
   fetchCustomerSummary,
   fetchCustomerTimeline,
   fetchCustomerZones,
@@ -41,15 +44,22 @@ import {
   unblockCustomer,
   updateCustomer,
   updatePortalMembership,
+  upsertCustomerFiscalOverride,
+  upsertCustomerFiscalProfile,
   upsertCustomerPrice,
   type Customer,
   type CustomerAddressType,
   type CustomerCommunications,
   type CustomerDocumentItem,
+  type CustomerFiscal,
   type CustomerStatus,
   type CustomerSummary,
   type CustomerTimelineItem,
   type CustomerZone,
+  type FiscalOverrideMode,
+  FISCAL_OVERRIDE_LABELS,
+  FULFILLMENT_DOC_LABELS,
+  type FulfillmentDoc,
   type PortalLinkableUser,
   type PortalMembership,
   type PortalMembershipRole,
@@ -88,6 +98,7 @@ type EditForm = {
   allowExceptionalOverride: boolean;
   blockOnCriticalOverdue: boolean;
   notifyResponsible: boolean;
+  fulfillmentDoc: FulfillmentDoc;
 };
 
 const ADDRESS_TYPES = Object.keys(ADDRESS_TYPE_LABELS) as CustomerAddressType[];
@@ -110,6 +121,12 @@ function severityTone(
   if (s === "critical" || s === "high") return "danger";
   if (s === "medium") return "warning";
   return "info";
+}
+
+function vatLiableSelect(value: boolean | null): "" | "true" | "false" {
+  if (value === true) return "true";
+  if (value === false) return "false";
+  return "";
 }
 
 function Field({
@@ -197,16 +214,32 @@ export default function Customer360Page() {
   const [portalError, setPortalError] = useState<string | null>(null);
   const [portalQ, setPortalQ] = useState("");
 
+  const [fiscal, setFiscal] = useState<CustomerFiscal | null>(null);
+  const [fiscalError, setFiscalError] = useState<string | null>(null);
+  const [fiscalBusy, setFiscalBusy] = useState(false);
+  const [fiscalRegime, setFiscalRegime] = useState("");
+  const [fiscalStatus, setFiscalStatus] = useState("");
+  const [fiscalCategory, setFiscalCategory] = useState("");
+  const [vatLiable, setVatLiable] = useState<"" | "true" | "false">("");
+  const [withholdingArEnabled, setWithholdingArEnabled] = useState(false);
+  const [fiscalNotes, setFiscalNotes] = useState("");
+  const [overrideTaxCodeId, setOverrideTaxCodeId] = useState("");
+  const [overrideMode, setOverrideMode] =
+    useState<FiscalOverrideMode>("NEVER");
+  const [overrideJustification, setOverrideJustification] = useState("");
+  const [overrideReference, setOverrideReference] = useState("");
+
   const load = useCallback(async () => {
     if (!id) {
       setState({ kind: "error", message: "Identifiant manquant." });
       return;
     }
     setState({ kind: "loading" });
-    const [summaryRes, timelineRes, memRes] = await Promise.all([
+    const [summaryRes, timelineRes, memRes, fiscalRes] = await Promise.all([
       fetchCustomerSummary(id),
       fetchCustomerTimeline(id, { limit: 20 }),
       fetchPortalMemberships(id),
+      fetchCustomerFiscal(id),
     ]);
     if (!summaryRes.ok) {
       if (summaryRes.status === 403) {
@@ -225,6 +258,19 @@ export default function Customer360Page() {
     setState({ kind: "ok", data: summaryRes.data });
     setTimeline(timelineRes.ok ? timelineRes.data.items : []);
     setMemberships(memRes.ok ? memRes.data.items : []);
+    if (fiscalRes.ok) {
+      setFiscal(fiscalRes.data);
+      setFiscalRegime(fiscalRes.data.profile.fiscalRegime ?? "");
+      setFiscalStatus(fiscalRes.data.profile.fiscalStatus ?? "");
+      setFiscalCategory(fiscalRes.data.profile.fiscalCategory ?? "");
+      setVatLiable(vatLiableSelect(fiscalRes.data.profile.vatLiable));
+      setWithholdingArEnabled(fiscalRes.data.profile.withholdingArEnabled);
+      setFiscalNotes(fiscalRes.data.profile.notes ?? "");
+      setFiscalError(null);
+    } else {
+      setFiscal(null);
+      setFiscalError(fiscalRes.message);
+    }
     setDocs(null);
     setComms(null);
     setTab("overview");
@@ -324,6 +370,7 @@ export default function Customer360Page() {
       allowExceptionalOverride: c.allowExceptionalOverride ?? false,
       blockOnCriticalOverdue: c.blockOnCriticalOverdue ?? false,
       notifyResponsible: c.notifyResponsible ?? false,
+      fulfillmentDoc: c.fulfillmentDoc ?? "DELIVERY_NOTE",
     });
     setEditError(null);
     setEditOpen(true);
@@ -350,6 +397,7 @@ export default function Customer360Page() {
       allowExceptionalOverride: editForm.allowExceptionalOverride,
       blockOnCriticalOverdue: editForm.blockOnCriticalOverdue,
       notifyResponsible: editForm.notifyResponsible,
+      fulfillmentDoc: editForm.fulfillmentDoc,
       version: customer.version,
     });
     if (!res.ok) {
@@ -522,6 +570,84 @@ export default function Customer360Page() {
       return;
     }
     await load();
+  }
+
+  function applyFiscalLocal(data: CustomerFiscal) {
+    setFiscal(data);
+    setFiscalRegime(data.profile.fiscalRegime ?? "");
+    setFiscalStatus(data.profile.fiscalStatus ?? "");
+    setFiscalCategory(data.profile.fiscalCategory ?? "");
+    setVatLiable(vatLiableSelect(data.profile.vatLiable));
+    setWithholdingArEnabled(data.profile.withholdingArEnabled);
+    setFiscalNotes(data.profile.notes ?? "");
+    setFiscalError(null);
+  }
+
+  async function onSaveFiscalProfile() {
+    if (!customer || !fiscal) return;
+    setFiscalBusy(true);
+    setFiscalError(null);
+    const res = await upsertCustomerFiscalProfile(customer.id, {
+      fiscalRegime: fiscalRegime.trim() || null,
+      fiscalStatus: fiscalStatus.trim() || null,
+      fiscalCategory: fiscalCategory.trim() || null,
+      vatLiable: vatLiable === "" ? null : vatLiable === "true",
+      withholdingArEnabled,
+      notes: fiscalNotes.trim() || null,
+      version: fiscal.profile.version,
+    });
+    setFiscalBusy(false);
+    if (!res.ok) {
+      setFiscalError(res.message);
+      return;
+    }
+    applyFiscalLocal(res.data);
+  }
+
+  async function onSaveFiscalOverride() {
+    if (!customer || !overrideTaxCodeId) {
+      setFiscalError("Choisissez un code fiscal.");
+      return;
+    }
+    if (
+      overrideMode !== "AUTO" &&
+      !overrideJustification.trim()
+    ) {
+      setFiscalError(
+        "Justification obligatoire pour Toujours / Jamais / Confirmer.",
+      );
+      return;
+    }
+    setFiscalBusy(true);
+    setFiscalError(null);
+    const res = await upsertCustomerFiscalOverride(customer.id, {
+      taxCodeId: overrideTaxCodeId,
+      mode: overrideMode,
+      justification: overrideJustification.trim() || null,
+      reference: overrideReference.trim() || null,
+    });
+    setFiscalBusy(false);
+    if (!res.ok) {
+      setFiscalError(res.message);
+      return;
+    }
+    applyFiscalLocal(res.data);
+    setOverrideTaxCodeId("");
+    setOverrideJustification("");
+    setOverrideReference("");
+  }
+
+  async function onDeleteFiscalOverride(taxCodeId: string) {
+    if (!customer) return;
+    setFiscalBusy(true);
+    setFiscalError(null);
+    const res = await deleteCustomerFiscalOverride(customer.id, taxCodeId);
+    setFiscalBusy(false);
+    if (!res.ok) {
+      setFiscalError(res.message);
+      return;
+    }
+    applyFiscalLocal(res.data);
   }
 
   async function openPortalDrawer() {
@@ -880,6 +1006,16 @@ export default function Customer360Page() {
                       <dd>{customer.paymentTerms ?? "—"}</dd>
                     </div>
                     <div>
+                      <dt className="text-a-fg-muted">Document</dt>
+                      <dd>
+                        {
+                          FULFILLMENT_DOC_LABELS[
+                            customer.fulfillmentDoc ?? "DELIVERY_NOTE"
+                          ]
+                        }
+                      </dd>
+                    </div>
+                    <div>
                       <dt className="text-a-fg-muted">Crédit statut</dt>
                       <dd>{customer.creditStatus ?? "NORMAL"}</dd>
                     </div>
@@ -916,6 +1052,220 @@ export default function Customer360Page() {
                       </dd>
                     </div>
                   </dl>
+                </APageSection>
+
+                <APageSection
+                  title="Fiscalité"
+                  description="Profil client et dérogations par code. Les taux restent dans Fiscalité / Préférences — jamais inventés ici. NEVER = exonération justifiée, pas un contournement."
+                >
+                  {fiscalError ? (
+                    <p className="mb-3 text-[length:var(--a-text-sm)] text-a-danger">
+                      {fiscalError}
+                    </p>
+                  ) : null}
+                  {!fiscal ? (
+                    <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                      Profil fiscal indisponible.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      <dl className="grid gap-3 text-[length:var(--a-text-sm)] sm:grid-cols-2">
+                        <div>
+                          <dt className="text-a-fg-muted">MF (pièce d’identité)</dt>
+                          <dd className="a-mono">{fiscal.taxId ?? "—"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-a-fg-muted">RAS clients (AR)</dt>
+                          <dd className="text-a-fg-muted">
+                            Architecture seulement — non appliqué à la facture
+                            (D246). RAS auto = fournisseurs (AP), plus tard.
+                          </dd>
+                        </div>
+                      </dl>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="Régime">
+                          <AInput
+                            value={fiscalRegime}
+                            onChange={(e) => setFiscalRegime(e.target.value)}
+                            placeholder="réel, forfait…"
+                          />
+                        </Field>
+                        <Field label="Statut fiscal">
+                          <AInput
+                            value={fiscalStatus}
+                            onChange={(e) => setFiscalStatus(e.target.value)}
+                          />
+                        </Field>
+                        <Field label="Catégorie">
+                          <AInput
+                            value={fiscalCategory}
+                            onChange={(e) => setFiscalCategory(e.target.value)}
+                          />
+                        </Field>
+                        <Field label="Assujetti TVA">
+                          <select
+                            className={softSelect}
+                            value={vatLiable}
+                            onChange={(e) =>
+                              setVatLiable(
+                                e.target.value as "" | "true" | "false",
+                              )
+                            }
+                          >
+                            <option value="">Non renseigné</option>
+                            <option value="true">Assujetti</option>
+                            <option value="false">Non assujetti</option>
+                          </select>
+                        </Field>
+                      </div>
+                      <ToggleRow
+                        label="Flag RAS AR (inactif)"
+                        checked={withholdingArEnabled}
+                        onChange={setWithholdingArEnabled}
+                      />
+                      <Field label="Notes">
+                        <AInput
+                          value={fiscalNotes}
+                          onChange={(e) => setFiscalNotes(e.target.value)}
+                        />
+                      </Field>
+                      <AButton
+                        type="button"
+                        size="sm"
+                        disabled={fiscalBusy}
+                        onClick={() => void onSaveFiscalProfile()}
+                      >
+                        Enregistrer le fiscal
+                      </AButton>
+
+                      <div>
+                        <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                          Dérogations par code
+                        </p>
+                        {fiscal.overrides.length === 0 ? (
+                          <p className="mb-3 text-[length:var(--a-text-sm)] text-a-fg-muted">
+                            Aucune dérogation — le moteur applique les règles
+                            ACTIVE.
+                          </p>
+                        ) : (
+                          <div className={`${softTableWrap} mb-3`}>
+                            <table className="w-full text-left text-[length:var(--a-text-sm)]">
+                              <thead className={softThead}>
+                                <tr>
+                                  <th className="a-table-cell font-medium">
+                                    Code
+                                  </th>
+                                  <th className="a-table-cell font-medium">
+                                    Mode
+                                  </th>
+                                  <th className="a-table-cell font-medium">
+                                    Justification
+                                  </th>
+                                  <th className="a-table-cell font-medium">
+                                    Actions
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {fiscal.overrides.map((row) => (
+                                  <tr key={row.id} className={softTr}>
+                                    <td className="a-table-cell">
+                                      <span className="a-mono">{row.taxCode}</span>
+                                      <span className="text-a-fg-muted">
+                                        {" "}
+                                        · {row.taxLabel}
+                                      </span>
+                                    </td>
+                                    <td className="a-table-cell">
+                                      <ABadge tone="neutral">
+                                        {FISCAL_OVERRIDE_LABELS[row.mode]}
+                                      </ABadge>
+                                    </td>
+                                    <td className="a-table-cell">
+                                      {row.justification ?? "—"}
+                                    </td>
+                                    <td className="a-table-cell">
+                                      <AButton
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        disabled={fiscalBusy}
+                                        onClick={() =>
+                                          void onDeleteFiscalOverride(
+                                            row.taxCodeId,
+                                          )
+                                        }
+                                      >
+                                        Auto
+                                      </AButton>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                        <div className="grid gap-2 lg:grid-cols-[1fr_10rem_1fr_auto]">
+                          <select
+                            className={softSelect}
+                            value={overrideTaxCodeId}
+                            onChange={(e) =>
+                              setOverrideTaxCodeId(e.target.value)
+                            }
+                          >
+                            <option value="">Code fiscal…</option>
+                            {fiscal.availableCodes.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.code} · {c.label} ({c.status})
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            className={softSelect}
+                            value={overrideMode}
+                            onChange={(e) =>
+                              setOverrideMode(
+                                e.target.value as FiscalOverrideMode,
+                              )
+                            }
+                          >
+                            {(
+                              Object.keys(
+                                FISCAL_OVERRIDE_LABELS,
+                              ) as FiscalOverrideMode[]
+                            )
+                              .filter((m) => m !== "AUTO")
+                              .map((m) => (
+                                <option key={m} value={m}>
+                                  {FISCAL_OVERRIDE_LABELS[m]}
+                                </option>
+                              ))}
+                          </select>
+                          <AInput
+                            value={overrideJustification}
+                            onChange={(e) =>
+                              setOverrideJustification(e.target.value)
+                            }
+                            placeholder="Justification"
+                          />
+                          <AButton
+                            type="button"
+                            size="sm"
+                            disabled={fiscalBusy || !overrideTaxCodeId}
+                            onClick={() => void onSaveFiscalOverride()}
+                          >
+                            Appliquer
+                          </AButton>
+                        </div>
+                        <AInput
+                          className="mt-2"
+                          value={overrideReference}
+                          onChange={(e) => setOverrideReference(e.target.value)}
+                          placeholder="Référence (décision, certificat…)"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </APageSection>
 
                 <APageSection
@@ -1846,6 +2196,14 @@ export default function Customer360Page() {
                 }
               />
             </div>
+
+            <FulfillmentDocToggle
+              value={editForm.fulfillmentDoc}
+              onChange={(fulfillmentDoc) =>
+                setEditForm({ ...editForm, fulfillmentDoc })
+              }
+              hint="Titre imprimé (facture ou bon de livraison) — même contenu, même compta. Modifiable à chaque document."
+            />
 
             <div className="space-y-3 a-underlay p-3">
               <p className="text-[length:var(--a-text-sm)] font-medium">

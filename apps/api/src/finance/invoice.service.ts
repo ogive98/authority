@@ -8,6 +8,7 @@ import {
   Prisma,
   SalOrderStatus,
 } from '@prisma/client';
+import { TaxDecisionSource, TaxKind } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
@@ -22,11 +23,13 @@ import { FinanceException } from './finance.exception';
 export type InvoiceLineDto = {
   id: string;
   lineNo: number;
+  lineType: 'PRODUCT' | 'TAX';
   description: string;
   qty: string;
   unitPriceHt: string;
   taxCodeId: string;
   taxCode: string | null;
+  productId: string | null;
   amountHt: string;
   amountTax: string;
   amountTtc: string;
@@ -42,6 +45,7 @@ export type InvoiceDto = {
   status: FinInvoiceStatus;
   salesOrderId: string | null;
   shipmentId: string | null;
+  fulfillmentDoc: 'DELIVERY_NOTE' | 'INVOICE';
   currency: string;
   amountHt: string;
   amountTax: string;
@@ -69,10 +73,12 @@ type InvoiceWithExtras = FinInvoice & {
   lines: Array<{
     id: string;
     lineNo: number;
+    lineType?: 'PRODUCT' | 'TAX';
     description: string;
     qty: Prisma.Decimal;
     unitPriceHt: Prisma.Decimal;
     taxCodeId: string;
+    productId?: string | null;
     amountHt: Prisma.Decimal;
     amountTax: Prisma.Decimal;
     amountTtc: Prisma.Decimal;
@@ -159,7 +165,7 @@ export class InvoiceService {
   }
 
   async create(companyId: string, dto: CreateInvoiceDto): Promise<InvoiceDto> {
-    await this.assertCustomer(companyId, dto.customerId);
+    const customer = await this.assertCustomer(companyId, dto.customerId);
     if (dto.salesOrderId) {
       await this.assertSalesOrder(companyId, dto.customerId, dto.salesOrderId);
     }
@@ -172,6 +178,8 @@ export class InvoiceService {
     const number = await this.nextNumber(companyId);
     const currency = (dto.currency?.trim() || 'TND').toUpperCase();
     const issue = dto.issue === true;
+    const fulfillmentDoc =
+      dto.fulfillmentDoc ?? customer.fulfillmentDoc ?? 'DELIVERY_NOTE';
 
     const row = await this.prisma.$transaction(async (tx) => {
       const invoice = await tx.finInvoice.create({
@@ -182,6 +190,7 @@ export class InvoiceService {
           status: issue ? FinInvoiceStatus.ISSUED : FinInvoiceStatus.DRAFT,
           salesOrderId: dto.salesOrderId ?? null,
           shipmentId: dto.shipmentId ?? null,
+          fulfillmentDoc,
           currency,
           amountHt: withExpertise.amountHt,
           amountTax: withExpertise.amountTax,
@@ -200,6 +209,7 @@ export class InvoiceService {
               qty: l.qty,
               unitPriceHt: l.unitPriceHt,
               taxCodeId: l.taxCodeId,
+              productId: l.productId,
               amountHt: l.amountHt,
               amountTax: l.amountTax,
               amountTtc: l.amountTtc,
@@ -616,6 +626,7 @@ export class InvoiceService {
       qty: number;
       unitPriceHt: number;
       taxCodeId: string;
+      productId: string | null;
       amountHt: number;
       amountTax: number;
       amountTtc: number;
@@ -627,7 +638,12 @@ export class InvoiceService {
       let amountTax = 0;
       let lineNo = 1;
       for (const line of dto.lines) {
-        const computed = await this.computeOneLine(companyId, line, lineNo);
+        const computed = await this.computeOneLine(
+          companyId,
+          line,
+          lineNo,
+          dto.customerId,
+        );
         lines.push(computed);
         amountHt = round3(amountHt + computed.amountHt);
         amountTax = round3(amountTax + computed.amountTax);
@@ -670,6 +686,7 @@ export class InvoiceService {
           qty: 1,
           unitPriceHt: ttc,
           taxCodeId: exo.id,
+          productId: null,
           amountHt: ttc,
           amountTax: 0,
           amountTtc: ttc,
@@ -695,6 +712,7 @@ export class InvoiceService {
         qty: number;
         unitPriceHt: number;
         taxCodeId: string;
+        productId?: string | null;
         amountHt: number;
         amountTax: number;
         amountTtc: number;
@@ -745,15 +763,56 @@ export class InvoiceService {
     companyId: string,
     line: CreateInvoiceLineDto,
     lineNo: number,
+    customerId: string,
   ) {
+    if (line.productId) {
+      const product = await this.prisma.prdProduct.findFirst({
+        where: { id: line.productId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!product) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_AMOUNT,
+          'Product not found for this line.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
     const qty = round3(line.qty);
     const unitPriceHt = round3(line.unitPriceHt);
     const amountHt = round3(qty * unitPriceHt);
-    const { rateBps } = await this.tax.resolveRateBps(
-      companyId,
-      line.taxCodeId,
-    );
-    const amountTax = taxFromHt(amountHt, rateBps);
+    const { decisions } = await this.tax.calculate(companyId, {
+      currency: 'TND',
+      operationType: 'AR_INVOICE',
+      customerId,
+      lines: [
+        {
+          lineNo,
+          taxCodeId: line.taxCodeId,
+          productId: line.productId,
+          qty,
+          unitPriceHt,
+          amountHt,
+          description: line.description,
+        },
+      ],
+    });
+    const vat = decisions.find((d) => d.kind === TaxKind.VAT);
+    if (!vat) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.INVALID_AMOUNT,
+        'VAT tax code is not applicable for this line.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (!vat.applicable && vat.source !== TaxDecisionSource.EXEMPTION) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.INVALID_AMOUNT,
+        'VAT tax code is not applicable for this line.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const amountTax = vat.applicable ? vat.calculatedAmount : 0;
     const amountTtc = round3(amountHt + amountTax);
     return {
       lineNo,
@@ -761,6 +820,7 @@ export class InvoiceService {
       qty,
       unitPriceHt,
       taxCodeId: line.taxCodeId,
+      productId: line.productId ?? null,
       amountHt,
       amountTax,
       amountTtc,
@@ -785,7 +845,10 @@ export class InvoiceService {
     return row;
   }
 
-  private async assertCustomer(companyId: string, customerId: string) {
+  private async assertCustomer(
+    companyId: string,
+    customerId: string,
+  ): Promise<{ fulfillmentDoc: 'DELIVERY_NOTE' | 'INVOICE' }> {
     const customer = await this.prisma.cusCustomer.findFirst({
       where: { id: customerId, companyId, deletedAt: null },
     });
@@ -796,6 +859,7 @@ export class InvoiceService {
         HttpStatus.NOT_FOUND,
       );
     }
+    return customer;
   }
 
   private async assertSalesOrder(
@@ -891,6 +955,7 @@ function serializeInvoice(
     status: row.status,
     salesOrderId: row.salesOrderId,
     shipmentId: row.shipmentId,
+    fulfillmentDoc: row.fulfillmentDoc,
     currency: row.currency,
     amountHt: Number(row.amountHt).toFixed(3),
     amountTax: Number(row.amountTax).toFixed(3),
@@ -905,11 +970,13 @@ function serializeInvoice(
     lines: (row.lines ?? []).map((l) => ({
       id: l.id,
       lineNo: l.lineNo,
+      lineType: l.lineType ?? 'PRODUCT',
       description: l.description,
       qty: Number(l.qty).toFixed(3),
       unitPriceHt: Number(l.unitPriceHt).toFixed(3),
       taxCodeId: l.taxCodeId,
       taxCode: l.taxCode?.code ?? null,
+      productId: l.productId ?? null,
       amountHt: Number(l.amountHt).toFixed(3),
       amountTax: Number(l.amountTax).toFixed(3),
       amountTtc: Number(l.amountTtc).toFixed(3),

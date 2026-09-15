@@ -11,7 +11,10 @@ describe('InvoiceService expertise surcharges (D093)', () => {
   }) {
     const prisma: Record<string, unknown> = {
       cusCustomer: {
-        findFirst: jest.fn().mockResolvedValue({ id: customerId }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: customerId,
+          fulfillmentDoc: 'DELIVERY_NOTE',
+        }),
         findMany: jest.fn().mockResolvedValue([
           {
             id: customerId,
@@ -27,6 +30,9 @@ describe('InvoiceService expertise surcharges (D093)', () => {
         findFirst: jest.fn(),
         findMany: jest.fn(),
       },
+      prdProduct: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
         fn(prisma),
       ),
@@ -36,6 +42,17 @@ describe('InvoiceService expertise surcharges (D093)', () => {
     const tax = {
       resolveRateBps: jest.fn().mockResolvedValue({ rateBps: 1900 }),
       findCodeByCode: jest.fn(),
+      calculate: jest.fn().mockResolvedValue({
+        decisions: [
+          {
+            applicable: true,
+            kind: 'VAT',
+            calculatedAmount: 19,
+            rateBps: 1900,
+            taxCode: 'TVA19',
+          },
+        ],
+      }),
     };
     const expertise = {
       getFodec: jest.fn().mockResolvedValue(
@@ -76,6 +93,7 @@ describe('InvoiceService expertise surcharges (D093)', () => {
       status: 'DRAFT',
       salesOrderId: null,
       shipmentId: null,
+      fulfillmentDoc: 'DELIVERY_NOTE',
       currency: 'TND',
       amountHt: 100,
       amountTax: 19,
@@ -102,6 +120,7 @@ describe('InvoiceService expertise surcharges (D093)', () => {
           amountFodec: data.amountFodec,
           amountTimbre: data.amountTimbre,
           amountTotal: data.amountTotal,
+          fulfillmentDoc: data.fulfillmentDoc ?? created.fulfillmentDoc,
         });
         return Promise.resolve(created);
       },
@@ -117,11 +136,11 @@ describe('InvoiceService expertise surcharges (D093)', () => {
       expertise as never,
     );
 
-    return { service, prisma, expertise, created };
+    return { service, prisma, expertise, created, tax };
   }
 
   it('does not invent FODEC/timbre when expertise is PENDING', async () => {
-    const { service, expertise, created } = build({
+    const { service, expertise, created, tax } = build({
       fodec: null,
       timbre: null,
     });
@@ -142,6 +161,42 @@ describe('InvoiceService expertise surcharges (D093)', () => {
     expect(Number(created.amountFodec)).toBe(0);
     expect(Number(created.amountTimbre)).toBe(0);
     expect(Number(created.amountTotal)).toBe(119);
+    expect(tax.calculate).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({ customerId }),
+    );
+  });
+
+  it('passes productId to tax.calculate when provided', async () => {
+    const productId = '44444444-4444-4444-4444-444444444444';
+    const { service, prisma, tax } = build({
+      fodec: null,
+      timbre: null,
+    });
+    (prisma.prdProduct as { findFirst: jest.Mock }).findFirst.mockResolvedValue({
+      id: productId,
+    });
+
+    await service.create(companyId, {
+      customerId,
+      lines: [
+        {
+          description: 'Fromage',
+          qty: 1,
+          unitPriceHt: 100,
+          taxCodeId,
+          productId,
+        },
+      ],
+    });
+
+    expect(tax.calculate).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        customerId,
+        lines: [expect.objectContaining({ productId, taxCodeId })],
+      }),
+    );
   });
 
   it('applies FODEC rateBps on HT when VALIDATED', async () => {
@@ -183,6 +238,41 @@ describe('InvoiceService expertise surcharges (D093)', () => {
     expect(Number(created.amountTimbre)).toBe(1);
     expect(Number(created.amountTotal)).toBe(120);
   });
+
+  it('inherits customer fulfillmentDoc and allows override (title only)', async () => {
+    const { service, prisma, created } = build({ fodec: null, timbre: null });
+    await service.create(companyId, {
+      customerId,
+      lines: [
+        {
+          description: 'Fromage',
+          qty: 1,
+          unitPriceHt: 100,
+          taxCodeId,
+        },
+      ],
+    });
+    expect(created.fulfillmentDoc).toBe('DELIVERY_NOTE');
+
+    await service.create(companyId, {
+      customerId,
+      fulfillmentDoc: 'INVOICE',
+      lines: [
+        {
+          description: 'Fromage',
+          qty: 1,
+          unitPriceHt: 100,
+          taxCodeId,
+        },
+      ],
+    });
+    expect(created.fulfillmentDoc).toBe('INVOICE');
+    expect(prisma.finInvoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ fulfillmentDoc: 'INVOICE' }),
+      }),
+    );
+  });
 });
 
 describe('InvoiceService.cancel (D183)', () => {
@@ -204,6 +294,7 @@ describe('InvoiceService.cancel (D183)', () => {
       amountTimbre: 0,
       salesOrderId: null,
       shipmentId: null,
+      fulfillmentDoc: 'DELIVERY_NOTE',
       currency: 'TND',
       dueDate: null,
       issuedAt: new Date(),

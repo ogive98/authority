@@ -6,7 +6,7 @@ export const maintenanceManifest: ModuleManifest = {
   version: '1.0.0',
   apiVersion: '1',
   description:
-    'Maintenance Soft Glass V0 — assets, WO, optional fleet vehicle, preventive date UI (D256)',
+    'Maintenance Soft Glass — assets, WO, optional fleet link, preventive ADV (D256+D258)',
   capabilities: [
     {
       key: 'maintenance.asset',
@@ -33,6 +33,7 @@ export const maintenanceManifest: ModuleManifest = {
     'maintenance.asset.down',
     'maintenance.asset.up',
     'maintenance.wo.create',
+    'maintenance.wo.open_preventive',
     'maintenance.wo.complete',
   ],
   queries: [

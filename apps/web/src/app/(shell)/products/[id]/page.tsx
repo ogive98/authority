@@ -20,16 +20,23 @@ import {
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import {
+  FISCAL_OVERRIDE_LABELS,
   STATUS_LABELS,
   activateProduct,
   archiveProduct,
+  deleteProductFiscalOverride,
   fetchProduct,
+  fetchProductFiscal,
   fetchRefs,
   updateProduct,
+  upsertProductFiscalOverride,
+  upsertProductFiscalProfile,
+  type FiscalOverrideMode,
   type Product,
+  type ProductFiscal,
   type RefValue,
 } from "@/lib/products";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect, softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -61,16 +68,28 @@ export default function ProductEditPage() {
   const [uoms, setUoms] = useState<RefValue[]>([]);
   const [storages, setStorages] = useState<RefValue[]>([]);
   const [allergens, setAllergens] = useState<RefValue[]>([]);
+  const [fiscal, setFiscal] = useState<ProductFiscal | null>(null);
+  const [fiscalError, setFiscalError] = useState<string | null>(null);
+  const [fiscalBusy, setFiscalBusy] = useState(false);
+  const [defaultVatTaxCodeId, setDefaultVatTaxCodeId] = useState("");
+  const [hsCode, setHsCode] = useState("");
+  const [fiscalCategory, setFiscalCategory] = useState("");
+  const [fiscalNotes, setFiscalNotes] = useState("");
+  const [overrideTaxCodeId, setOverrideTaxCodeId] = useState("");
+  const [overrideMode, setOverrideMode] = useState<FiscalOverrideMode>("NEVER");
+  const [overrideJustification, setOverrideJustification] = useState("");
+  const [overrideReference, setOverrideReference] = useState("");
 
   const load = useCallback(async () => {
     if (!id) return;
     setState({ kind: "loading" });
-    const [res, t, u, s, a] = await Promise.all([
+    const [res, t, u, s, a, fiscalRes] = await Promise.all([
       fetchProduct(id),
       fetchRefs("product_type"),
       fetchRefs("uom"),
       fetchRefs("storage_class"),
       fetchRefs("allergen"),
+      fetchProductFiscal(id),
     ]);
     if (t.ok) setTypes(t.items);
     if (u.ok) setUoms(u.items);
@@ -103,6 +122,12 @@ export default function ProductEditPage() {
       allergenFlags: p.allergenFlags.join(", "),
     });
     setState({ kind: "ok", product: p });
+    if (fiscalRes.ok) {
+      applyFiscalState(fiscalRes.data);
+    } else {
+      setFiscal(null);
+      setFiscalError(fiscalRes.message);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -195,6 +220,67 @@ export default function ProductEditPage() {
     router.push("/products");
   }
 
+  function applyFiscalState(data: ProductFiscal) {
+    setFiscal(data);
+    setDefaultVatTaxCodeId(data.profile.defaultVatTaxCodeId ?? "");
+    setHsCode(data.profile.hsCode ?? "");
+    setFiscalCategory(data.profile.fiscalCategory ?? "");
+    setFiscalNotes(data.profile.notes ?? "");
+    setFiscalError(null);
+  }
+
+  async function onSaveFiscalProfile() {
+    if (state.kind !== "ok") return;
+    setFiscalBusy(true);
+    setFiscalError(null);
+    const res = await upsertProductFiscalProfile(state.product.id, {
+      defaultVatTaxCodeId: defaultVatTaxCodeId || null,
+      hsCode: hsCode.trim() || null,
+      fiscalCategory: fiscalCategory.trim() || null,
+      notes: fiscalNotes.trim() || null,
+      version: fiscal?.profile.version ?? 0,
+    });
+    setFiscalBusy(false);
+    if (!res.ok) {
+      setFiscalError(res.message);
+      return;
+    }
+    applyFiscalState(res.data);
+  }
+
+  async function onSaveFiscalOverride() {
+    if (state.kind !== "ok" || !overrideTaxCodeId) return;
+    setFiscalBusy(true);
+    setFiscalError(null);
+    const res = await upsertProductFiscalOverride(state.product.id, {
+      taxCodeId: overrideTaxCodeId,
+      mode: overrideMode,
+      justification: overrideJustification.trim() || null,
+      reference: overrideReference.trim() || null,
+    });
+    setFiscalBusy(false);
+    if (!res.ok) {
+      setFiscalError(res.message);
+      return;
+    }
+    applyFiscalState(res.data);
+    setOverrideJustification("");
+    setOverrideReference("");
+  }
+
+  async function onDeleteFiscalOverride(taxCodeId: string) {
+    if (state.kind !== "ok") return;
+    setFiscalBusy(true);
+    setFiscalError(null);
+    const res = await deleteProductFiscalOverride(state.product.id, taxCodeId);
+    setFiscalBusy(false);
+    if (!res.ok) {
+      setFiscalError(res.message);
+      return;
+    }
+    applyFiscalState(res.data);
+  }
+
   const overflowItems =
     state.kind === "ok"
       ? [
@@ -282,6 +368,7 @@ export default function ProductEditPage() {
         {state.kind === "ok" && form ? (
           <ADetailGrid
             primary={
+              <>
               <APageSection title="Identité produit">
                 <div className="max-w-xl space-y-4">
             <Field label="Nom" htmlFor="prd-name">
@@ -418,6 +505,213 @@ export default function ProductEditPage() {
             ) : null}
                 </div>
               </APageSection>
+
+              <APageSection
+                title="Fiscalité"
+                description="Profil produit et dérogations par code. Les taux restent dans Fiscalité / Préférences — jamais inventés ici. NEVER = exonération justifiée. Pas de taxe fromage / 4386 tant qu’une source légale n’est pas validée."
+              >
+                {fiscalError ? (
+                  <p className="mb-3 text-[length:var(--a-text-sm)] text-a-danger">
+                    {fiscalError}
+                  </p>
+                ) : null}
+                {!fiscal ? (
+                  <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                    Profil fiscal indisponible.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="TVA par défaut" htmlFor="prd-fiscal-vat">
+                        <select
+                          id="prd-fiscal-vat"
+                          className={softSelect}
+                          value={defaultVatTaxCodeId}
+                          onChange={(e) =>
+                            setDefaultVatTaxCodeId(e.target.value)
+                          }
+                        >
+                          <option value="">
+                            Aucune (saisie manuelle à la facture)
+                          </option>
+                          {fiscal.availableCodes
+                            .filter((c) => c.kind === "VAT")
+                            .map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.code} · {c.label} ({c.status})
+                              </option>
+                            ))}
+                        </select>
+                      </Field>
+                      <Field label="Code SH / HS" htmlFor="prd-fiscal-hs">
+                        <AInput
+                          id="prd-fiscal-hs"
+                          value={hsCode}
+                          onChange={(e) => setHsCode(e.target.value)}
+                          placeholder="0406…"
+                        />
+                      </Field>
+                      <Field
+                        label="Catégorie fiscale"
+                        htmlFor="prd-fiscal-cat"
+                      >
+                        <AInput
+                          id="prd-fiscal-cat"
+                          value={fiscalCategory}
+                          onChange={(e) => setFiscalCategory(e.target.value)}
+                        />
+                      </Field>
+                      <Field label="Notes" htmlFor="prd-fiscal-notes">
+                        <AInput
+                          id="prd-fiscal-notes"
+                          value={fiscalNotes}
+                          onChange={(e) => setFiscalNotes(e.target.value)}
+                        />
+                      </Field>
+                    </div>
+                    <AButton
+                      type="button"
+                      size="sm"
+                      disabled={fiscalBusy}
+                      onClick={() => void onSaveFiscalProfile()}
+                    >
+                      Enregistrer le fiscal
+                    </AButton>
+
+                    <div>
+                      <p className="mb-2 text-[length:var(--a-text-sm)] font-medium">
+                        Dérogations par code
+                      </p>
+                      {fiscal.overrides.length === 0 ? (
+                        <p className="mb-3 text-[length:var(--a-text-sm)] text-a-fg-muted">
+                          Aucune dérogation — le moteur applique les règles
+                          ACTIVE.
+                        </p>
+                      ) : (
+                        <div className={`${softTableWrap} mb-3`}>
+                          <table className="w-full text-left text-[length:var(--a-text-sm)]">
+                            <thead className={softThead}>
+                              <tr>
+                                <th className="a-table-cell font-medium">
+                                  Code
+                                </th>
+                                <th className="a-table-cell font-medium">
+                                  Mode
+                                </th>
+                                <th className="a-table-cell font-medium">
+                                  Justification
+                                </th>
+                                <th className="a-table-cell font-medium">
+                                  Actions
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {fiscal.overrides.map((row) => (
+                                <tr key={row.id} className={softTr}>
+                                  <td className="a-table-cell">
+                                    <span className="a-mono">{row.taxCode}</span>
+                                    <span className="text-a-fg-muted">
+                                      {" "}
+                                      · {row.taxLabel}
+                                    </span>
+                                  </td>
+                                  <td className="a-table-cell">
+                                    <ABadge tone="neutral">
+                                      {FISCAL_OVERRIDE_LABELS[row.mode]}
+                                    </ABadge>
+                                  </td>
+                                  <td className="a-table-cell">
+                                    {row.justification ?? "—"}
+                                  </td>
+                                  <td className="a-table-cell">
+                                    <AButton
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      disabled={fiscalBusy}
+                                      onClick={() =>
+                                        void onDeleteFiscalOverride(
+                                          row.taxCodeId,
+                                        )
+                                      }
+                                    >
+                                      Auto
+                                    </AButton>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                      <div className="grid gap-2 lg:grid-cols-[1fr_10rem_1fr_auto]">
+                        <select
+                          id="prd-fiscal-override-code"
+                          className={softSelect}
+                          value={overrideTaxCodeId}
+                          onChange={(e) =>
+                            setOverrideTaxCodeId(e.target.value)
+                          }
+                        >
+                          <option value="">Code fiscal…</option>
+                          {fiscal.availableCodes.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.code} · {c.label} ({c.status})
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          id="prd-fiscal-override-mode"
+                          className={softSelect}
+                          value={overrideMode}
+                          onChange={(e) =>
+                            setOverrideMode(
+                              e.target.value as FiscalOverrideMode,
+                            )
+                          }
+                        >
+                          {(
+                            Object.keys(
+                              FISCAL_OVERRIDE_LABELS,
+                            ) as FiscalOverrideMode[]
+                          )
+                            .filter((m) => m !== "AUTO")
+                            .map((m) => (
+                              <option key={m} value={m}>
+                                {FISCAL_OVERRIDE_LABELS[m]}
+                              </option>
+                            ))}
+                        </select>
+                        <AInput
+                          id="prd-fiscal-override-just"
+                          value={overrideJustification}
+                          onChange={(e) =>
+                            setOverrideJustification(e.target.value)
+                          }
+                          placeholder="Justification"
+                        />
+                        <AButton
+                          type="button"
+                          size="sm"
+                          disabled={fiscalBusy || !overrideTaxCodeId}
+                          onClick={() => void onSaveFiscalOverride()}
+                        >
+                          Appliquer
+                        </AButton>
+                      </div>
+                      <AInput
+                        id="prd-fiscal-override-ref"
+                        className="mt-2"
+                        value={overrideReference}
+                        onChange={(e) => setOverrideReference(e.target.value)}
+                        placeholder="Référence (décision, certificat…)"
+                      />
+                    </div>
+                  </div>
+                )}
+              </APageSection>
+              </>
             }
             context={
               <AContextPanel title="Résumé">
@@ -442,6 +736,18 @@ export default function ProductEditPage() {
                     <dt className="text-a-fg-muted">Suivi lot</dt>
                     <dd className="text-a-fg">
                       {form.trackLot || form.perishable ? "Oui" : "Non"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">TVA par défaut</dt>
+                    <dd className="a-mono text-a-fg">
+                      {fiscal?.profile.defaultVatCode ?? "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-a-fg-muted">Code SH / HS</dt>
+                    <dd className="a-mono text-a-fg">
+                      {fiscal?.profile.hsCode ?? "—"}
                     </dd>
                   </div>
                 </dl>

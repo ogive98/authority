@@ -116,6 +116,7 @@ export type CustomerDto = {
   blockOnCriticalOverdue: boolean;
   notifyResponsible: boolean;
   creditStatus: string;
+  fulfillmentDoc: 'DELIVERY_NOTE' | 'INVOICE';
   status: CusCustomerStatus;
   version: number;
   createdAt: string;
@@ -517,6 +518,9 @@ export class CustomersService {
             salubritaEmail: dto.salubritaEmail ?? false,
             salubritaWhatsapp: dto.salubritaWhatsapp ?? false,
             salubritaPortal: dto.salubritaPortal ?? true,
+            ...(dto.fulfillmentDoc !== undefined
+              ? { fulfillmentDoc: dto.fulfillmentDoc }
+              : {}),
             status: CusCustomerStatus.ACTIVE,
           },
           include: { party: true, zone: true },
@@ -661,6 +665,9 @@ export class CustomersService {
             : {}),
           ...(dto.notifyResponsible !== undefined
             ? { notifyResponsible: dto.notifyResponsible }
+            : {}),
+          ...(dto.fulfillmentDoc !== undefined
+            ? { fulfillmentDoc: dto.fulfillmentDoc }
             : {}),
           version: { increment: 1 },
         },
@@ -1175,6 +1182,7 @@ function serializeCustomer(row: CustomerWithParty): CustomerDto {
     blockOnCriticalOverdue: row.blockOnCriticalOverdue,
     notifyResponsible: row.notifyResponsible,
     creditStatus: row.creditStatus,
+    fulfillmentDoc: row.fulfillmentDoc,
     status: row.status,
     version: row.version,
     createdAt: row.createdAt.toISOString(),

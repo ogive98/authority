@@ -201,6 +201,170 @@ export async function archiveProduct(id: string): Promise<
   }
 }
 
+export type FiscalOverrideMode = "AUTO" | "ALWAYS" | "NEVER" | "CONFIRM";
+
+export const FISCAL_OVERRIDE_LABELS: Record<FiscalOverrideMode, string> = {
+  AUTO: "Auto (règle)",
+  ALWAYS: "Toujours",
+  NEVER: "Jamais (exonération)",
+  CONFIRM: "Confirmer",
+};
+
+export type ProductFiscalCode = {
+  id: string;
+  code: string;
+  label: string;
+  kind: string;
+  status: string;
+  active: boolean;
+};
+
+export type ProductFiscalProfile = {
+  id: string | null;
+  defaultVatTaxCodeId: string | null;
+  defaultVatCode: string | null;
+  hsCode: string | null;
+  fiscalCategory: string | null;
+  notes: string | null;
+  version: number;
+};
+
+export type ProductFiscalOverride = {
+  id: string;
+  taxCodeId: string;
+  taxCode: string;
+  taxLabel: string;
+  kind: string;
+  ruleStatus: string;
+  mode: FiscalOverrideMode;
+  source: string;
+  validFrom: string | null;
+  validTo: string | null;
+  justification: string | null;
+  reference: string | null;
+  documentId: string | null;
+  comment: string | null;
+  version: number;
+};
+
+export type ProductFiscal = {
+  productId: string;
+  sku: string;
+  profile: ProductFiscalProfile;
+  overrides: ProductFiscalOverride[];
+  availableCodes: ProductFiscalCode[];
+};
+
+type ProductApiError = {
+  ok: false;
+  status: number;
+  code?: string;
+  message: string;
+};
+
+async function parseProductError(res: Response): Promise<ProductApiError> {
+  const body = (await res.json().catch(() => ({}))) as {
+    code?: string;
+    message?: string;
+  };
+  return {
+    ok: false,
+    status: res.status,
+    code: body.code,
+    message: body.message ?? `HTTP ${res.status}`,
+  };
+}
+
+export async function fetchProductFiscal(
+  productId: string,
+): Promise<{ ok: true; data: ProductFiscal } | ProductApiError> {
+  try {
+    const res = await fetch(`/api/v1/products/${productId}/fiscal`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseProductError(res);
+    return { ok: true, data: (await res.json()) as ProductFiscal };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function upsertProductFiscalProfile(
+  productId: string,
+  body: {
+    defaultVatTaxCodeId?: string | null;
+    hsCode?: string | null;
+    fiscalCategory?: string | null;
+    notes?: string | null;
+    version?: number;
+  },
+): Promise<{ ok: true; data: ProductFiscal } | ProductApiError> {
+  try {
+    const res = await fetch(`/api/v1/products/${productId}/fiscal`, {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseProductError(res);
+    return { ok: true, data: (await res.json()) as ProductFiscal };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function upsertProductFiscalOverride(
+  productId: string,
+  body: {
+    taxCodeId: string;
+    mode: FiscalOverrideMode;
+    source?: string;
+    justification?: string | null;
+    reference?: string | null;
+    version?: number;
+  },
+): Promise<{ ok: true; data: ProductFiscal } | ProductApiError> {
+  try {
+    const res = await fetch(
+      `/api/v1/products/${productId}/fiscal/overrides`,
+      {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) return parseProductError(res);
+    return { ok: true, data: (await res.json()) as ProductFiscal };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function deleteProductFiscalOverride(
+  productId: string,
+  taxCodeId: string,
+): Promise<{ ok: true; data: ProductFiscal } | ProductApiError> {
+  try {
+    const res = await fetch(
+      `/api/v1/products/${productId}/fiscal/overrides/${taxCodeId}`,
+      { method: "DELETE", credentials: "include" },
+    );
+    if (!res.ok) return parseProductError(res);
+    return { ok: true, data: (await res.json()) as ProductFiscal };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 async function mutateProduct(
   method: string,
   url: string,

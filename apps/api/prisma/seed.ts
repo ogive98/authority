@@ -2370,13 +2370,20 @@ async function seedTunisiaVatCatalog(
           code: d.code,
           label: d.label,
           kind: 'VAT',
+          calcMethod: 'RATE',
+          status: 'ACTIVE',
           active: true,
         },
       });
     } else {
       await prismaClient.taxCode.update({
         where: { id: codeRow.id },
-        data: { label: d.label, active: true },
+        data: {
+          label: d.label,
+          active: true,
+          calcMethod: 'RATE',
+          status: 'ACTIVE',
+        },
       });
     }
 
@@ -2394,6 +2401,8 @@ async function seedTunisiaVatCatalog(
           companyId,
           taxCodeId: codeRow.id,
           rateBps: d.rateBps,
+          calcMethod: 'RATE',
+          status: 'VALIDATED',
           validFrom,
           lawRef,
           expertValidatedAt: validatedAt,

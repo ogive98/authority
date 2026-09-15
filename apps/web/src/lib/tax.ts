@@ -3,9 +3,13 @@ export type TaxCode = {
   companyId: string;
   code: string;
   label: string;
-  kind: "VAT";
+  kind: string;
+  calcMethod?: string;
+  status?: string;
   active: boolean;
   currentRateBps: number | null;
+  currentAmountMilli?: number | null;
+  unit?: string | null;
   lawRef: string | null;
 };
 

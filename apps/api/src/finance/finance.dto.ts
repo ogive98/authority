@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -86,6 +87,10 @@ export class CreateInvoiceLineDto {
 
   @IsUUID()
   taxCodeId!: string;
+
+  @IsOptional()
+  @IsUUID()
+  productId?: string;
 }
 
 export class CreateInvoiceDto {
@@ -112,6 +117,11 @@ export class CreateInvoiceDto {
   @IsOptional()
   @IsUUID()
   shipmentId?: string;
+
+  /** Printed title only — same AR/GL document. Defaults from customer fiche. */
+  @IsOptional()
+  @IsIn(['DELIVERY_NOTE', 'INVOICE'])
+  fulfillmentDoc?: 'DELIVERY_NOTE' | 'INVOICE';
 
   @IsOptional()
   @IsDateString()
@@ -154,6 +164,10 @@ export class CreateCreditNoteLineDto {
 
   @IsUUID()
   taxCodeId!: string;
+
+  @IsOptional()
+  @IsUUID()
+  productId?: string;
 }
 
 /** Credit note / avoir V0 (D192) — invoice-linked only. */

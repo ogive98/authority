@@ -47,6 +47,7 @@ import {
   type FleetVehicleLog,
   type FleetVehicleStatus,
 } from "@/lib/fleet";
+import { fetchAssets, type MaintenanceAsset } from "@/lib/maintenance";
 
 type Load =
   | {
@@ -123,14 +124,16 @@ export default function FleetVehiclePage() {
   const [logForm, setLogForm] = useState<LogForm | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [mntAsset, setMntAsset] = useState<MaintenanceAsset | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
     setState({ kind: "loading" });
-    const [vRes, aRes, lRes] = await Promise.all([
+    const [vRes, aRes, lRes, mRes] = await Promise.all([
       fetchVehicle(id),
       fetchAssignments({ vehicleId: id, includeCancelled: true }),
       fetchVehicleLogs(id),
+      fetchAssets({ vehicleId: id }),
     ]);
     if (!vRes.ok) {
       if (vRes.status === 403) {
@@ -140,6 +143,7 @@ export default function FleetVehiclePage() {
       setState({ kind: "error", message: vRes.message });
       return;
     }
+    setMntAsset(mRes.ok ? (mRes.data.items[0] ?? null) : null);
     setState({
       kind: "ok",
       data: vRes.data,
@@ -276,6 +280,17 @@ export default function FleetVehiclePage() {
           >
             Planning
           </Link>
+          {mntAsset ? (
+            <>
+              {" · "}
+              <Link
+                href={`/maintenance/${mntAsset.id}`}
+                className="text-a-accent underline-offset-2 hover:underline"
+              >
+                Équipement maintenance
+              </Link>
+            </>
+          ) : null}
         </p>
 
         {state.kind === "loading" && <ASkeleton className="h-40 w-full" />}

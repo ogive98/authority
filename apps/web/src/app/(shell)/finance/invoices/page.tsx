@@ -19,8 +19,13 @@ import {
   ASkeleton,
   type AComboboxOption,
 } from "@/components/a";
+import { FulfillmentDocToggle } from "@/components/fulfillment-doc-toggle";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
-import { fetchCustomers } from "@/lib/customers";
+import {
+  fetchCustomers,
+  FULFILLMENT_DOC_LABELS,
+  type FulfillmentDoc,
+} from "@/lib/customers";
 import {
   INVOICE_STATUS_LABELS,
   cancelInvoice,
@@ -64,6 +69,7 @@ type LineDraft = {
 type FormState = {
   customerId: string | null;
   customerLabel: string;
+  fulfillmentDoc: FulfillmentDoc;
   dueDate: string;
   label: string;
   issue: boolean;
@@ -109,6 +115,9 @@ function FinanceInvoicesPageInner() {
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [customerOpts, setCustomerOpts] = useState<AComboboxOption[]>([]);
+  const [customerPrefs, setCustomerPrefs] = useState<
+    Record<string, FulfillmentDoc>
+  >({});
   const [customerLoading, setCustomerLoading] = useState(false);
   const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -182,6 +191,13 @@ function FinanceInvoicesPageInner() {
         label: `${c.code} — ${c.legalName}`,
       })),
     );
+    setCustomerPrefs((prev) => {
+      const next = { ...prev };
+      for (const c of res.data.items) {
+        next[c.id] = c.fulfillmentDoc ?? "DELIVERY_NOTE";
+      }
+      return next;
+    });
   }, []);
 
   function scheduleCustomerSearch(text: string) {
@@ -198,6 +214,7 @@ function FinanceInvoicesPageInner() {
     setForm({
       customerId: null,
       customerLabel: "",
+      fulfillmentDoc: "DELIVERY_NOTE",
       dueDate: "",
       label: "",
       issue: true,
@@ -243,6 +260,7 @@ function FinanceInvoicesPageInner() {
       label: form.label.trim() || undefined,
       currency: "TND",
       issue: form.issue,
+      fulfillmentDoc: form.fulfillmentDoc,
     });
     setBusy(false);
     if (!res.ok) {
@@ -405,6 +423,7 @@ function FinanceInvoicesPageInner() {
               <thead className={softThead}>
                 <tr>
                   <th className="a-table-cell font-medium">N°</th>
+                  <th className="a-table-cell font-medium">Document</th>
                   <th className="a-table-cell font-medium">Client</th>
                   <th className="a-table-cell font-medium">Statut</th>
                   <th className="a-table-cell font-medium text-right">HT</th>
@@ -423,6 +442,13 @@ function FinanceInvoicesPageInner() {
                       >
                         {inv.number}
                       </Link>
+                    </td>
+                    <td className="a-table-cell">
+                      {
+                        FULFILLMENT_DOC_LABELS[
+                          inv.fulfillmentDoc ?? "DELIVERY_NOTE"
+                        ]
+                      }
                     </td>
                     <td className="a-table-cell">
                       {inv.customerName ?? inv.customerCode ?? "—"}
@@ -511,18 +537,28 @@ function FinanceInvoicesPageInner() {
                 setForm({ ...form, customerLabel: text, customerId: null });
                 scheduleCustomerSearch(text);
               }}
-              onSelect={(opt) =>
+              onSelect={(opt) => {
+                const pref = customerPrefs[opt.id] ?? "DELIVERY_NOTE";
                 setForm({
                   ...form,
                   customerId: opt.id,
                   customerLabel: opt.label,
-                })
-              }
+                  fulfillmentDoc: pref,
+                });
+              }}
               onOpen={() => void refreshCustomers(form.customerLabel)}
               options={customerOpts}
               loading={customerLoading}
               placeholder="Code ou raison sociale…"
               emptyText="Aucun client"
+            />
+
+            <FulfillmentDocToggle
+              value={form.fulfillmentDoc}
+              onChange={(fulfillmentDoc) =>
+                setForm({ ...form, fulfillmentDoc })
+              }
+              hint="Préférence fiche client — change seulement le titre. Même lignes, même compta, mêmes modes."
             />
 
             <div className="space-y-1">

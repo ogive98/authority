@@ -20,6 +20,7 @@ import {
   ASwitch,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
+import { FulfillmentDocToggle } from "@/components/fulfillment-doc-toggle";
 import {
   STATUS_LABELS,
   addCustomerContact,
@@ -37,6 +38,7 @@ import {
   type Customer,
   type CustomerPrice,
   type CustomerZone,
+  type FulfillmentDoc,
 } from "@/lib/customers";
 import {
   fetchCustomerFinancialOverview,
@@ -62,6 +64,7 @@ type FormState = {
   salubritaEmail: boolean;
   salubritaWhatsapp: boolean;
   salubritaPortal: boolean;
+  fulfillmentDoc: FulfillmentDoc;
   contactName: string;
   contactPhone: string;
   contactWhatsapp: string;
@@ -104,6 +107,7 @@ export default function CustomersPage() {
       salubritaEmail: false,
       salubritaWhatsapp: false,
       salubritaPortal: true,
+      fulfillmentDoc: "DELIVERY_NOTE",
       contactName: "",
       contactPhone: "",
       contactWhatsapp: "",
@@ -185,6 +189,7 @@ export default function CustomersPage() {
       salubritaEmail: detail.data.salubritaEmail ?? false,
       salubritaWhatsapp: detail.data.salubritaWhatsapp ?? false,
       salubritaPortal: detail.data.salubritaPortal ?? true,
+      fulfillmentDoc: detail.data.fulfillmentDoc ?? "DELIVERY_NOTE",
       contactName: "",
       contactPhone: "",
       contactWhatsapp: "",
@@ -229,6 +234,7 @@ export default function CustomersPage() {
           salubritaEmail: form.salubritaEmail,
           salubritaWhatsapp: form.salubritaWhatsapp,
           salubritaPortal: form.salubritaPortal,
+          fulfillmentDoc: form.fulfillmentDoc,
           contacts,
         });
         if (!res.ok) {
@@ -247,6 +253,7 @@ export default function CustomersPage() {
           salubritaEmail: form.salubritaEmail,
           salubritaWhatsapp: form.salubritaWhatsapp,
           salubritaPortal: form.salubritaPortal,
+          fulfillmentDoc: form.fulfillmentDoc,
           version,
         });
         if (!res.ok) {
@@ -714,6 +721,14 @@ export default function CustomersPage() {
                 ) : null}
               </div>
             ) : null}
+
+            <FulfillmentDocToggle
+              value={form.fulfillmentDoc}
+              onChange={(fulfillmentDoc) =>
+                setForm({ ...form, fulfillmentDoc })
+              }
+              hint="Titre imprimé — même contenu, même compta. Défaut : bon de livraison."
+            />
 
             <Field label="Zone">
               <select

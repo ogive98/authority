@@ -58,6 +58,7 @@ describe('CustomersService', () => {
       blockOnCriticalOverdue: false,
       notifyResponsible: false,
       creditStatus: 'NORMAL',
+      fulfillmentDoc: 'DELIVERY_NOTE',
       status: CusCustomerStatus.ACTIVE,
       version: opts?.version ?? 0,
       createdAt: new Date(),
@@ -151,6 +152,7 @@ describe('CustomersService', () => {
     expect(result.items[0].code).toBe('C-001');
     expect(result.items[0].zoneCode).toBe('SF-NORD');
     expect(result.items[0].blocked).toBe(false);
+    expect(result.items[0].fulfillmentDoc).toBe('DELIVERY_NOTE');
   });
 
   it('creates customer with inline party', async () => {
@@ -162,6 +164,28 @@ describe('CustomersService', () => {
     });
     expect(masterData.createParty).toHaveBeenCalled();
     expect(created.code).toBe('C-001');
+  });
+
+  it('updates fulfillmentDoc', async () => {
+    const { service, prisma } = build();
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    (prisma.$transaction as jest.Mock).mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          cusCustomer: { create: jest.fn(), updateMany },
+          cusContact: { createMany: jest.fn() },
+          mdParty: { update: jest.fn() },
+        }),
+    );
+    await service.update(companyId, customerId, {
+      fulfillmentDoc: 'INVOICE',
+      version: 0,
+    });
+    expect(updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ fulfillmentDoc: 'INVOICE' }),
+      }),
+    );
   });
 
   it('rejects update on version conflict', async () => {

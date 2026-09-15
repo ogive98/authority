@@ -792,10 +792,70 @@ model PrdProduct {
   updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt       DateTime?        @map("deleted_at") @db.Timestamptz(6)
 
+  invoiceLines     FinInvoiceLine[]
+  creditNoteLines  FinCreditNoteLine[]
+  fiscalProfile    PrdFiscalProfile?
+  fiscalOverrides  PrdFiscalRuleOverride[]
+
   @@unique([companyId, sku])
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, status])
   @@map("prd_product")
+}
+
+enum PrdFiscalOverrideMode {
+  AUTO
+  ALWAYS
+  NEVER
+  CONFIRM
+}
+
+/** D261 — product fiscal profile. Classification only; no cheese-tax / 4386 seed. */
+model PrdFiscalProfile {
+  id                  String    @id @default(uuid()) @db.Uuid
+  companyId           String    @map("company_id") @db.Uuid
+  productId           String    @unique @map("product_id") @db.Uuid
+  defaultVatTaxCodeId String?   @map("default_vat_tax_code_id") @db.Uuid
+  hsCode              String?   @map("hs_code")
+  fiscalCategory      String?   @map("fiscal_category")
+  notes               String?
+  version             Int       @default(0)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  product         PrdProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  defaultVatCode  TaxCode?   @relation("PrdFiscalDefaultVat", fields: [defaultVatTaxCodeId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, productId])
+  @@map("prd_fiscal_profile")
+}
+
+model PrdFiscalRuleOverride {
+  id             String                @id @default(uuid()) @db.Uuid
+  companyId      String                @map("company_id") @db.Uuid
+  productId      String                @map("product_id") @db.Uuid
+  taxCodeId      String                @map("tax_code_id") @db.Uuid
+  mode           PrdFiscalOverrideMode @default(AUTO)
+  source         TaxDecisionSource     @default(CLIENT_OVERRIDE)
+  validFrom      DateTime?             @map("valid_from") @db.Date
+  validTo        DateTime?             @map("valid_to") @db.Date
+  justification  String?
+  reference      String?
+  documentId     String?               @map("document_id") @db.Uuid
+  comment        String?
+  version        Int                   @default(0)
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?             @map("deleted_at") @db.Timestamptz(6)
+
+  product PrdProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  taxCode TaxCode    @relation(fields: [taxCodeId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, productId, taxCodeId])
+  @@index([companyId, productId])
+  @@index([companyId, taxCodeId])
+  @@map("prd_fiscal_rule_override")
 }
 
 // --- md_* master data reference lists (POLY-01) ---
@@ -905,6 +965,12 @@ model CusZone {
   @@map("cus_zone")
 }
 
+/** D262 — printed title only: same finance invoice, Facture vs Bon de livraison. */
+enum CusFulfillmentDoc {
+  DELIVERY_NOTE
+  INVOICE
+}
+
 model CusCustomer {
   id             String            @id @default(uuid()) @db.Uuid
   companyId      String            @map("company_id") @db.Uuid
@@ -930,6 +996,8 @@ model CusCustomer {
   blockOnCriticalOverdue    Boolean @default(false) @map("block_on_critical_overdue")
   notifyResponsible         Boolean @default(false) @map("notify_responsible")
   creditStatus              CusCreditStatus @default(NORMAL) @map("credit_status")
+  /** D262 — default printed title (Bon de livraison). Overridable per invoice. */
+  fulfillmentDoc            CusFulfillmentDoc @default(DELIVERY_NOTE) @map("fulfillment_doc")
   status         CusCustomerStatus @default(ACTIVE)
   version        Int               @default(0)
   createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -942,6 +1010,8 @@ model CusCustomer {
   addresses         CusAddress[]
   prices            CusCustomerPrice[]
   portalMemberships PtlMembership[]
+  fiscalProfile     CusFiscalProfile?
+  fiscalOverrides   CusFiscalRuleOverride[]
 
   @@unique([companyId, code])
   @@unique([companyId, partyId])
@@ -951,6 +1021,67 @@ model CusCustomer {
   @@index([companyId, blocked])
   @@index([companyId, zoneId])
   @@map("cus_customer")
+}
+
+enum CusFiscalOverrideMode {
+  AUTO
+  ALWAYS
+  NEVER
+  CONFIRM
+}
+
+/** D260 — customer fiscal profile. Rates stay in Tax Engine / Prefs; this is classification only. */
+model CusFiscalProfile {
+  id                    String    @id @default(uuid()) @db.Uuid
+  companyId             String    @map("company_id") @db.Uuid
+  customerId            String    @unique @map("customer_id") @db.Uuid
+  fiscalRegime          String?   @map("fiscal_regime")
+  vatLiable             Boolean?  @map("vat_liable")
+  fiscalStatus          String?   @map("fiscal_status")
+  fiscalCategory        String?   @map("fiscal_category")
+  /** Architecture for AR RAS later — default off; AP RAS is supplier-side (D246/D259). */
+  withholdingArEnabled  Boolean   @default(false) @map("withholding_ar_enabled")
+  notes                 String?
+  version               Int       @default(0)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt             DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  customer CusCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, customerId])
+  @@map("cus_fiscal_profile")
+}
+
+/**
+ * Per-customer tax-code override. NEVER cannot bypass an inactive/PENDING rule
+ * into a charge; NEVER + justification = exemption. ALWAYS cannot activate PENDING_EXPERT.
+ */
+model CusFiscalRuleOverride {
+  id             String                @id @default(uuid()) @db.Uuid
+  companyId      String                @map("company_id") @db.Uuid
+  customerId     String                @map("customer_id") @db.Uuid
+  taxCodeId      String                @map("tax_code_id") @db.Uuid
+  mode           CusFiscalOverrideMode @default(AUTO)
+  source         TaxDecisionSource     @default(CLIENT_OVERRIDE)
+  validFrom      DateTime?             @map("valid_from") @db.Date
+  validTo        DateTime?             @map("valid_to") @db.Date
+  justification  String?
+  reference      String?
+  documentId     String?               @map("document_id") @db.Uuid
+  comment        String?
+  version        Int                   @default(0)
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?             @map("deleted_at") @db.Timestamptz(6)
+
+  customer CusCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  taxCode  TaxCode     @relation(fields: [taxCodeId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, customerId, taxCodeId])
+  @@index([companyId, customerId])
+  @@index([companyId, taxCodeId])
+  @@map("cus_fiscal_rule_override")
 }
 
 /** D241 — multi-address customer sites (HQ / billing / shipping / …). */
@@ -1722,6 +1853,12 @@ enum FinPromiseStatus {
   CANCELLED
 }
 
+/** Invoice / credit-note line kind (D259) — PRODUCT default; TAX reserved for specific-tax lines. */
+enum FinInvoiceLineType {
+  PRODUCT
+  TAX
+}
+
 model FinInvoice {
   id           String          @id @default(uuid()) @db.Uuid
   companyId    String          @map("company_id") @db.Uuid
@@ -1730,6 +1867,8 @@ model FinInvoice {
   status       FinInvoiceStatus @default(DRAFT)
   salesOrderId String?         @map("sales_order_id") @db.Uuid
   shipmentId   String?         @map("shipment_id") @db.Uuid
+  /** D262 — title snapshot: Facture vs Bon de livraison. Same AR / GL / modes. */
+  fulfillmentDoc CusFulfillmentDoc @default(DELIVERY_NOTE) @map("fulfillment_doc")
   currency     String          @default("TND")
   /** Gross TTC — HT + TVA + FODEC + timbre (expertise when VALIDATED). */
   amountTotal  Decimal         @map("amount_total") @db.Decimal(18, 3)
@@ -1760,25 +1899,34 @@ model FinInvoice {
 }
 
 model FinInvoiceLine {
-  id          String   @id @default(uuid()) @db.Uuid
-  companyId   String   @map("company_id") @db.Uuid
-  invoiceId   String   @map("invoice_id") @db.Uuid
-  lineNo      Int      @map("line_no")
+  id          String             @id @default(uuid()) @db.Uuid
+  companyId   String             @map("company_id") @db.Uuid
+  invoiceId   String             @map("invoice_id") @db.Uuid
+  lineNo      Int                @map("line_no")
+  lineType    FinInvoiceLineType @default(PRODUCT) @map("line_type")
   description String
-  qty         Decimal  @db.Decimal(18, 3)
-  unitPriceHt Decimal  @map("unit_price_ht") @db.Decimal(18, 3)
-  taxCodeId   String   @map("tax_code_id") @db.Uuid
-  amountHt    Decimal  @map("amount_ht") @db.Decimal(18, 3)
-  amountTax   Decimal  @map("amount_tax") @db.Decimal(18, 3)
-  amountTtc   Decimal  @map("amount_ttc") @db.Decimal(18, 3)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  qty         Decimal            @db.Decimal(18, 3)
+  unitPriceHt Decimal            @map("unit_price_ht") @db.Decimal(18, 3)
+  taxCodeId   String             @map("tax_code_id") @db.Uuid
+  /** Set on PRODUCT lines when the SKU is known — nullable for legacy invoices. */
+  productId   String?            @map("product_id") @db.Uuid
+  /** Immutable fiscal snapshot row — filled when document is ISSUED (later lot). */
+  taxLineId   String?            @map("tax_line_id") @db.Uuid
+  amountHt    Decimal            @map("amount_ht") @db.Decimal(18, 3)
+  amountTax   Decimal            @map("amount_tax") @db.Decimal(18, 3)
+  amountTtc   Decimal            @map("amount_ttc") @db.Decimal(18, 3)
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   invoice FinInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  taxCode TaxCode   @relation(fields: [taxCodeId], references: [id])
+  taxCode TaxCode    @relation(fields: [taxCodeId], references: [id])
+  product PrdProduct? @relation(fields: [productId], references: [id], onDelete: Restrict)
+  taxLine TaxLine?    @relation(fields: [taxLineId], references: [id], onDelete: SetNull)
 
   @@unique([invoiceId, lineNo])
   @@index([companyId, invoiceId])
+  @@index([companyId, productId])
+  @@index([companyId, lineType])
   @@map("fin_invoice_line")
 }
 
@@ -1819,25 +1967,32 @@ model FinCreditNote {
 }
 
 model FinCreditNoteLine {
-  id           String   @id @default(uuid()) @db.Uuid
-  companyId    String   @map("company_id") @db.Uuid
-  creditNoteId String   @map("credit_note_id") @db.Uuid
-  lineNo       Int      @map("line_no")
+  id           String             @id @default(uuid()) @db.Uuid
+  companyId    String             @map("company_id") @db.Uuid
+  creditNoteId String             @map("credit_note_id") @db.Uuid
+  lineNo       Int                @map("line_no")
+  lineType     FinInvoiceLineType @default(PRODUCT) @map("line_type")
   description  String
-  qty          Decimal  @db.Decimal(18, 3)
-  unitPriceHt  Decimal  @map("unit_price_ht") @db.Decimal(18, 3)
-  taxCodeId    String   @map("tax_code_id") @db.Uuid
-  amountHt     Decimal  @map("amount_ht") @db.Decimal(18, 3)
-  amountTax    Decimal  @map("amount_tax") @db.Decimal(18, 3)
-  amountTtc    Decimal  @map("amount_ttc") @db.Decimal(18, 3)
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  qty          Decimal            @db.Decimal(18, 3)
+  unitPriceHt  Decimal            @map("unit_price_ht") @db.Decimal(18, 3)
+  taxCodeId    String             @map("tax_code_id") @db.Uuid
+  productId    String?            @map("product_id") @db.Uuid
+  taxLineId    String?            @map("tax_line_id") @db.Uuid
+  amountHt     Decimal            @map("amount_ht") @db.Decimal(18, 3)
+  amountTax    Decimal            @map("amount_tax") @db.Decimal(18, 3)
+  amountTtc    Decimal            @map("amount_ttc") @db.Decimal(18, 3)
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   creditNote FinCreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
   taxCode    TaxCode       @relation(fields: [taxCodeId], references: [id])
+  product    PrdProduct?   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  taxLine    TaxLine?      @relation(fields: [taxLineId], references: [id], onDelete: SetNull)
 
   @@unique([creditNoteId, lineNo])
   @@index([companyId, creditNoteId])
+  @@index([companyId, productId])
+  @@index([companyId, lineType])
   @@map("fin_credit_note_line")
 }
 
@@ -2217,53 +2372,159 @@ model FinDunningDraft {
   @@map("fin_dunning_draft")
 }
 
-// --- tax_* Tax Engine V0 (D088) — Tunisia VAT catalog; CNSS/IRPP reserved for HR ---
+// --- tax_* Tax Engine (D088 VAT + D259 rule engine) — never invent rates ---
+// Prefs (D090) remain the seat for FODEC/timbre/RAS/TEJ values until VALIDATED.
+// CNSS / IRPP stay in HR — not TaxKind on sales documents.
 
 enum TaxKind {
   VAT
+  WITHHOLDING
+  SPECIFIC_TAX
+  DUTY
+  CONTRIBUTION
+  EXEMPTION
+  DEDUCTION
+  OTHER
+}
+
+enum TaxCalcMethod {
+  RATE
+  FIXED
+  QTY
+}
+
+/** DRAFT → PENDING_EXPERT → VALIDATED → ACTIVE. Sensitive rules must not skip expert. */
+enum TaxRuleStatus {
+  DRAFT
+  PENDING_EXPERT
+  VALIDATED
+  ACTIVE
+  INACTIVE
+}
+
+enum TaxDecisionSource {
+  SYSTEM_RULE
+  CLIENT_OVERRIDE
+  EXEMPTION
+  MANUAL_OVERRIDE
 }
 
 model TaxCode {
-  id        String   @id @default(uuid()) @db.Uuid
-  companyId String   @map("company_id") @db.Uuid
-  code      String
-  label     String
-  kind      TaxKind  @default(VAT)
-  active    Boolean  @default(true)
-  version   Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+  id                 String         @id @default(uuid()) @db.Uuid
+  companyId          String         @map("company_id") @db.Uuid
+  code               String
+  label              String
+  kind               TaxKind        @default(VAT)
+  calcMethod         TaxCalcMethod  @default(RATE) @map("calc_method")
+  /** New non-VAT rules default DRAFT; existing VAT backfilled ACTIVE (D259). */
+  status             TaxRuleStatus  @default(DRAFT)
+  active             Boolean        @default(true)
+  unit               String?
+  currency           String         @default("TND")
+  description        String?
+  priority           Int            @default(0)
+  lawRef             String?        @map("law_ref")
+  validatedBy        String?        @map("validated_by") @db.Uuid
+  validatedAt        DateTime?      @map("validated_at") @db.Timestamptz(6)
+  validationComment  String?        @map("validation_comment")
+  version            Int            @default(0)
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime?      @map("deleted_at") @db.Timestamptz(6)
 
   rates           TaxRate[]
   invoiceLines    FinInvoiceLine[]
   creditNoteLines FinCreditNoteLine[]
+  taxLines        TaxLine[]
+  customerOverrides CusFiscalRuleOverride[]
+  productOverrides  PrdFiscalRuleOverride[]
+  defaultForProducts PrdFiscalProfile[] @relation("PrdFiscalDefaultVat")
 
   @@unique([companyId, code])
   @@index([companyId, kind, active])
+  @@index([companyId, status, kind])
   @@map("tax_code")
 }
 
 model TaxRate {
-  id                 String    @id @default(uuid()) @db.Uuid
-  companyId          String    @map("company_id") @db.Uuid
-  taxCodeId          String    @map("tax_code_id") @db.Uuid
-  /** Basis points: 1900 = 19%. */
-  rateBps            Int       @map("rate_bps")
-  validFrom          DateTime  @map("valid_from") @db.Date
-  validTo            DateTime? @map("valid_to") @db.Date
-  lawRef             String?   @map("law_ref")
-  expertValidatedAt  DateTime? @map("expert_validated_at") @db.Timestamptz(6)
-  version            Int       @default(0)
-  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(6)
+  id                 String         @id @default(uuid()) @db.Uuid
+  companyId          String         @map("company_id") @db.Uuid
+  taxCodeId          String         @map("tax_code_id") @db.Uuid
+  calcMethod         TaxCalcMethod  @default(RATE) @map("calc_method")
+  /** Basis points: 1900 = 19%. 0 when method is FIXED/QTY. */
+  rateBps            Int            @map("rate_bps")
+  /** FIXED = per document; QTY = per unit. Millimes (1000 = 1 TND). Null until expert. */
+  amountMilli        Int?           @map("amount_milli")
+  unit               String?
+  currency           String         @default("TND")
+  status             TaxRuleStatus  @default(VALIDATED)
+  validFrom          DateTime       @map("valid_from") @db.Date
+  validTo            DateTime?      @map("valid_to") @db.Date
+  lawRef             String?        @map("law_ref")
+  expertValidatedAt  DateTime?      @map("expert_validated_at") @db.Timestamptz(6)
+  validatedBy        String?        @map("validated_by") @db.Uuid
+  validationComment  String?        @map("validation_comment")
+  version            Int            @default(0)
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime?      @map("deleted_at") @db.Timestamptz(6)
 
-  taxCode TaxCode @relation(fields: [taxCodeId], references: [id], onDelete: Cascade)
+  taxCode  TaxCode   @relation(fields: [taxCodeId], references: [id], onDelete: Cascade)
+  taxLines TaxLine[]
 
   @@index([companyId, taxCodeId, validFrom])
   @@index([companyId, validFrom])
+  @@index([companyId, status])
   @@map("tax_rate")
+}
+
+/**
+ * Immutable fiscal snapshot (CDC tax_line). Preview calculate does not persist.
+ * Frozen rows must never be recalculated when a later rate changes.
+ */
+model TaxLine {
+  id                String             @id @default(uuid()) @db.Uuid
+  companyId         String             @map("company_id") @db.Uuid
+  sourceType        String             @map("source_type")
+  sourceId          String?            @map("source_id") @db.Uuid
+  lineNo            Int?               @map("line_no")
+  taxCodeId         String             @map("tax_code_id") @db.Uuid
+  taxRateId         String?            @map("tax_rate_id") @db.Uuid
+  ruleVersion       Int                @map("rule_version")
+  taxCode           String             @map("tax_code")
+  taxName           String             @map("tax_name")
+  kind              TaxKind
+  calcMethod        TaxCalcMethod      @map("calc_method")
+  rateBps           Int?               @map("rate_bps")
+  amountMilli       Int?               @map("amount_milli")
+  base              Decimal            @db.Decimal(18, 3)
+  taxableQuantity   Decimal?           @map("taxable_quantity") @db.Decimal(18, 3)
+  unit              String?
+  calculatedAmount  Decimal            @map("calculated_amount") @db.Decimal(18, 3)
+  currency          String             @default("TND")
+  applicable        Boolean            @default(true)
+  reason            String
+  source            TaxDecisionSource  @default(SYSTEM_RULE)
+  lawRef            String?            @map("law_ref")
+  effectiveFrom     DateTime           @map("effective_from") @db.Date
+  effectiveTo       DateTime?          @map("effective_to") @db.Date
+  calculatedAt      DateTime           @map("calculated_at") @db.Timestamptz(6)
+  frozen            Boolean            @default(false)
+  version           Int                @default(0)
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?          @map("deleted_at") @db.Timestamptz(6)
+
+  taxCodeRel      TaxCode             @relation(fields: [taxCodeId], references: [id])
+  taxRate         TaxRate?            @relation(fields: [taxRateId], references: [id], onDelete: SetNull)
+  invoiceLines    FinInvoiceLine[]
+  creditNoteLines FinCreditNoteLine[]
+
+  @@index([companyId, sourceType, sourceId])
+  @@index([companyId, taxCodeId])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, frozen])
+  @@map("tax_line")
 }
 
 // --- acc_* Accounting GL V0 (D072) — no invented tax rates ---

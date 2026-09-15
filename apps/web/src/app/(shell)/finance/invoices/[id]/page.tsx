@@ -26,6 +26,7 @@ import {
   issueInvoice,
   type FinInvoice,
 } from "@/lib/finance";
+import { FULFILLMENT_DOC_LABELS } from "@/lib/customers";
 import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 
 type Load =
@@ -136,8 +137,12 @@ export default function FinanceInvoiceFichePage() {
             Factures
           </Link>
         }
-        kicker="Finance"
-        title={inv ? inv.number : "Facture"}
+        kicker={
+          inv
+            ? FULFILLMENT_DOC_LABELS[inv.fulfillmentDoc ?? "DELIVERY_NOTE"]
+            : "Finance"
+        }
+        title={inv ? inv.number : "Document"}
         description="Fiche Soft Glass — HT/TVA/FODEC/timbre/TTC as-recorded (D224)."
         status={
           inv ? (
@@ -202,6 +207,16 @@ export default function FinanceInvoiceFichePage() {
                     v{inv.version}
                   </span>
                   <dl className="grid gap-3 text-[length:var(--a-text-sm)] sm:grid-cols-2">
+                    <div>
+                      <dt className="text-a-fg-muted">Document</dt>
+                      <dd>
+                        {
+                          FULFILLMENT_DOC_LABELS[
+                            inv.fulfillmentDoc ?? "DELIVERY_NOTE"
+                          ]
+                        }
+                      </dd>
+                    </div>
                     <div>
                       <dt className="text-a-fg-muted">Client</dt>
                       <dd>

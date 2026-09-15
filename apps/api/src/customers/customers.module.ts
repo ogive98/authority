@@ -7,6 +7,7 @@ import { ModulesRegistryModule } from '../modules-registry/modules-registry.modu
 import { MasterDataModule } from '../master-data/master-data.module';
 import { FinanceModule } from '../finance/finance.module';
 import { Customer360Service } from './customer-360.service';
+import { CustomerFiscalService } from './customer-fiscal.service';
 import { CustomersController } from './customers.controller';
 import { CustomersService } from './customers.service';
 import { PortalMembershipService } from './portal-membership.service';
@@ -22,7 +23,17 @@ import { PortalMembershipService } from './portal-membership.service';
     FinanceModule,
   ],
   controllers: [CustomersController],
-  providers: [CustomersService, Customer360Service, PortalMembershipService],
-  exports: [CustomersService, Customer360Service, PortalMembershipService],
+  providers: [
+    CustomersService,
+    Customer360Service,
+    PortalMembershipService,
+    CustomerFiscalService,
+  ],
+  exports: [
+    CustomersService,
+    Customer360Service,
+    PortalMembershipService,
+    CustomerFiscalService,
+  ],
 })
 export class CustomersModule {}

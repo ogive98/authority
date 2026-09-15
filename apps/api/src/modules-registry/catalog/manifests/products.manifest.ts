@@ -5,7 +5,7 @@ export const productsManifest: ModuleManifest = {
   name: 'Produits',
   version: '1.0.0',
   apiVersion: '1',
-  description: 'Catalogue produits (CRUD)',
+  description: 'Catalogue produits (CRUD) + profil fiscal D261',
   capabilities: [
     {
       key: 'products.read',
@@ -34,14 +34,15 @@ export const productsManifest: ModuleManifest = {
       requiresAudit: true,
     },
   ],
-  commands: ['products.create', 'products.update', 'products.activate'],
-  queries: ['products.list', 'products.get'],
+  commands: ['products.create', 'products.update', 'products.activate', 'products.fiscal.upsert'],
+  queries: ['products.list', 'products.get', 'products.fiscal.get'],
   permissions: ['products.read', 'products.write', 'products.activate'],
   dependencies: ['platform', 'organization', 'master_data'],
   publishedEvents: [
     'products.created.v1',
     'products.updated.v1',
     'products.activated.v1',
+    'products.fiscal.updated.v1',
   ],
   navigationEntries: [
     { id: 'catalogue', label: 'Catalogue', href: '/products' },

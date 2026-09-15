@@ -1,14 +1,22 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsDateString,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import type {
+  TaxCalcMethod,
+  TaxDecisionSource,
+  TaxKind,
+} from '@prisma/client';
 
 export class CreateTaxRateDto {
   @IsUUID()
@@ -43,3 +51,98 @@ export class PatchTaxRateDto {
   @MaxLength(240)
   lawRef?: string | null;
 }
+
+export class CalculateTaxLineDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  lineNo?: number;
+
+  @IsOptional()
+  @IsUUID()
+  taxCodeId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  productId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  description?: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  qty!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(16)
+  unit?: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  unitPriceHt!: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  amountHt?: number;
+}
+
+export class CalculateTaxDto {
+  @IsOptional()
+  @IsDateString()
+  asOf?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  currency?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  operationType?: string;
+
+  @IsOptional()
+  @IsUUID()
+  customerId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  supplierId?: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CalculateTaxLineDto)
+  lines!: CalculateTaxLineDto[];
+}
+
+export type FiscalDecision = {
+  applicable: boolean;
+  ruleId: string | null;
+  ruleVersion: number | null;
+  taxRateId: string | null;
+  taxCode: string | null;
+  taxName: string | null;
+  kind: TaxKind | null;
+  calcMethod: TaxCalcMethod | null;
+  base: number;
+  quantity: number | null;
+  unit: string | null;
+  rateBps: number | null;
+  fixedAmountMilli: number | null;
+  calculatedAmount: number;
+  currency: string;
+  reason: string;
+  source: TaxDecisionSource;
+  effectiveDate: string;
+  lawRef: string | null;
+  lineNo: number | null;
+  productId: string | null;
+};

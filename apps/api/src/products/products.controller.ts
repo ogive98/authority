@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -20,14 +21,18 @@ import { RequireModule } from '../modules-registry/modules.decorators';
 import { PermissionGuard } from '../permissions/permission.guard';
 import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
-import { CreateProductDto, UpdateProductDto } from './products.dto';
+import { CreateProductDto, UpdateProductDto, UpsertProductFiscalOverrideDto, UpsertProductFiscalProfileDto } from './products.dto';
+import { ProductFiscalService } from './product-fiscal.service';
 import { ProductsService } from './products.service';
 
 @Controller('api/v1/products')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
 @RequireModule('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly productFiscal: ProductFiscalService,
+  ) {}
 
   @Get()
   @RequirePermission(PERMISSION_KEYS.productsRead)
@@ -43,6 +48,45 @@ export class ProductsController {
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor,
     });
+  }
+
+  @Get(':id/fiscal')
+  @RequirePermission(PERMISSION_KEYS.productsRead)
+  getFiscal(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.productFiscal.get(tenancy.companyId, id);
+  }
+
+  @Put(':id/fiscal')
+  @RequirePermission(PERMISSION_KEYS.productsWrite)
+  upsertFiscalProfile(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpsertProductFiscalProfileDto,
+  ) {
+    return this.productFiscal.upsertProfile(tenancy.companyId, id, dto);
+  }
+
+  @Put(':id/fiscal/overrides')
+  @RequirePermission(PERMISSION_KEYS.productsWrite)
+  upsertFiscalOverride(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpsertProductFiscalOverrideDto,
+  ) {
+    return this.productFiscal.upsertOverride(tenancy.companyId, id, dto);
+  }
+
+  @Delete(':id/fiscal/overrides/:taxCodeId')
+  @RequirePermission(PERMISSION_KEYS.productsWrite)
+  removeFiscalOverride(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('taxCodeId', ParseUUIDPipe) taxCodeId: string,
+  ) {
+    return this.productFiscal.removeOverride(tenancy.companyId, id, taxCodeId);
   }
 
   @Get(':id')

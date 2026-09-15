@@ -6,6 +6,7 @@ import {
   FinOpenItemStatus,
   Prisma,
 } from '@prisma/client';
+import { TaxDecisionSource, TaxKind } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
@@ -24,11 +25,13 @@ import { FinanceException } from './finance.exception';
 export type CreditNoteLineDto = {
   id: string;
   lineNo: number;
+  lineType: 'PRODUCT' | 'TAX';
   description: string;
   qty: string;
   unitPriceHt: string;
   taxCodeId: string;
   taxCode: string | null;
+  productId: string | null;
   amountHt: string;
   amountTax: string;
   amountTtc: string;
@@ -70,10 +73,12 @@ type CreditNoteWithExtras = FinCreditNote & {
   lines: Array<{
     id: string;
     lineNo: number;
+    lineType?: 'PRODUCT' | 'TAX';
     description: string;
     qty: Prisma.Decimal;
     unitPriceHt: Prisma.Decimal;
     taxCodeId: string;
+    productId?: string | null;
     amountHt: Prisma.Decimal;
     amountTax: Prisma.Decimal;
     amountTtc: Prisma.Decimal;
@@ -201,6 +206,7 @@ export class CreditNoteService {
               qty: l.qty,
               unitPriceHt: l.unitPriceHt,
               taxCodeId: l.taxCodeId,
+              productId: l.productId,
               amountHt: l.amountHt,
               amountTax: l.amountTax,
               amountTtc: l.amountTtc,
@@ -414,12 +420,14 @@ export class CreditNoteService {
     companyId: string,
     invoice: {
       id: string;
+      customerId: string;
       amountTotal: Prisma.Decimal;
       lines?: Array<{
         description: string;
         qty: Prisma.Decimal;
         unitPriceHt: Prisma.Decimal;
         taxCodeId: string;
+        productId?: string | null;
       }>;
     },
     dto: CreateCreditNoteDto,
@@ -445,12 +453,13 @@ export class CreditNoteService {
         qty: Number(l.qty),
         unitPriceHt: Number(l.unitPriceHt),
         taxCodeId: l.taxCodeId,
+        productId: l.productId ?? undefined,
       }));
-      return this.computeLines(companyId, lines);
+      return this.computeLines(companyId, lines, invoice.customerId);
     }
 
     if (dto.lines && dto.lines.length > 0) {
-      return this.computeLines(companyId, dto.lines);
+      return this.computeLines(companyId, dto.lines, invoice.customerId);
     }
 
     throw new FinanceException(
@@ -463,6 +472,7 @@ export class CreditNoteService {
   private async computeLines(
     companyId: string,
     inputLines: CreateCreditNoteLineDto[],
+    customerId: string,
   ): Promise<{
     amountHt: number;
     amountTax: number;
@@ -473,6 +483,7 @@ export class CreditNoteService {
       qty: number;
       unitPriceHt: number;
       taxCodeId: string;
+      productId: string | null;
       amountHt: number;
       amountTax: number;
       amountTtc: number;
@@ -483,7 +494,12 @@ export class CreditNoteService {
     let amountTax = 0;
     let lineNo = 1;
     for (const line of inputLines) {
-      const computed = await this.computeOneLine(companyId, line, lineNo);
+      const computed = await this.computeOneLine(
+        companyId,
+        line,
+        lineNo,
+        customerId,
+      );
       lines.push(computed);
       amountHt = round3(amountHt + computed.amountHt);
       amountTax = round3(amountTax + computed.amountTax);
@@ -509,6 +525,7 @@ export class CreditNoteService {
         qty: number;
         unitPriceHt: number;
         taxCodeId: string;
+        productId?: string | null;
         amountHt: number;
         amountTax: number;
         amountTtc: number;
@@ -559,15 +576,56 @@ export class CreditNoteService {
     companyId: string,
     line: CreateCreditNoteLineDto,
     lineNo: number,
+    customerId: string,
   ) {
+    if (line.productId) {
+      const product = await this.prisma.prdProduct.findFirst({
+        where: { id: line.productId, companyId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!product) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_AMOUNT,
+          'Product not found for this line.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+    }
     const qty = round3(line.qty);
     const unitPriceHt = round3(line.unitPriceHt);
     const amountHt = round3(qty * unitPriceHt);
-    const { rateBps } = await this.tax.resolveRateBps(
-      companyId,
-      line.taxCodeId,
-    );
-    const amountTax = taxFromHt(amountHt, rateBps);
+    const { decisions } = await this.tax.calculate(companyId, {
+      currency: 'TND',
+      operationType: 'AR_CREDIT_NOTE',
+      customerId,
+      lines: [
+        {
+          lineNo,
+          taxCodeId: line.taxCodeId,
+          productId: line.productId,
+          qty,
+          unitPriceHt,
+          amountHt,
+          description: line.description,
+        },
+      ],
+    });
+    const vat = decisions.find((d) => d.kind === TaxKind.VAT);
+    if (!vat) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.INVALID_AMOUNT,
+        'VAT tax code is not applicable for this line.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (!vat.applicable && vat.source !== TaxDecisionSource.EXEMPTION) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.INVALID_AMOUNT,
+        'VAT tax code is not applicable for this line.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const amountTax = vat.applicable ? vat.calculatedAmount : 0;
     const amountTtc = round3(amountHt + amountTax);
     return {
       lineNo,
@@ -575,6 +633,7 @@ export class CreditNoteService {
       qty,
       unitPriceHt,
       taxCodeId: line.taxCodeId,
+      productId: line.productId ?? null,
       amountHt,
       amountTax,
       amountTtc,
@@ -727,11 +786,13 @@ function serializeCreditNote(
     lines: (row.lines ?? []).map((l) => ({
       id: l.id,
       lineNo: l.lineNo,
+      lineType: l.lineType ?? 'PRODUCT',
       description: l.description,
       qty: Number(l.qty).toFixed(3),
       unitPriceHt: Number(l.unitPriceHt).toFixed(3),
       taxCodeId: l.taxCodeId,
       taxCode: l.taxCode?.code ?? null,
+      productId: l.productId ?? null,
       amountHt: Number(l.amountHt).toFixed(3),
       amountTax: Number(l.amountTax).toFixed(3),
       amountTtc: Number(l.amountTtc).toFixed(3),

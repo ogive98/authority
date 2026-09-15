@@ -211,4 +211,105 @@ describe('MaintenanceService', () => {
     const result = await service.listAssets(companyId);
     expect(result.items[0].preventiveDue).toBe(true);
   });
+
+  it('filters assets by vehicleId', async () => {
+    const prisma = mockPrisma();
+    const outbox = { enqueue: jest.fn() };
+    const service = new MaintenanceService(prisma as never, outbox as never);
+
+    prisma.mntAsset.findMany.mockResolvedValue([
+      {
+        ...asset,
+        vehicleId,
+        vehicle: {
+          id: vehicleId,
+          code: 'CAM-01',
+          plate: '123-TN',
+          deletedAt: null,
+        },
+      },
+    ]);
+
+    await service.listAssets(companyId, { vehicleId });
+    expect(prisma.mntAsset.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ companyId, vehicleId }),
+      }),
+    );
+  });
+
+  it('openPreventiveWorkOrder creates PREVENTIVE WO', async () => {
+    const prisma = mockPrisma();
+    const outbox = { enqueue: jest.fn() };
+    const service = new MaintenanceService(prisma as never, outbox as never);
+
+    prisma.mntAsset.findFirst.mockResolvedValue({ ...asset, vehicle: null });
+    prisma.$transaction.mockImplementation(async (fn) => {
+      const tx = {
+        mntWo: {
+          create: jest.fn().mockResolvedValue({
+            id: woId,
+            companyId,
+            assetId,
+            type: MntWoType.PREVENTIVE,
+            status: MntWoStatus.OPEN,
+            title: 'Préventif · CUVE-01 · 2026-09-01',
+            notes: 'Ouverture ADV depuis date préventive 2026-09-01.',
+            openedAt: new Date('2026-09-14T12:00:00Z'),
+            doneAt: null,
+            version: 0,
+            createdAt: new Date('2026-09-14T12:00:00Z'),
+            updatedAt: new Date('2026-09-14T12:00:00Z'),
+            deletedAt: null,
+            asset: {
+              id: assetId,
+              code: asset.code,
+              label: asset.label,
+              type: asset.type,
+              status: asset.status,
+            },
+          }),
+        },
+      };
+      return fn(tx);
+    });
+
+    const result = await service.openPreventiveWorkOrder(companyId, assetId);
+    expect(result.type).toBe(MntWoType.PREVENTIVE);
+    expect(result.status).toBe(MntWoStatus.OPEN);
+    expect(result.title).toContain('Préventif');
+    expect(outbox.enqueue).toHaveBeenCalled();
+  });
+
+  it('openPreventiveWorkOrder rejects missing asset', async () => {
+    const prisma = mockPrisma();
+    const outbox = { enqueue: jest.fn() };
+    const service = new MaintenanceService(prisma as never, outbox as never);
+
+    prisma.mntAsset.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.openPreventiveWorkOrder(companyId, assetId),
+    ).rejects.toMatchObject({
+      response: { code: MNT_ERROR_CODES.NOT_FOUND },
+    });
+  });
+
+  it('openPreventiveWorkOrder rejects asset without preventive date', async () => {
+    const prisma = mockPrisma();
+    const outbox = { enqueue: jest.fn() };
+    const service = new MaintenanceService(prisma as never, outbox as never);
+
+    prisma.mntAsset.findFirst.mockResolvedValue({
+      ...asset,
+      nextPreventiveAt: null,
+      vehicle: null,
+    });
+
+    await expect(
+      service.openPreventiveWorkOrder(companyId, assetId),
+    ).rejects.toMatchObject({
+      response: { code: MNT_ERROR_CODES.NO_PREVENTIVE_DATE },
+    });
+  });
 });

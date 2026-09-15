@@ -1,22 +1,33 @@
 import type { ModuleManifest } from '../manifest.types';
 
 /**
- * Tax Engine V0 (D088) — Tunisia VAT catalog.
- * CNSS / IRPP / payroll rates are NOT here (future HR module).
+ * Tax Engine (D088 + D259) — Tunisia VAT catalog + fiscal calculate.
+ * FODEC / timbre / RAS / TEJ remain Prefs VALIDATED only (D090/D092/D246).
+ * CNSS / IRPP / payroll rates are NOT here (HR).
+ * tax.simulate (CDC) → permission tax.read
+ * tax.manage (CDC) → permission tax.rate.manage
  */
 export const taxManifest: ModuleManifest = {
   id: 'tax',
   name: 'Fiscalité',
-  version: '1.0.0',
+  version: '1.1.0',
   apiVersion: '1',
   description:
-    'Tax Engine — TVA Tunisie + lecture FODEC/timbre/RAS/TEJ Prefs (VALIDATED only); no invented rates; no TEJ transmission',
+    'Tax Engine — TVA Tunisie + POST /tax/calculate; FODEC/timbre/RAS/TEJ Prefs VALIDATED only; no invented rates; no TEJ transmission',
   capabilities: [
     {
       key: 'tax.read',
       moduleId: 'tax',
       version: '1',
       description: 'Read VAT tax codes, active rates, and fiscal expertise readiness',
+      permissionKey: 'tax.read',
+      riskLevel: 'low',
+    },
+    {
+      key: 'tax.simulate',
+      moduleId: 'tax',
+      version: '1',
+      description: 'Run Fiscal Engine calculate (preview FiscalDecision[])',
       permissionKey: 'tax.read',
       riskLevel: 'low',
     },
@@ -29,12 +40,26 @@ export const taxManifest: ModuleManifest = {
       riskLevel: 'high',
       requiresAudit: true,
     },
+    {
+      key: 'tax.manage',
+      moduleId: 'tax',
+      version: '1',
+      description: 'Manage fiscal rules (CDC alias of tax.rate.manage)',
+      permissionKey: 'tax.rate.manage',
+      riskLevel: 'high',
+      requiresAudit: true,
+    },
   ],
-  commands: ['tax.rate.create', 'tax.rate.patch'],
+  commands: [
+    'tax.rate.create',
+    'tax.rate.patch',
+    'tax.calculate',
+    'tax.compute',
+  ],
   queries: ['tax.codes.list', 'tax.rates.list'],
   permissions: ['tax.read', 'tax.rate.manage'],
   dependencies: ['platform', 'organization', 'master_data'],
-  publishedEvents: ['tax.rate.published.v1'],
+  publishedEvents: ['tax.rate.published.v1', 'tax.rate.changed.v1'],
   navigationEntries: [
     { id: 'tax-catalog', label: 'Fiscalité / TVA', href: '/tax' },
     {

@@ -40,6 +40,7 @@ export class MaintenanceController {
     @Query('q') q?: string,
     @Query('status') status?: string,
     @Query('preventiveDue') preventiveDueRaw?: string,
+    @Query('vehicleId') vehicleId?: string,
     @Query('limit') limitRaw?: string,
     @Query('cursor') cursor?: string,
   ) {
@@ -52,6 +53,7 @@ export class MaintenanceController {
       q,
       status,
       preventiveDue,
+      vehicleId,
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor,
     });
@@ -64,6 +66,19 @@ export class MaintenanceController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.maintenanceService.getAsset(tenancy.companyId, id);
+  }
+
+  @Post('assets/:id/open-preventive')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.maintenanceWo)
+  openPreventive(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.maintenanceService.openPreventiveWorkOrder(
+      tenancy.companyId,
+      id,
+    );
   }
 
   @Post('assets')

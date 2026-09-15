@@ -87,11 +87,13 @@ export async function fetchAssets(opts?: {
   q?: string;
   status?: MntAssetStatus | "";
   preventiveDue?: boolean;
+  vehicleId?: string;
 }): Promise<{ ok: true; data: { items: MaintenanceAsset[] } } | ApiFail> {
   const sp = new URLSearchParams();
   if (opts?.q?.trim()) sp.set("q", opts.q.trim());
   if (opts?.status) sp.set("status", opts.status);
   if (opts?.preventiveDue) sp.set("preventiveDue", "1");
+  if (opts?.vehicleId?.trim()) sp.set("vehicleId", opts.vehicleId.trim());
   const qs = sp.toString();
   const res = await fetch(`/api/v1/maintenance/assets${qs ? `?${qs}` : ""}`, {
     credentials: "include",
@@ -101,6 +103,30 @@ export async function fetchAssets(opts?: {
     ok: true,
     data: (await res.json()) as { items: MaintenanceAsset[] },
   };
+}
+
+export async function fetchAsset(
+  id: string,
+): Promise<{ ok: true; data: MaintenanceAsset } | ApiFail> {
+  const res = await fetch(`/api/v1/maintenance/assets/${id}`, {
+    credentials: "include",
+  });
+  if (!res.ok) return parseFail(res);
+  return { ok: true, data: (await res.json()) as MaintenanceAsset };
+}
+
+export async function openPreventiveWo(
+  assetId: string,
+): Promise<{ ok: true; data: MaintenanceWo } | ApiFail> {
+  const res = await fetch(
+    `/api/v1/maintenance/assets/${assetId}/open-preventive`,
+    {
+      method: "POST",
+      credentials: "include",
+    },
+  );
+  if (!res.ok) return parseFail(res);
+  return { ok: true, data: (await res.json()) as MaintenanceWo };
 }
 
 export async function createAsset(body: {

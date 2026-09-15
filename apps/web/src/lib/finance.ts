@@ -88,6 +88,7 @@ export type FinInvoice = {
   status: InvoiceStatus;
   salesOrderId: string | null;
   shipmentId: string | null;
+  fulfillmentDoc?: "DELIVERY_NOTE" | "INVOICE";
   currency: string;
   amountHt: string;
   amountTax: string;
@@ -103,11 +104,13 @@ export type FinInvoice = {
   lines: {
     id: string;
     lineNo: number;
+    lineType?: "PRODUCT" | "TAX";
     description: string;
     qty: string;
     unitPriceHt: string;
     taxCodeId: string;
     taxCode: string | null;
+    productId?: string | null;
     amountHt: string;
     amountTax: string;
     amountTtc: string;
@@ -142,11 +145,13 @@ export type FinCreditNote = {
   lines: {
     id: string;
     lineNo: number;
+    lineType?: "PRODUCT" | "TAX";
     description: string;
     qty: string;
     unitPriceHt: string;
     taxCodeId: string;
     taxCode: string | null;
+    productId?: string | null;
     amountHt: string;
     amountTax: string;
     amountTtc: string;
@@ -569,6 +574,8 @@ export async function createInvoice(body: {
   notes?: string;
   currency?: string;
   issue?: boolean;
+  salesOrderId?: string;
+  fulfillmentDoc?: "DELIVERY_NOTE" | "INVOICE";
 }): Promise<{ ok: true; data: FinInvoice } | ApiFail> {
   try {
     const res = await fetch("/api/v1/finance/invoices", {

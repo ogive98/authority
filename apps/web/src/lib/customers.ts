@@ -83,6 +83,7 @@ export type Customer = {
   blockOnCriticalOverdue?: boolean;
   notifyResponsible?: boolean;
   creditStatus?: string;
+  fulfillmentDoc?: FulfillmentDoc;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -144,6 +145,7 @@ export type CustomerWriteBody = {
   allowExceptionalOverride?: boolean;
   blockOnCriticalOverdue?: boolean;
   notifyResponsible?: boolean;
+  fulfillmentDoc?: FulfillmentDoc;
   contacts?: Array<{
     name: string;
     phone?: string;
@@ -152,6 +154,13 @@ export type CustomerWriteBody = {
     role?: string;
   }>;
   version?: number;
+};
+
+export type FulfillmentDoc = "DELIVERY_NOTE" | "INVOICE";
+
+export const FULFILLMENT_DOC_LABELS: Record<FulfillmentDoc, string> = {
+  DELIVERY_NOTE: "Bon de livraison",
+  INVOICE: "Facture",
 };
 
 export const STATUS_LABELS: Record<CustomerStatus, string> = {
@@ -900,6 +909,153 @@ export async function updatePortalMembership(
     );
     if (!res.ok) return parseError(res);
     return { ok: true, data: (await res.json()) as PortalMembership };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export type FiscalOverrideMode = "AUTO" | "ALWAYS" | "NEVER" | "CONFIRM";
+
+export const FISCAL_OVERRIDE_LABELS: Record<FiscalOverrideMode, string> = {
+  AUTO: "Auto (règle)",
+  ALWAYS: "Toujours",
+  NEVER: "Jamais (exonération)",
+  CONFIRM: "Confirmer",
+};
+
+export type CustomerFiscalCode = {
+  id: string;
+  code: string;
+  label: string;
+  kind: string;
+  status: string;
+  active: boolean;
+};
+
+export type CustomerFiscalProfile = {
+  id: string | null;
+  fiscalRegime: string | null;
+  vatLiable: boolean | null;
+  fiscalStatus: string | null;
+  fiscalCategory: string | null;
+  withholdingArEnabled: boolean;
+  notes: string | null;
+  version: number;
+};
+
+export type CustomerFiscalOverride = {
+  id: string;
+  taxCodeId: string;
+  taxCode: string;
+  taxLabel: string;
+  kind: string;
+  ruleStatus: string;
+  mode: FiscalOverrideMode;
+  source: string;
+  validFrom: string | null;
+  validTo: string | null;
+  justification: string | null;
+  reference: string | null;
+  documentId: string | null;
+  comment: string | null;
+  version: number;
+};
+
+export type CustomerFiscal = {
+  customerId: string;
+  taxId: string | null;
+  profile: CustomerFiscalProfile;
+  overrides: CustomerFiscalOverride[];
+  availableCodes: CustomerFiscalCode[];
+};
+
+export async function fetchCustomerFiscal(
+  customerId: string,
+): Promise<{ ok: true; data: CustomerFiscal } | ApiError> {
+  try {
+    const res = await fetch(`/api/v1/customers/${customerId}/fiscal`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as CustomerFiscal };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function upsertCustomerFiscalProfile(
+  customerId: string,
+  body: {
+    fiscalRegime?: string | null;
+    vatLiable?: boolean | null;
+    fiscalStatus?: string | null;
+    fiscalCategory?: string | null;
+    withholdingArEnabled?: boolean;
+    notes?: string | null;
+    version?: number;
+  },
+): Promise<{ ok: true; data: CustomerFiscal } | ApiError> {
+  try {
+    const res = await fetch(`/api/v1/customers/${customerId}/fiscal`, {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as CustomerFiscal };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function upsertCustomerFiscalOverride(
+  customerId: string,
+  body: {
+    taxCodeId: string;
+    mode: FiscalOverrideMode;
+    source?: string;
+    justification?: string | null;
+    reference?: string | null;
+    version?: number;
+  },
+): Promise<{ ok: true; data: CustomerFiscal } | ApiError> {
+  try {
+    const res = await fetch(
+      `/api/v1/customers/${customerId}/fiscal/overrides`,
+      {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as CustomerFiscal };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function deleteCustomerFiscalOverride(
+  customerId: string,
+  taxCodeId: string,
+): Promise<{ ok: true; data: CustomerFiscal } | ApiError> {
+  try {
+    const res = await fetch(
+      `/api/v1/customers/${customerId}/fiscal/overrides/${taxCodeId}`,
+      { method: "DELETE", credentials: "include" },
+    );
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as CustomerFiscal };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }

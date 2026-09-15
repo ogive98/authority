@@ -307,8 +307,8 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/customers",
     title: { fr: "Clients", it: "Clienti" },
     summary: {
-      fr: "Fiche 360 Soft Glass, tarifs négociés, hub financier (créances / aging).",
-      it: "Scheda 360 Soft Glass, prezzi negoziati, hub finanziario (crediti / aging).",
+      fr: "Fiche 360 Soft Glass, tarifs négociés, hub financier (créances / aging), profil fiscal.",
+      it: "Scheda 360 Soft Glass, prezzi negoziati, hub finanziario (crediti / aging), profilo fiscale.",
     },
     when: {
       fr: "Avant la première commande, ou pour piloter le risque crédit / relances.",
@@ -341,6 +341,30 @@ export const HELP_MODULES: HelpModule[] = [
       },
       {
         name: {
+          fr: "Document — facture ou bon de livraison",
+          it: "Documento — fattura o bolla di consegna",
+        },
+        when: {
+          fr: "Le titre imprimé est un bon de livraison (défaut) ou une facture — même contenu, même compta.",
+          it: "Il titolo stampato è una bolla di consegna (predefinito) o una fattura — stesso contenuto, stessa contabilità.",
+        },
+        steps: {
+          fr: [
+            "Fiche `/customers/[id]` → Éditer → toggle Document : Bon de livraison (défaut) ou Facture.",
+            "À la facturation (`/finance/invoices` → Nouvelle facture), le titre reprend la fiche.",
+            "Vous pouvez le changer pour ce document seulement — ça ne change que le titre.",
+            "Même lignes, même AR/GL, mêmes modes SPECTRE / PATCH / GHOST.",
+          ],
+          it: [
+            "Scheda `/customers/[id]` → Éditer → toggle Documento: Bolla di consegna (predefinito) o Fattura.",
+            "In fatturazione (`/finance/invoices` → Nuova fattura) il titolo riprende la scheda.",
+            "Puoi cambiarlo solo per questo documento — cambia soltanto il titolo.",
+            "Stesse righe, stesso AR/GL, stessi modi SPECTRE / PATCH / GHOST.",
+          ],
+        },
+      },
+      {
+        name: {
           fr: "Fiche client 360",
           it: "Scheda cliente 360",
         },
@@ -364,6 +388,34 @@ export const HELP_MODULES: HelpModule[] = [
             "Documenti: file collegati · upload via `/documents` (link CUSTOMER).",
             "Comunicazione: canali · contatti · solleciti · dichiarazioni portale (niente CRM chat).",
             "« Éditer » + Portale (D242); overflow per ordine / blocco.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Fiscalité client",
+          it: "Fiscalità cliente",
+        },
+        when: {
+          fr: "Classer le client (régime, assujettissement) ou déroger à un code fiscal ACTIVE, avec justification.",
+          it: "Classificare il cliente (regime, assoggettamento) o derogare a un codice fiscale ACTIVE, con giustificazione.",
+        },
+        steps: {
+          fr: [
+            "Fiche 360 → Synthèse → section Fiscalité.",
+            "Le MF s’édite via « Éditer » (pièce d’identité) — pas ici.",
+            "Renseignez régime / statut / catégorie / assujetti TVA, puis « Enregistrer le fiscal ».",
+            "Dérogation : choisissez un code, un mode (Toujours / Jamais / Confirmer) et une justification obligatoire.",
+            "Jamais = exonération auditée (NEVER). Toujours n’active pas une règle PENDING_EXPERT.",
+            "« Auto » retire la dérogation. RAS AR est un flag inactif (architecture) — RAS auto = AP plus tard.",
+          ],
+          it: [
+            "Scheda 360 → Sintesi → sezione Fiscalità.",
+            "Il MF si modifica da « Éditer » (identità) — non qui.",
+            "Compila regime / stato / categoria / assoggettato IVA, poi « Enregistrer le fiscal ».",
+            "Deroga: scegli un codice, una modalità (Toujours / Jamais / Confirmer) e una giustificazione obbligatoria.",
+            "Jamais = esenzione auditata (NEVER). Toujours non attiva una regola PENDING_EXPERT.",
+            "« Auto » toglie la deroga. RAS AR è un flag inattivo (architettura) — RAS auto = AP più tardi.",
           ],
         },
       },
@@ -398,12 +450,16 @@ export const HELP_MODULES: HelpModule[] = [
         "Communication = dunning + déclarations — pas de messagerie SoT (D244).",
         "WA→commande, TEJ/RAS et automations FULL_AUTO reportés (Prefs VALIDATED pour tax).",
         "Module Portails ENABLED requis pour lier / révoquer (D242).",
+        "Dérogation fiscale NEVER = exonération justifiée + audit — jamais un bypass silencieux (D260). ALWAYS n’active pas PENDING_EXPERT. RAS AR flag architecture only.",
+        "Document = titre (bon de livraison par défaut / facture) ; surchargeable à l’émission — même `fin_invoice`, AR/GL/modes inchangés (D262).",
       ],
       it: [
         "Nessun modulo CRM parallelo — Soft Glass only (D161/D241/D244).",
         "Comunicazione = solleciti + dichiarazioni — niente messaging SoT (D244).",
         "WA→ordine, TEJ/RAS e automazioni FULL_AUTO differiti (Prefs VALIDATED per tax).",
         "Modulo Portali ENABLED richiesto per collegare / revocare (D242).",
+        "Deroga fiscale NEVER = esenzione giustificata + audit — mai un bypass silenzioso (D260). ALWAYS non attiva PENDING_EXPERT. Flag RAS AR solo architettura.",
+        "Documento = titolo (bolla di consegna predefinita / fattura); sovrascrivibile all’emissione — stesso `fin_invoice`, AR/GL/modi invariati (D262).",
       ],
     },
   },
@@ -510,12 +566,14 @@ export const HELP_MODULES: HelpModule[] = [
             "Chips statut (Tous / Actif / En atelier / Hors service / Archivé).",
             "« + Nouveau véhicule » (chauffeur habitué optionnel) ou fiche `/fleet/[id]`.",
             "Sur la fiche : Éditer · carnet · historique d’affectations.",
+            "Si un équipement Maintenance est lié (`vehicleId`) → lien Soft Glass « Équipement maintenance ».",
           ],
           it: [
             "Apri `/fleet` (modulo Flotta ENABLED + `fleet.manage`).",
             "Chip stato (Tutti / Attivo / In officina / Fuori servizio / Archiviato).",
             "« + Nouveau véhicule » (autista abituale opzionale) o scheda `/fleet/[id]`.",
             "In scheda: Éditer · libretto · storico assegnazioni.",
+            "Se un asset Manutenzione è collegato (`vehicleId`) → link Soft Glass « Équipement maintenance ».",
           ],
         },
       },
@@ -594,8 +652,8 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/maintenance",
     title: { fr: "Maintenance", it: "Manutenzione" },
     summary: {
-      fr: "Équipements Soft Glass (online/down), OT panne/préventif, lien optionnel véhicule flotte, date préventive UI. Pas de job Thunder ni pièces Inventory.",
-      it: "Attrezzature Soft Glass (online/down), OT guasto/preventivo, link opzionale veicolo flotta, data preventivo UI. Niente job Thunder né pezzi Inventory.",
+      fr: "Fiche équipement Soft Glass, OT panne/préventif ADV, chips Ouverts/Terminés, lien flotte ↔ maintenance. Pas de job Thunder ni pièces Inventory.",
+      it: "Scheda attrezzatura Soft Glass, OT guasto/preventivo ADV, chip Aperti/Completati, link flotta ↔ manutenzione. Niente job Thunder né pezzi Inventory.",
     },
     when: {
       fr: "Quand une cuve, presse, chambre froide ou camion est en panne ou dû en préventif.",
@@ -604,46 +662,50 @@ export const HELP_MODULES: HelpModule[] = [
     features: [
       {
         name: {
-          fr: "Équipements + lien flotte + préventif dû",
-          it: "Attrezzature + link flotta + preventivo scaduto",
+          fr: "Équipements + fiche + lien flotte + préventif dû",
+          it: "Attrezzature + scheda + link flotta + preventivo scaduto",
         },
         when: {
-          fr: "Créer / éditer un asset ; filtrer préventif dû.",
-          it: "Creare / modificare un asset; filtrare preventivo scaduto.",
+          fr: "Créer / éditer un asset ; ouvrir la fiche ; filtrer préventif dû.",
+          it: "Creare / modificare un asset; aprire la scheda; filtrare preventivo scaduto.",
         },
         steps: {
           fr: [
             "Ouvrez `/maintenance` (module Maintenance ENABLED + `maintenance.asset`).",
             "« + Nouvel équipement » : code, libellé, type, véhicule flotte optionnel, date préventive.",
-            "Chips statut · chip « Préventif dû ».",
-            "Down / Up ADV (events `maintenance.asset.down|up.v1`) — pas d’auto.",
+            "Cliquez le code → fiche `/maintenance/[id]` (Down/Up, éditer, historique OT).",
+            "Si préventif dû → « OT préventif » (ADV, `maintenance.wo`) — pas d’auto.",
+            "Lien « Véhicule flotte » sur la fiche si `vehicleId` ; inverse depuis `/fleet/[id]`.",
           ],
           it: [
             "Apri `/maintenance` (modulo Manutenzione ENABLED + `maintenance.asset`).",
             "« + Nouvel équipement »: codice, etichetta, tipo, veicolo flotta opzionale, data preventivo.",
-            "Chip stato · chip « Préventif dû ».",
-            "Down / Up ADV (eventi `maintenance.asset.down|up.v1`) — niente auto.",
+            "Clic sul codice → scheda `/maintenance/[id]` (Down/Up, modifica, storico OT).",
+            "Se preventivo scaduto → « OT préventif » (ADV, `maintenance.wo`) — niente auto.",
+            "Link « Véhicule flotte » sulla scheda se `vehicleId`; inverso da `/fleet/[id]`.",
           ],
         },
       },
       {
         name: {
-          fr: "Ordres de travail (OT)",
-          it: "Ordini di lavoro (OT)",
+          fr: "Ordres de travail (OT) + historique",
+          it: "Ordini di lavoro (OT) + storico",
         },
         when: {
-          fr: "Ouvrir un OT panne ou préventif puis le terminer.",
-          it: "Aprire un OT guasto o preventivo e completarlo.",
+          fr: "Ouvrir un OT panne ou préventif puis le terminer ; filtrer Ouverts / Terminés / Tous.",
+          it: "Aprire un OT guasto o preventivo e completarlo; filtrare Aperti / Completati / Tutti.",
         },
         steps: {
           fr: [
             "`/maintenance?tab=wo` (`maintenance.wo`).",
-            "Créer OT depuis la liste ou le bouton OT sur une ligne équipement.",
+            "Chips Ouverts · Terminés · Tous.",
+            "Créer OT depuis la liste, la fiche, ou « OT préventif » si dû.",
             "« Terminer » → status DONE (pas d’auto Up de l’équipement).",
           ],
           it: [
             "`/maintenance?tab=wo` (`maintenance.wo`).",
-            "Crea OT dalla lista o dal bottone OT su una riga attrezzatura.",
+            "Chip Aperti · Completati · Tutti.",
+            "Crea OT dalla lista, dalla scheda, o « OT préventif » se scaduto.",
             "« Terminer » → status DONE (niente Up automatico dell’asset).",
           ],
         },
@@ -651,13 +713,15 @@ export const HELP_MODULES: HelpModule[] = [
     ],
     locks: {
       fr: [
-        "Lien flotte = `vehicleId` optionnel seulement (1A) — pas de sync statut camion.",
+        "Lien flotte = `vehicleId` optionnel seulement (1A) — pas de FK carnet→OT · pas de sync statut camion.",
         "Date préventive = rappel UI (2B) — pas de job `maintenance.preventive_due`.",
+        "OT préventif = ADV uniquement — pas d’auto depuis carnet flotte.",
         "Pas de pièces Inventory · pas de blocage OF Production · pas de full CMMS.",
       ],
       it: [
-        "Link flotta = solo `vehicleId` opzionale (1A) — niente sync stato camion.",
+        "Link flotta = solo `vehicleId` opzionale (1A) — niente FK libretto→OT · niente sync stato camion.",
         "Data preventivo = reminder UI (2B) — niente job `maintenance.preventive_due`.",
+        "OT preventivo = solo ADV — niente auto dal libretto flotta.",
         "Niente pezzi Inventory · niente blocco OF Produzione · niente full CMMS.",
       ],
     },
@@ -697,7 +761,49 @@ export const HELP_MODULES: HelpModule[] = [
           ],
         },
       },
+      {
+        name: {
+          fr: "Fiscalité produit",
+          it: "Fiscalità prodotto",
+        },
+        when: {
+          fr: "Classer le SKU (TVA par défaut, HS) ou déroger à un code fiscal ACTIVE, avec justification.",
+          it: "Classificare lo SKU (IVA predefinita, HS) o derogare a un codice fiscale ACTIVE, con giustificazione.",
+        },
+        steps: {
+          fr: [
+            "Fiche `/products/[id]` → section Fiscalité (sous Identité produit).",
+            "Choisissez une TVA par défaut (codes VAT seulement) — fallback moteur si la ligne n’a pas de taxCodeId.",
+            "Renseignez code SH / HS et catégorie, puis « Enregistrer le fiscal ».",
+            "Dérogation : code + mode (Toujours / Jamais / Confirmer) + justification obligatoire.",
+            "Jamais = exonération auditée (NEVER). Un NEVER client gagne sur un ALWAYS produit.",
+            "Toujours n’active pas une règle PENDING_EXPERT. « Auto » retire la dérogation.",
+          ],
+          it: [
+            "Scheda `/products/[id]` → sezione Fiscalità (sotto Identità prodotto).",
+            "Scegli un’IVA predefinita (solo codici VAT) — fallback del motore se la riga non ha taxCodeId.",
+            "Compila codice SH / HS e categoria, poi « Enregistrer le fiscal ».",
+            "Deroga: codice + modalità (Toujours / Jamais / Confirmer) + giustificazione obbligatoria.",
+            "Jamais = esenzione auditata (NEVER). Un NEVER cliente vince su un ALWAYS prodotto.",
+            "Toujours non attiva una regola PENDING_EXPERT. « Auto » toglie la deroga.",
+          ],
+        },
+      },
     ],
+    locks: {
+      fr: [
+        "Pas de seed 4386 / 3 DT/kg / taxe fromage — classification seulement (D261).",
+        "NEVER = exonération justifiée + audit. ALWAYS n’active pas PENDING_EXPERT. NEVER client prime ALWAYS produit.",
+        "Pas de ligne SPECIFIC_TAX auto sur facture ce lot. taxCodeId reste obligatoire à la création facture.",
+        "Taux = Fiscalité / Préférences VALIDATED — jamais inventés sur la fiche produit.",
+      ],
+      it: [
+        "Nessun seed 4386 / 3 DT/kg / tassa formaggio — solo classificazione (D261).",
+        "NEVER = esenzione giustificata + audit. ALWAYS non attiva PENDING_EXPERT. NEVER cliente batte ALWAYS prodotto.",
+        "Nessuna riga SPECIFIC_TAX automatica in fattura in questo lotto. taxCodeId resta obbligatorio in creazione fattura.",
+        "Aliquote = Fiscalità / Preferenze VALIDATED — mai inventate sulla scheda prodotto.",
+      ],
+    },
   },
   {
     id: "inventory",
@@ -852,6 +958,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Ouvrez `/finance/invoices` → « + Nouvelle facture ».",
             "Chips Tout / Brouillon / Émise / Annulée — URL `?status=` partageable.",
             "Client, lignes, codes TVA, échéance.",
+            "Toggle Document : bon de livraison / facture — reprend la fiche, changeable pour ce document (titre seulement).",
             "Sur la fiche : Émettre (DRAFT → ISSUED) ; Annuler / Avoir via overflow.",
             "Jamais inventer FODEC/timbre — Prefs Expertise seulement.",
           ],
@@ -859,6 +966,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Apri `/finance/invoices` → « + Nuova fattura ».",
             "Chip Tutti / Bozza / Emessa / Annullata — URL `?status=` condividibile.",
             "Cliente, righe, codici IVA, scadenza.",
+            "Toggle Documento: bolla di consegna / fattura — riprende la scheda, modificabile per questo documento (solo titolo).",
             "In scheda: Emetti (DRAFT → ISSUED); Annulla / Nota via overflow.",
             "Mai inventare FODEC/bollo — solo Prefs Expertise.",
           ],
@@ -1118,6 +1226,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Catalogue codes TVA 7/13/19/0 — consommés à l’émission facture.",
             "Saisie barèmes : Préférences › Expertise (groupe Fiscalité).",
             "Jamais inventer taux · TEJ sans transmission API.",
+            "Moteur fiscal API `POST /tax/calculate` — règles PENDING_EXPERT = montant 0.",
           ],
           it: [
             "Apri `/tax` — fascia Expertise FODEC/bollo/RAS/TEJ.",
@@ -1125,6 +1234,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Catalogo codici IVA 7/13/19/0 — usati in emissione fattura.",
             "Inserimento aliquote: Preferenze › Expertise (gruppo Fiscalità).",
             "Mai inventare aliquote · TEJ senza trasmissione API.",
+            "Motore fiscale API `POST /tax/calculate` — regole PENDING_EXPERT = importo 0.",
           ],
         },
       },
@@ -1133,10 +1243,12 @@ export const HELP_MODULES: HelpModule[] = [
       fr: [
         "FODEC / timbre / RAS / TEJ : Prefs VALIDATED only.",
         "Pas de TEJ transmission pretend.",
+        "Règle fiscale ACTIVE seulement après validation expert (D259).",
       ],
       it: [
         "FODEC / bollo / RAS / TEJ: solo Prefs VALIDATED.",
         "Niente TEJ transmission pretend.",
+        "Regola fiscale ACTIVE solo dopo validazione esperto (D259).",
       ],
     },
   },

@@ -72,6 +72,7 @@ export class MaintenanceService {
       q?: string;
       status?: string;
       preventiveDue?: boolean;
+      vehicleId?: string;
       limit?: number;
       cursor?: string;
     } = {},
@@ -81,6 +82,9 @@ export class MaintenanceService {
       companyId,
       deletedAt: null,
     };
+    if (opts.vehicleId?.trim()) {
+      where.vehicleId = opts.vehicleId.trim();
+    }
     if (opts.status?.trim()) {
       if (!isAssetStatus(opts.status.trim())) {
         throw new MaintenanceException(
@@ -498,6 +502,27 @@ export class MaintenanceService {
     });
 
     return serializeWo(created);
+  }
+
+  async openPreventiveWorkOrder(
+    companyId: string,
+    assetId: string,
+  ): Promise<MaintenanceWoDto> {
+    const asset = await this.findActiveAsset(companyId, assetId, true);
+    if (!asset.nextPreventiveAt) {
+      throw new MaintenanceException(
+        MNT_ERROR_CODES.NO_PREVENTIVE_DATE,
+        'Asset has no nextPreventiveAt date.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const due = toDateOnly(asset.nextPreventiveAt);
+    return this.createWorkOrder(companyId, {
+      assetId,
+      type: 'PREVENTIVE',
+      title: `Préventif · ${asset.code} · ${due}`,
+      notes: `Ouverture ADV depuis date préventive ${due}.`,
+    });
   }
 
   async completeWorkOrder(

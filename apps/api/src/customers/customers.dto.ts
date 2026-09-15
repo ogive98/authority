@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEmail,
   IsIn,
   IsInt,
@@ -134,6 +135,10 @@ export class CreateCustomerDto {
   salubritaPortal?: boolean;
 
   @IsOptional()
+  @IsIn(['DELIVERY_NOTE', 'INVOICE'])
+  fulfillmentDoc?: 'DELIVERY_NOTE' | 'INVOICE';
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateContactDto)
@@ -210,6 +215,10 @@ export class UpdateCustomerDto {
   @IsOptional()
   @IsBoolean()
   notifyResponsible?: boolean;
+
+  @IsOptional()
+  @IsIn(['DELIVERY_NOTE', 'INVOICE'])
+  fulfillmentDoc?: 'DELIVERY_NOTE' | 'INVOICE';
 
   @IsInt()
   @Min(0)
@@ -475,4 +484,93 @@ export class UpdatePortalMembershipDto {
   @IsInt()
   @Min(0)
   version!: number;
+}
+
+/** D260 — customer fiscal profile (classification only; rates stay in Tax Engine / Prefs). */
+export class UpsertCustomerFiscalProfileDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  fiscalRegime?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  vatLiable?: boolean | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  fiscalStatus?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  fiscalCategory?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  withholdingArEnabled?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  version?: number;
+}
+
+export class UpsertCustomerFiscalOverrideDto {
+  @IsUUID()
+  taxCodeId!: string;
+
+  @IsIn(['AUTO', 'ALWAYS', 'NEVER', 'CONFIRM'])
+  mode!: 'AUTO' | 'ALWAYS' | 'NEVER' | 'CONFIRM';
+
+  @IsOptional()
+  @IsIn([
+    'SYSTEM_RULE',
+    'CLIENT_OVERRIDE',
+    'EXEMPTION',
+    'MANUAL_OVERRIDE',
+  ])
+  source?:
+    | 'SYSTEM_RULE'
+    | 'CLIENT_OVERRIDE'
+    | 'EXEMPTION'
+    | 'MANUAL_OVERRIDE';
+
+  @IsOptional()
+  @IsDateString()
+  validFrom?: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  validTo?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  justification?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  reference?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  documentId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  comment?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  version?: number;
 }

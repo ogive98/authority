@@ -34,9 +34,12 @@ import {
   UpdateContactDto,
   UpdateCustomerDto,
   UpdatePortalMembershipDto,
+  UpsertCustomerFiscalOverrideDto,
+  UpsertCustomerFiscalProfileDto,
   UpsertCustomerPriceDto,
 } from './customers.dto';
 import { Customer360Service } from './customer-360.service';
+import { CustomerFiscalService } from './customer-fiscal.service';
 import { CustomersService } from './customers.service';
 import { PortalMembershipService } from './portal-membership.service';
 
@@ -48,6 +51,7 @@ export class CustomersController {
     private readonly customersService: CustomersService,
     private readonly customer360: Customer360Service,
     private readonly portalMemberships: PortalMembershipService,
+    private readonly customerFiscal: CustomerFiscalService,
   ) {}
 
   @Get()
@@ -141,6 +145,49 @@ export class CustomersController {
     return this.customer360.communications(tenancy.companyId, id, {
       limit: Number.isFinite(limit) ? limit : undefined,
     });
+  }
+
+  @Get(':id/fiscal')
+  @RequirePermission(PERMISSION_KEYS.customersRead)
+  getFiscal(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.customerFiscal.get(tenancy.companyId, id);
+  }
+
+  @Put(':id/fiscal')
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  upsertFiscalProfile(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpsertCustomerFiscalProfileDto,
+  ) {
+    return this.customerFiscal.upsertProfile(tenancy.companyId, id, dto);
+  }
+
+  @Put(':id/fiscal/overrides')
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  upsertFiscalOverride(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpsertCustomerFiscalOverrideDto,
+  ) {
+    return this.customerFiscal.upsertOverride(tenancy.companyId, id, dto);
+  }
+
+  @Delete(':id/fiscal/overrides/:taxCodeId')
+  @RequirePermission(PERMISSION_KEYS.customersWrite)
+  removeFiscalOverride(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('taxCodeId', ParseUUIDPipe) taxCodeId: string,
+  ) {
+    return this.customerFiscal.removeOverride(
+      tenancy.companyId,
+      id,
+      taxCodeId,
+    );
   }
 
   @Get(':id/portal-memberships')

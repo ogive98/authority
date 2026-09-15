@@ -1,9 +1,12 @@
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
   MinLength,
@@ -117,4 +120,85 @@ export class UpdateProductDto {
   @IsInt()
   @Min(0)
   version!: number;
+}
+
+/** D261 — product fiscal profile (classification + default VAT; no invented rates). */
+export class UpsertProductFiscalProfileDto {
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null && v !== undefined)
+  @IsUUID()
+  defaultVatTaxCodeId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  hsCode?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  fiscalCategory?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  version?: number;
+}
+
+export class UpsertProductFiscalOverrideDto {
+  @IsUUID()
+  taxCodeId!: string;
+
+  @IsIn(['AUTO', 'ALWAYS', 'NEVER', 'CONFIRM'])
+  mode!: 'AUTO' | 'ALWAYS' | 'NEVER' | 'CONFIRM';
+
+  @IsOptional()
+  @IsIn([
+    'SYSTEM_RULE',
+    'CLIENT_OVERRIDE',
+    'EXEMPTION',
+    'MANUAL_OVERRIDE',
+  ])
+  source?:
+    | 'SYSTEM_RULE'
+    | 'CLIENT_OVERRIDE'
+    | 'EXEMPTION'
+    | 'MANUAL_OVERRIDE';
+
+  @IsOptional()
+  @IsDateString()
+  validFrom?: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  validTo?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  justification?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  reference?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  documentId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  comment?: string | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  version?: number;
 }

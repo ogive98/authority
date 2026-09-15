@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -33,10 +34,12 @@ import {
   fetchWorkOrders,
   markAssetDown,
   markAssetUp,
+  openPreventiveWo,
   updateAsset,
   type MaintenanceAsset,
   type MaintenanceWo,
   type MntAssetStatus,
+  type MntWoStatus,
   type MntWoType,
 } from "@/lib/maintenance";
 
@@ -91,6 +94,9 @@ export default function MaintenancePage() {
   >("loading");
   const [woError, setWoError] = useState<string | null>(null);
   const [workOrders, setWorkOrders] = useState<MaintenanceWo[]>([]);
+  const [woStatusFilter, setWoStatusFilter] = useState<"" | MntWoStatus>(
+    "OPEN",
+  );
   const [woOpen, setWoOpen] = useState(false);
   const [woForm, setWoForm] = useState<WoForm | null>(null);
 
@@ -142,12 +148,15 @@ export default function MaintenancePage() {
     [],
   );
 
-  const loadWo = useCallback(async () => {
+  const loadWo = useCallback(async (status?: "" | MntWoStatus) => {
     setWoState("loading");
     setWoError(null);
+    const statusFilterWo = status === undefined ? woStatusFilter : status;
     const [aRes, wRes] = await Promise.all([
       fetchAssets(),
-      fetchWorkOrders({ status: "OPEN" }),
+      fetchWorkOrders({
+        status: statusFilterWo || undefined,
+      }),
     ]);
     if (!aRes.ok || !wRes.ok) {
       const fail = !aRes.ok ? aRes : wRes;
@@ -163,7 +172,7 @@ export default function MaintenancePage() {
     setState({ kind: "ok", items: aRes.data.items });
     setWorkOrders(wRes.data.items);
     setWoState("ok");
-  }, []);
+  }, [woStatusFilter]);
 
   const loadFleetVehicles = useCallback(async () => {
     const res = await fetchVehicles({ status: "ACTIVE" });
@@ -173,8 +182,8 @@ export default function MaintenancePage() {
 
   useEffect(() => {
     if (tab === "assets") void loadAssets(q, statusFilter, dueOnly);
-    else void loadWo();
-  }, [tab, loadAssets, loadWo, statusFilter, dueOnly]);
+    else void loadWo(woStatusFilter);
+  }, [tab, loadAssets, loadWo, statusFilter, dueOnly, woStatusFilter]);
 
   const assets = useMemo(
     () => (state.kind === "ok" ? state.items : []),
@@ -296,11 +305,11 @@ export default function MaintenancePage() {
     }
   }
 
-  async function onCompleteWo(id: string) {
+  async function onCompleteWo(woId: string) {
     setBusy(true);
     setWoError(null);
     try {
-      const res = await completeWorkOrder(id);
+      const res = await completeWorkOrder(woId);
       if (!res.ok) {
         setWoError(res.code ? `${res.code} — ${res.message}` : res.message);
         return;
@@ -311,12 +320,28 @@ export default function MaintenancePage() {
     }
   }
 
+  async function onOpenPreventive(asset: MaintenanceAsset) {
+    setBusy(true);
+    setFormError(null);
+    try {
+      const res = await openPreventiveWo(asset.id);
+      if (!res.ok) {
+        setFormError(res.code ? `${res.code} — ${res.message}` : res.message);
+        return;
+      }
+      setWoStatusFilter("OPEN");
+      setTab("wo");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
       <AScreenHeader
         kicker="Maintenance"
         title="Équipements & OT"
-        description="Soft Glass V0 · lien flotte optionnel · date préventive UI · pas de job Thunder (D256)."
+        description="Soft Glass · fiche équipement · OT préventif ADV · chips historique · lien flotte (D258)."
         primary={
           tab === "assets" ? (
             <AButton type="button" size="sm" onClick={openCreate}>
@@ -438,7 +463,14 @@ export default function MaintenancePage() {
                 <tbody>
                   {state.items.map((a) => (
                     <ASoftTr key={a.id}>
-                      <td className="font-medium">{a.code}</td>
+                      <td className="font-medium">
+                        <Link
+                          href={`/maintenance/${a.id}`}
+                          className="text-a-accent underline-offset-2 hover:underline"
+                        >
+                          {a.code}
+                        </Link>
+                      </td>
                       <td>{a.label}</td>
                       <td>
                         {MNT_ASSET_TYPE_LABELS[a.type] ?? a.type}
@@ -467,12 +499,29 @@ export default function MaintenancePage() {
                         )}
                       </td>
                       <td>
-                        {a.vehicle
-                          ? `${a.vehicle.code} · ${a.vehicle.plate}`
-                          : "—"}
+                        {a.vehicle ? (
+                          <Link
+                            href={`/fleet/${a.vehicle.id}`}
+                            className="text-a-accent underline-offset-2 hover:underline"
+                          >
+                            {a.vehicle.code} · {a.vehicle.plate}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="text-right">
                         <div className="flex justify-end gap-2">
+                          {a.preventiveDue && a.nextPreventiveAt ? (
+                            <AButton
+                              type="button"
+                              size="sm"
+                              disabled={busy}
+                              onClick={() => void onOpenPreventive(a)}
+                            >
+                              OT préventif
+                            </AButton>
+                          ) : null}
                           <AButton
                             type="button"
                             size="sm"
@@ -510,6 +559,28 @@ export default function MaintenancePage() {
 
         {tab === "wo" && (
           <>
+            <AFilterBar
+              filters={
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      { id: "OPEN" as const, label: "Ouverts" },
+                      { id: "DONE" as const, label: "Terminés" },
+                      { id: "" as const, label: "Tous" },
+                    ] as const
+                  ).map((chip) => (
+                    <button
+                      key={chip.id || "all-wo"}
+                      type="button"
+                      className={softChipClass(woStatusFilter === chip.id)}
+                      onClick={() => setWoStatusFilter(chip.id)}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              }
+            />
             {woError ? (
               <p className="mb-3 text-sm text-[color:var(--a-danger)]">
                 {woError}
@@ -524,7 +595,13 @@ export default function MaintenancePage() {
             )}
             {woState === "ok" && workOrders.length === 0 && (
               <AEmptyState
-                title="Aucun OT ouvert"
+                title={
+                  woStatusFilter === "DONE"
+                    ? "Aucun OT terminé"
+                    : woStatusFilter === ""
+                      ? "Aucun OT"
+                      : "Aucun OT ouvert"
+                }
                 description="Ouvrez un OT panne ou préventif depuis un équipement."
               />
             )}
@@ -546,9 +623,16 @@ export default function MaintenancePage() {
                       <td className="font-medium">{w.title}</td>
                       <td>{MNT_WO_TYPE_LABELS[w.type]}</td>
                       <td>
-                        {w.asset
-                          ? `${w.asset.code} · ${w.asset.label}`
-                          : w.assetId.slice(0, 8)}
+                        {w.asset ? (
+                          <Link
+                            href={`/maintenance/${w.asset.id}`}
+                            className="text-a-accent underline-offset-2 hover:underline"
+                          >
+                            {w.asset.code} · {w.asset.label}
+                          </Link>
+                        ) : (
+                          w.assetId.slice(0, 8)
+                        )}
                       </td>
                       <td>
                         <ABadge

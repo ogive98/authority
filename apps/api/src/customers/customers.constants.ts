@@ -19,6 +19,9 @@ export const CUSTOMERS_ERROR_CODES = {
   USER_INVALID: 'CUS.USER_INVALID',
   PORTALS_DISABLED: 'CUS.PORTALS_DISABLED',
   INVALID_ROLE: 'CUS.INVALID_ROLE',
+  FISCAL_JUSTIFICATION: 'CUS.FISCAL_JUSTIFICATION',
+  FISCAL_INVALID_MODE: 'CUS.FISCAL_INVALID_MODE',
+  TAX_CODE_NOT_FOUND: 'CUS.TAX_CODE_NOT_FOUND',
 } as const;
 
 export type CustomersErrorCode =
@@ -34,4 +37,20 @@ export const CUSTOMERS_EVENT_TYPES = {
   CUSTOMER_UNBLOCKED: 'customers.customer.unblocked.v1',
   CREDIT_CHANGED: 'customers.credit.changed.v1',
   PORTAL_MEMBERSHIP_CHANGED: 'customers.portal_membership.changed.v1',
+  FISCAL_UPDATED: 'customers.fiscal.updated.v1',
 } as const;
+
+export const FISCAL_OVERRIDE_MODES = [
+  'AUTO',
+  'ALWAYS',
+  'NEVER',
+  'CONFIRM',
+] as const;
+
+export type FiscalOverrideMode = (typeof FISCAL_OVERRIDE_MODES)[number];
+
+export const FISCAL_NEVER_SOURCES = [
+  'EXEMPTION',
+  'MANUAL_OVERRIDE',
+  'CLIENT_OVERRIDE',
+] as const;

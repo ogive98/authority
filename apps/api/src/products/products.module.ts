@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
+import { AuditModule } from '../audit/audit.module';
 import { IdentityModule } from '../identity/identity.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { MasterDataModule } from '../master-data/master-data.module';
+import { ProductFiscalService } from './product-fiscal.service';
 import { ProductsController } from './products.controller';
 import { ProductsService } from './products.service';
 
@@ -14,9 +16,10 @@ import { ProductsService } from './products.service';
     PermissionsModule,
     ModulesRegistryModule,
     MasterDataModule,
+    AuditModule,
   ],
   controllers: [ProductsController],
-  providers: [ProductsService],
-  exports: [ProductsService],
+  providers: [ProductsService, ProductFiscalService],
+  exports: [ProductsService, ProductFiscalService],
 })
 export class ProductsModule {}

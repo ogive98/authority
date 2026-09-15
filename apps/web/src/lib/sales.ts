@@ -110,11 +110,13 @@ export async function fetchIntakeSettings(): Promise<
 export async function fetchSalesOrders(opts?: {
   q?: string;
   status?: SalesOrderStatus | "";
+  customerId?: string;
 }): Promise<{ ok: true; data: SalesOrderListResponse } | ApiFail> {
   try {
     const params = new URLSearchParams();
     if (opts?.q?.trim()) params.set("q", opts.q.trim());
     if (opts?.status) params.set("status", opts.status);
+    if (opts?.customerId) params.set("customerId", opts.customerId);
     const qs = params.toString();
     const res = await fetch(
       qs ? `/api/v1/sales/orders?${qs}` : "/api/v1/sales/orders",
