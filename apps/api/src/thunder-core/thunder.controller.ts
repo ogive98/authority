@@ -36,6 +36,8 @@ import { ThunderMetricsService } from './observability/thunder-metrics.service';
 import type { ThunderMonitorSnapshot } from './observability/monitor-snapshot.types';
 import { EnqueueHelloJobDto, EnqueueTestJobDto } from './thunder.dto';
 import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
+import { IntentPrepareDto } from './intent/intent.dto';
+import { IntentPrepareService } from './intent/intent-prepare.service';
 
 const MONITOR_SSE_MS = 2_000;
 
@@ -52,12 +54,34 @@ export class ThunderController {
     private readonly moduleHooks: ModuleHookRegistry,
     private readonly adapters: AdapterRegistryService,
     private readonly entitlements: EntitlementEvaluatorService,
+    private readonly intentPrepare: IntentPrepareService,
   ) {}
 
   @Get('monitor/snapshot')
   @RequirePermission(PERMISSION_KEYS.systemMonitoringView)
   getMonitorSnapshot() {
     return this.monitorSnapshot.snapshot();
+  }
+
+  /**
+   * AUTHORITY X intent prepare — orchestration only.
+   * Resolves entities + Soft Glass routes / prefill. Never writes ledger.
+   */
+  @Post('intents/prepare')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(PERMISSION_KEYS.thunderIntelRead)
+  async prepareIntent(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() body: IntentPrepareDto,
+    @Headers('x-correlation-id') correlationHeader?: string,
+  ) {
+    return this.intentPrepare.prepare({
+      companyId: tenancy.companyId,
+      userId: user.id,
+      dto: body,
+      correlationId: correlationHeader ?? randomUUID(),
+    });
   }
 
   @Get('metrics')

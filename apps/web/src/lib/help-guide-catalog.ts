@@ -115,6 +115,30 @@ export const HELP_MODULES: HelpModule[] = [
       },
       {
         name: {
+          fr: "AUTHORITY X (topbar)",
+          it: "AUTHORITY X (topbar)",
+        },
+        when: {
+          fr: "Commande flottante rapide sans quitter Soft Glass.",
+          it: "Comando fluttuante rapido senza lasciare Soft Glass.",
+        },
+        steps: {
+          fr: [
+            "Cliquez l’orbe « X » teal dans la topbar (à gauche des notifications).",
+            "Le companion AUTHORITY X passe au premier plan — Soft Glass reste ouvert derrière.",
+            "Sinon : raccourci CTRL+X si le tray Electron tourne.",
+            "Si hors ligne : lancez `npm run dev -w authority-x` (tray).",
+          ],
+          it: [
+            "Clicca l’orbe « X » teal nella topbar (a sinistra delle notifiche).",
+            "Il companion AUTHORITY X passa in primo piano — Soft Glass resta aperto sotto.",
+            "Altrimenti: scorciatoia CTRL+X se il tray Electron è attivo.",
+            "Se offline: avvia `npm run dev -w authority-x` (tray).",
+          ],
+        },
+      },
+      {
+        name: {
           fr: "Smart Action Dock",
           it: "Smart Action Dock",
         },
@@ -941,6 +965,54 @@ export const HELP_MODULES: HelpModule[] = [
             "In scheda: Registra (DRAFT → POSTED); Annulla via overflow.",
             "POSTED → « Pagare »: RAS detratto auto se Prefs VALIDATED (netto = base − RAS); toggle per eccezione.",
             "Riconciliazione banca invariata · mai inventare IVA/RAS · niente TEJ transmission · niente GL AP.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "AUTHORITY X → facture AP",
+          it: "AUTHORITY X → fattura AP",
+        },
+        when: {
+          fr: "Commande desktop « Ahmed 1000 DT » → suggestion paiement fournisseur.",
+          it: "Comando desktop « Ahmed 1000 DT » → suggerimento pagamento fornitore.",
+        },
+        steps: {
+          fr: [
+            "AUTHORITY X (CTRL+X) : saisir la commande → choisir l’entité si ambiguë.",
+            "Assisted : valider → Soft Glass ouvre `/finance/ap-bills` avec tiroir prérempli.",
+            "Hotlink : ouverture directe Soft Glass après le live log.",
+            "Vérifier fournisseur / montant → Enregistrer (jamais d’écriture silencieuse).",
+            "Pas de virement Treasury inventé — Transfer pending si workflow absent.",
+          ],
+          it: [
+            "AUTHORITY X (CTRL+X): digita il comando → scegli l’entità se ambigua.",
+            "Assisted: conferma → Soft Glass apre `/finance/ap-bills` con drawer precompilato.",
+            "Hotlink: apertura diretta Soft Glass dopo il live log.",
+            "Verifica fornitore / importo → Salva (mai scrittura silenziosa).",
+            "Niente bonifico Treasury inventato — Transfer pending se workflow assente.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "AUTHORITY X → encaissement AR",
+          it: "AUTHORITY X → incasso AR",
+        },
+        when: {
+          fr: "Commande desktop pour un client — suggestion Encaissement.",
+          it: "Comando desktop per un cliente — suggerimento Incasso.",
+        },
+        steps: {
+          fr: [
+            "AUTHORITY X : commande avec client → « Encaissement client ».",
+            "Soft Glass ouvre `/finance/payments?create=1&…` (tiroir prérempli).",
+            "Vérifier client / montant → Enregistrer (jamais silencieux).",
+          ],
+          it: [
+            "AUTHORITY X: comando con cliente → « Incasso cliente ».",
+            "Soft Glass apre `/finance/payments?create=1&…` (drawer precompilato).",
+            "Verifica cliente / importo → Salva (mai silenzioso).",
           ],
         },
       },

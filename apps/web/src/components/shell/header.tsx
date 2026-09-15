@@ -20,6 +20,7 @@ import { CompanyBrandPlate } from "./company-brand-plate";
 import { ThemeModeSwitch } from "./mode-switch";
 import { UserMenu } from "./user-menu";
 import { cn } from "@/lib/utils";
+import { summonAuthorityX } from "@/lib/authority-x-summon";
 
 function IconBtn({
   label,
@@ -94,6 +95,8 @@ export function ShellHeader() {
   const { t, unread: unreadLabel } = useShellT();
   const toggleLocale = useLocaleStore((s) => s.toggleLocale);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [axBusy, setAxBusy] = useState(false);
+  const [axHint, setAxHint] = useState<string | null>(null);
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
   const setPaletteOpen = useShellStore((s) => s.setPaletteOpen);
   const spectreEnabled = useShellStore((s) => s.spectreEnabled);
@@ -161,6 +164,18 @@ export function ShellHeader() {
     setTheme(next);
   }
 
+  async function openAuthorityX() {
+    if (axBusy) return;
+    setAxBusy(true);
+    setAxHint(null);
+    const result = await summonAuthorityX();
+    setAxBusy(false);
+    if (!result.ok) {
+      setAxHint(t("authorityXOffline"));
+      window.setTimeout(() => setAxHint(null), 4200);
+    }
+  }
+
   const anyOps = spectreEnabled || patchEnabled || ghostEnabled;
 
   return (
@@ -197,6 +212,32 @@ export function ShellHeader() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+        <button
+          type="button"
+          title={t("authorityXOpen")}
+          aria-label={t("authorityXOpen")}
+          disabled={axBusy}
+          onClick={() => void openAuthorityX()}
+          className={cn(
+            "a-authority-x-orb group relative inline-flex h-9 w-9 shrink-0 items-center justify-center",
+            "rounded-full text-[15px] font-bold tracking-tighter text-a-accent",
+            "transition-transform duration-300 hover:scale-110",
+            axBusy && "opacity-60",
+          )}
+        >
+          <span className="relative z-[1] drop-shadow-[0_0_10px_color-mix(in_srgb,var(--a-accent)_55%,transparent)]">
+            X
+          </span>
+        </button>
+        {axHint ? (
+          <span
+            className="a-mono hidden max-w-[9rem] truncate text-[9px] text-a-warning sm:inline"
+            role="status"
+          >
+            {axHint}
+          </span>
+        ) : null}
+
         <IconBtn
           label={unread > 0 ? unreadLabel(unread) : t("notifications")}
           onClick={() => setInboxOpen(true)}

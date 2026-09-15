@@ -46,6 +46,8 @@ import { RuleEngineService } from './rules/rule-engine.service';
 import { ThunderRulesRegistrar } from './rules/thunder-rules.registrar';
 import { ThunderController } from './thunder.controller';
 import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
+import { IntentEntityResolver } from './intent/intent-entity-resolver.service';
+import { IntentPrepareService } from './intent/intent-prepare.service';
 
 @Module({
   imports: [
@@ -65,6 +67,8 @@ import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
   controllers: [ThunderController],
   providers: [
     ThunderDevOnlyGuard,
+    IntentEntityResolver,
+    IntentPrepareService,
     AdapterRegistryService,
     ThunderAdaptersRegistrar,
     JobRegistryService,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   ABadge,
   AButton,
@@ -88,6 +88,7 @@ function FinanceApBillsPageInner() {
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const axPrefillDone = useRef(false);
 
   const load = useCallback(
     async (query?: string, status?: "" | ApBillStatus) => {
@@ -140,6 +141,47 @@ function FinanceApBillsPageInner() {
     // sync from URL only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  /** AUTHORITY X / Thunder prepare — open create drawer with prefill (human still submits) */
+  useEffect(() => {
+    if (axPrefillDone.current) return;
+    const create = searchParams.get("create");
+    const source = searchParams.get("source");
+    if (create !== "1" && source !== "authority_x") return;
+    // Wait for suppliers list when UUID supplierId is present
+    const supplierId = searchParams.get("supplierId")?.trim() ?? "";
+    if (supplierId && suppliers.length === 0) return;
+
+    const amount = searchParams.get("amount")?.trim() ?? "";
+    const vendorName = searchParams.get("vendorName")?.trim() ?? "";
+    const match = supplierId
+      ? suppliers.find((s) => s.id === supplierId)
+      : undefined;
+
+    axPrefillDone.current = true;
+    setFormError(null);
+    setForm({
+      supplierId: match?.id ?? "",
+      vendorName: match?.legalName ?? vendorName,
+      amountTotal: amount,
+      billDate: todayIso(),
+      dueDate: "",
+      label: source === "authority_x" ? "AUTHORITY X" : "",
+      reference: "",
+      notes:
+        source === "authority_x"
+          ? "Prérempli depuis AUTHORITY X — confirmer avant enregistrement."
+          : "",
+    });
+    setDrawerOpen(true);
+
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.delete("create");
+    const qs = sp.toString();
+    router.replace(qs ? `/finance/ap-bills?${qs}` : "/finance/ap-bills", {
+      scroll: false,
+    });
+  }, [searchParams, suppliers, router]);
 
   function openCreate() {
     setFormError(null);

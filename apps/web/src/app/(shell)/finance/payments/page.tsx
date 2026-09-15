@@ -107,6 +107,7 @@ function FinancePaymentsPageInner() {
   const [policy, setPolicy] = useState<AllocationPolicy>("OLDEST_FIRST");
   const [plan, setPlan] = useState<AllocationPlan | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const axPrefillDone = useRef(false);
 
   const load = useCallback(
     async (query?: string, status?: "" | PaymentStatus) => {
@@ -189,6 +190,44 @@ function FinancePaymentsPageInner() {
       })),
     );
   }, []);
+
+  /** AUTHORITY X / Thunder — open create drawer with prefill (human still submits) */
+  useEffect(() => {
+    if (axPrefillDone.current) return;
+    const create = searchParams.get("create");
+    const source = searchParams.get("source");
+    if (create !== "1" && source !== "authority_x") return;
+
+    const customerId = searchParams.get("customerId")?.trim() ?? "";
+    const amount = searchParams.get("amount")?.trim() ?? "";
+    const customerName = searchParams.get("customerName")?.trim() ?? "";
+    const paymentDate = new Date().toISOString().slice(0, 10);
+
+    axPrefillDone.current = true;
+    setFormError(null);
+    setForm({
+      customerId: customerId || null,
+      customerLabel: customerName,
+      amount,
+      method: "CASH",
+      paymentDate,
+      reference: source === "authority_x" ? "AUTHORITY X" : "",
+      instrumentNumber: "",
+      bankName: "",
+      dueDate: "",
+    });
+    setDrawerOpen(true);
+    if (customerName || customerId) {
+      void refreshCustomers(customerName || customerId);
+    }
+
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.delete("create");
+    const qs = sp.toString();
+    router.replace(qs ? `/finance/payments?${qs}` : "/finance/payments", {
+      scroll: false,
+    });
+  }, [searchParams, router, refreshCustomers]);
 
   function scheduleCustomerSearch(text: string) {
     if (searchTimer.current) clearTimeout(searchTimer.current);

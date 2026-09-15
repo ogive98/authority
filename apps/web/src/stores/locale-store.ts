@@ -49,6 +49,9 @@ const SHELL_I18N = {
     notifications: "Notifications",
     notificationsUnread: (n: number) =>
       `Notifications — ${n} non lu${n > 1 ? "s" : ""}`,
+    authorityXOpen: "AUTHORITY X — commande flottante",
+    authorityXOffline:
+      "AUTHORITY X hors ligne — lancez le companion (tray)",
     theme: "Thème",
     themeToLight: "Passer en mode clair",
     themeToDark: "Passer en mode sombre",
@@ -156,6 +159,9 @@ const SHELL_I18N = {
     notifications: "Notifiche",
     notificationsUnread: (n: number) =>
       `Notifiche — ${n} non lett${n > 1 ? "e" : "a"}`,
+    authorityXOpen: "AUTHORITY X — comando fluttuante",
+    authorityXOffline:
+      "AUTHORITY X offline — avvia il companion (tray)",
     theme: "Tema",
     themeToLight: "Passa alla modalità chiara",
     themeToDark: "Passa alla modalità scura",
