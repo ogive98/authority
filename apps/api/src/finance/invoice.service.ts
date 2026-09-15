@@ -804,6 +804,22 @@ export class InvoiceService {
     const qty = round3(line.qty);
     const unitPriceHt = round3(line.unitPriceHt);
     const amountHt = round3(qty * unitPriceHt);
+
+    let taxCodeId = line.taxCodeId?.trim() || undefined;
+    if (!taxCodeId && line.productId) {
+      // Tax engine resolves product default (+ D271 stub TVA19)
+      taxCodeId = undefined;
+    } else if (!taxCodeId) {
+      taxCodeId = (await this.tax.resolveStubVat19(companyId)) ?? undefined;
+    }
+    if (!taxCodeId && !line.productId) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.INVALID_AMOUNT,
+        'VAT code required (or pick a product with default / stub TVA19).',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const { decisions } = await this.tax.calculate(companyId, {
       currency: 'TND',
       operationType: 'AR_INVOICE',
@@ -811,7 +827,7 @@ export class InvoiceService {
       lines: [
         {
           lineNo,
-          taxCodeId: line.taxCodeId,
+          taxCodeId,
           productId: line.productId,
           qty,
           unitPriceHt,
@@ -837,12 +853,20 @@ export class InvoiceService {
     }
     const amountTax = vat.applicable ? vat.calculatedAmount : 0;
     const amountTtc = round3(amountHt + amountTax);
+    const resolvedTaxCodeId = vat.ruleId ?? taxCodeId;
+    if (!resolvedTaxCodeId) {
+      throw new FinanceException(
+        FINANCE_ERROR_CODES.INVALID_AMOUNT,
+        'Could not resolve VAT tax code for this line.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
     return {
       lineNo,
       description: line.description.trim(),
       qty,
       unitPriceHt,
-      taxCodeId: line.taxCodeId,
+      taxCodeId: resolvedTaxCodeId,
       productId: line.productId ?? null,
       amountHt,
       amountTax,

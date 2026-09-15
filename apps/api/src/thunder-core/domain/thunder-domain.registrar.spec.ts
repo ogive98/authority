@@ -12,6 +12,9 @@ describe('ThunderDomainRegistrar', () => {
     postCreditNoteIssued: jest.fn(),
     postPaymentAllocated: jest.fn(),
     postBankFee: jest.fn(),
+    postApBillPosted: jest.fn(),
+    reverseApBillPosted: jest.fn(),
+    postApPaymentPosted: jest.fn(),
     reversePaymentOnInstrumentReject: jest.fn(),
     reverseInvoiceIssued: jest.fn(),
   };
@@ -53,6 +56,9 @@ describe('ThunderDomainRegistrar', () => {
           'finance.payment.reversed.v1',
           'finance.instrument.rejected.v1',
           'finance.bank.fee_posted.v1',
+          'finance.ap_bill.posted.v1',
+          'finance.ap_bill.cancelled.v1',
+          'finance.ap_payment.posted.v1',
         ],
       },
     );
@@ -332,6 +338,48 @@ describe('ThunderDomainRegistrar', () => {
         paymentId,
         rejectSourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
         sourceType: 'fin_payment_reverse',
+      }),
+    );
+  });
+
+  it('posts GL from finance.ap_bill.posted when accounting enabled (D273)', async () => {
+    gl.postApBillPosted.mockResolvedValue({
+      outcome: 'posted',
+      entryId: 'je-ap',
+      number: 'JE-AP',
+    });
+    const registrar = new ThunderDomainRegistrar(
+      { register: jest.fn() } as never,
+      { isEnabled: jest.fn().mockResolvedValue(true) } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      gl as never,
+    );
+    const billId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    await registrar.onFinanceToGl({
+      eventId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      eventType: 'finance.ap_bill.posted.v1',
+      eventVersion: 1,
+      occurredAt: new Date().toISOString(),
+      source: 'finance',
+      companyId,
+      correlationId: 'c-ap',
+      aggregateType: 'fin_ap_bill',
+      aggregateId: billId,
+      payload: {
+        billId,
+        amountTotal: '250.000',
+        billDate: '2026-09-15',
+      },
+    });
+    expect(gl.postApBillPosted).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        billId,
+        amount: 250,
+        entryDate: '2026-09-15',
+        sourceId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
       }),
     );
   });

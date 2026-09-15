@@ -196,6 +196,7 @@ async function main() {
   }
 
   await seedTunisiaVatCatalog(prisma, company.id);
+  await seedExpertiseOperationalStubs(prisma, company.id);
 
   await prisma.modFlag.upsert({
     where: {
@@ -1735,6 +1736,20 @@ async function seedSettingsDefinitions(
       isPrefOnly: true,
     },
     {
+      key: 'accounting.gl.ap',
+      valueType: 'string',
+      defaultJson: '401',
+      description: 'GL account code for Accounts Payable (AP→GL D273)',
+      isPrefOnly: true,
+    },
+    {
+      key: 'accounting.gl.expense',
+      valueType: 'string',
+      defaultJson: '601',
+      description: 'GL account code for AP bill expense / purchases (D273)',
+      isPrefOnly: true,
+    },
+    {
       key: 'accounting.gl.sales_journal',
       valueType: 'string',
       defaultJson: 'VEN',
@@ -1745,7 +1760,14 @@ async function seedSettingsDefinitions(
       key: 'accounting.gl.bank_journal',
       valueType: 'string',
       defaultJson: 'BQ',
-      description: 'Bank journal code for payment GL posting',
+      description: 'Bank journal code for payment / AP payment GL posting',
+      isPrefOnly: true,
+    },
+    {
+      key: 'accounting.gl.purchases_journal',
+      valueType: 'string',
+      defaultJson: 'ACH',
+      description: 'Purchases journal code for AP bill GL posting (D273)',
       isPrefOnly: true,
     },
     {
@@ -2041,6 +2063,8 @@ async function seedAccountingGl(companyId: string): Promise<void> {
       name: 'TVA collectée',
       type: 'LIABILITY' as const,
     },
+    { code: '401', name: 'Fournisseurs', type: 'LIABILITY' as const },
+    { code: '601', name: 'Achats', type: 'EXPENSE' as const },
   ]) {
     await prisma.accAccount.upsert({
       where: {
@@ -2092,6 +2116,23 @@ async function seedAccountingGl(companyId: string): Promise<void> {
       companyId,
       code: 'BQ',
       name: 'Journal de banque',
+      active: true,
+    },
+  });
+
+  await prisma.accJournal.upsert({
+    where: {
+      companyId_code: { companyId, code: 'ACH' },
+    },
+    update: {
+      name: 'Journal des achats',
+      active: true,
+      deletedAt: null,
+    },
+    create: {
+      companyId,
+      code: 'ACH',
+      name: 'Journal des achats',
       active: true,
     },
   });
@@ -2406,6 +2447,144 @@ async function seedTunisiaVatCatalog(
           validFrom,
           lawRef,
           expertValidatedAt: validatedAt,
+        },
+      });
+    }
+  }
+
+  // D271 — stub product default VAT = TVA19 until expert overrides (no FODEC invent)
+  await seedProductVatStubs(prismaClient, companyId);
+}
+
+/** Operational stub: every active product gets defaultVat → TVA19 if unset. */
+async function seedProductVatStubs(
+  prismaClient: typeof prisma,
+  companyId: string,
+): Promise<void> {
+  const tva19 = await prismaClient.taxCode.findFirst({
+    where: { companyId, code: 'TVA19', deletedAt: null, active: true },
+    select: { id: true },
+  });
+  if (!tva19) return;
+
+  const products = await prismaClient.prdProduct.findMany({
+    where: { companyId, deletedAt: null },
+    select: { id: true },
+  });
+  for (const p of products) {
+    const existing = await prismaClient.prdFiscalProfile.findFirst({
+      where: { companyId, productId: p.id, deletedAt: null },
+    });
+    if (!existing) {
+      await prismaClient.prdFiscalProfile.create({
+        data: {
+          companyId,
+          productId: p.id,
+          defaultVatTaxCodeId: tva19.id,
+          notes: 'STUB_UNTIL_EXPERT — TVA19 catalogue Code TVA (D271)',
+        },
+      });
+    } else if (!existing.defaultVatTaxCodeId) {
+      await prismaClient.prdFiscalProfile.update({
+        where: { id: existing.id },
+        data: {
+          defaultVatTaxCodeId: tva19.id,
+          notes:
+            existing.notes ??
+            'STUB_UNTIL_EXPERT — TVA19 catalogue Code TVA (D271)',
+        },
+      });
+    }
+  }
+}
+
+/** D272 — operational stubs so Soft Glass is not blocked until accountant.
+ * Marked STUB_UNTIL_EXPERT. TEJ transmission remains DISABLED in code forever.
+ * Not legal claims — replace in Préférences → Expertise.
+ */
+async function seedExpertiseOperationalStubs(
+  prismaClient: typeof prisma,
+  companyId: string,
+): Promise<void> {
+  const validatedAt = new Date('2026-09-15T12:00:00.000Z');
+  const lawRef = 'STUB_UNTIL_EXPERT — remplacer par le comptable';
+  const notes = 'STUB_UNTIL_EXPERT — valeurs opérationnelles temporaires (D272)';
+
+  const stubs: Array<{
+    slotKey: string;
+    valueLabel: string;
+    rateBps?: number | null;
+    amountMilli?: number | null;
+  }> = [
+    {
+      slotKey: 'tax.fodec',
+      valueLabel: '1 % STUB (FODEC)',
+      rateBps: 100,
+    },
+    {
+      slotKey: 'tax.timbre',
+      valueLabel: '1,000 TND STUB (timbre)',
+      amountMilli: 1000,
+    },
+    {
+      slotKey: 'tax.tej',
+      valueLabel: 'Régime local STUB — draft XML only (pas de transmission)',
+    },
+    {
+      slotKey: 'hr.cnss.employee',
+      valueLabel: '9,18 % STUB (CNSS salarié)',
+      rateBps: 918,
+    },
+    {
+      slotKey: 'hr.cnss.employer',
+      valueLabel: '16,57 % STUB (CNSS employeur)',
+      rateBps: 1657,
+    },
+    {
+      slotKey: 'hr.cnss.ceiling',
+      valueLabel: '6 000 TND STUB (plafond CNSS)',
+      amountMilli: 6_000_000,
+    },
+  ];
+
+  for (const s of stubs) {
+    const existing = await prismaClient.setExpertise.findUnique({
+      where: {
+        companyId_slotKey: { companyId, slotKey: s.slotKey },
+      },
+    });
+    // Never overwrite a real expert row
+    if (existing && existing.deletedAt == null) {
+      const isStub =
+        (existing.notes?.includes('STUB_UNTIL_EXPERT') ?? false) ||
+        existing.lawRef.includes('STUB_UNTIL_EXPERT');
+      if (!isStub) continue;
+    }
+
+    if (existing) {
+      await prismaClient.setExpertise.update({
+        where: { id: existing.id },
+        data: {
+          valueLabel: s.valueLabel,
+          lawRef,
+          expertValidatedAt: validatedAt,
+          rateBps: s.rateBps ?? null,
+          amountMilli: s.amountMilli ?? null,
+          notes,
+          deletedAt: null,
+        },
+      });
+    } else {
+      await prismaClient.setExpertise.create({
+        data: {
+          companyId,
+          slotKey: s.slotKey,
+          valueLabel: s.valueLabel,
+          lawRef,
+          expertValidatedAt: validatedAt,
+          rateBps: s.rateBps ?? null,
+          amountMilli: s.amountMilli ?? null,
+          notes,
         },
       });
     }

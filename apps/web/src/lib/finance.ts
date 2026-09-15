@@ -567,7 +567,8 @@ export async function createInvoice(body: {
     description: string;
     qty: number;
     unitPriceHt: number;
-    taxCodeId: string;
+    taxCodeId?: string;
+    productId?: string;
   }[];
   dueDate?: string;
   label?: string;

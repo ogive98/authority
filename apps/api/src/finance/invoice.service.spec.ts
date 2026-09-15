@@ -45,6 +45,7 @@ describe('InvoiceService expertise surcharges (D093)', () => {
     const tax = {
       resolveRateBps: jest.fn().mockResolvedValue({ rateBps: 1900 }),
       findCodeByCode: jest.fn(),
+      resolveStubVat19: jest.fn().mockResolvedValue(taxCodeId),
       calculate: jest.fn().mockResolvedValue({
         decisions: [
           {
@@ -53,6 +54,8 @@ describe('InvoiceService expertise surcharges (D093)', () => {
             calculatedAmount: 19,
             rateBps: 1900,
             taxCode: 'TVA19',
+            ruleId: taxCodeId,
+            source: 'SYSTEM_RULE',
           },
         ],
       }),
@@ -168,6 +171,41 @@ describe('InvoiceService expertise surcharges (D093)', () => {
     expect(tax.calculate).toHaveBeenCalledWith(
       companyId,
       expect.objectContaining({ customerId }),
+    );
+  });
+
+  it('resolves VAT from product when taxCodeId omitted (D271)', async () => {
+    const productId = '44444444-4444-4444-4444-444444444444';
+    const { service, prisma, tax } = build({
+      fodec: null,
+      timbre: null,
+    });
+    (prisma.prdProduct as { findFirst: jest.Mock }).findFirst.mockResolvedValue({
+      id: productId,
+    });
+
+    await service.create(companyId, {
+      customerId,
+      lines: [
+        {
+          description: 'Fromage',
+          qty: 1,
+          unitPriceHt: 100,
+          productId,
+        },
+      ],
+    });
+
+    expect(tax.calculate).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        lines: [
+          expect.objectContaining({
+            productId,
+            taxCodeId: undefined,
+          }),
+        ],
+      }),
     );
   });
 

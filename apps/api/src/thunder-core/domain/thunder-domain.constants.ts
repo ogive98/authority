@@ -14,4 +14,7 @@ export const THUNDER_DOMAIN_EVENT_TYPES = {
   financePaymentReversed: 'finance.payment.reversed.v1',
   financeInstrumentRejected: 'finance.instrument.rejected.v1',
   financeBankFeePosted: 'finance.bank.fee_posted.v1',
+  financeApBillPosted: 'finance.ap_bill.posted.v1',
+  financeApBillCancelled: 'finance.ap_bill.cancelled.v1',
+  financeApPaymentPosted: 'finance.ap_payment.posted.v1',
 } as const;

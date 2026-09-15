@@ -731,7 +731,27 @@ export class TaxService {
       where: { companyId, productId, deletedAt: null },
       select: { defaultVatTaxCodeId: true },
     });
-    return profile?.defaultVatTaxCodeId ?? null;
+    if (profile?.defaultVatTaxCodeId) return profile.defaultVatTaxCodeId;
+    // D271 stub — catalogue TVA19 until expert sets product fiscal (no invented rate)
+    return this.resolveStubVat19(companyId);
+  }
+
+  /**
+   * Operational stub: Tunisian VAT catalog TVA19 already seeded (Code TVA).
+   * Not FODEC/timbre/CNSS — accountant replaces product defaults later.
+   */
+  async resolveStubVat19(companyId: string): Promise<string | null> {
+    const row = await this.prisma.taxCode.findFirst({
+      where: {
+        companyId,
+        code: 'TVA19',
+        kind: TaxKind.VAT,
+        deletedAt: null,
+        active: true,
+      },
+      select: { id: true },
+    });
+    return row?.id ?? null;
   }
 
   private stampOverride(

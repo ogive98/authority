@@ -142,10 +142,15 @@ export default function AccountingEntryFichePage() {
       ? `/finance/invoices/${entry.sourceId}`
       : entry?.sourceType === "fin_credit_note" && entry.sourceId
         ? `/finance/credit-notes`
-        : entry?.sourceType === "fin_payment_alloc" ||
-            entry?.sourceType === "fin_bank_fee"
-          ? "/finance/banking"
-          : null;
+        : entry?.sourceType === "fin_ap_bill" ||
+            entry?.sourceType === "fin_ap_bill_cancel"
+          ? "/finance/ap-bills"
+          : entry?.sourceType === "fin_ap_payment"
+            ? "/finance/ap-bills"
+            : entry?.sourceType === "fin_payment_alloc" ||
+                entry?.sourceType === "fin_bank_fee"
+              ? "/finance/banking"
+              : null;
 
   return (
     <>

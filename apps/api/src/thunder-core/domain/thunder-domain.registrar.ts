@@ -53,6 +53,9 @@ export class ThunderDomainRegistrar implements OnModuleInit {
           THUNDER_DOMAIN_EVENT_TYPES.financePaymentReversed,
           THUNDER_DOMAIN_EVENT_TYPES.financeInstrumentRejected,
           THUNDER_DOMAIN_EVENT_TYPES.financeBankFeePosted,
+          THUNDER_DOMAIN_EVENT_TYPES.financeApBillPosted,
+          THUNDER_DOMAIN_EVENT_TYPES.financeApBillCancelled,
+          THUNDER_DOMAIN_EVENT_TYPES.financeApPaymentPosted,
         ],
       },
     );
@@ -350,6 +353,89 @@ export class ThunderDomainRegistrar implements OnModuleInit {
       });
       this.logger.log(
         `accounting.postFromFinance bank_fee ${result.outcome} ${
+          'number' in result ? result.number : result.reason
+        }`,
+      );
+      return;
+    }
+
+    if (
+      envelope.eventType === THUNDER_DOMAIN_EVENT_TYPES.financeApBillPosted
+    ) {
+      const billId =
+        stringPayload(envelope.payload, 'billId') || envelope.aggregateId;
+      const amount = numberPayload(envelope.payload, 'amountTotal');
+      const entryDate =
+        stringPayload(envelope.payload, 'billDate') || today;
+      if (!billId || amount == null) {
+        this.logger.warn(
+          'accounting.postFromFinance ap_bill: missing fields',
+        );
+        return;
+      }
+      const result = await this.financeGl.postApBillPosted(companyId, {
+        sourceId: envelope.eventId,
+        billId,
+        amount,
+        entryDate,
+        description: `ap_bill:${billId}`,
+      });
+      this.logger.log(
+        `accounting.postFromFinance ap_bill ${result.outcome} ${
+          'number' in result ? result.number : result.reason
+        }`,
+      );
+      return;
+    }
+
+    if (
+      envelope.eventType === THUNDER_DOMAIN_EVENT_TYPES.financeApBillCancelled
+    ) {
+      const billId =
+        stringPayload(envelope.payload, 'billId') || envelope.aggregateId;
+      if (!billId) {
+        this.logger.warn(
+          'accounting.postFromFinance ap_bill cancel: missing billId',
+        );
+        return;
+      }
+      const result = await this.financeGl.reverseApBillPosted(companyId, {
+        billId,
+        reverseSourceId: envelope.eventId,
+      });
+      this.logger.log(
+        `accounting.postFromFinance ap_bill cancel ${result.outcome} ${
+          'number' in result ? result.number : result.reason
+        }`,
+      );
+      return;
+    }
+
+    if (
+      envelope.eventType === THUNDER_DOMAIN_EVENT_TYPES.financeApPaymentPosted
+    ) {
+      const apPaymentId =
+        stringPayload(envelope.payload, 'apPaymentId') ||
+        envelope.aggregateId;
+      const amount = numberPayload(envelope.payload, 'amount');
+      const entryDate =
+        stringPayload(envelope.payload, 'paymentDate') ||
+        stringPayload(envelope.payload, 'accountingDate') ||
+        today;
+      if (!apPaymentId || amount == null) {
+        this.logger.warn(
+          'accounting.postFromFinance ap_payment: missing fields',
+        );
+        return;
+      }
+      const result = await this.financeGl.postApPaymentPosted(companyId, {
+        sourceId: envelope.eventId,
+        apPaymentId,
+        amount,
+        entryDate,
+      });
+      this.logger.log(
+        `accounting.postFromFinance ap_payment ${result.outcome} ${
           'number' in result ? result.number : result.reason
         }`,
       );

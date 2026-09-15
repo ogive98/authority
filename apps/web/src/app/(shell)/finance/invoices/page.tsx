@@ -37,6 +37,11 @@ import {
   type InvoiceStatus,
 } from "@/lib/finance";
 import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
+import {
+  fetchProductFiscal,
+  fetchProducts,
+  type Product,
+} from "@/lib/products";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
   softChipClass,
@@ -64,6 +69,8 @@ type LineDraft = {
   qty: string;
   unitPriceHt: string;
   taxCodeId: string;
+  productId: string;
+  vatSource: "manual" | "product" | "stub";
 };
 
 type FormState = {
@@ -82,6 +89,8 @@ function emptyLine(taxCodeId = ""): LineDraft {
     qty: "1",
     unitPriceHt: "",
     taxCodeId,
+    productId: "",
+    vatSource: taxCodeId ? "stub" : "manual",
   };
 }
 
@@ -120,6 +129,7 @@ function FinanceInvoicesPageInner() {
   >({});
   const [customerLoading, setCustomerLoading] = useState(false);
   const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(
@@ -172,8 +182,12 @@ function FinanceInvoicesPageInner() {
 
   useEffect(() => {
     void (async () => {
-      const res = await fetchTaxCodes();
-      if (res.ok) setTaxCodes(res.data.items);
+      const [taxRes, prodRes] = await Promise.all([
+        fetchTaxCodes(),
+        fetchProducts(),
+      ]);
+      if (taxRes.ok) setTaxCodes(taxRes.data.items);
+      if (prodRes.ok) setProducts(prodRes.data.items);
     })();
   }, []);
 
@@ -223,6 +237,55 @@ function FinanceInvoicesPageInner() {
     setDrawerOpen(true);
   }
 
+  async function applyProductToLine(idx: number, productId: string) {
+    if (!form) return;
+    if (!productId) {
+      const stub =
+        taxCodes.find((c) => c.code === "TVA19")?.id ?? taxCodes[0]?.id ?? "";
+      setForm({
+        ...form,
+        lines: form.lines.map((l, i) =>
+          i === idx
+            ? {
+                ...l,
+                productId: "",
+                taxCodeId: stub,
+                vatSource: stub ? "stub" : "manual",
+              }
+            : l,
+        ),
+      });
+      return;
+    }
+    const product = products.find((p) => p.id === productId);
+    const fiscal = await fetchProductFiscal(productId);
+    const stub =
+      taxCodes.find((c) => c.code === "TVA19")?.id ?? taxCodes[0]?.id ?? "";
+    let taxCodeId = stub;
+    let vatSource: LineDraft["vatSource"] = "stub";
+    if (fiscal.ok && fiscal.data.profile.defaultVatTaxCodeId) {
+      taxCodeId = fiscal.data.profile.defaultVatTaxCodeId;
+      const notes = fiscal.data.profile.notes ?? "";
+      vatSource = notes.includes("STUB_UNTIL_EXPERT") ? "stub" : "product";
+    }
+    setForm({
+      ...form,
+      lines: form.lines.map((l, i) =>
+        i === idx
+          ? {
+              ...l,
+              productId,
+              description: l.description.trim()
+                ? l.description
+                : (product?.name ?? l.description),
+              taxCodeId,
+              vatSource,
+            }
+          : l,
+      ),
+    });
+  }
+
   async function submit() {
     if (!form?.customerId) {
       setFormError("Sélectionnez un client.");
@@ -232,14 +295,15 @@ function FinanceInvoicesPageInner() {
       description: l.description.trim(),
       qty: Number(l.qty.replace(",", ".")),
       unitPriceHt: Number(l.unitPriceHt.replace(",", ".")),
-      taxCodeId: l.taxCodeId,
+      taxCodeId: l.taxCodeId || undefined,
+      productId: l.productId || undefined,
     }));
     if (
       lines.length === 0 ||
       lines.some(
         (l) =>
           !l.description ||
-          !l.taxCodeId ||
+          (!l.taxCodeId && !l.productId) ||
           !Number.isFinite(l.qty) ||
           l.qty <= 0 ||
           !Number.isFinite(l.unitPriceHt) ||
@@ -247,7 +311,7 @@ function FinanceInvoicesPageInner() {
       )
     ) {
       setFormError(
-        "Chaque ligne doit avoir description, qté, PU HT et code TVA.",
+        "Chaque ligne : description, qté, PU HT, et produit ou code TVA.",
       );
       return;
     }
@@ -305,7 +369,7 @@ function FinanceInvoicesPageInner() {
       <AScreenHeader
         kicker="Finance"
         title="Factures"
-        description="Factures HT / TVA / FODEC / timbre / TTC — FODEC·timbre seulement si validés en Préférences. Soft Glass fiche D224."
+        description="Factures HT / TVA / TTC — TVA auto depuis le produit (stub TVA19 jusqu’au comptable). FODEC·timbre seulement si validés en Préférences."
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             {LAYOUT_ACTIONS.newInvoice}
@@ -645,6 +709,19 @@ function FinanceInvoicesPageInner() {
                       })
                     }
                   />
+                  <select
+                    className={softSelect}
+                    value={line.productId}
+                    onChange={(e) => void applyProductToLine(idx, e.target.value)}
+                    aria-label={`Produit ligne ${idx + 1}`}
+                  >
+                    <option value="">Produit (optionnel)…</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.sku} — {p.name}
+                      </option>
+                    ))}
+                  </select>
                   <div className="grid grid-cols-3 gap-2">
                     <AInput
                       placeholder="Qté"
@@ -680,7 +757,11 @@ function FinanceInvoicesPageInner() {
                           ...form,
                           lines: form.lines.map((l, i) =>
                             i === idx
-                              ? { ...l, taxCodeId: e.target.value }
+                              ? {
+                                  ...l,
+                                  taxCodeId: e.target.value,
+                                  vatSource: "manual",
+                                }
                               : l,
                           ),
                         })
@@ -694,6 +775,15 @@ function FinanceInvoicesPageInner() {
                       ))}
                     </select>
                   </div>
+                  {line.vatSource === "stub" ? (
+                    <p className="text-[length:var(--a-text-xs)] text-a-warning">
+                      Stub TVA19 — à valider avec le comptable (pas FODEC/timbre).
+                    </p>
+                  ) : line.vatSource === "product" ? (
+                    <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      TVA reprise de la fiche produit.
+                    </p>
+                  ) : null}
                 </div>
               ))}
             </div>

@@ -29,8 +29,13 @@ export const DEFAULT_GL_CODES = {
   revenue: '701',
   /** TVA collectée — code compte, pas un taux. */
   vat: '4367',
+  /** Fournisseurs — AP liability (D273). */
+  ap: '401',
+  /** Achats / charges — AP bill expense (D273). */
+  expense: '601',
   salesJournal: 'VEN',
   bankJournal: 'BQ',
+  purchasesJournal: 'ACH',
   /**
    * Bank fee expense — empty until human Prefs (D193).
    * Never invent a Tunisian fee CoA code.
@@ -38,16 +43,19 @@ export const DEFAULT_GL_CODES = {
   bankFee: '',
 } as const;
 
-/** Company prefs — CoA / journal codes for Finance→GL (D179/D180/D193). */
+/** Company prefs — CoA / journal codes for Finance→GL (D179/D180/D193/D273). */
 export const ACCOUNTING_SETTING_KEYS = {
   AR: 'accounting.gl.ar',
   BANK: 'accounting.gl.bank',
   REVENUE: 'accounting.gl.revenue',
   VAT: 'accounting.gl.vat',
+  AP: 'accounting.gl.ap',
+  EXPENSE: 'accounting.gl.expense',
   /** Bank charges / frais — empty until human (D193). */
   BANK_FEE: 'accounting.gl.bank_fee',
   SALES_JOURNAL: 'accounting.gl.sales_journal',
   BANK_JOURNAL: 'accounting.gl.bank_journal',
+  PURCHASES_JOURNAL: 'accounting.gl.purchases_journal',
 } as const;
 
 export const ACCOUNTING_SETTING_DEFAULTS: Record<
@@ -58,9 +66,13 @@ export const ACCOUNTING_SETTING_DEFAULTS: Record<
   [ACCOUNTING_SETTING_KEYS.BANK]: DEFAULT_GL_CODES.bank,
   [ACCOUNTING_SETTING_KEYS.REVENUE]: DEFAULT_GL_CODES.revenue,
   [ACCOUNTING_SETTING_KEYS.VAT]: DEFAULT_GL_CODES.vat,
+  [ACCOUNTING_SETTING_KEYS.AP]: DEFAULT_GL_CODES.ap,
+  [ACCOUNTING_SETTING_KEYS.EXPENSE]: DEFAULT_GL_CODES.expense,
   [ACCOUNTING_SETTING_KEYS.BANK_FEE]: DEFAULT_GL_CODES.bankFee,
   [ACCOUNTING_SETTING_KEYS.SALES_JOURNAL]: DEFAULT_GL_CODES.salesJournal,
   [ACCOUNTING_SETTING_KEYS.BANK_JOURNAL]: DEFAULT_GL_CODES.bankJournal,
+  [ACCOUNTING_SETTING_KEYS.PURCHASES_JOURNAL]:
+    DEFAULT_GL_CODES.purchasesJournal,
 };
 
 export type GlMappingCodes = {
@@ -68,8 +80,11 @@ export type GlMappingCodes = {
   bank: string;
   revenue: string;
   vat: string;
+  ap: string;
+  expense: string;
   /** Empty string until Prefs seat filled. */
   bankFee: string;
   salesJournal: string;
   bankJournal: string;
+  purchasesJournal: string;
 };

@@ -242,7 +242,7 @@ function FinanceApBillsPageInner() {
       <AScreenHeader
         kicker="Finance"
         title="Factures fournisseurs"
-        description="Factures AP Soft Glass — lien master `/suppliers` optionnel · vendorName libre sinon · RAS/TEJ si Prefs VALIDATED · pas de GL (D236 / D250 / D246)."
+        description="Factures AP Soft Glass — lien master `/suppliers` optionnel · vendorName libre sinon · RAS si Prefs VALIDATED · GL Thunder à la validation (D273)."
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             {LAYOUT_ACTIONS.newApBill}
@@ -408,7 +408,7 @@ function FinanceApBillsPageInner() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title="Nouvelle facture fournisseur"
-        description="Master `/suppliers` optionnel — sinon vendorName libre. Pas de TVA inventée, pas de GL."
+        description="Master `/suppliers` optionnel — sinon vendorName libre. Pas de TVA inventée. Poster → GL Achats/Fournisseurs (D273)."
       >
         {form ? (
           <div className="space-y-3">

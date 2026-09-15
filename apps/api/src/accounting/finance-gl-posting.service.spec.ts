@@ -9,9 +9,12 @@ describe('FinanceGlPostingService', () => {
       bank: DEFAULT_GL_CODES.bank,
       revenue: DEFAULT_GL_CODES.revenue,
       vat: DEFAULT_GL_CODES.vat,
+      ap: DEFAULT_GL_CODES.ap,
+      expense: DEFAULT_GL_CODES.expense,
       bankFee: '',
       salesJournal: DEFAULT_GL_CODES.salesJournal,
       bankJournal: DEFAULT_GL_CODES.bankJournal,
+      purchasesJournal: DEFAULT_GL_CODES.purchasesJournal,
     }),
   };
 
@@ -356,5 +359,130 @@ describe('FinanceGlPostingService', () => {
       reason: 'ACC.PERIOD_CLOSED: period 2026-09 is CLOSED',
     });
     expect(accounting.createEntry).not.toHaveBeenCalled();
+  });
+
+  it('posts AP bill Dr expense / Cr AP when CoA present (D273)', async () => {
+    const prisma = {
+      accJournalEntry: { findFirst: jest.fn().mockResolvedValue(null) },
+      accAccount: {
+        findMany: jest.fn().mockResolvedValue([
+          { code: '601', id: 'a-exp' },
+          { code: '401', id: 'a-ap' },
+        ]),
+      },
+      accJournal: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'j-ach' }),
+      },
+      accFiscalPeriod: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'p-open',
+          code: '2026-09',
+          status: 'OPEN',
+        }),
+      },
+    };
+    const accounting = {
+      createEntry: jest.fn().mockResolvedValue({ id: 'draft-1' }),
+      postEntry: jest
+        .fn()
+        .mockResolvedValue({ id: 'je-ap', number: 'JE-AP-1' }),
+      reverseEntry: jest.fn(),
+    };
+    const svc = new FinanceGlPostingService(
+      prisma as never,
+      accounting as never,
+      glMapping as never,
+    );
+    const result = await svc.postApBillPosted(companyId, {
+      sourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      billId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      amount: 250,
+      entryDate: '2026-09-15',
+    });
+    expect(result).toEqual({
+      outcome: 'posted',
+      entryId: 'je-ap',
+      number: 'JE-AP-1',
+    });
+    expect(accounting.createEntry).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        sourceType: 'fin_ap_bill',
+        journalId: 'j-ach',
+        lines: [
+          expect.objectContaining({
+            accountId: 'a-exp',
+            debit: 250,
+            credit: 0,
+          }),
+          expect.objectContaining({
+            accountId: 'a-ap',
+            debit: 0,
+            credit: 250,
+          }),
+        ],
+      }),
+    );
+  });
+
+  it('posts AP payment Dr AP / Cr bank (D273)', async () => {
+    const prisma = {
+      accJournalEntry: { findFirst: jest.fn().mockResolvedValue(null) },
+      accAccount: {
+        findMany: jest.fn().mockResolvedValue([
+          { code: '401', id: 'a-ap' },
+          { code: '512', id: 'a-bank' },
+        ]),
+      },
+      accJournal: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'j-bq' }),
+      },
+      accFiscalPeriod: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'p-open',
+          code: '2026-09',
+          status: 'OPEN',
+        }),
+      },
+    };
+    const accounting = {
+      createEntry: jest.fn().mockResolvedValue({ id: 'draft-2' }),
+      postEntry: jest
+        .fn()
+        .mockResolvedValue({ id: 'je-pay', number: 'JE-AP-PAY' }),
+      reverseEntry: jest.fn(),
+    };
+    const svc = new FinanceGlPostingService(
+      prisma as never,
+      accounting as never,
+      glMapping as never,
+    );
+    const result = await svc.postApPaymentPosted(companyId, {
+      sourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      apPaymentId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      amount: 100,
+      entryDate: '2026-09-15',
+    });
+    expect(result).toEqual({
+      outcome: 'posted',
+      entryId: 'je-pay',
+      number: 'JE-AP-PAY',
+    });
+    expect(accounting.createEntry).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        sourceType: 'fin_ap_payment',
+        lines: [
+          expect.objectContaining({
+            accountId: 'a-ap',
+            debit: 100,
+          }),
+          expect.objectContaining({
+            accountId: 'a-bank',
+            credit: 100,
+          }),
+        ],
+      }),
+    );
   });
 });

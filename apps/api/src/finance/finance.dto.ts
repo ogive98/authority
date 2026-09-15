@@ -85,8 +85,10 @@ export class CreateInvoiceLineDto {
   @Min(0)
   unitPriceHt!: number;
 
+  /** Optional when productId has default VAT or stub TVA19 (D271). */
+  @IsOptional()
   @IsUUID()
-  taxCodeId!: string;
+  taxCodeId?: string;
 
   @IsOptional()
   @IsUUID()

@@ -520,8 +520,8 @@ model SetValue {
 
 /**
  * Expert-validated legal parameters (D091) — FODEC / timbre / CNSS / IRPP / TFP.
- * Never seeded with invented rates; lawRef + expertValidatedAt required on write.
- * VAT stays in Tax Engine (`tax_rate`), not here.
+ * Operational demo may seed STUB_UNTIL_EXPERT rows (D272); never invent permanent rates.
+ * VAT stays in Tax Engine (`tax_rate`), not here. TEJ transmission never enabled here.
  */
 model SetExpertise {
   id                 String    @id @default(uuid()) @db.Uuid

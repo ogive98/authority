@@ -71,9 +71,12 @@ type GlMapForm = {
   bank: string;
   revenue: string;
   vat: string;
+  ap: string;
+  expense: string;
   bankFee: string;
   salesJournal: string;
   bankJournal: string;
+  purchasesJournal: string;
 };
 
 type LoadState =
@@ -296,9 +299,12 @@ function AccountingPageInner() {
       [GL_MAPPING_KEYS.bank, mapDraft.bank],
       [GL_MAPPING_KEYS.revenue, mapDraft.revenue],
       [GL_MAPPING_KEYS.vat, mapDraft.vat],
+      [GL_MAPPING_KEYS.ap, mapDraft.ap],
+      [GL_MAPPING_KEYS.expense, mapDraft.expense],
       [GL_MAPPING_KEYS.bankFee, mapDraft.bankFee],
       [GL_MAPPING_KEYS.salesJournal, mapDraft.salesJournal],
       [GL_MAPPING_KEYS.bankJournal, mapDraft.bankJournal],
+      [GL_MAPPING_KEYS.purchasesJournal, mapDraft.purchasesJournal],
     ];
     for (const [key, value] of pairs) {
       const r = await putCompanySetting(key, value.trim());
@@ -810,9 +816,12 @@ function AccountingPageInner() {
                       ["bank", "Banque", "account"],
                       ["revenue", "Ventes / produits", "account"],
                       ["vat", "TVA collectée (as-recorded)", "account"],
+                      ["ap", "Fournisseurs (AP)", "account"],
+                      ["expense", "Achats / charges (AP)", "account"],
                       ["bankFee", "Frais bancaires", "account"],
                       ["salesJournal", "Journal ventes", "journal"],
                       ["bankJournal", "Journal banque", "journal"],
+                      ["purchasesJournal", "Journal achats", "journal"],
                     ] as const
                   ).map(([field, label, kind]) => (
                     <label

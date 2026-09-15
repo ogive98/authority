@@ -20,12 +20,18 @@ const SETTING_META: Record<
     'GL account code for Revenue (Finance→GL invoice)',
   [ACCOUNTING_SETTING_KEYS.VAT]:
     'GL account code for VAT collected (as-recorded tax only)',
+  [ACCOUNTING_SETTING_KEYS.AP]:
+    'GL account code for Accounts Payable (AP bill / AP payment)',
+  [ACCOUNTING_SETTING_KEYS.EXPENSE]:
+    'GL account code for AP bill expense / purchases (as-recorded)',
   [ACCOUNTING_SETTING_KEYS.BANK_FEE]:
     'GL account code for bank fees (empty until human — D193)',
   [ACCOUNTING_SETTING_KEYS.SALES_JOURNAL]:
     'Sales journal code for invoice GL posting',
   [ACCOUNTING_SETTING_KEYS.BANK_JOURNAL]:
-    'Bank journal code for payment / bank fee GL posting',
+    'Bank journal code for payment / bank fee / AP payment GL posting',
+  [ACCOUNTING_SETTING_KEYS.PURCHASES_JOURNAL]:
+    'Purchases journal code for AP bill GL posting',
 };
 
 /**
@@ -90,9 +96,12 @@ export class AccountingGlMappingResolver {
       bank: read(ACCOUNTING_SETTING_KEYS.BANK),
       revenue: read(ACCOUNTING_SETTING_KEYS.REVENUE),
       vat: read(ACCOUNTING_SETTING_KEYS.VAT),
+      ap: read(ACCOUNTING_SETTING_KEYS.AP),
+      expense: read(ACCOUNTING_SETTING_KEYS.EXPENSE),
       bankFee: read(ACCOUNTING_SETTING_KEYS.BANK_FEE),
       salesJournal: read(ACCOUNTING_SETTING_KEYS.SALES_JOURNAL),
       bankJournal: read(ACCOUNTING_SETTING_KEYS.BANK_JOURNAL),
+      purchasesJournal: read(ACCOUNTING_SETTING_KEYS.PURCHASES_JOURNAL),
     };
   }
 

@@ -65,9 +65,12 @@ export const COMPANY_ONLY_SETTING_KEYS = [
   'accounting.gl.bank',
   'accounting.gl.revenue',
   'accounting.gl.vat',
+  'accounting.gl.ap',
+  'accounting.gl.expense',
   'accounting.gl.bank_fee',
   'accounting.gl.sales_journal',
   'accounting.gl.bank_journal',
+  'accounting.gl.purchases_journal',
   'sales.reserve_on_confirm',
   'sales.auto_confirm_on_create',
   'sales.require_requested_date',
@@ -226,7 +229,7 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     domain: 'tax',
     label: 'FODEC',
     description:
-      'Fonds de développement de la compétitivité — taux après validation expert.',
+      'Fonds de développement de la compétitivité — seed demo STUB_UNTIL_EXPERT (D272) jusqu’au comptable.',
     defaultStatus: 'PENDING_EXPERT',
     lawRefHint: null,
     manageHref: null,
@@ -235,7 +238,8 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     key: 'tax.timbre',
     domain: 'tax',
     label: 'Timbre fiscal',
-    description: 'Droit de timbre — montants après validation expert.',
+    description:
+      'Droit de timbre — seed demo STUB_UNTIL_EXPERT (D272) jusqu’au comptable.',
     defaultStatus: 'PENDING_EXPERT',
     lawRefHint: null,
     manageHref: null,
@@ -255,7 +259,7 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     domain: 'tax',
     label: 'TEJ (déclaration fiscale)',
     description:
-      'Paramètres TEJ / déclaration (libellé, régime, réf.) — vide jusqu’à expert. Pas de transmission API ni XML pretend.',
+      'Params locaux STUB (D272) pour brouillon XML — transmission API toujours DISABLED.',
     defaultStatus: 'PENDING_EXPERT',
     lawRefHint: null,
     manageHref: '/settings#expertise',
@@ -265,7 +269,7 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     domain: 'hr',
     label: 'CNSS salarié',
     description:
-      'Taux part salarié (rateBps) — vide jusqu’à saisie expert. Jamais seedé.',
+      'Taux part salarié — seed demo STUB_UNTIL_EXPERT (D272) jusqu’au comptable.',
     defaultStatus: 'PENDING_EXPERT',
     lawRefHint: null,
     manageHref: '/hr',
@@ -275,7 +279,7 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     domain: 'hr',
     label: 'CNSS employeur',
     description:
-      'Taux part employeur (rateBps) — vide jusqu’à saisie expert. Jamais seedé.',
+      'Taux part employeur — seed demo STUB_UNTIL_EXPERT (D272) jusqu’au comptable.',
     defaultStatus: 'PENDING_EXPERT',
     lawRefHint: null,
     manageHref: '/hr',
@@ -285,7 +289,7 @@ export const EXPERTISE_CATALOG: readonly ExpertiseSlotDef[] = [
     domain: 'hr',
     label: 'CNSS plafond',
     description:
-      'Plafond assiette mensuelle (amountMilli) — vide jusqu’à saisie expert.',
+      'Plafond assiette — seed demo STUB_UNTIL_EXPERT (D272) jusqu’au comptable.',
     defaultStatus: 'PENDING_EXPERT',
     lawRefHint: null,
     manageHref: '/hr',

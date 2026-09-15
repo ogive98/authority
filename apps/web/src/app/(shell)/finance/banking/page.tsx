@@ -1225,7 +1225,7 @@ export default function FinanceBankingPage() {
         open={apOpen}
         onOpenChange={setApOpen}
         title="Décaissement AP"
-        description="Nom libre ou facture AP postée · montant TND · aucun GL (D237)."
+        description="Nom libre ou facture AP postée · montant TND · GL Dr AP / Cr Banque via Thunder (D273)."
       >
         {apForm ? (
           <div className="space-y-3">

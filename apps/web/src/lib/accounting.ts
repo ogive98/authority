@@ -97,15 +97,18 @@ export type PatchSampleMeta = {
   note: string;
 };
 
-/** Pref keys for Finance→GL mapping (D179/D193). */
+/** Pref keys for Finance→GL mapping (D179/D193/D273). */
 export const GL_MAPPING_KEYS = {
   ar: "accounting.gl.ar",
   bank: "accounting.gl.bank",
   revenue: "accounting.gl.revenue",
   vat: "accounting.gl.vat",
+  ap: "accounting.gl.ap",
+  expense: "accounting.gl.expense",
   bankFee: "accounting.gl.bank_fee",
   salesJournal: "accounting.gl.sales_journal",
   bankJournal: "accounting.gl.bank_journal",
+  purchasesJournal: "accounting.gl.purchases_journal",
 } as const;
 
 export const GL_MAPPING_DEFAULTS = {
@@ -113,10 +116,13 @@ export const GL_MAPPING_DEFAULTS = {
   bank: "512",
   revenue: "701",
   vat: "4367",
+  ap: "401",
+  expense: "601",
   /** Empty until human Prefs — never invent fee CoA. */
   bankFee: "",
   salesJournal: "VEN",
   bankJournal: "BQ",
+  purchasesJournal: "ACH",
 } as const;
 
 type ApiFail = { ok: false; status: number; code?: string; message: string };

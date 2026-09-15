@@ -54,7 +54,16 @@ export function ExpertiseHintsStrip({ keys, className }: Props) {
           <span className="font-medium text-a-fg">{s.label}</span>
           {s.status === "VALIDATED" && s.valueSummary ? (
             <>
-              <ABadge tone="success">{s.valueSummary}</ABadge>
+              <ABadge
+                tone={
+                  s.notes?.includes("STUB_UNTIL_EXPERT") ||
+                  s.lawRef?.includes("STUB_UNTIL_EXPERT")
+                    ? "warning"
+                    : "success"
+                }
+              >
+                {s.valueSummary}
+              </ABadge>
               {s.lawRef ? (
                 <span className="text-a-fg-muted">{s.lawRef}</span>
               ) : null}

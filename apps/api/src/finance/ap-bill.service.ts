@@ -212,6 +212,7 @@ export class ApBillService {
           number: bill.number,
           vendorName: bill.vendorName,
           amountTotal: bill.amountTotal.toString(),
+          billDate: bill.billDate.toISOString().slice(0, 10),
         },
       });
       return bill;

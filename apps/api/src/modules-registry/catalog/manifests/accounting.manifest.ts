@@ -70,6 +70,9 @@ export const accountingManifest: ModuleManifest = {
     'finance.payment.reversed.v1',
     'finance.instrument.rejected.v1',
     'finance.bank.fee_posted.v1',
+    'finance.ap_bill.posted.v1',
+    'finance.ap_bill.cancelled.v1',
+    'finance.ap_payment.posted.v1',
   ],
   navigationEntries: [
     { id: 'gl', label: 'Grand livre', href: '/accounting' },

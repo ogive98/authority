@@ -104,7 +104,7 @@ export default function FinanceApBillFichePage() {
     if (!id) return;
     if (
       !window.confirm(
-        "Annuler cette facture fournisseur ? Aucun GL n’est impacté (V0).",
+        "Annuler cette facture fournisseur ? Si une écriture GL existe, elle sera contrepassée via Thunder (D273).",
       )
     ) {
       return;
@@ -217,7 +217,7 @@ export default function FinanceApBillFichePage() {
         }
         kicker="Finance"
         title={bill ? bill.number : "Facture fournisseur"}
-        description="AP bill Soft Glass — décaissement · RAS auto si Prefs VALIDATED (D264) · pas de GL."
+        description="AP bill Soft Glass — décaissement · RAS auto si Prefs VALIDATED (D264) · GL Thunder (D273)."
         status={
           bill ? (
             <ABadge tone={apBillBadgeTone(bill.status)}>
@@ -415,8 +415,9 @@ export default function FinanceApBillFichePage() {
                   </li>
                   <li>Version : {bill.version}</li>
                   <li>
-                    Lien optionnel vers `FinApPayment` · pas de master · pas de
-                    GL · rapprochement banque inchangé.
+                    Lien optionnel vers `FinApPayment` · GL Thunder à la
+                    validation / décaissement (D273) · rapprochement banque
+                    sans écriture supplémentaire.
                   </li>
                 </ul>
               </AContextPanel>
@@ -429,7 +430,7 @@ export default function FinanceApBillFichePage() {
         open={payOpen}
         onOpenChange={setPayOpen}
         title="Décaissement lié"
-        description="Crée un FinApPayment POSTED lié à cette facture — aucun GL."
+        description="Crée un FinApPayment POSTED lié — GL Dr Fournisseurs / Cr Banque (D273)."
       >
         {payForm && bill ? (
           <div className="space-y-3">

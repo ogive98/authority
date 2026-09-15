@@ -487,6 +487,219 @@ export class FinanceGlPostingService {
     });
   }
 
+  /**
+   * AP bill posted (D273) — Dr Charges / Cr Fournisseurs (amount as-recorded).
+   * No tax invention — AP bills carry a single total.
+   */
+  async postApBillPosted(
+    companyId: string,
+    input: {
+      sourceId: string;
+      billId: string;
+      amount: number;
+      entryDate: string;
+      description?: string;
+    },
+  ): Promise<FinanceGlPostResult> {
+    const amount = round3(input.amount);
+    if (amount <= 0) {
+      return { outcome: 'skipped', reason: 'non-positive amount' };
+    }
+
+    const existing = await this.findBySource(
+      companyId,
+      'fin_ap_bill',
+      input.sourceId,
+    );
+    if (existing) {
+      return {
+        outcome: 'existing',
+        entryId: existing.id,
+        number: existing.number,
+      };
+    }
+
+    const map = await this.glMapping.resolve(companyId);
+    const accounts = await this.resolveAccounts(companyId, [
+      map.expense,
+      map.ap,
+    ]);
+    if (!accounts) {
+      return {
+        outcome: 'skipped',
+        reason: `missing CoA ${map.expense}/${map.ap}`,
+      };
+    }
+
+    return this.createAndPost(companyId, {
+      sourceType: 'fin_ap_bill',
+      sourceId: input.sourceId,
+      entryDate: input.entryDate,
+      description: input.description ?? `ap_bill:${input.billId}`,
+      journalCode: map.purchasesJournal,
+      lines: [
+        {
+          accountId: accounts[map.expense]!,
+          debit: amount,
+          credit: 0,
+          lineNo: 1,
+          memo: 'AP expense',
+        },
+        {
+          accountId: accounts[map.ap]!,
+          debit: 0,
+          credit: amount,
+          lineNo: 2,
+          memo: 'AP liability',
+        },
+      ],
+    });
+  }
+
+  /**
+   * AP bill cancelled — reverse POSTED fin_ap_bill GL rows (D273).
+   * Idempotent on reverseSourceId.
+   */
+  async reverseApBillPosted(
+    companyId: string,
+    input: { billId: string; reverseSourceId: string },
+  ): Promise<FinanceGlPostResult> {
+    const already = await this.findBySource(
+      companyId,
+      'fin_ap_bill_cancel',
+      input.reverseSourceId,
+    );
+    if (already) {
+      return {
+        outcome: 'existing',
+        entryId: already.id,
+        number: already.number,
+      };
+    }
+
+    const marker = `ap_bill:${input.billId}`;
+    const targets = await this.prisma.accJournalEntry.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: AccEntryStatus.POSTED,
+        sourceType: 'fin_ap_bill',
+        OR: [
+          { description: marker },
+          { description: { startsWith: `${marker}` } },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (targets.length === 0) {
+      return { outcome: 'skipped', reason: 'no posted AP bill GL to reverse' };
+    }
+
+    let last: { id: string; number: string } = {
+      id: targets[0]!.id,
+      number: targets[0]!.number,
+    };
+    for (const entry of targets) {
+      try {
+        const reversed = await this.accounting.reverseEntry(
+          companyId,
+          entry.id,
+        );
+        last = { id: reversed.id, number: reversed.number };
+      } catch (error) {
+        this.logger.warn(
+          `GL AP bill reverse failed for ${entry.number}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        return { outcome: 'skipped', reason: 'reverse failed' };
+      }
+    }
+
+    await this.prisma.accJournalEntry.update({
+      where: { id: last.id },
+      data: {
+        sourceType: 'fin_ap_bill_cancel',
+        sourceId: input.reverseSourceId,
+      },
+    });
+
+    return {
+      outcome: 'posted',
+      entryId: last.id,
+      number: last.number,
+    };
+  }
+
+  /**
+   * AP payment posted (D273) — Dr Fournisseurs / Cr Banque (net as-recorded).
+   * RAS withheld is not split to a RAS GL account in V0.
+   */
+  async postApPaymentPosted(
+    companyId: string,
+    input: {
+      sourceId: string;
+      apPaymentId: string;
+      amount: number;
+      entryDate: string;
+    },
+  ): Promise<FinanceGlPostResult> {
+    const amount = round3(input.amount);
+    if (amount <= 0) {
+      return { outcome: 'skipped', reason: 'non-positive amount' };
+    }
+
+    const existing = await this.findBySource(
+      companyId,
+      'fin_ap_payment',
+      input.sourceId,
+    );
+    if (existing) {
+      return {
+        outcome: 'existing',
+        entryId: existing.id,
+        number: existing.number,
+      };
+    }
+
+    const map = await this.glMapping.resolve(companyId);
+    const accounts = await this.resolveAccounts(companyId, [
+      map.ap,
+      map.bank,
+    ]);
+    if (!accounts) {
+      return {
+        outcome: 'skipped',
+        reason: `missing CoA ${map.ap}/${map.bank}`,
+      };
+    }
+
+    return this.createAndPost(companyId, {
+      sourceType: 'fin_ap_payment',
+      sourceId: input.sourceId,
+      entryDate: input.entryDate,
+      description: `ap_payment:${input.apPaymentId}`,
+      journalCode: map.bankJournal,
+      lines: [
+        {
+          accountId: accounts[map.ap]!,
+          debit: amount,
+          credit: 0,
+          lineNo: 1,
+          memo: 'AP settle',
+        },
+        {
+          accountId: accounts[map.bank]!,
+          debit: 0,
+          credit: amount,
+          lineNo: 2,
+          memo: 'Bank',
+        },
+      ],
+    });
+  }
+
   /** Reverse posted payment allocation GL (instrument reject or payment.reverse). */
   async reversePaymentOnInstrumentReject(
     companyId: string,
