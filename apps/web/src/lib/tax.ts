@@ -251,6 +251,9 @@ export type TaxWithholding = {
   certificateSha256?: string | null;
   certificateAt?: string | null;
   tejExportId?: string | null;
+  tejImportAckAt?: string | null;
+  tejImportNote?: string | null;
+  tejRejectReason?: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -286,6 +289,10 @@ export type TejCenterOverview = {
     validated: number;
     certificateReady: number;
     tejPrepared: number;
+    awaitingImportAck?: number;
+    transmitted?: number;
+    accepted?: number;
+    rejected?: number;
     stubBlocked: number;
     amountWithheldValidated: string;
   };
@@ -414,15 +421,78 @@ export async function validateTaxWithholding(
   }
 }
 
+/** D287 — local Tej import ack (no AUTHORITY upload). */
+export async function ackTejImport(
+  id: string,
+  note?: string,
+): Promise<{ ok: true; data: TaxWithholding } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/tax/withholdings/${id}/tej-import-ack`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(note?.trim() ? { note: note.trim() } : {}),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as TaxWithholding };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function recordTejResult(
+  id: string,
+  input: {
+    result: "ACCEPTED" | "REJECTED";
+    note?: string;
+    rejectReason?: string;
+  },
+): Promise<{ ok: true; data: TaxWithholding } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/tax/withholdings/${id}/tej-result`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as TaxWithholding };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function archiveTaxWithholding(
+  id: string,
+): Promise<{ ok: true; data: TaxWithholding } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/tax/withholdings/${id}/archive`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as TaxWithholding };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
 export const WH_STATUS_LABELS: Record<TaxWithholdingStatus, string> = {
   DETECTED: "Détectée",
   CALCULATED: "Calculée",
   VALIDATED: "Validée",
   CERTIFICATE_READY: "Certificat prêt",
   TEJ_PREPARED: "TEJ préparé",
-  TRANSMITTED: "Transmis (local)",
-  ACCEPTED: "Acceptée",
-  REJECTED: "Rejetée",
+  TRANSMITTED: "Import Tej (accusé)",
+  ACCEPTED: "Acceptée Tej",
+  REJECTED: "Rejetée Tej",
   ARCHIVED: "Archivée",
 };
 

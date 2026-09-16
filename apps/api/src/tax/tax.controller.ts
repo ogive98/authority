@@ -25,9 +25,11 @@ import {
   CalculateTaxDto,
   CreateTaxRateDto,
   DetectRasDto,
+  AckTejImportDto,
   GenerateTejInvoicePackDto,
   GenerateTejLocalDto,
   PatchTaxRateDto,
+  RecordTejResultDto,
 } from './tax.dto';
 import { TaxService } from './tax.service';
 import { TejLocalService } from './tej-local.service';
@@ -263,5 +265,46 @@ export class TaxController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.ras.getCertificate(tenancy.companyId, id);
+  }
+
+  /** D287 — local Tej import ack (TEJ_PREPARED → TRANSMITTED). No upload. */
+  @Post('withholdings/:id/tej-import-ack')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.taxRateManage)
+  ackTejImport(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AckTejImportDto,
+  ) {
+    return this.ras.ackTejImport(tenancy.companyId, id, {
+      note: dto.note,
+    });
+  }
+
+  /** D287 — record Tej accept/reject locally (TRANSMITTED → ACCEPTED|REJECTED). */
+  @Post('withholdings/:id/tej-result')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.taxRateManage)
+  recordTejResult(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RecordTejResultDto,
+  ) {
+    return this.ras.recordTejResult(tenancy.companyId, id, {
+      result: dto.result,
+      note: dto.note,
+      rejectReason: dto.rejectReason,
+    });
+  }
+
+  /** D287 — ACCEPTED|REJECTED → ARCHIVED. */
+  @Post('withholdings/:id/archive')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.taxRateManage)
+  archiveWithholding(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.ras.archive(tenancy.companyId, id);
   }
 }

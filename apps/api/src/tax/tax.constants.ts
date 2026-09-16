@@ -28,6 +28,12 @@ export const TAX_EVENT_TYPES = {
   WITHHOLDING_FROM_AR: 'tax.withholding.from_ar.v1',
   /** D284 — local RAS certificate generated (not official MF). */
   WITHHOLDING_CERTIFICATE: 'tax.withholding.certificate.v1',
+  /** D287 — human ack of Tej import (local status TRANSMITTED; no upload). */
+  WITHHOLDING_TEJ_IMPORT_ACK: 'tax.withholding.tej_import_ack.v1',
+  /** D287 — Tej platform result recorded locally ACCEPTED|REJECTED. */
+  WITHHOLDING_TEJ_RESULT: 'tax.withholding.tej_result.v1',
+  /** D287 — archived after Tej result. */
+  WITHHOLDING_ARCHIVED: 'tax.withholding.archived.v1',
 } as const;
 
 export const TAX_LAW_REF_TN =

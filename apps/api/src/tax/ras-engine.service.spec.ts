@@ -310,6 +310,164 @@ describe('RasEngineService (D282)', () => {
     expect(taxWithholding.create).toHaveBeenCalledTimes(1);
   });
 
+  it('ackTejImport moves TEJ_PREPARED → TRANSMITTED (D287, no upload)', async () => {
+    const expertise = { getSlot: jest.fn(), previewRas: jest.fn() };
+    const row = {
+      id: 'wh-1',
+      companyId,
+      status: 'TEJ_PREPARED',
+      applicable: true,
+      decisionCode: RAS_DECISION_CODES.APPLICABLE,
+      decisionReason: 'ok',
+      side: 'AP',
+      supplierId: null,
+      apBillId: null,
+      apPaymentId: 'pay-1',
+      arInvoiceId: null,
+      vendorName: 'Nord',
+      baseAmount: { toString: () => '1000.000' },
+      rateBps: 150,
+      withholdingAmount: { toString: () => '15.000' },
+      netPayable: { toString: () => '985.000' },
+      currency: 'TND',
+      lawRef: 'LF',
+      periodLabel: '2026-09',
+      prefsSnapshotJson: {},
+      isStubRate: false,
+      certificateSha256: 'abc',
+      certificateAt: new Date(),
+      tejExportId: 'tej-1',
+      tejImportAckAt: null,
+      tejImportNote: null,
+      tejRejectReason: null,
+      version: 2,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const taxWithholding = {
+      findFirst: jest.fn().mockResolvedValue(row),
+      update: jest.fn().mockResolvedValue({
+        ...row,
+        status: 'TRANSMITTED',
+        tejImportAckAt: new Date(),
+        tejImportNote: 'importé manuellement',
+        version: 3,
+      }),
+    };
+    const prisma = {
+      taxWithholding,
+      $transaction: jest.fn(async (fn: (tx: unknown) => unknown) =>
+        fn({ taxWithholding }),
+      ),
+    };
+    const outbox = { enqueue: jest.fn().mockResolvedValue({ id: 'o1' }) };
+    const svc = build(expertise, prisma, outbox);
+    const next = await svc.ackTejImport(companyId, 'wh-1', {
+      note: 'importé manuellement',
+    });
+    expect(next.status).toBe('TRANSMITTED');
+    expect(outbox.enqueue).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventType: 'tax.withholding.tej_import_ack.v1',
+        payloadJson: expect.objectContaining({ transmission: 'DISABLED' }),
+      }),
+    );
+  });
+
+  it('recordTejResult REJECTED requires rejectReason (D287)', async () => {
+    const expertise = { getSlot: jest.fn(), previewRas: jest.fn() };
+    const prisma = {
+      taxWithholding: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'wh-1',
+          companyId,
+          status: 'TRANSMITTED',
+          applicable: true,
+          decisionCode: RAS_DECISION_CODES.APPLICABLE,
+          decisionReason: 'ok',
+          side: 'AP',
+          supplierId: null,
+          apBillId: null,
+          apPaymentId: null,
+          arInvoiceId: null,
+          vendorName: 'Nord',
+          baseAmount: { toString: () => '1000.000' },
+          rateBps: 150,
+          withholdingAmount: { toString: () => '15.000' },
+          netPayable: { toString: () => '985.000' },
+          currency: 'TND',
+          lawRef: 'LF',
+          periodLabel: '2026-09',
+          prefsSnapshotJson: {},
+          isStubRate: false,
+          version: 3,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          tejImportNote: null,
+        }),
+      },
+    };
+    const svc = build(expertise, prisma);
+    await expect(
+      svc.recordTejResult(companyId, 'wh-1', { result: 'REJECTED' }),
+    ).rejects.toMatchObject({ code: 'TAX.INVALID_INPUT' });
+  });
+
+  it('archive moves ACCEPTED → ARCHIVED (D287)', async () => {
+    const expertise = { getSlot: jest.fn(), previewRas: jest.fn() };
+    const row = {
+      id: 'wh-1',
+      companyId,
+      status: 'ACCEPTED',
+      applicable: true,
+      decisionCode: RAS_DECISION_CODES.APPLICABLE,
+      decisionReason: 'ok',
+      side: 'AR',
+      supplierId: null,
+      apBillId: null,
+      apPaymentId: null,
+      arInvoiceId: 'inv-1',
+      vendorName: 'Client',
+      baseAmount: { toString: () => '1000.000' },
+      rateBps: 150,
+      withholdingAmount: { toString: () => '15.000' },
+      netPayable: { toString: () => '985.000' },
+      currency: 'TND',
+      lawRef: 'LF',
+      periodLabel: '2026-09',
+      prefsSnapshotJson: {},
+      isStubRate: false,
+      version: 4,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const taxWithholding = {
+      findFirst: jest.fn().mockResolvedValue(row),
+      update: jest.fn().mockResolvedValue({
+        ...row,
+        status: 'ARCHIVED',
+        version: 5,
+      }),
+    };
+    const prisma = {
+      taxWithholding,
+      $transaction: jest.fn(async (fn: (tx: unknown) => unknown) =>
+        fn({ taxWithholding }),
+      ),
+    };
+    const outbox = { enqueue: jest.fn().mockResolvedValue({ id: 'o1' }) };
+    const svc = build(expertise, prisma, outbox);
+    const next = await svc.archive(companyId, 'wh-1');
+    expect(next.status).toBe('ARCHIVED');
+    expect(outbox.enqueue).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventType: 'tax.withholding.archived.v1',
+      }),
+    );
+  });
+
   it('generateCertificate moves VALIDATED → CERTIFICATE_READY (D284)', async () => {
     const expertise = {
       getSlot: jest.fn(),

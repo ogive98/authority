@@ -76,6 +76,9 @@ export type TaxWithholdingDto = {
   certificateSha256: string | null;
   certificateAt: string | null;
   tejExportId: string | null;
+  tejImportAckAt: string | null;
+  tejImportNote: string | null;
+  tejRejectReason: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -679,13 +682,172 @@ export class RasEngineService {
     };
   }
 
+  /**
+   * D287 — TEJ_PREPARED → TRANSMITTED.
+   * Local human acknowledgment that the XML pack was imported into the Tej platform.
+   * Never uploads / never calls Tej API.
+   */
+  async ackTejImport(
+    companyId: string,
+    id: string,
+    input?: { note?: string },
+  ): Promise<TaxWithholdingDto> {
+    const row = await this.findScoped(companyId, id);
+    if (row.status !== TaxWithholdingStatus.TEJ_PREPARED) {
+      throw new TaxException(
+        TAX_ERROR_CODES.INVALID_STATUS,
+        `Accusé import Tej requires TEJ_PREPARED (got ${row.status}).`,
+        HttpStatus.CONFLICT,
+      );
+    }
+    const note = input?.note?.trim() || null;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const next = await tx.taxWithholding.update({
+        where: { id: row.id },
+        data: {
+          status: TaxWithholdingStatus.TRANSMITTED,
+          tejImportAckAt: new Date(),
+          tejImportNote: note,
+          version: { increment: 1 },
+        },
+      });
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'tax_withholding',
+        aggregateId: next.id,
+        eventType: TAX_EVENT_TYPES.WITHHOLDING_TEJ_IMPORT_ACK,
+        payloadJson: {
+          withholdingId: next.id,
+          from: row.status,
+          to: next.status,
+          transmission: 'DISABLED',
+          note,
+        },
+      });
+      return next;
+    });
+    return serializeWithholding(updated);
+  }
+
+  /**
+   * D287 — TRANSMITTED → ACCEPTED | REJECTED (Tej platform result recorded locally).
+   */
+  async recordTejResult(
+    companyId: string,
+    id: string,
+    input: {
+      result: 'ACCEPTED' | 'REJECTED';
+      note?: string;
+      rejectReason?: string;
+    },
+  ): Promise<TaxWithholdingDto> {
+    const row = await this.findScoped(companyId, id);
+    if (row.status !== TaxWithholdingStatus.TRANSMITTED) {
+      throw new TaxException(
+        TAX_ERROR_CODES.INVALID_STATUS,
+        `Tej result requires TRANSMITTED (got ${row.status}).`,
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (input.result !== 'ACCEPTED' && input.result !== 'REJECTED') {
+      throw new TaxException(
+        TAX_ERROR_CODES.INVALID_INPUT,
+        'result must be ACCEPTED or REJECTED.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const rejectReason = input.rejectReason?.trim() || null;
+    if (input.result === 'REJECTED' && !rejectReason) {
+      throw new TaxException(
+        TAX_ERROR_CODES.INVALID_INPUT,
+        'rejectReason is required when recording REJECTED.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const note = input.note?.trim() || null;
+    const toStatus =
+      input.result === 'ACCEPTED'
+        ? TaxWithholdingStatus.ACCEPTED
+        : TaxWithholdingStatus.REJECTED;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const next = await tx.taxWithholding.update({
+        where: { id: row.id },
+        data: {
+          status: toStatus,
+          tejImportNote: note ?? row.tejImportNote,
+          tejRejectReason:
+            input.result === 'REJECTED' ? rejectReason : null,
+          version: { increment: 1 },
+        },
+      });
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'tax_withholding',
+        aggregateId: next.id,
+        eventType: TAX_EVENT_TYPES.WITHHOLDING_TEJ_RESULT,
+        payloadJson: {
+          withholdingId: next.id,
+          from: row.status,
+          to: next.status,
+          result: input.result,
+          rejectReason:
+            input.result === 'REJECTED' ? rejectReason : null,
+          transmission: 'DISABLED',
+        },
+      });
+      return next;
+    });
+    return serializeWithholding(updated);
+  }
+
+  /**
+   * D287 — ACCEPTED | REJECTED → ARCHIVED.
+   */
+  async archive(
+    companyId: string,
+    id: string,
+  ): Promise<TaxWithholdingDto> {
+    const row = await this.findScoped(companyId, id);
+    if (
+      row.status !== TaxWithholdingStatus.ACCEPTED &&
+      row.status !== TaxWithholdingStatus.REJECTED
+    ) {
+      throw new TaxException(
+        TAX_ERROR_CODES.INVALID_STATUS,
+        `Archive requires ACCEPTED or REJECTED (got ${row.status}).`,
+        HttpStatus.CONFLICT,
+      );
+    }
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const next = await tx.taxWithholding.update({
+        where: { id: row.id },
+        data: {
+          status: TaxWithholdingStatus.ARCHIVED,
+          version: { increment: 1 },
+        },
+      });
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'tax_withholding',
+        aggregateId: next.id,
+        eventType: TAX_EVENT_TYPES.WITHHOLDING_ARCHIVED,
+        payloadJson: {
+          withholdingId: next.id,
+          from: row.status,
+          to: next.status,
+        },
+      });
+      return next;
+    });
+    return serializeWithholding(updated);
+  }
+
   async getCertificate(
     companyId: string,
     id: string,
   ): Promise<RasCertificateDto> {
     const row = await this.findScoped(companyId, id);
     if (
-      row.status !== TaxWithholdingStatus.CERTIFICATE_READY ||
       !row.certificateBody ||
       !row.certificateSha256 ||
       !row.certificateAt
@@ -748,6 +910,9 @@ function serializeWithholding(row: {
   certificateAt?: Date | null;
   certificateBody?: string | null;
   tejExportId?: string | null;
+  tejImportAckAt?: Date | null;
+  tejImportNote?: string | null;
+  tejRejectReason?: string | null;
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -777,6 +942,9 @@ function serializeWithholding(row: {
     certificateSha256: row.certificateSha256 ?? null,
     certificateAt: row.certificateAt?.toISOString() ?? null,
     tejExportId: row.tejExportId ?? null,
+    tejImportAckAt: row.tejImportAckAt?.toISOString() ?? null,
+    tejImportNote: row.tejImportNote ?? null,
+    tejRejectReason: row.tejRejectReason ?? null,
     version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

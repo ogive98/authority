@@ -21,6 +21,10 @@ export type TejCenterOverviewDto = {
     validated: number;
     certificateReady: number;
     tejPrepared: number;
+    awaitingImportAck: number;
+    transmitted: number;
+    accepted: number;
+    rejected: number;
     stubBlocked: number;
     amountWithheldValidated: string;
   };
@@ -80,6 +84,10 @@ export class TejCenterService {
     let validated = 0;
     let certificateReady = 0;
     let tejPrepared = 0;
+    let awaitingImportAck = 0;
+    let transmitted = 0;
+    let accepted = 0;
+    let rejected = 0;
     let stubBlocked = 0;
     let amountValidated = 0;
 
@@ -96,14 +104,22 @@ export class TejCenterService {
       if (
         r.status === TaxWithholdingStatus.VALIDATED ||
         r.status === TaxWithholdingStatus.CERTIFICATE_READY ||
-        r.status === TaxWithholdingStatus.TEJ_PREPARED
+        r.status === TaxWithholdingStatus.TEJ_PREPARED ||
+        r.status === TaxWithholdingStatus.TRANSMITTED ||
+        r.status === TaxWithholdingStatus.ACCEPTED
       ) {
         amountValidated += Number(r.withholdingAmount);
       }
       if (r.status === TaxWithholdingStatus.VALIDATED) validated += 1;
       if (r.status === TaxWithholdingStatus.CERTIFICATE_READY)
         certificateReady += 1;
-      if (r.status === TaxWithholdingStatus.TEJ_PREPARED) tejPrepared += 1;
+      if (r.status === TaxWithholdingStatus.TEJ_PREPARED) {
+        tejPrepared += 1;
+        awaitingImportAck += 1;
+      }
+      if (r.status === TaxWithholdingStatus.TRANSMITTED) transmitted += 1;
+      if (r.status === TaxWithholdingStatus.ACCEPTED) accepted += 1;
+      if (r.status === TaxWithholdingStatus.REJECTED) rejected += 1;
       if (r.isStubRate && r.applicable === true) stubBlocked += 1;
     }
 
@@ -129,6 +145,10 @@ export class TejCenterService {
         validated,
         certificateReady,
         tejPrepared,
+        awaitingImportAck,
+        transmitted,
+        accepted,
+        rejected,
         stubBlocked,
         amountWithheldValidated: amountValidated.toFixed(3),
       },

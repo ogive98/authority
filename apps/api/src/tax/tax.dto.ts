@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsDateString,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -171,6 +172,31 @@ export class DetectRasDto {
   @IsString()
   @MaxLength(8)
   currency?: string;
+}
+
+/** D287 — human ack that XML was imported into Tej (local only). */
+export class AckTejImportDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  note?: string;
+}
+
+/** D287 — record Tej platform accept/reject locally. */
+export class RecordTejResultDto {
+  @IsString()
+  @IsIn(['ACCEPTED', 'REJECTED'])
+  result!: 'ACCEPTED' | 'REJECTED';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  note?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  rejectReason?: string;
 }
 
 export type FiscalDecision = {

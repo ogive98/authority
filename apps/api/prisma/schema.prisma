@@ -2650,6 +2650,10 @@ model TaxWithholding {
   certificateAt      DateTime?             @map("certificate_at") @db.Timestamptz(6)
   /** D285 — TEJ local XML pack that consumed this row. */
   tejExportId        String?               @map("tej_export_id") @db.Uuid
+  /** D287 — human ack that XML was imported into Tej (NOT AUTHORITY transmission). */
+  tejImportAckAt     DateTime?             @map("tej_import_ack_at") @db.Timestamptz(6)
+  tejImportNote      String?               @map("tej_import_note") @db.Text
+  tejRejectReason    String?               @map("tej_reject_reason") @db.Text
   version            Int                   @default(0)
   createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)

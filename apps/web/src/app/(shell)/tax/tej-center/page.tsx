@@ -19,6 +19,8 @@ import {
 } from "@/components/a";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
+  ackTejImport,
+  archiveTaxWithholding,
   createTaxWithholding,
   detectRas,
   downloadRasCertificate,
@@ -29,6 +31,7 @@ import {
   generateRasCertificate,
   generateTejInvoicePack,
   generateTejPack,
+  recordTejResult,
   validateTaxWithholding,
   WH_STATUS_LABELS,
   type RasDetectResult,
@@ -52,6 +55,7 @@ function statusTone(
 ): "success" | "warning" | "neutral" | "danger" | "accent" | "info" {
   if (status === "CERTIFICATE_READY") return "accent";
   if (status === "TEJ_PREPARED") return "info";
+  if (status === "TRANSMITTED") return "info";
   if (status === "VALIDATED" || status === "ACCEPTED") return "success";
   if (status === "REJECTED") return "danger";
   if (status === "CALCULATED" || status === "DETECTED") return "warning";
@@ -72,6 +76,8 @@ export default function TejCenterPage() {
     null,
   );
   const [actionError, setActionError] = useState<string | null>(null);
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -217,6 +223,63 @@ export default function TejCenterPage() {
     downloadTejXml(res.data);
   }
 
+  async function onAckImport(id: string) {
+    setActionError(null);
+    setBusy(true);
+    const res = await ackTejImport(id);
+    setBusy(false);
+    if (!res.ok) {
+      setActionError(res.message);
+      return;
+    }
+    await load();
+  }
+
+  async function onAcceptTej(id: string) {
+    setActionError(null);
+    setBusy(true);
+    const res = await recordTejResult(id, { result: "ACCEPTED" });
+    setBusy(false);
+    if (!res.ok) {
+      setActionError(res.message);
+      return;
+    }
+    await load();
+  }
+
+  async function onConfirmReject() {
+    if (!rejectId || !rejectReason.trim()) {
+      setActionError("Motif de rejet Tej requis.");
+      return;
+    }
+    setActionError(null);
+    setBusy(true);
+    const res = await recordTejResult(rejectId, {
+      result: "REJECTED",
+      rejectReason: rejectReason.trim(),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setActionError(res.message);
+      return;
+    }
+    setRejectId(null);
+    setRejectReason("");
+    await load();
+  }
+
+  async function onArchive(id: string) {
+    setActionError(null);
+    setBusy(true);
+    const res = await archiveTaxWithholding(id);
+    setBusy(false);
+    if (!res.ok) {
+      setActionError(res.message);
+      return;
+    }
+    await load();
+  }
+
   const overview = state.kind === "ok" ? state.overview : null;
   const items = state.kind === "ok" ? state.items : [];
 
@@ -230,7 +293,7 @@ export default function TejCenterPage() {
         }
         kicker="Fiscalité"
         title="TEJ Center"
-        description="Plateforme Soft Glass RAS → TEJ — retenues AP & AR · certificat · lot XML · par facture. Transmission DISABLED · brouillon local (pas d’XSD officiel)."
+        description="Plateforme Soft Glass RAS → TEJ — retenues AP & AR · certificat · lot XML · accusé import Tej (local). Transmission DISABLED · brouillon local (pas d’XSD officiel)."
         primary={
           <AButton
             type="button"
@@ -394,11 +457,18 @@ export default function TejCenterPage() {
             <APageSection title="Lots TEJ">
               <div className={`${softPanel} space-y-2 p-4`}>
                 <p className="a-mono text-[length:var(--a-text-2xl)] tabular-nums">
-                  {overview.tejExports.packs}
+                  {overview.withholdings.tejPrepared}
                 </p>
                 <p className="text-[length:var(--a-text-xs)] text-a-muted">
-                  TEJ_PREPARED : {overview.withholdings.tejPrepared} · drafts{" "}
-                  {overview.tejExports.localDrafts}
+                  À accuser :{" "}
+                  {overview.withholdings.awaitingImportAck ??
+                    overview.withholdings.tejPrepared}{" "}
+                  · Importés {overview.withholdings.transmitted ?? 0}
+                </p>
+                <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                  Acceptés {overview.withholdings.accepted ?? 0} · Rejetés{" "}
+                  {overview.withholdings.rejected ?? 0} · packs{" "}
+                  {overview.tejExports.packs}
                 </p>
                 <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums text-a-muted">
                   {overview.withholdings.amountWithheldValidated} TND
@@ -582,6 +652,55 @@ export default function TejCenterPage() {
                             ) : null}
                           </>
                         ) : null}
+                        {row.status === "TEJ_PREPARED" ? (
+                          <AButton
+                            type="button"
+                            size="sm"
+                            disabled={busy}
+                            onClick={() => void onAckImport(row.id)}
+                          >
+                            Accusé import
+                          </AButton>
+                        ) : null}
+                        {row.status === "TRANSMITTED" ? (
+                          <>
+                            <AButton
+                              type="button"
+                              size="sm"
+                              disabled={busy}
+                              onClick={() => void onAcceptTej(row.id)}
+                            >
+                              Accepté Tej
+                            </AButton>
+                            <AButton
+                              type="button"
+                              size="sm"
+                              disabled={busy}
+                              onClick={() => {
+                                setRejectId(row.id);
+                                setRejectReason("");
+                              }}
+                            >
+                              Rejeté Tej
+                            </AButton>
+                          </>
+                        ) : null}
+                        {row.status === "ACCEPTED" ||
+                        row.status === "REJECTED" ? (
+                          <AButton
+                            type="button"
+                            size="sm"
+                            disabled={busy}
+                            onClick={() => void onArchive(row.id)}
+                          >
+                            Archiver
+                          </AButton>
+                        ) : null}
+                        {row.status === "REJECTED" && row.tejRejectReason ? (
+                          <span className="text-[length:var(--a-text-xs)] text-a-danger">
+                            {row.tejRejectReason}
+                          </span>
+                        ) : null}
                         {row.isStubRate && row.applicable === true ? (
                           <span className="text-[length:var(--a-text-xs)] text-a-warning">
                             Stub — Prefs
@@ -591,7 +710,11 @@ export default function TejCenterPage() {
                         row.status !== "CALCULATED" &&
                         row.status !== "DETECTED" &&
                         row.status !== "VALIDATED" &&
-                        row.status !== "CERTIFICATE_READY" ? (
+                        row.status !== "CERTIFICATE_READY" &&
+                        row.status !== "TEJ_PREPARED" &&
+                        row.status !== "TRANSMITTED" &&
+                        row.status !== "ACCEPTED" &&
+                        row.status !== "REJECTED" ? (
                           <span className="text-a-muted">—</span>
                         ) : null}
                       </div>
@@ -603,6 +726,39 @@ export default function TejCenterPage() {
           </div>
         ) : null}
       </APageBody>
+
+      <ADrawer
+        open={rejectId != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejectId(null);
+            setRejectReason("");
+          }
+        }}
+        title="Rejet Tej (local)"
+        description="Enregistre le rejet signalé par la plateforme Tej — AUTHORITY ne transmet rien."
+      >
+        <div className="space-y-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+              Motif de rejet
+            </span>
+            <AInput
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Ex. anomalie XSD / ligne refusée"
+            />
+          </label>
+          <AButton
+            type="button"
+            size="sm"
+            disabled={busy || !rejectReason.trim()}
+            onClick={() => void onConfirmReject()}
+          >
+            Enregistrer rejet
+          </AButton>
+        </div>
+      </ADrawer>
 
       <ADrawer
         open={drawerOpen}
