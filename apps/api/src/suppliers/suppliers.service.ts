@@ -74,13 +74,21 @@ export class SuppliersService {
 
   async list(
     companyId: string,
-    opts: { q?: string; limit?: number; cursor?: string } = {},
+    opts: {
+      q?: string;
+      status?: string;
+      limit?: number;
+      cursor?: string;
+    } = {},
   ): Promise<{ items: SupplierDto[]; nextCursor: string | null }> {
     const limit = Math.min(Math.max(opts.limit ?? 50, 1), 100);
     const where: Prisma.SupSupplierWhereInput = {
       companyId,
       deletedAt: null,
     };
+    if (opts.status && SUPPLIER_STATUSES.includes(opts.status as never)) {
+      where.status = opts.status as SupSupplierStatus;
+    }
     if (opts.q?.trim()) {
       const q = opts.q.trim();
       where.OR = [

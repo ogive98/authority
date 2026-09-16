@@ -175,6 +175,15 @@ export const COMMAND_CATALOG: CommandItem[] = [
     permissionKey: "forge.read",
   },
   {
+    id: "nav-suppliers",
+    label: "Fournisseurs",
+    group: "navigation",
+    href: "/suppliers",
+    keywords: ["fournisseurs", "suppliers", "vendor", "achats"],
+    requiresModule: "suppliers",
+    permissionKey: "suppliers.read",
+  },
+  {
     id: "nav-tokens",
     label: "Dev — Tokens",
     group: "navigation",
@@ -293,6 +302,7 @@ export const DEMO_PERMISSION_GRANTS = new Set([
   "delivery.fail",
   "finance.ar.read",
   "finance.ar.write",
+  "suppliers.read",
   "forge.read",
   "forge.write",
   "forge.approve",
@@ -318,6 +328,7 @@ export const DEMO_ENABLED_MODULES = new Set([
   "documents",
   "accounting",
   "automation",
+  "suppliers",
   "forge",
 ]);
 

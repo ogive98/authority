@@ -528,6 +528,30 @@ export const HELP_MODULES: HelpModule[] = [
       },
       {
         name: {
+          fr: "Supplier 360 — synthèse AP",
+          it: "Supplier 360 — sintesi AP",
+        },
+        when: {
+          fr: "Voir l’exposition AP et l’historique liés au master.",
+          it: "Vedere l’esposizione AP e lo storico legati al master.",
+        },
+        steps: {
+          fr: [
+            "`/suppliers/[id]` charge synthèse : POSTED / brouillons / ouvert / payé (TND).",
+            "Factures et paiements récents · timeline AP · actions hold / brouillons.",
+            "Liste : chips Actifs / Hold / Bloqués.",
+            "Lien « Factures fournisseurs » filtre `?supplierId=`.",
+          ],
+          it: [
+            "`/suppliers/[id]` carica sintesi: POSTED / bozze / aperto / pagato (TND).",
+            "Fatture e pagamenti recenti · timeline AP · azioni hold / bozze.",
+            "Lista: chip Attivi / Hold / Bloccati.",
+            "Link « Fatture fornitori » filtra `?supplierId=`.",
+          ],
+        },
+      },
+      {
+        name: {
           fr: "Fiche fournisseur + hold qualité",
           it: "Scheda fornitore + hold qualità",
         },
@@ -553,14 +577,14 @@ export const HELP_MODULES: HelpModule[] = [
     ],
     locks: {
       fr: [
-        "Pas de commandes achat / prix / réceptions stock / portail fournisseur (D250 V0).",
+        "Pas de commandes achat / prix / réceptions stock / portail fournisseur.",
         "vendorName libre toujours possible sur AP — master optionnel.",
-        "Pas de GL sur AP (D205/D236).",
+        "Totaux AP as-recorded (POSTED / paiements liés) — pas d’aging fournisseur V0.",
       ],
       it: [
-        "Niente ordini acquisto / prezzi / ricevimenti stock / portale fornitore (D250 V0).",
+        "Niente ordini acquisto / prezzi / ricevimenti stock / portale fornitore.",
         "vendorName libero sempre possibile su AP — master opzionale.",
-        "Niente GL su AP (D205/D236).",
+        "Totali AP as-recorded (POSTED / pagamenti collegati) — niente aging fornitore V0.",
       ],
     },
   },

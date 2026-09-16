@@ -25,27 +25,55 @@ import {
   SetSupplierHoldDto,
   UpdateSupplierDto,
 } from './suppliers.dto';
+import { Supplier360Service } from './supplier-360.service';
 import { SuppliersService } from './suppliers.service';
 
 @Controller('api/v1/suppliers')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
 @RequireModule('suppliers')
 export class SuppliersController {
-  constructor(private readonly suppliersService: SuppliersService) {}
+  constructor(
+    private readonly suppliersService: SuppliersService,
+    private readonly supplier360: Supplier360Service,
+  ) {}
 
   @Get()
   @RequirePermission(PERMISSION_KEYS.suppliersRead)
   list(
     @CurrentTenancy() tenancy: TenancyContext,
     @Query('q') q?: string,
+    @Query('status') status?: string,
     @Query('limit') limitRaw?: string,
     @Query('cursor') cursor?: string,
   ) {
     const limit = limitRaw ? Number(limitRaw) : undefined;
     return this.suppliersService.list(tenancy.companyId, {
       q,
+      status,
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor,
+    });
+  }
+
+  @Get(':id/summary')
+  @RequirePermission(PERMISSION_KEYS.suppliersRead)
+  summary(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.supplier360.summary(tenancy.companyId, id);
+  }
+
+  @Get(':id/timeline')
+  @RequirePermission(PERMISSION_KEYS.suppliersRead)
+  timeline(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.supplier360.timeline(tenancy.companyId, id, {
+      limit: Number.isFinite(limit) ? limit : undefined,
     });
   }
 

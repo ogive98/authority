@@ -5,6 +5,7 @@ import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
 import { MasterDataModule } from '../master-data/master-data.module';
+import { Supplier360Service } from './supplier-360.service';
 import { SuppliersController } from './suppliers.controller';
 import { SuppliersService } from './suppliers.service';
 
@@ -18,7 +19,7 @@ import { SuppliersService } from './suppliers.service';
     AuditModule,
   ],
   controllers: [SuppliersController],
-  providers: [SuppliersService],
-  exports: [SuppliersService],
+  providers: [SuppliersService, Supplier360Service],
+  exports: [SuppliersService, Supplier360Service],
 })
 export class SuppliersModule {}

@@ -19,22 +19,24 @@ import {
   type AOverflowItem,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softPanel, softSelect } from "@/lib/soft-glass-ui";
 import {
   SUPPLIER_CATEGORY_LABELS,
   SUPPLIER_STATUS_LABELS,
   addSupplierContact,
-  fetchSupplier,
+  fetchSupplierSummary,
+  fetchSupplierTimeline,
   setSupplierHold,
   updateSupplier,
   type Supplier,
   type SupplierCategory,
   type SupplierStatus,
+  type SupplierTimelineItem,
 } from "@/lib/suppliers";
 
 type Load =
   | { kind: "loading" }
-  | { kind: "ok"; data: Supplier }
+  | { kind: "ok"; data: SupplierSummary; timeline: SupplierTimelineItem[] }
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
@@ -108,16 +110,23 @@ export default function SupplierDetailPage() {
   const load = useCallback(async () => {
     if (!id) return;
     setState({ kind: "loading" });
-    const res = await fetchSupplier(id);
-    if (!res.ok) {
-      if (res.status === 403) {
-        setState({ kind: "forbidden", message: res.message });
+    const [summaryRes, timelineRes] = await Promise.all([
+      fetchSupplierSummary(id),
+      fetchSupplierTimeline(id, { limit: 20 }),
+    ]);
+    if (!summaryRes.ok) {
+      if (summaryRes.status === 403) {
+        setState({ kind: "forbidden", message: summaryRes.message });
         return;
       }
-      setState({ kind: "error", message: res.message });
+      setState({ kind: "error", message: summaryRes.message });
       return;
     }
-    setState({ kind: "ok", data: res.data });
+    setState({
+      kind: "ok",
+      data: summaryRes.data,
+      timeline: timelineRes.ok ? timelineRes.data.items : [],
+    });
   }, [id]);
 
   useEffect(() => {
@@ -147,8 +156,8 @@ export default function SupplierDetailPage() {
     try {
       const lead = editForm.leadTimeDays.trim();
       const moq = editForm.moqDefault.trim();
-      const res = await updateSupplier(state.data.id, {
-        version: state.data.version,
+      const res = await updateSupplier(state.data.supplier.id, {
+        version: state.data.supplier.version,
         legalName: editForm.legalName.trim(),
         taxId: editForm.taxId.trim() || null,
         category: editForm.category,
@@ -164,7 +173,7 @@ export default function SupplierDetailPage() {
         return;
       }
       setEditOpen(false);
-      setState({ kind: "ok", data: res.data });
+      await load();
     } finally {
       setBusy(false);
     }
@@ -175,9 +184,9 @@ export default function SupplierDetailPage() {
     setBusy(true);
     setActionError(null);
     try {
-      const next = !state.data.qualityHold;
-      const res = await setSupplierHold(state.data.id, {
-        version: state.data.version,
+      const next = !state.data.supplier.qualityHold;
+      const res = await setSupplierHold(state.data.supplier.id, {
+        version: state.data.supplier.version,
         qualityHold: next,
         setOnHoldStatus: next,
       });
@@ -185,7 +194,7 @@ export default function SupplierDetailPage() {
         setActionError(res.message);
         return;
       }
-      setState({ kind: "ok", data: res.data });
+      await load();
     } finally {
       setBusy(false);
     }
@@ -196,7 +205,7 @@ export default function SupplierDetailPage() {
     setBusy(true);
     setContactError(null);
     try {
-      const res = await addSupplierContact(state.data.id, {
+      const res = await addSupplierContact(state.data.supplier.id, {
         name: contactForm.name.trim(),
         phone: contactForm.phone.trim() || undefined,
         whatsapp: contactForm.whatsapp.trim() || undefined,
@@ -246,7 +255,9 @@ export default function SupplierDetailPage() {
     );
   }
 
-  const data = state.data;
+  const summary = state.data;
+  const data = summary.supplier;
+  const timeline = state.timeline;
   const overflow: AOverflowItem[] = [
     {
       id: "hold",
@@ -258,7 +269,7 @@ export default function SupplierDetailPage() {
       id: "ap",
       label: "Factures fournisseurs",
       onSelect: () => {
-        window.location.href = "/finance/ap-bills";
+        window.location.href = `/finance/ap-bills?supplierId=${data.id}`;
       },
     },
   ];
@@ -268,7 +279,7 @@ export default function SupplierDetailPage() {
       <AScreenHeader
         kicker="Fournisseurs"
         title={data.legalName}
-        description={`${data.code} · ${SUPPLIER_CATEGORY_LABELS[data.category]}`}
+        description={`${data.code} · ${SUPPLIER_CATEGORY_LABELS[data.category]} · hub AP`}
         breadcrumb={
           <Link href="/suppliers" className="text-a-accent hover:underline">
             ← Liste
@@ -313,6 +324,146 @@ export default function SupplierDetailPage() {
             {actionError}
           </p>
         )}
+
+        <APageSection title="Synthèse AP">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {(
+              [
+                ["Factures POSTED", String(summary.counts.postedBills)],
+                ["Brouillons AP", String(summary.counts.draftBills)],
+                [
+                  `Ouvert (${summary.ap.currency})`,
+                  summary.ap.openTotal,
+                ],
+                [
+                  `Payé (${summary.ap.currency})`,
+                  summary.ap.paidTotal,
+                ],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label} className={`${softPanel} space-y-1 p-3`}>
+                <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                  {label}
+                </p>
+                <p className="a-mono text-[length:var(--a-text-xl)] tabular-nums">
+                  {value}
+                </p>
+              </div>
+            ))}
+          </div>
+          {summary.actionRequired.length > 0 ? (
+            <ul className="mt-3 space-y-1 text-[length:var(--a-text-sm)]">
+              {summary.actionRequired.map((a) => (
+                <li key={a.id} className="flex flex-wrap items-center gap-2">
+                  <ABadge
+                    tone={
+                      a.severity === "critical"
+                        ? "danger"
+                        : a.severity === "high"
+                          ? "warning"
+                          : "neutral"
+                    }
+                  >
+                    {a.code}
+                  </ABadge>
+                  {a.href ? (
+                    <Link
+                      href={a.href}
+                      className="text-a-accent hover:underline"
+                    >
+                      {a.label}
+                    </Link>
+                  ) : (
+                    <span>{a.label}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </APageSection>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <APageSection title="Factures AP récentes">
+            {summary.recent.bills.length === 0 ? (
+              <p className="text-[length:var(--a-text-sm)] text-a-muted">
+                Aucune facture liée à ce master.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {summary.recent.bills.map((b) => (
+                  <li key={b.id} className="flex justify-between gap-2">
+                    <Link
+                      href={`/finance/ap-bills/${b.id}`}
+                      className="a-mono text-a-accent hover:underline"
+                    >
+                      {b.number}
+                    </Link>
+                    <span className="a-mono tabular-nums">{b.amountTotal}</span>
+                    <ABadge tone="neutral">{b.status}</ABadge>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link
+              href={`/finance/ap-bills?supplierId=${data.id}`}
+              className="mt-2 inline-block text-[length:var(--a-text-sm)] text-a-accent hover:underline"
+            >
+              Toutes les factures →
+            </Link>
+          </APageSection>
+          <APageSection title="Paiements AP récents">
+            {summary.recent.payments.length === 0 ? (
+              <p className="text-[length:var(--a-text-sm)] text-a-muted">
+                Aucun paiement via facture liée.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {summary.recent.payments.map((p) => (
+                  <li key={p.id} className="flex justify-between gap-2">
+                    <span className="a-mono">{p.number}</span>
+                    <span className="a-mono tabular-nums">{p.amount}</span>
+                    <ABadge tone="neutral">{p.status}</ABadge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </APageSection>
+        </div>
+
+        <APageSection title="Timeline">
+          {timeline.length === 0 ? (
+            <p className="text-[length:var(--a-text-sm)] text-a-muted">
+              Pas encore d’événements AP.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {timeline.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex flex-wrap items-baseline justify-between gap-2"
+                >
+                  <div>
+                    <Link
+                      href={t.href}
+                      className="text-a-accent hover:underline"
+                    >
+                      {t.title}
+                    </Link>
+                    {t.subtitle ? (
+                      <span className="ml-2 text-[length:var(--a-text-xs)] text-a-muted">
+                        {t.subtitle}
+                      </span>
+                    ) : null}
+                  </div>
+                  <span className="a-mono text-[length:var(--a-text-xs)] text-a-muted">
+                    {t.at.slice(0, 10)}
+                    {t.amount ? ` · ${t.amount}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </APageSection>
 
         <APageSection title="Identité">
           <dl>

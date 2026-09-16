@@ -28,6 +28,7 @@ import {
   fetchSuppliers,
   type Supplier,
   type SupplierCategory,
+  type SupplierStatus,
 } from "@/lib/suppliers";
 
 type LoadState =
@@ -67,6 +68,7 @@ function statusTone(
 export default function SuppliersPage() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<SupplierStatus | "">("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -90,9 +92,9 @@ export default function SuppliersPage() {
     [],
   );
 
-  const load = useCallback(async (query?: string) => {
+  const load = useCallback(async (query?: string, status?: SupplierStatus | "") => {
     setState({ kind: "loading" });
-    const res = await fetchSuppliers(query);
+    const res = await fetchSuppliers(query, status);
     if (!res.ok) {
       if (res.status === 403) {
         setState({ kind: "forbidden", message: res.message });
@@ -105,8 +107,8 @@ export default function SuppliersPage() {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void load(q, statusFilter);
+  }, [load, statusFilter]);
 
   function openCreate() {
     setForm(emptyForm());
@@ -149,7 +151,7 @@ export default function SuppliersPage() {
         return;
       }
       setDrawerOpen(false);
-      await load(q);
+      await load(q, statusFilter);
     } finally {
       setBusy(false);
     }
@@ -160,7 +162,7 @@ export default function SuppliersPage() {
       <AScreenHeader
         kicker="Fournisseurs"
         title="Master fournisseurs"
-        description="Catégorie, délai, MOQ · pas de commandes ni prix (D250)."
+        description="Master Soft Glass · hub AP 360 · pas de commandes ni prix."
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             {LAYOUT_ACTIONS.newSupplier}
@@ -176,16 +178,38 @@ export default function SuppliersPage() {
               placeholder="Code ou raison sociale…"
               aria-label="Recherche"
               onKeyDown={(e) => {
-                if (e.key === "Enter") void load(q);
+                if (e.key === "Enter") void load(q, statusFilter);
               }}
             />
+          }
+          filters={
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["", "Tous"],
+                  ["ACTIVE", "Actifs"],
+                  ["ON_HOLD", "Hold"],
+                  ["BLOCKED", "Bloqués"],
+                ] as const
+              ).map(([value, label]) => (
+                <AButton
+                  key={label}
+                  type="button"
+                  size="sm"
+                  variant={statusFilter === value ? "primary" : "ghost"}
+                  onClick={() => setStatusFilter(value)}
+                >
+                  {label}
+                </AButton>
+              ))}
+            </div>
           }
           utilities={
             <AButton
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() => void load(q)}
+              onClick={() => void load(q, statusFilter)}
             >
               Filtrer
             </AButton>

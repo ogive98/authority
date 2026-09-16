@@ -73,9 +73,11 @@ async function parseFail(res: Response): Promise<ApiFail> {
 
 export async function fetchSuppliers(
   q?: string,
+  status?: SupplierStatus | "",
 ): Promise<{ ok: true; data: { items: Supplier[] } } | ApiFail> {
   const sp = new URLSearchParams();
   if (q?.trim()) sp.set("q", q.trim());
+  if (status) sp.set("status", status);
   const qs = sp.toString();
   const res = await fetch(`/api/v1/suppliers${qs ? `?${qs}` : ""}`, {
     credentials: "include",
@@ -184,4 +186,81 @@ export async function addSupplierContact(
   });
   if (!res.ok) return parseFail(res);
   return { ok: true, data: (await res.json()) as SupplierContact };
+}
+
+export type SupplierSummary = {
+  supplier: Supplier;
+  counts: {
+    contacts: number;
+    draftBills: number;
+    postedBills: number;
+    payments: number;
+  };
+  ap: { openTotal: string; paidTotal: string; currency: string };
+  actionRequired: Array<{
+    id: string;
+    severity: string;
+    code: string;
+    label: string;
+    href?: string;
+  }>;
+  recent: {
+    bills: Array<{
+      id: string;
+      number: string;
+      status: string;
+      amountTotal: string;
+      billDate: string;
+      createdAt: string;
+    }>;
+    payments: Array<{
+      id: string;
+      number: string;
+      status: string;
+      amount: string;
+      paymentDate: string | null;
+      createdAt: string;
+      apBillId: string | null;
+    }>;
+  };
+};
+
+export type SupplierTimelineItem = {
+  id: string;
+  kind: "ap_bill" | "ap_payment";
+  at: string;
+  title: string;
+  subtitle: string | null;
+  status: string;
+  href: string;
+  amount: string | null;
+};
+
+export async function fetchSupplierSummary(
+  id: string,
+): Promise<{ ok: true; data: SupplierSummary } | ApiFail> {
+  const res = await fetch(`/api/v1/suppliers/${id}/summary`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!res.ok) return parseFail(res);
+  return { ok: true, data: (await res.json()) as SupplierSummary };
+}
+
+export async function fetchSupplierTimeline(
+  id: string,
+  opts?: { limit?: number },
+): Promise<{ ok: true; data: { items: SupplierTimelineItem[] } } | ApiFail> {
+  const sp = new URLSearchParams();
+  if (opts?.limit) sp.set("limit", String(opts.limit));
+  const qs = sp.toString();
+  const res = await fetch(
+    `/api/v1/suppliers/${id}/timeline${qs ? `?${qs}` : ""}`,
+    { credentials: "include", cache: "no-store" },
+  );
+  if (!res.ok) return parseFail(res);
+  return {
+    ok: true,
+    data: (await res.json()) as { items: SupplierTimelineItem[] },
+  };
 }

@@ -31,6 +31,7 @@ assert.ok(
   coverage.enriched >= 12,
   `expected progressive enrichments, got ${coverage.enriched}`,
 );
+assert.ok(getFeatureMetadata("nav-suppliers"), "nav-suppliers enrichment");
 
 const overlays = enrichmentsFromForgeMetadataBridge([
   {

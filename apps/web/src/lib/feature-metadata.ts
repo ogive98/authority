@@ -199,6 +199,19 @@ export const FEATURE_METADATA_ENRICHMENTS: Record<
     },
     ai: { discoverable: true, executable: false },
   },
+  "nav-suppliers": {
+    module: "suppliers",
+    entity: "supplier",
+    tags: ["suppliers", "ap", "vendor"],
+    icon: "suppliers.nav",
+    aliases: ["fournisseurs", "vendor", "fornitori", "achats"],
+    relatedEntities: ["ap_bill", "ap_payment"],
+    description: {
+      fr: "Master fournisseurs · hub AP 360",
+      it: "Anagrafica fornitori · hub AP 360",
+    },
+    ai: { discoverable: true, executable: true },
+  },
   "nav-settings": {
     tags: ["settings", "prefs"],
     icon: "settings.nav",
