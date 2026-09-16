@@ -1479,6 +1479,8 @@ export type FinApPayment = {
   notes: string | null;
   apBillId: string | null;
   apBillNumber: string | null;
+  /** D283 — TaxWithholding when RAS applied on disbursement. */
+  taxWithholdingId?: string | null;
   version: number;
   matched: boolean;
   createdAt: string;

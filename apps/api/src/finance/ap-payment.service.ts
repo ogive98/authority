@@ -8,6 +8,7 @@ import {
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
+import { RasEngineService } from '../tax/ras-engine.service';
 import {
   FINANCE_ERROR_CODES,
   FINANCE_EVENT_TYPES,
@@ -35,6 +36,8 @@ export type ApPaymentDto = {
   notes: string | null;
   apBillId: string | null;
   apBillNumber: string | null;
+  /** D283 — TaxWithholding created when RAS applied. */
+  taxWithholdingId: string | null;
   version: number;
   matched: boolean;
   createdAt: string;
@@ -47,6 +50,7 @@ export class ApPaymentService {
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly expertise: ExpertiseResolverService,
+    private readonly ras: RasEngineService,
   ) {}
 
   async list(
@@ -83,7 +87,15 @@ export class ApPaymentService {
       orderBy: [{ paymentDate: 'desc' }, { createdAt: 'desc' }],
       take: limit,
     });
-    return { items: rows.map(serializeApPayment) };
+    const withholdingByPayment = await this.mapWithholdingIds(
+      companyId,
+      rows.map((r) => r.id),
+    );
+    return {
+      items: rows.map((r) =>
+        serializeApPayment(r, withholdingByPayment.get(r.id) ?? null),
+      ),
+    };
   }
 
   async create(
@@ -94,6 +106,7 @@ export class ApPaymentService {
     const gross = round3(dto.amount);
 
     let apBillId: string | null = null;
+    let supplierId: string | null = null;
     let vendorName = dto.vendorName?.trim() ?? '';
 
     if (dto.apBillId) {
@@ -115,6 +128,7 @@ export class ApPaymentService {
         );
       }
       apBillId = bill.id;
+      supplierId = bill.supplierId ?? null;
       if (!vendorName) vendorName = bill.vendorName;
     }
 
@@ -156,52 +170,96 @@ export class ApPaymentService {
       : paymentDate;
     const currency = (dto.currency?.trim() || 'TND').toUpperCase();
 
-    const row = await this.prisma.$transaction(async (tx) => {
-      const payment = await tx.finApPayment.create({
-        data: {
+    const { payment, withholdingId } = await this.prisma.$transaction(
+      async (tx) => {
+        const created = await tx.finApPayment.create({
+          data: {
+            companyId,
+            number,
+            vendorName,
+            amount: net,
+            amountRas,
+            rasRateBps,
+            rasApplied,
+            currency,
+            method: dto.method,
+            status: FinPaymentStatus.POSTED,
+            paymentDate,
+            accountingDate,
+            reference: dto.reference?.trim() || null,
+            notes: dto.notes?.trim() || null,
+            apBillId,
+          },
+          include: {
+            bankMatches: { select: { id: true } },
+            apBill: { select: { number: true } },
+          },
+        });
+        await this.outbox.enqueue(tx, {
           companyId,
-          number,
-          vendorName,
-          amount: net,
-          amountRas,
-          rasRateBps,
-          rasApplied,
-          currency,
-          method: dto.method,
-          status: FinPaymentStatus.POSTED,
-          paymentDate,
-          accountingDate,
-          reference: dto.reference?.trim() || null,
-          notes: dto.notes?.trim() || null,
-          apBillId,
-        },
-        include: {
-          bankMatches: { select: { id: true } },
-          apBill: { select: { number: true } },
-        },
-      });
-      await this.outbox.enqueue(tx, {
-        companyId,
-        eventType: FINANCE_EVENT_TYPES.AP_PAYMENT_POSTED,
-        aggregateType: 'fin_ap_payment',
-        aggregateId: payment.id,
-        payloadJson: {
-          apPaymentId: payment.id,
-          number,
-          vendorName,
-          amount: net.toFixed(3),
-          amountRas: amountRas.toFixed(3),
-          rasApplied,
-          rasRateBps,
-          currency,
-          paymentDate: paymentDate.toISOString().slice(0, 10),
-          apBillId,
-        },
-      });
-      return payment;
-    });
+          eventType: FINANCE_EVENT_TYPES.AP_PAYMENT_POSTED,
+          aggregateType: 'fin_ap_payment',
+          aggregateId: created.id,
+          payloadJson: {
+            apPaymentId: created.id,
+            number,
+            vendorName,
+            amount: net.toFixed(3),
+            amountRas: amountRas.toFixed(3),
+            rasApplied,
+            rasRateBps,
+            currency,
+            paymentDate: paymentDate.toISOString().slice(0, 10),
+            apBillId,
+          },
+        });
 
-    return serializeApPayment(row);
+        let whId: string | null = null;
+        if (rasApplied && amountRas > 0) {
+          const wh = await this.ras.createFromApPayment(
+            companyId,
+            {
+              apPaymentId: created.id,
+              apBillId,
+              supplierId,
+              vendorName,
+              baseAmount: gross,
+              withholdingAmount: amountRas,
+              rateBps: rasRateBps,
+              netPayable: net,
+              currency,
+              paymentDate,
+            },
+            tx,
+          );
+          whId = wh.id;
+        }
+
+        return { payment: created, withholdingId: whId };
+      },
+    );
+
+    return serializeApPayment(payment, withholdingId);
+  }
+
+  private async mapWithholdingIds(
+    companyId: string,
+    paymentIds: string[],
+  ): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    if (paymentIds.length === 0) return map;
+    const rows = await this.prisma.taxWithholding.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        apPaymentId: { in: paymentIds },
+      },
+      select: { id: true, apPaymentId: true },
+    });
+    for (const r of rows) {
+      if (r.apPaymentId) map.set(r.apPaymentId, r.id);
+    }
+    return map;
   }
 
   private async nextNumber(companyId: string): Promise<string> {
@@ -224,29 +282,32 @@ export function assertPositiveApAmount(amount: number): void {
   }
 }
 
-function serializeApPayment(row: {
-  id: string;
-  companyId: string;
-  number: string;
-  vendorName: string;
-  amount: Prisma.Decimal;
-  amountRas?: Prisma.Decimal | number | null;
-  rasRateBps?: number | null;
-  rasApplied?: boolean | null;
-  currency: string;
-  method: FinPaymentMethod;
-  status: FinPaymentStatus;
-  paymentDate: Date;
-  accountingDate: Date;
-  reference: string | null;
-  notes: string | null;
-  apBillId: string | null;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-  bankMatches: { id: string }[];
-  apBill: { number: string } | null;
-}): ApPaymentDto {
+function serializeApPayment(
+  row: {
+    id: string;
+    companyId: string;
+    number: string;
+    vendorName: string;
+    amount: Prisma.Decimal;
+    amountRas?: Prisma.Decimal | number | null;
+    rasRateBps?: number | null;
+    rasApplied?: boolean | null;
+    currency: string;
+    method: FinPaymentMethod;
+    status: FinPaymentStatus;
+    paymentDate: Date;
+    accountingDate: Date;
+    reference: string | null;
+    notes: string | null;
+    apBillId: string | null;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+    bankMatches: { id: string }[];
+    apBill: { number: string } | null;
+  },
+  taxWithholdingId: string | null,
+): ApPaymentDto {
   const net = Number(row.amount);
   const ras = Number(row.amountRas ?? 0);
   return {
@@ -268,6 +329,7 @@ function serializeApPayment(row: {
     notes: row.notes,
     apBillId: row.apBillId,
     apBillNumber: row.apBill?.number ?? null,
+    taxWithholdingId,
     version: row.version,
     matched: row.bankMatches.length > 0,
     createdAt: row.createdAt.toISOString(),

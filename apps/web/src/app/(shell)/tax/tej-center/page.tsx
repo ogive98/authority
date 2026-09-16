@@ -161,7 +161,7 @@ export default function TejCenterPage() {
         }
         kicker="Fiscalité"
         title="TEJ Center"
-        description="Hub Soft Glass RAS → TEJ — détection / calcul / validation. Transmission DISABLED. XML officiel reporté (XSD)."
+        description="Hub Soft Glass RAS → TEJ — détection / calcul / validation. Décaissement AP avec RAS crée une retenue auto (D283). Transmission DISABLED."
         primary={
           <AButton
             type="button"
@@ -325,6 +325,7 @@ export default function TejCenterPage() {
                       <div className="text-[length:var(--a-text-xs)] text-a-muted">
                         {row.periodLabel ?? "—"}
                         {row.isStubRate ? " · stub" : ""}
+                        {row.apPaymentId ? " · AP" : ""}
                       </div>
                     </td>
                     <td className="px-3 py-2">

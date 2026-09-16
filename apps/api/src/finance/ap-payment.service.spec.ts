@@ -23,7 +23,7 @@ describe('assertPositiveApAmount', () => {
   });
 });
 
-describe('ApPaymentService RAS auto (D264)', () => {
+describe('ApPaymentService RAS auto (D264/D283)', () => {
   const companyId = '11111111-1111-1111-1111-111111111111';
   const billId = '22222222-2222-2222-2222-222222222222';
 
@@ -61,6 +61,7 @@ describe('ApPaymentService RAS auto (D264)', () => {
           id: billId,
           vendorName: 'Fournisseur',
           status: 'POSTED',
+          supplierId: null,
         }),
       },
       finApPayment: {
@@ -73,6 +74,9 @@ describe('ApPaymentService RAS auto (D264)', () => {
           return Promise.resolve(created);
         }),
       },
+      taxWithholding: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
         fn(prisma),
       ),
@@ -83,16 +87,20 @@ describe('ApPaymentService RAS auto (D264)', () => {
         opts?.ras ?? { applied: true, amount: 50, rateBps: 500, ras: {} },
       ),
     };
+    const ras = {
+      createFromApPayment: jest.fn().mockResolvedValue({ id: 'wh-1' }),
+    };
     const service = new ApPaymentService(
       prisma as never,
       outbox as never,
       expertise as never,
+      ras as never,
     );
-    return { service, prisma, expertise, created, outbox };
+    return { service, prisma, expertise, created, outbox, ras };
   }
 
   it('deducts RAS when Prefs VALIDATED (net stored in amount)', async () => {
-    const { service, prisma, expertise, created, outbox } = build();
+    const { service, prisma, expertise, created, outbox, ras } = build();
     const dto = await service.create(companyId, {
       apBillId: billId,
       amount: 1000,
@@ -114,7 +122,18 @@ describe('ApPaymentService RAS auto (D264)', () => {
     expect(dto.amountRas).toBe('50.000');
     expect(dto.amountGross).toBe('1000.000');
     expect(dto.rasApplied).toBe(true);
+    expect(dto.taxWithholdingId).toBe('wh-1');
     expect(created.amount).toBe(950);
+    expect(ras.createFromApPayment).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        apPaymentId: 'pay-1',
+        baseAmount: 1000,
+        withholdingAmount: 50,
+        netPayable: 950,
+      }),
+      prisma,
+    );
     expect(outbox.enqueue).toHaveBeenCalledWith(
       prisma,
       expect.objectContaining({
@@ -128,7 +147,7 @@ describe('ApPaymentService RAS auto (D264)', () => {
   });
 
   it('skips RAS when applyRas=false', async () => {
-    const { service, prisma, expertise } = build();
+    const { service, prisma, expertise, ras } = build();
     await service.create(companyId, {
       apBillId: billId,
       amount: 1000,
@@ -137,6 +156,7 @@ describe('ApPaymentService RAS auto (D264)', () => {
       applyRas: false,
     });
     expect(expertise.previewRas).not.toHaveBeenCalled();
+    expect(ras.createFromApPayment).not.toHaveBeenCalled();
     expect(prisma.finApPayment.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -149,7 +169,7 @@ describe('ApPaymentService RAS auto (D264)', () => {
   });
 
   it('does not invent RAS when Prefs PENDING', async () => {
-    const { service, prisma, expertise } = build({
+    const { service, prisma, expertise, ras } = build({
       ras: { applied: false, amount: 0, rateBps: null },
     });
     await service.create(companyId, {
@@ -159,6 +179,7 @@ describe('ApPaymentService RAS auto (D264)', () => {
       paymentDate: '2026-09-15',
     });
     expect(expertise.previewRas).toHaveBeenCalled();
+    expect(ras.createFromApPayment).not.toHaveBeenCalled();
     expect(prisma.finApPayment.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

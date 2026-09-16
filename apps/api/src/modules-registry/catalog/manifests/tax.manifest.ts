@@ -75,6 +75,7 @@ export const taxManifest: ModuleManifest = {
     'tax.tej.local_generated.v1',
     'tax.withholding.created.v1',
     'tax.withholding.validated.v1',
+    'tax.withholding.from_ap.v1',
   ],
   navigationEntries: [
     { id: 'tax-catalog', label: 'Fiscalité / TVA', href: '/tax' },

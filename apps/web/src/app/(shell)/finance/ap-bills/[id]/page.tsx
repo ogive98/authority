@@ -57,6 +57,7 @@ export default function FinanceApBillFichePage() {
   const [payOpen, setPayOpen] = useState(false);
   const [payForm, setPayForm] = useState<PayForm | null>(null);
   const [payError, setPayError] = useState<string | null>(null);
+  const [paySuccess, setPaySuccess] = useState<string | null>(null);
   const [rasHint, setRasHint] = useState<string | null>(null);
   const [rasPreviewAmount, setRasPreviewAmount] = useState<number | null>(null);
 
@@ -163,6 +164,7 @@ export default function FinanceApBillFichePage() {
     }
     setBusy(true);
     setPayError(null);
+    setPaySuccess(null);
     const res = await createApPayment({
       apBillId: id,
       amount,
@@ -178,6 +180,13 @@ export default function FinanceApBillFichePage() {
     }
     setPayOpen(false);
     setPayForm(null);
+    if (res.data.rasApplied && res.data.taxWithholdingId) {
+      setPaySuccess(
+        `RAS ${res.data.amountRas ?? "—"} TND — retenue créée dans TEJ Center (à valider).`,
+      );
+    } else if (res.data.rasApplied) {
+      setPaySuccess(`RAS ${res.data.amountRas ?? "—"} TND déduite sur le décaissement.`);
+    }
     await load();
   }
 
@@ -255,6 +264,17 @@ export default function FinanceApBillFichePage() {
 
       <APageBody>
         <ExpertiseHintsStrip keys={["tax.ras", "tax.tej"]} />
+        {paySuccess ? (
+          <p className="mb-3 text-[length:var(--a-text-sm)] text-a-fg">
+            {paySuccess}{" "}
+            <Link
+              href="/tax/tej-center"
+              className="text-a-accent hover:underline"
+            >
+              Ouvrir TEJ Center
+            </Link>
+          </p>
+        ) : null}
         {actionError ? (
           <p className="text-[length:var(--a-text-sm)] text-a-danger">
             {actionError}

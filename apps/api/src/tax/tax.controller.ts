@@ -152,6 +152,7 @@ export class TaxController {
     @CurrentTenancy() tenancy: TenancyContext,
     @Query('status') status?: string,
     @Query('periodLabel') periodLabel?: string,
+    @Query('apPaymentId') apPaymentId?: string,
   ) {
     const st =
       status &&
@@ -160,7 +161,11 @@ export class TaxController {
       )
         ? (status as TaxWithholdingStatus)
         : undefined;
-    return this.ras.list(tenancy.companyId, { status: st, periodLabel });
+    return this.ras.list(tenancy.companyId, {
+      status: st,
+      periodLabel,
+      apPaymentId: apPaymentId?.trim() || undefined,
+    });
   }
 
   @Get('withholdings/:id')

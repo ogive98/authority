@@ -2647,6 +2647,7 @@ model TaxWithholding {
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, apPaymentId])
   @@index([companyId, supplierId])
+  @@unique([companyId, apPaymentId])
   @@map("tax_withholding")
 }
 

@@ -155,4 +155,83 @@ describe('RasEngineService (D282)', () => {
       code: 'TAX.INVALID_STATUS',
     });
   });
+
+  it('createFromApPayment is idempotent and marks FROM_AP_PAYMENT (D283)', async () => {
+    const expertise = {
+      getSlot: jest.fn().mockResolvedValue({
+        status: 'VALIDATED',
+        lawRef: 'LF expert',
+        notes: null,
+        rateBps: 500,
+        valueSummary: '5 %',
+      }),
+      previewRas: jest.fn(),
+    };
+    const created = {
+      id: 'wh-ap',
+      companyId,
+      status: 'CALCULATED',
+      applicable: true,
+      decisionCode: RAS_DECISION_CODES.FROM_AP_PAYMENT,
+      decisionReason: 'from ap',
+      supplierId: null,
+      apBillId: 'bill-1',
+      apPaymentId: 'pay-1',
+      vendorName: 'Nord',
+      baseAmount: { toString: () => '1000.000' },
+      rateBps: 500,
+      withholdingAmount: { toString: () => '50.000' },
+      netPayable: { toString: () => '950.000' },
+      currency: 'TND',
+      lawRef: 'LF expert',
+      periodLabel: '2026-09',
+      prefsSnapshotJson: { source: 'ap_payment' },
+      isStubRate: false,
+      version: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const taxWithholding = {
+      findFirst: jest
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(created),
+      create: jest.fn().mockResolvedValue(created),
+    };
+    const prisma = {
+      taxWithholding,
+      $transaction: jest.fn(async (fn: (tx: unknown) => unknown) =>
+        fn({ taxWithholding }),
+      ),
+    };
+    const outbox = { enqueue: jest.fn().mockResolvedValue({ id: 'o1' }) };
+    const svc = build(expertise, prisma, outbox);
+    const first = await svc.createFromApPayment(companyId, {
+      apPaymentId: 'pay-1',
+      apBillId: 'bill-1',
+      vendorName: 'Nord',
+      baseAmount: 1000,
+      withholdingAmount: 50,
+      rateBps: 500,
+      netPayable: 950,
+      currency: 'TND',
+      paymentDate: new Date('2026-09-15T12:00:00Z'),
+    });
+    expect(first.id).toBe('wh-ap');
+    expect(first.decisionCode).toBe(RAS_DECISION_CODES.FROM_AP_PAYMENT);
+    expect(taxWithholding.create).toHaveBeenCalledTimes(1);
+
+    const second = await svc.createFromApPayment(companyId, {
+      apPaymentId: 'pay-1',
+      vendorName: 'Nord',
+      baseAmount: 1000,
+      withholdingAmount: 50,
+      rateBps: 500,
+      netPayable: 950,
+      currency: 'TND',
+      paymentDate: new Date('2026-09-15T12:00:00Z'),
+    });
+    expect(second.id).toBe('wh-ap');
+    expect(taxWithholding.create).toHaveBeenCalledTimes(1);
+  });
 });

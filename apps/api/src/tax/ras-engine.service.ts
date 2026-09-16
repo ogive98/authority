@@ -17,6 +17,8 @@ export const RAS_DECISION_CODES = {
   BASE_INVALID: 'RAS.BASE_INVALID',
   APPLICABLE: 'RAS.APPLICABLE',
   NOT_APPLICABLE_ZERO: 'RAS.NOT_APPLICABLE_ZERO',
+  /** D283 — amounts taken from posted AP payment (already disbursed net). */
+  FROM_AP_PAYMENT: 'RAS.FROM_AP_PAYMENT',
 } as const;
 
 export type RasDetectInput = {
@@ -248,9 +250,116 @@ export class RasEngineService {
     return serializeWithholding(row);
   }
 
+  /**
+   * D283 — materialize a CALCULATED withholding from a posted AP payment with RAS.
+   * Idempotent on apPaymentId. Does not invent rates (amounts already applied on payment).
+   */
+  async createFromApPayment(
+    companyId: string,
+    input: {
+      apPaymentId: string;
+      apBillId?: string | null;
+      supplierId?: string | null;
+      vendorName: string;
+      baseAmount: number;
+      withholdingAmount: number;
+      rateBps: number | null;
+      netPayable: number;
+      currency: string;
+      paymentDate: Date;
+    },
+    tx?: Prisma.TransactionClient,
+  ): Promise<TaxWithholdingDto> {
+    const run = async (client: Prisma.TransactionClient) => {
+      const existing = await client.taxWithholding.findFirst({
+        where: {
+          companyId,
+          apPaymentId: input.apPaymentId,
+          deletedAt: null,
+        },
+      });
+      if (existing) return serializeWithholding(existing);
+
+      const slot = await this.expertise.getSlot(companyId, 'tax.ras');
+      const stub = isStubUntilExpert(slot?.lawRef, slot?.notes);
+      const periodLabel = `${input.paymentDate.getUTCFullYear()}-${String(input.paymentDate.getUTCMonth() + 1).padStart(2, '0')}`;
+      const prefsSnapshot: Record<string, unknown> = {
+        source: 'ap_payment',
+        apPaymentId: input.apPaymentId,
+        slotStatus: slot?.status ?? 'MISSING',
+        lawRef: slot?.lawRef ?? null,
+        rateBps: input.rateBps,
+        isStub: stub,
+      };
+      const decisionCode = stub
+        ? RAS_DECISION_CODES.PREFS_STUB
+        : RAS_DECISION_CODES.FROM_AP_PAYMENT;
+      const decisionReason = stub
+        ? `Retenue issue du décaissement AP (stub démo STUB_UNTIL_EXPERT) — validation bloquée jusqu’au remplacement Prefs. Base ${dec(input.baseAmount)} · RAS ${dec(input.withholdingAmount)} · net ${dec(input.netPayable)}.`
+        : `Retenue issue du décaissement AP POSTED. Base ${dec(input.baseAmount)} · ${input.rateBps ?? '—'} bps · RAS ${dec(input.withholdingAmount)} · net ${dec(input.netPayable)}.`;
+
+      const created = await client.taxWithholding.create({
+        data: {
+          companyId,
+          status: TaxWithholdingStatus.CALCULATED,
+          applicable: true,
+          decisionReason,
+          decisionCode,
+          supplierId: input.supplierId ?? null,
+          apBillId: input.apBillId ?? null,
+          apPaymentId: input.apPaymentId,
+          vendorName: input.vendorName.trim() || 'Vendor',
+          baseAmount: new Prisma.Decimal(dec(input.baseAmount)),
+          rateBps: input.rateBps,
+          withholdingAmount: new Prisma.Decimal(dec(input.withholdingAmount)),
+          netPayable: new Prisma.Decimal(dec(input.netPayable)),
+          currency: input.currency?.trim() || 'TND',
+          lawRef: slot?.lawRef ?? null,
+          periodLabel,
+          prefsSnapshotJson: prefsSnapshot as Prisma.InputJsonValue,
+          isStubRate: stub,
+        },
+      });
+      await this.outbox.enqueue(client, {
+        companyId,
+        aggregateType: 'tax_withholding',
+        aggregateId: created.id,
+        eventType: TAX_EVENT_TYPES.WITHHOLDING_FROM_AP,
+        payloadJson: {
+          withholdingId: created.id,
+          apPaymentId: input.apPaymentId,
+          status: created.status,
+          decisionCode: created.decisionCode,
+          isStubRate: created.isStubRate,
+        },
+      });
+      await this.outbox.enqueue(client, {
+        companyId,
+        aggregateType: 'tax_withholding',
+        aggregateId: created.id,
+        eventType: TAX_EVENT_TYPES.WITHHOLDING_CREATED,
+        payloadJson: {
+          withholdingId: created.id,
+          status: created.status,
+          decisionCode: created.decisionCode,
+          applicable: true,
+          source: 'ap_payment',
+        },
+      });
+      return serializeWithholding(created);
+    };
+
+    if (tx) return run(tx);
+    return this.prisma.$transaction((inner) => run(inner));
+  }
+
   async list(
     companyId: string,
-    opts?: { status?: TaxWithholdingStatus; periodLabel?: string },
+    opts?: {
+      status?: TaxWithholdingStatus;
+      periodLabel?: string;
+      apPaymentId?: string;
+    },
   ): Promise<{ items: TaxWithholdingDto[] }> {
     const rows = await this.prisma.taxWithholding.findMany({
       where: {
@@ -258,6 +367,7 @@ export class RasEngineService {
         deletedAt: null,
         ...(opts?.status ? { status: opts.status } : {}),
         ...(opts?.periodLabel ? { periodLabel: opts.periodLabel } : {}),
+        ...(opts?.apPaymentId ? { apPaymentId: opts.apPaymentId } : {}),
       },
       orderBy: { createdAt: 'desc' },
       take: 100,
