@@ -2637,6 +2637,10 @@ model TaxWithholding {
   periodLabel        String?               @map("period_label")
   prefsSnapshotJson  Json                  @default("{}") @map("prefs_snapshot_json")
   isStubRate         Boolean               @default(false) @map("is_stub_rate")
+  /** D284 — local RAS certificate body (not official MF form). */
+  certificateBody    String?               @map("certificate_body") @db.Text
+  certificateSha256  String?               @map("certificate_sha256")
+  certificateAt      DateTime?             @map("certificate_at") @db.Timestamptz(6)
   version            Int                   @default(0)
   createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)

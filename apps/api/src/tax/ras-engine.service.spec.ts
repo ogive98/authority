@@ -234,4 +234,89 @@ describe('RasEngineService (D282)', () => {
     expect(second.id).toBe('wh-ap');
     expect(taxWithholding.create).toHaveBeenCalledTimes(1);
   });
+
+  it('generateCertificate moves VALIDATED → CERTIFICATE_READY (D284)', async () => {
+    const expertise = {
+      getSlot: jest.fn(),
+      previewRas: jest.fn(),
+    };
+    const validated = {
+      id: 'wh-1',
+      companyId,
+      status: 'VALIDATED',
+      applicable: true,
+      decisionCode: RAS_DECISION_CODES.APPLICABLE,
+      decisionReason: 'ok',
+      supplierId: null,
+      apBillId: null,
+      apPaymentId: 'pay-1',
+      vendorName: 'Nord',
+      baseAmount: { toString: () => '1000.000' },
+      rateBps: 150,
+      withholdingAmount: { toString: () => '15.000' },
+      netPayable: { toString: () => '985.000' },
+      currency: 'TND',
+      lawRef: 'LF expert',
+      periodLabel: '2026-09',
+      prefsSnapshotJson: {},
+      isStubRate: false,
+      certificateBody: null,
+      certificateSha256: null,
+      certificateAt: null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const updated = {
+      ...validated,
+      status: 'CERTIFICATE_READY',
+      certificateBody: 'body',
+      certificateSha256: 'abc',
+      certificateAt: new Date('2026-09-16T10:00:00Z'),
+      version: 2,
+    };
+    const taxWithholding = {
+      findFirst: jest.fn().mockResolvedValue(validated),
+      update: jest.fn().mockResolvedValue(updated),
+    };
+    const prisma = {
+      taxWithholding,
+      orgCompany: {
+        findFirst: jest.fn().mockResolvedValue({ legalName: 'Demo SARL' }),
+      },
+      $transaction: jest.fn(async (fn: (tx: unknown) => unknown) =>
+        fn({ taxWithholding }),
+      ),
+    };
+    const outbox = { enqueue: jest.fn().mockResolvedValue({ id: 'o1' }) };
+    const svc = build(expertise, prisma, outbox);
+    const cert = await svc.generateCertificate(companyId, 'wh-1');
+    expect(cert.status).toBe('CERTIFICATE_READY');
+    expect(cert.body).toContain('ATTESTATION DE RETENUE');
+    expect(cert.body).toContain('AUTHORITY_LOCAL_CERTIFICATE');
+    expect(cert.body).toContain('Demo SARL');
+    expect(cert.contentSha256).toHaveLength(64);
+    expect(taxWithholding.update).toHaveBeenCalled();
+  });
+
+  it('generateCertificate rejects non-VALIDATED', async () => {
+    const expertise = { getSlot: jest.fn(), previewRas: jest.fn() };
+    const prisma = {
+      taxWithholding: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'wh-1',
+          companyId,
+          status: 'CALCULATED',
+          applicable: true,
+          rateBps: 150,
+          isStubRate: false,
+          certificateBody: null,
+        }),
+      },
+    };
+    const svc = build(expertise, prisma);
+    await expect(
+      svc.generateCertificate(companyId, 'wh-1'),
+    ).rejects.toMatchObject({ code: 'TAX.INVALID_STATUS' });
+  });
 });

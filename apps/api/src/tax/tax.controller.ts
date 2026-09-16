@@ -206,4 +206,24 @@ export class TaxController {
   ) {
     return this.ras.validate(tenancy.companyId, id);
   }
+
+  /** D284 — local RAS certificate (not official MF form). */
+  @Post('withholdings/:id/certificate')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.taxRateManage)
+  generateCertificate(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.ras.generateCertificate(tenancy.companyId, id);
+  }
+
+  @Get('withholdings/:id/certificate')
+  @RequirePermission(PERMISSION_KEYS.taxRead)
+  getCertificate(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.ras.getCertificate(tenancy.companyId, id);
+  }
 }

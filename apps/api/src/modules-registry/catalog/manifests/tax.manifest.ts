@@ -59,6 +59,7 @@ export const taxManifest: ModuleManifest = {
     'tax.withholding.detect',
     'tax.withholding.create',
     'tax.withholding.validate',
+    'tax.withholding.certificate',
   ],
   queries: [
     'tax.codes.list',
@@ -66,6 +67,7 @@ export const taxManifest: ModuleManifest = {
     'tax.tej.exports.list',
     'tax.tej.center.overview',
     'tax.withholdings.list',
+    'tax.withholding.certificate.get',
   ],
   permissions: ['tax.read', 'tax.rate.manage'],
   dependencies: ['platform', 'organization', 'master_data', 'settings'],
@@ -76,6 +78,7 @@ export const taxManifest: ModuleManifest = {
     'tax.withholding.created.v1',
     'tax.withholding.validated.v1',
     'tax.withholding.from_ap.v1',
+    'tax.withholding.certificate.v1',
   ],
   navigationEntries: [
     { id: 'tax-catalog', label: 'Fiscalité / TVA', href: '/tax' },

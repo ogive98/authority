@@ -534,6 +534,8 @@ export const UI_STRINGS_IT: Record<string, string> = {
   "Générer attestation": "Genera attestazione",
   "Générer lots": "Genera lotti",
   "TEJ — brouillon local": "TEJ — bozza locale",
+  Certificat: "Certificato",
+  Télécharger: "Scarica",
   "Ouvrir TEJ Center": "Apri TEJ Center",
   "TEJ Center": "TEJ Center",
   "Nouvelle retenue": "Nuova ritenuta",

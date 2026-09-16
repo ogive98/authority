@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   Prisma,
@@ -9,6 +10,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TAX_ERROR_CODES, TAX_EVENT_TYPES } from './tax.constants';
 import { TaxException } from './tax.exception';
 import { OutboxService } from '../audit/outbox.service';
+
+/** Explicit non-official marker — never claim MF / TEJ compliance. */
+export const RAS_CERT_SCHEMA_NOTE =
+  'AUTHORITY_LOCAL_CERTIFICATE — attestation interne AUTHORITY; pas un formulaire officiel MF; pas de transmission TEJ';
 
 export const RAS_DECISION_CODES = {
   PREFS_PENDING: 'RAS.PREFS_PENDING',
@@ -64,9 +69,21 @@ export type TaxWithholdingDto = {
   periodLabel: string | null;
   isStubRate: boolean;
   prefsSnapshot: Record<string, unknown>;
+  certificateSha256: string | null;
+  certificateAt: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type RasCertificateDto = {
+  withholdingId: string;
+  status: TaxWithholdingStatus;
+  schemaNote: string;
+  contentSha256: string;
+  generatedAt: string;
+  body: string;
+  withholding: TaxWithholdingDto;
 };
 
 function round3(n: number): number {
@@ -434,6 +451,140 @@ export class RasEngineService {
     return serializeWithholding(updated);
   }
 
+  /**
+   * D284 — generate local RAS certificate from VALIDATED row.
+   * Idempotent if already CERTIFICATE_READY with body. Never invents rates.
+   */
+  async generateCertificate(
+    companyId: string,
+    id: string,
+  ): Promise<RasCertificateDto> {
+    const row = await this.findScoped(companyId, id);
+    if (row.isStubRate) {
+      throw new TaxException(
+        TAX_ERROR_CODES.INVALID_STATUS,
+        'Cannot issue certificate while rate is STUB_UNTIL_EXPERT.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (
+      row.status === TaxWithholdingStatus.CERTIFICATE_READY &&
+      row.certificateBody &&
+      row.certificateSha256 &&
+      row.certificateAt
+    ) {
+      return {
+        withholdingId: row.id,
+        status: row.status,
+        schemaNote: RAS_CERT_SCHEMA_NOTE,
+        contentSha256: row.certificateSha256,
+        generatedAt: row.certificateAt.toISOString(),
+        body: row.certificateBody,
+        withholding: serializeWithholding(row),
+      };
+    }
+    if (row.status !== TaxWithholdingStatus.VALIDATED) {
+      throw new TaxException(
+        TAX_ERROR_CODES.INVALID_STATUS,
+        `Certificate requires VALIDATED status (got ${row.status}).`,
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (row.applicable !== true || row.rateBps == null) {
+      throw new TaxException(
+        TAX_ERROR_CODES.INVALID_STATUS,
+        'Cannot certificate a non-applicable withholding.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const company = await this.prisma.orgCompany.findFirst({
+      where: { id: companyId, deletedAt: null },
+      select: { legalName: true },
+    });
+    const withholderName = company?.legalName?.trim() || 'Société (nom Prefs)';
+    const generatedAt = new Date();
+    const body = buildLocalRasCertificate({
+      withholderName,
+      vendorName: row.vendorName,
+      baseAmount: row.baseAmount.toString(),
+      rateBps: row.rateBps,
+      withholdingAmount: row.withholdingAmount.toString(),
+      netPayable: row.netPayable?.toString() ?? null,
+      currency: row.currency,
+      lawRef: row.lawRef,
+      periodLabel: row.periodLabel,
+      apPaymentId: row.apPaymentId,
+      withholdingId: row.id,
+      generatedAt: generatedAt.toISOString(),
+    });
+    const sha = createHash('sha256').update(body, 'utf8').digest('hex');
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const next = await tx.taxWithholding.update({
+        where: { id: row.id },
+        data: {
+          status: TaxWithholdingStatus.CERTIFICATE_READY,
+          certificateBody: body,
+          certificateSha256: sha,
+          certificateAt: generatedAt,
+          version: { increment: 1 },
+        },
+      });
+      await this.outbox.enqueue(tx, {
+        companyId,
+        aggregateType: 'tax_withholding',
+        aggregateId: next.id,
+        eventType: TAX_EVENT_TYPES.WITHHOLDING_CERTIFICATE,
+        payloadJson: {
+          withholdingId: next.id,
+          from: row.status,
+          to: next.status,
+          contentSha256: sha,
+        },
+      });
+      return next;
+    });
+
+    return {
+      withholdingId: updated.id,
+      status: updated.status,
+      schemaNote: RAS_CERT_SCHEMA_NOTE,
+      contentSha256: sha,
+      generatedAt: generatedAt.toISOString(),
+      body,
+      withholding: serializeWithholding(updated),
+    };
+  }
+
+  async getCertificate(
+    companyId: string,
+    id: string,
+  ): Promise<RasCertificateDto> {
+    const row = await this.findScoped(companyId, id);
+    if (
+      row.status !== TaxWithholdingStatus.CERTIFICATE_READY ||
+      !row.certificateBody ||
+      !row.certificateSha256 ||
+      !row.certificateAt
+    ) {
+      throw new TaxException(
+        TAX_ERROR_CODES.INVALID_STATUS,
+        'Certificate not generated yet — POST …/certificate first.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    return {
+      withholdingId: row.id,
+      status: row.status,
+      schemaNote: RAS_CERT_SCHEMA_NOTE,
+      contentSha256: row.certificateSha256,
+      generatedAt: row.certificateAt.toISOString(),
+      body: row.certificateBody,
+      withholding: serializeWithholding(row),
+    };
+  }
+
   private async findScoped(companyId: string, id: string) {
     const row = await this.prisma.taxWithholding.findFirst({
       where: { id, companyId, deletedAt: null },
@@ -469,6 +620,9 @@ function serializeWithholding(row: {
   periodLabel: string | null;
   prefsSnapshotJson: unknown;
   isStubRate: boolean;
+  certificateSha256?: string | null;
+  certificateAt?: Date | null;
+  certificateBody?: string | null;
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -493,8 +647,54 @@ function serializeWithholding(row: {
     periodLabel: row.periodLabel,
     isStubRate: row.isStubRate,
     prefsSnapshot: (row.prefsSnapshotJson ?? {}) as Record<string, unknown>,
+    certificateSha256: row.certificateSha256 ?? null,
+    certificateAt: row.certificateAt?.toISOString() ?? null,
     version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+function buildLocalRasCertificate(input: {
+  withholderName: string;
+  vendorName: string;
+  baseAmount: string;
+  rateBps: number;
+  withholdingAmount: string;
+  netPayable: string | null;
+  currency: string;
+  lawRef: string | null;
+  periodLabel: string | null;
+  apPaymentId: string | null;
+  withholdingId: string;
+  generatedAt: string;
+}): string {
+  const ratePct = (input.rateBps / 100).toFixed(2);
+  const lines = [
+    '════════════════════════════════════════════════════════════',
+    '  ATTESTATION DE RETENUE À LA SOURCE — BROUILLON AUTHORITY',
+    '════════════════════════════════════════════════════════════',
+    '',
+    RAS_CERT_SCHEMA_NOTE,
+    '',
+    `Émetteur (reteneur) : ${input.withholderName}`,
+    `Bénéficiaire        : ${input.vendorName}`,
+    `Période             : ${input.periodLabel ?? '—'}`,
+    `Réf. retenue        : ${input.withholdingId}`,
+    input.apPaymentId ? `Réf. décaissement AP : ${input.apPaymentId}` : null,
+    '',
+    `Base imposable      : ${input.baseAmount} ${input.currency}`,
+    `Taux (Prefs)        : ${ratePct} % (${input.rateBps} bps)`,
+    `Montant RAS         : ${input.withholdingAmount} ${input.currency}`,
+    `Net versé           : ${input.netPayable ?? '—'} ${input.currency}`,
+    `Réf. légale Prefs   : ${input.lawRef ?? '—'}`,
+    '',
+    `Généré le           : ${input.generatedAt}`,
+    '',
+    'Ce document est une attestation interne AUTHORITY destinée',
+    'au suivi opérationnel. Il ne remplace pas un formulaire',
+    'officiel du ministère des Finances et n’est pas transmis à TEJ.',
+    '════════════════════════════════════════════════════════════',
+  ].filter((l) => l != null);
+  return lines.join('\n');
 }

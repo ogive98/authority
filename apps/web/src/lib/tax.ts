@@ -201,6 +201,8 @@ export type TaxWithholding = {
   periodLabel: string | null;
   isStubRate: boolean;
   prefsSnapshot: Record<string, unknown>;
+  certificateSha256?: string | null;
+  certificateAt?: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -359,3 +361,55 @@ export const WH_STATUS_LABELS: Record<TaxWithholdingStatus, string> = {
   REJECTED: "Rejetée",
   ARCHIVED: "Archivée",
 };
+
+export type RasCertificate = {
+  withholdingId: string;
+  status: TaxWithholdingStatus;
+  schemaNote: string;
+  contentSha256: string;
+  generatedAt: string;
+  body: string;
+  withholding: TaxWithholding;
+};
+
+export async function generateRasCertificate(
+  id: string,
+): Promise<{ ok: true; data: RasCertificate } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/tax/withholdings/${id}/certificate`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as RasCertificate };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function fetchRasCertificate(
+  id: string,
+): Promise<{ ok: true; data: RasCertificate } | ApiFail> {
+  try {
+    const res = await fetch(`/api/v1/tax/withholdings/${id}/certificate`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as RasCertificate };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export function downloadRasCertificate(cert: RasCertificate): void {
+  const blob = new Blob([cert.body], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ras-certificat-${cert.withholdingId.slice(0, 8)}-${cert.contentSha256.slice(0, 8)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

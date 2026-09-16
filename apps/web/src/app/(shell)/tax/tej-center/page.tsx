@@ -21,8 +21,10 @@ import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
   createTaxWithholding,
   detectRas,
+  downloadRasCertificate,
   fetchTaxWithholdings,
   fetchTejCenterOverview,
+  generateRasCertificate,
   validateTaxWithholding,
   WH_STATUS_LABELS,
   type RasDetectResult,
@@ -43,7 +45,8 @@ type Load =
 
 function statusTone(
   status: TaxWithholding["status"],
-): "success" | "warning" | "neutral" | "danger" {
+): "success" | "warning" | "neutral" | "danger" | "accent" {
+  if (status === "CERTIFICATE_READY") return "accent";
   if (status === "VALIDATED" || status === "ACCEPTED") return "success";
   if (status === "REJECTED") return "danger";
   if (status === "CALCULATED" || status === "DETECTED") return "warning";
@@ -148,6 +151,17 @@ export default function TejCenterPage() {
     await load();
   }
 
+  async function onCertificate(id: string) {
+    setActionError(null);
+    const res = await generateRasCertificate(id);
+    if (!res.ok) {
+      setActionError(res.message);
+      return;
+    }
+    downloadRasCertificate(res.data);
+    await load();
+  }
+
   const overview = state.kind === "ok" ? state.overview : null;
   const items = state.kind === "ok" ? state.items : [];
 
@@ -161,7 +175,7 @@ export default function TejCenterPage() {
         }
         kicker="Fiscalité"
         title="TEJ Center"
-        description="Hub Soft Glass RAS → TEJ — détection / calcul / validation. Décaissement AP avec RAS crée une retenue auto (D283). Transmission DISABLED."
+        description="Hub Soft Glass RAS → TEJ — validation · certificat local (D284) · transmission DISABLED."
         primary={
           <AButton
             type="button"
@@ -346,24 +360,50 @@ export default function TejCenterPage() {
                       {row.decisionCode}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      {(row.status === "CALCULATED" ||
-                        row.status === "DETECTED") &&
-                      row.applicable === true &&
-                      !row.isStubRate ? (
-                        <AButton
-                          type="button"
-                          size="sm"
-                          onClick={() => void onValidate(row.id)}
-                        >
-                          Valider
-                        </AButton>
-                      ) : row.isStubRate && row.applicable === true ? (
-                        <span className="text-[length:var(--a-text-xs)] text-a-warning">
-                          Stub — Prefs
-                        </span>
-                      ) : (
-                        <span className="text-a-muted">—</span>
-                      )}
+                      <div className="flex flex-wrap justify-end gap-1">
+                        {(row.status === "CALCULATED" ||
+                          row.status === "DETECTED") &&
+                        row.applicable === true &&
+                        !row.isStubRate ? (
+                          <AButton
+                            type="button"
+                            size="sm"
+                            onClick={() => void onValidate(row.id)}
+                          >
+                            Valider
+                          </AButton>
+                        ) : null}
+                        {row.status === "VALIDATED" ? (
+                          <AButton
+                            type="button"
+                            size="sm"
+                            onClick={() => void onCertificate(row.id)}
+                          >
+                            Certificat
+                          </AButton>
+                        ) : null}
+                        {row.status === "CERTIFICATE_READY" ? (
+                          <AButton
+                            type="button"
+                            size="sm"
+                            onClick={() => void onCertificate(row.id)}
+                          >
+                            Télécharger
+                          </AButton>
+                        ) : null}
+                        {row.isStubRate && row.applicable === true ? (
+                          <span className="text-[length:var(--a-text-xs)] text-a-warning">
+                            Stub — Prefs
+                          </span>
+                        ) : null}
+                        {!row.isStubRate &&
+                        row.status !== "CALCULATED" &&
+                        row.status !== "DETECTED" &&
+                        row.status !== "VALIDATED" &&
+                        row.status !== "CERTIFICATE_READY" ? (
+                          <span className="text-a-muted">—</span>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}

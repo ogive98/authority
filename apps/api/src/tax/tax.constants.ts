@@ -22,6 +22,8 @@ export const TAX_EVENT_TYPES = {
   WITHHOLDING_VALIDATED: 'tax.withholding.validated.v1',
   /** D283 — withholding auto-created from AP disbursement. */
   WITHHOLDING_FROM_AP: 'tax.withholding.from_ap.v1',
+  /** D284 — local RAS certificate generated (not official MF). */
+  WITHHOLDING_CERTIFICATE: 'tax.withholding.certificate.v1',
 } as const;
 
 export const TAX_LAW_REF_TN =
