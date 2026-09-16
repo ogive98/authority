@@ -5,10 +5,24 @@ export const SETTINGS_ERROR_CODES = {
   FORBIDDEN_LEVEL: 'SET.FORBIDDEN_LEVEL',
   EXPERTISE_READONLY: 'SET.EXPERTISE_READONLY',
   EXPERTISE_REQUIRED: 'SET.EXPERTISE_REQUIRED',
+  EXPERTISE_STUB_MARKER: 'SET.EXPERTISE_STUB_MARKER',
 } as const;
 
 export type SettingsErrorCode =
   (typeof SETTINGS_ERROR_CODES)[keyof typeof SETTINGS_ERROR_CODES];
+
+/** Seed / demo marker — Soft Glass must not show these as « Validé expert » (D280). */
+export const STUB_UNTIL_EXPERT_MARKER = 'STUB_UNTIL_EXPERT';
+
+export function isStubUntilExpert(
+  lawRef?: string | null,
+  notes?: string | null,
+): boolean {
+  return Boolean(
+    lawRef?.includes(STUB_UNTIL_EXPERT_MARKER) ||
+      notes?.includes(STUB_UNTIL_EXPERT_MARKER),
+  );
+}
 
 export const SETTING_LEVEL_PRIORITY: Record<SetLevel, number> = {
   SYSTEM: 0,

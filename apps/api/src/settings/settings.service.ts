@@ -25,6 +25,7 @@ import {
   SETTINGS_ERROR_CODES,
   SETTING_ENUM_VALUES,
   SETTING_LEVEL_PRIORITY,
+  isStubUntilExpert,
   type ExpertiseSlotStatus,
   type KernelSettingKey,
 } from './settings.constants';
@@ -67,12 +68,16 @@ export type ExpertiseSlotDto = {
   rateBps: number | null;
   amountMilli: number | null;
   notes: string | null;
+  /** Seed/demo stub — not a human expert validation (D280). */
+  isStub: boolean;
 };
 
 export interface ExpertiseCatalogResponse {
   companyId: string;
-  /** True when any slot still waits for expert rates (never invent). */
+  /** Slots still empty (PENDING_EXPERT). */
   pendingExpertCount: number;
+  /** VALIDATED rows still marked STUB_UNTIL_EXPERT — must be replaced. */
+  stubUntilExpertCount: number;
   items: ExpertiseSlotDto[];
 }
 
@@ -153,6 +158,7 @@ export class SettingsService {
           rateBps: null,
           amountMilli: null,
           notes: null,
+          isStub: isStubUntilExpert(vat.lawRef, null),
         };
       }
 
@@ -172,6 +178,7 @@ export class SettingsService {
           rateBps: row.rateBps,
           amountMilli: row.amountMilli,
           notes: row.notes,
+          isStub: isStubUntilExpert(row.lawRef, row.notes),
         };
       }
 
@@ -189,6 +196,7 @@ export class SettingsService {
         rateBps: null,
         amountMilli: null,
         notes: null,
+        isStub: false,
       };
     });
 
@@ -196,6 +204,7 @@ export class SettingsService {
       companyId,
       pendingExpertCount: items.filter((i) => i.status === 'PENDING_EXPERT')
         .length,
+      stubUntilExpertCount: items.filter((i) => i.isStub).length,
       items,
     };
   }
@@ -229,6 +238,15 @@ export class SettingsService {
       );
     }
 
+    const notesTrimmed = dto.notes?.trim() || null;
+    if (isStubUntilExpert(lawRef, notesTrimmed)) {
+      throw new SettingsException(
+        SETTINGS_ERROR_CODES.EXPERTISE_STUB_MARKER,
+        'Remove STUB_UNTIL_EXPERT from lawRef/notes — accountant must replace demo stubs with a real legal reference.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const expertValidatedAt = new Date(dto.expertValidatedAt);
     if (Number.isNaN(expertValidatedAt.getTime())) {
       throw new SettingsException(
@@ -243,6 +261,7 @@ export class SettingsService {
         companyId_slotKey: { companyId, slotKey },
       },
     });
+    const wasStub = isStubUntilExpert(existing?.lawRef, existing?.notes);
 
     await this.prisma.$transaction(async (tx) => {
       const saved = existing
@@ -254,7 +273,7 @@ export class SettingsService {
               expertValidatedAt,
               rateBps: dto.rateBps ?? null,
               amountMilli: dto.amountMilli ?? null,
-              notes: dto.notes?.trim() || null,
+              notes: notesTrimmed,
               deletedAt: null,
               version: { increment: 1 },
             },
@@ -268,14 +287,16 @@ export class SettingsService {
               expertValidatedAt,
               rateBps: dto.rateBps ?? null,
               amountMilli: dto.amountMilli ?? null,
-              notes: dto.notes?.trim() || null,
+              notes: notesTrimmed,
             },
           });
 
       await this.auditService.append(tx, {
         companyId,
         actorUserId,
-        action: AUDIT_ACTIONS.settingsExpertiseValidate,
+        action: wasStub
+          ? AUDIT_ACTIONS.settingsExpertiseStubReplaced
+          : AUDIT_ACTIONS.settingsExpertiseValidate,
         entityType: AUDIT_ENTITY_TYPES.setExpertise,
         entityId: saved.id,
         beforeJson: existing
@@ -283,6 +304,7 @@ export class SettingsService {
               valueLabel: existing.valueLabel,
               lawRef: existing.lawRef,
               rateBps: existing.rateBps,
+              isStub: wasStub,
             }
           : undefined,
         afterJson: {
@@ -292,6 +314,7 @@ export class SettingsService {
           rateBps: saved.rateBps,
           amountMilli: saved.amountMilli,
           expertValidatedAt: saved.expertValidatedAt.toISOString(),
+          stubReplaced: wasStub,
         } as Prisma.InputJsonValue,
         ip: meta?.ip,
         device: meta?.userAgent,

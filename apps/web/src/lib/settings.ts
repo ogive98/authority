@@ -14,11 +14,14 @@ export type ExpertiseSlot = {
   rateBps: number | null;
   amountMilli: number | null;
   notes: string | null;
+  /** Seed/demo stub — not a human expert validation (D280). */
+  isStub?: boolean;
 };
 
 export type ExpertiseCatalog = {
   companyId: string;
   pendingExpertCount: number;
+  stubUntilExpertCount?: number;
   items: ExpertiseSlot[];
 };
 

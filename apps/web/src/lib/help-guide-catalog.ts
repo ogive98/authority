@@ -1713,7 +1713,8 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Ouvrez `/settings` — compartiments Soft Glass.",
-            "Expertise : seed démo marque `STUB_UNTIL_EXPERT` (FODEC 1 %, timbre 1 TND, CNSS, TEJ local) — le comptable remplace (D272).",
+            "Expertise : seed démo = badge « Stub démo · à remplacer » (STUB_UNTIL_EXPERT) — pas « Validé expert » ; RAS/IRPP/TFP restent vides (D272/D280).",
+            "Remplacer un stub : réf. légale réelle sans STUB_UNTIL_EXPERT → Remplacer stub · audit stub_replaced.",
             "RAS reste vide jusqu’à saisie expert ; TEJ = brouillon XML local sur `/tax` (D265) — transmission toujours DISABLED.",
             "Envois : host SMTP, tester l’envoi si configuré.",
             "Modes : code unlock SPECTRE/PATCH/GHOST.",
@@ -1721,7 +1722,8 @@ export const HELP_MODULES: HelpModule[] = [
           ],
           it: [
             "Apri `/settings` — compartimenti Soft Glass.",
-            "Expertise: seed demo `STUB_UNTIL_EXPERT` (FODEC 1%, bollo 1 TND, CNSS, TEJ locale) — il commercialista sostituisce (D272).",
+            "Expertise: seed demo = badge « Stub demo · da sostituire » (STUB_UNTIL_EXPERT) — non « Validato expert »; RAS/IRPP/TFP restano vuoti (D272/D280).",
+            "Sostituire uno stub: rif. legale reale senza STUB_UNTIL_EXPERT → Sostituisci stub · audit stub_replaced.",
             "RAS resta vuoto fino a input esperto; TEJ = bozza XML locale su `/tax` (D265) — trasmissione sempre DISABLED.",
             "Invii: host SMTP, testa invio se configurato.",
             "Modalità: codice unlock SPECTRE/PATCH/GHOST.",

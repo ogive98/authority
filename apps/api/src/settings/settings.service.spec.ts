@@ -168,6 +168,7 @@ describe('SettingsService hierarchy', () => {
     const tej = catalog.items.find((i) => i.key === 'tax.tej');
     expect(fodec?.status).toBe('PENDING_EXPERT');
     expect(fodec?.valueSummary).toBeNull();
+    expect(fodec?.isStub).toBe(false);
     expect(cnss?.status).toBe('PENDING_EXPERT');
     expect(vat?.status).toBe('PENDING_EXPERT');
     expect(ras?.status).toBe('PENDING_EXPERT');
@@ -175,6 +176,32 @@ describe('SettingsService hierarchy', () => {
     expect(tej?.status).toBe('PENDING_EXPERT');
     expect(tej?.valueSummary).toBeNull();
     expect(catalog.pendingExpertCount).toBeGreaterThan(0);
+    expect(catalog.stubUntilExpertCount).toBe(0);
+  });
+
+  it('flags STUB_UNTIL_EXPERT rows as isStub (not Validé expert)', async () => {
+    prisma.setExpertise.findMany.mockResolvedValue([
+      {
+        id: 'e-stub',
+        companyId: 'company-demo',
+        slotKey: 'tax.fodec',
+        valueLabel: '1 %',
+        rateBps: 100,
+        amountMilli: null,
+        lawRef: 'STUB_UNTIL_EXPERT — remplacer par le comptable',
+        expertValidatedAt: new Date('2026-09-15T00:00:00.000Z'),
+        notes: 'STUB_UNTIL_EXPERT — valeurs opérationnelles temporaires (D272)',
+        version: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      },
+    ]);
+    const catalog = await service.listExpertise('company-demo');
+    const fodec = catalog.items.find((i) => i.key === 'tax.fodec');
+    expect(fodec?.status).toBe('VALIDATED');
+    expect(fodec?.isStub).toBe(true);
+    expect(catalog.stubUntilExpertCount).toBe(1);
   });
 
   it('marks TVA VALIDATED when Tax Engine rates exist', async () => {
@@ -238,6 +265,71 @@ describe('SettingsService hierarchy', () => {
     expect(item.valueSummary).toBe('1 %');
     expect(item.lawRef).toBe('Expert note 2026');
     expect(item.rateBps).toBe(100);
+    expect(item.isStub).toBe(false);
+  });
+
+  it('rejects upsert that keeps STUB_UNTIL_EXPERT marker', async () => {
+    await expect(
+      service.upsertExpertise(
+        'company-demo',
+        'tax.fodec',
+        {
+          valueLabel: '1 %',
+          lawRef: 'STUB_UNTIL_EXPERT — keep',
+          expertValidatedAt: '2026-09-08T00:00:00.000Z',
+          rateBps: 100,
+        },
+        'user-demo',
+      ),
+    ).rejects.toMatchObject({ code: 'SET.EXPERTISE_STUB_MARKER' });
+  });
+
+  it('audits stub_replaced when replacing a STUB_UNTIL_EXPERT row', async () => {
+    const existing = {
+      id: 'e-stub',
+      companyId: 'company-demo',
+      slotKey: 'tax.fodec',
+      valueLabel: '1 %',
+      rateBps: 100,
+      amountMilli: null,
+      lawRef: 'STUB_UNTIL_EXPERT — remplacer',
+      expertValidatedAt: new Date('2026-09-15T00:00:00.000Z'),
+      notes: 'STUB_UNTIL_EXPERT',
+      version: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
+    const saved = {
+      ...existing,
+      lawRef: 'LF 2026 art.12',
+      notes: null,
+      version: 1,
+      expertValidatedAt: new Date('2026-09-16T00:00:00.000Z'),
+    };
+    prisma.setExpertise.findUnique.mockResolvedValue(existing);
+    prisma.setExpertise.update.mockResolvedValue(saved);
+    prisma.setExpertise.findMany.mockResolvedValue([saved]);
+
+    const item = await service.upsertExpertise(
+      'company-demo',
+      'tax.fodec',
+      {
+        valueLabel: '1 %',
+        lawRef: 'LF 2026 art.12',
+        expertValidatedAt: '2026-09-16T00:00:00.000Z',
+        rateBps: 100,
+      },
+      'user-demo',
+    );
+
+    expect(item.isStub).toBe(false);
+    expect(auditService.append).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        action: AUDIT_ACTIONS.settingsExpertiseStubReplaced,
+      }),
+    );
   });
 
   it('rejects writing TVA via preferences (Tax Engine only)', async () => {

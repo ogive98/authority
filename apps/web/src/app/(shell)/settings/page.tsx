@@ -85,7 +85,12 @@ type GlMapForm = {
 
 type ExpertiseLoad =
   | { kind: "loading" }
-  | { kind: "ok"; items: ExpertiseSlot[]; pending: number }
+  | {
+      kind: "ok";
+      items: ExpertiseSlot[];
+      pending: number;
+      stubCount: number;
+    }
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
@@ -127,7 +132,9 @@ function draftFromSlot(row: ExpertiseSlot): ExpertDraft {
 
 function statusTone(
   status: ExpertiseSlot["status"],
+  isStub?: boolean,
 ): "success" | "warning" | "neutral" {
+  if (isStub) return "warning";
   switch (status) {
     case "VALIDATED":
       return "success";
@@ -138,7 +145,11 @@ function statusTone(
   }
 }
 
-function statusLabel(status: ExpertiseSlot["status"]): string {
+function statusLabel(
+  status: ExpertiseSlot["status"],
+  isStub?: boolean,
+): string {
+  if (isStub) return "Stub démo · à remplacer";
   switch (status) {
     case "VALIDATED":
       return "Validé expert";
@@ -147,6 +158,14 @@ function statusLabel(status: ExpertiseSlot["status"]): string {
     default:
       return "N/A";
   }
+}
+
+function slotIsStub(row: ExpertiseSlot): boolean {
+  if (typeof row.isStub === "boolean") return row.isStub;
+  return Boolean(
+    row.notes?.includes("STUB_UNTIL_EXPERT") ||
+      row.lawRef?.includes("STUB_UNTIL_EXPERT"),
+  );
 }
 
 function parseHashCompartment(hash: string): PrefsCompartmentId | null {
@@ -416,6 +435,9 @@ export default function SettingsPage() {
       kind: "ok",
       items: res.data.items,
       pending: res.data.pendingExpertCount,
+      stubCount:
+        res.data.stubUntilExpertCount ??
+        res.data.items.filter((i) => slotIsStub(i)).length,
     });
 
     const bracketsRes = await fetchIrppBrackets();
@@ -1563,13 +1585,24 @@ export default function SettingsPage() {
               <section className="space-y-5">
                 <p className="max-w-2xl text-[length:var(--a-text-sm)] text-a-fg-muted">
                   Formulaire expert — champs{" "}
-                  <span className="font-medium text-a-fg">vides par défaut</span>.
-                  Fiscalité : FODEC, timbre, RAS, TEJ (+ lien TVA). RH : CNSS,
-                  IRPP, abattements, TFP, FOPROLOS. Aucun taux n’est inventé ni
-                  seedé. Saisie humaine uniquement ici ; les modules ne
-                  consomment qu’après « Valider ». TEJ = params locaux — pas de
-                  transmission API.
+                  <span className="font-medium text-a-fg">vides par défaut</span>{" "}
+                  (RAS, IRPP, TFP… restent vides jusqu’à saisie). Seed démo
+                  FODEC / timbre / CNSS / TEJ local ={" "}
+                  <span className="font-medium text-a-fg">
+                    Stub démo · à remplacer
+                  </span>{" "}
+                  (marqueur <span className="a-mono">STUB_UNTIL_EXPERT</span>) —
+                  ce n’est pas une validation comptable. Remplacez la référence
+                  légale (sans ce marqueur) pour « Valider expert ». TVA via
+                  moteur fiscal. TEJ = params locaux — pas de transmission API.
                 </p>
+                {expertise.kind === "ok" &&
+                (expertise.stubCount ?? 0) > 0 ? (
+                  <p className="max-w-2xl rounded-[var(--a-radius-md)] bg-a-warning-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-warning-fg">
+                    {expertise.stubCount} slot(s) stub démo à remplacer par le
+                    comptable — badge warning, pas « Validé expert ».
+                  </p>
+                ) : null}
                 {expertise.kind === "loading" ? (
                   <ASkeleton className="h-48 w-full max-w-3xl" />
                 ) : null}
@@ -1632,8 +1665,16 @@ export default function SettingsPage() {
                                   <h3 className="text-[length:var(--a-text-md)] font-medium">
                                     {row.label}
                                   </h3>
-                                  <ABadge tone={statusTone(row.status)}>
-                                    {statusLabel(row.status)}
+                                  <ABadge
+                                    tone={statusTone(
+                                      row.status,
+                                      slotIsStub(row),
+                                    )}
+                                  >
+                                    {statusLabel(
+                                      row.status,
+                                      slotIsStub(row),
+                                    )}
                                   </ABadge>
                                 </div>
                                 <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -1663,10 +1704,13 @@ export default function SettingsPage() {
 
                       const draft = drafts[row.key] ?? emptyDraft();
                       const err = formErrors[row.key];
+                      const stub = slotIsStub(row);
                       const canSubmit =
                         Boolean(draft.valueLabel.trim()) &&
                         Boolean(draft.lawRef.trim()) &&
-                        Boolean(draft.expertValidatedAt);
+                        Boolean(draft.expertValidatedAt) &&
+                        !draft.lawRef.includes("STUB_UNTIL_EXPERT") &&
+                        !draft.notes.includes("STUB_UNTIL_EXPERT");
 
                       return (
                         <div
@@ -1679,8 +1723,10 @@ export default function SettingsPage() {
                                 <h3 className="text-[length:var(--a-text-md)] font-medium">
                                   {row.label}
                                 </h3>
-                                <ABadge tone={statusTone(row.status)}>
-                                  {statusLabel(row.status)}
+                                <ABadge
+                                  tone={statusTone(row.status, stub)}
+                                >
+                                  {statusLabel(row.status, stub)}
                                 </ABadge>
                                 <span className="a-mono text-[length:var(--a-text-xs)] text-a-fg-muted">
                                   {row.key}
@@ -1689,6 +1735,12 @@ export default function SettingsPage() {
                               <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
                                 {row.description}
                               </p>
+                              {stub ? (
+                                <p className="mt-2 text-[length:var(--a-text-xs)] text-a-warning-fg">
+                                  Remplacez la référence légale (sans
+                                  STUB_UNTIL_EXPERT) pour valider en expert.
+                                </p>
+                              ) : null}
                             </div>
                           </div>
 
@@ -1806,14 +1858,17 @@ export default function SettingsPage() {
                               disabled={busyKey === row.key || !canSubmit}
                               onClick={() => void onSubmitSlot(row)}
                             >
-                              {row.status === "VALIDATED"
-                                ? "Mettre à jour"
-                                : "Valider expertise"}
+                              {stub
+                                ? "Remplacer stub"
+                                : row.status === "VALIDATED"
+                                  ? "Mettre à jour"
+                                  : "Valider expertise"}
                             </AButton>
                             {!canSubmit ? (
                               <span className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                                Bouton actif seulement quand libellé + réf. + date
-                                sont renseignés.
+                                {stub
+                                  ? "Retirez STUB_UNTIL_EXPERT de la réf. / notes, puis libellé + date."
+                                  : "Bouton actif seulement quand libellé + réf. + date sont renseignés."}
                               </span>
                             ) : null}
                           </div>

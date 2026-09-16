@@ -14,12 +14,21 @@ type Props = {
   className?: string;
 };
 
+function slotIsStub(s: ExpertiseSlot): boolean {
+  if (typeof s.isStub === "boolean") return s.isStub;
+  return Boolean(
+    s.notes?.includes("STUB_UNTIL_EXPERT") ||
+      s.lawRef?.includes("STUB_UNTIL_EXPERT"),
+  );
+}
+
 /**
  * Readiness strip for FODEC/CNSS/… — never invents rates.
- * PENDING → link to Préférences; VALIDATED → show expert value.
+ * PENDING → link to Préférences; stub → warning; VALIDATED expert → success.
  */
 export function ExpertiseHintsStrip({ keys, className }: Props) {
   const [slots, setSlots] = useState<ExpertiseSlot[] | null>(null);
+  const [stubTotal, setStubTotal] = useState(0);
   const keyKey = [...keys].sort().join("|");
 
   useEffect(() => {
@@ -29,10 +38,15 @@ export function ExpertiseHintsStrip({ keys, className }: Props) {
       if (cancelled) return;
       if (!res.ok) {
         setSlots([]);
+        setStubTotal(0);
         return;
       }
       const wanted = new Set(keyKey.split("|").filter(Boolean));
       setSlots(res.data.items.filter((i) => wanted.has(i.key)));
+      setStubTotal(
+        res.data.stubUntilExpertCount ??
+          res.data.items.filter((i) => slotIsStub(i)).length,
+      );
     })();
     return () => {
       cancelled = true;
@@ -49,30 +63,29 @@ export function ExpertiseHintsStrip({ keys, className }: Props) {
       }
     >
       <span className="text-a-fg-muted">Expertise</span>
-      {slots.map((s) => (
-        <span key={s.key} className="inline-flex items-center gap-1.5">
-          <span className="font-medium text-a-fg">{s.label}</span>
-          {s.status === "VALIDATED" && s.valueSummary ? (
-            <>
-              <ABadge
-                tone={
-                  s.notes?.includes("STUB_UNTIL_EXPERT") ||
-                  s.lawRef?.includes("STUB_UNTIL_EXPERT")
-                    ? "warning"
-                    : "success"
-                }
-              >
-                {s.valueSummary}
-              </ABadge>
-              {s.lawRef ? (
-                <span className="text-a-fg-muted">{s.lawRef}</span>
-              ) : null}
-            </>
-          ) : (
-            <ABadge tone="warning">En attente expert</ABadge>
-          )}
-        </span>
-      ))}
+      {stubTotal > 0 ? (
+        <ABadge tone="warning">{stubTotal} stub(s)</ABadge>
+      ) : null}
+      {slots.map((s) => {
+        const stub = slotIsStub(s);
+        return (
+          <span key={s.key} className="inline-flex items-center gap-1.5">
+            <span className="font-medium text-a-fg">{s.label}</span>
+            {s.status === "VALIDATED" && s.valueSummary ? (
+              <>
+                <ABadge tone={stub ? "warning" : "success"}>
+                  {stub ? "Stub démo" : s.valueSummary}
+                </ABadge>
+                {s.lawRef && !stub ? (
+                  <span className="text-a-fg-muted">{s.lawRef}</span>
+                ) : null}
+              </>
+            ) : (
+              <ABadge tone="warning">En attente expert</ABadge>
+            )}
+          </span>
+        );
+      })}
       <Link
         href="/settings#expertise"
         className="ml-auto text-a-accent hover:underline"

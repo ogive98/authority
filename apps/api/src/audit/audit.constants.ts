@@ -12,6 +12,7 @@ export const AUDIT_ACTIONS = {
   organizationSiteCreate: 'organization.site.create',
   settingsValueUpdate: 'settings.value.update',
   settingsExpertiseValidate: 'settings.expertise.validate',
+  settingsExpertiseStubReplaced: 'settings.expertise.stub_replaced',
   settingsMailTestSent: 'settings.mail.test_sent',
   settingsMailTestFailed: 'settings.mail.test_failed',
   moduleEnable: 'module.enable',

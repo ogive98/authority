@@ -664,10 +664,10 @@ export const UI_STRINGS_IT: Record<string, string> = {
   "Activer SPECTRE MODE": "Attiva SPECTRE MODE",
   "Activer PATCH MODE": "Attiva PATCH MODE",
   "Activer GHOST MODE": "Attiva GHOST MODE",
-  Métadonnées: "Metadati",
-  "Nouvelle définition": "Nuova definizione",
-  "Repasser brouillon": "Torna a bozza",
-  Archiver: "Archivia",
+  "Stub démo · à remplacer": "Stub demo · da sostituire",
+  "Remplacer stub": "Sostituisci stub",
+  "Validé expert": "Validato expert",
+  "En attente expert": "In attesa expert",
 
   // Layout actions & extras (D225)
   "Nouveau compte bancaire": "Nuovo conto bancario",
