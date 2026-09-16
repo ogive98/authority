@@ -11,10 +11,17 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
   type AComboboxOption,
 } from "@/components/a";
 import {
@@ -35,8 +42,7 @@ import {
   type ShipmentStatus,
 } from "@/lib/delivery";
 import { fetchAssignments } from "@/lib/fleet";
-import { softChipClass, softList, softListRow } from "@/lib/soft-glass-ui";
-import { cn } from "@/lib/utils";
+import { ATabs } from "@/components/a/a-tabs";
 import { useStatusLabel } from "@/hooks/use-status-label";
 import { shouldHideDeliveryRoute } from "@/lib/ops-visibility";
 import { usePrefsStore } from "@/stores/prefs-store";
@@ -438,7 +444,10 @@ export default function DeliveryPage() {
       <AScreenHeader
         kicker="Logistique"
         title="Tournées"
-        description="Rounds CRUD · livraisons · stock issue/release · AR auto à la livraison."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "Rounds · stock issue/release · AR auto à la livraison",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             Nouvelle livraison
@@ -471,37 +480,21 @@ export default function DeliveryPage() {
             />
           }
           filters={
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Filtrer par statut"
-            >
-              {STATUS_FILTERS.map((chip) => {
-                const active = statusFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setStatusFilter(chip.id)}
-                    className={softChipClass(active)}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                const next = (id === "all" ? "" : id) as "" | ShipmentStatus;
+                setStatusFilter(next);
+              }}
+              items={STATUS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label: chip.label,
+              }))}
+            />
           }
           utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q, statusFilter)}
-            >
-              Filtrer
-            </AButton>
+            <AListUtilities onFilter={() => void load(q, statusFilter)} />
           }
         />
 
@@ -538,124 +531,138 @@ export default function DeliveryPage() {
               const roundId = rows.find((r) => r.roundId)?.roundId ?? null;
               const fleet = roundId ? fleetByRound.get(roundId) : undefined;
               return (
-              <div key={groupLabel} className="space-y-2">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-a-fg-subtle">
-                  Tournée · {groupLabel}
-                  <span className="a-mono ml-2 font-normal normal-case tracking-normal text-a-fg-muted">
-                    {rows.length}
-                  </span>
-                  {fleet ? (
-                    <ABadge tone="info" className="ml-2 normal-case tracking-normal">
-                      Véhicule · {fleet.code} · {fleet.plate}
-                      {fleet.cold ? " · froid" : ""}
-                    </ABadge>
-                  ) : null}
-                </p>
-                <ul className={softList}>
-                  {rows.map((row) => (
-                    <li
-                      key={row.id}
-                      className={cn(softListRow, "items-start")}
-                    >
-                      <div className="flex flex-wrap items-start gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="a-mono text-[13px] font-semibold text-a-fg">
+                <div key={groupLabel} className="space-y-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-a-fg-subtle">
+                    Tournée · {groupLabel}
+                    <span className="a-mono ml-2 font-normal normal-case tracking-normal text-a-fg-muted">
+                      {rows.length}
+                    </span>
+                    {fleet ? (
+                      <ABadge
+                        tone="info"
+                        className="ml-2 normal-case tracking-normal"
+                      >
+                        Véhicule · {fleet.code} · {fleet.plate}
+                        {fleet.cold ? " · froid" : ""}
+                      </ABadge>
+                    ) : null}
+                  </p>
+                  <ASoftTable className="min-w-[48rem]">
+                    <ASoftThead>
+                      <ASoftTr>
+                        <ASoftTh>Livraison</ASoftTh>
+                        <ASoftTh>Commande / client</ASoftTh>
+                        <ASoftTh>Statut</ASoftTh>
+                        <ASoftTh>Livreur</ASoftTh>
+                        <ASoftTh>Actions</ASoftTh>
+                      </ASoftTr>
+                    </ASoftThead>
+                    <tbody>
+                      {rows.map((row) => (
+                        <ASoftTr key={row.id}>
+                          <ASoftTd>
+                            <span className="a-mono font-semibold">
                               {row.number}
                             </span>
-                            <ABadge tone={shipmentBadgeTone(row.status)}>
-                              {st(row.status)}
-                            </ABadge>
-                          </div>
-                          <p className="mt-0.5 truncate text-[12px] text-a-fg-muted">
+                            {row.status === "FAILED" && row.failReason ? (
+                              <p className="mt-1 text-[12px] text-a-fg-muted">
+                                {row.failReason}
+                              </p>
+                            ) : null}
+                          </ASoftTd>
+                          <ASoftTd>
                             {row.orderNumber ?? "—"}
                             {" · "}
                             {row.customerName ?? row.customerCode ?? "—"}
-                          </p>
-                          {row.status === "FAILED" && row.failReason ? (
-                            <p className="mt-1 text-[12px] text-a-fg-muted">
-                              {row.failReason}
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {(row.status === "READY" ||
-                            row.status === "ASSIGNED") &&
-                          row.driverLabel ? (
-                            <AButton
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => void onDispatch(row)}
-                            >
-                              En route
-                            </AButton>
-                          ) : null}
-                          {row.status === "READY" ||
-                          row.status === "ASSIGNED" ||
-                          row.status === "OUT" ? (
-                            <>
-                              <AButton
-                                type="button"
-                                size="sm"
-                                onClick={() => void onComplete(row)}
-                              >
-                                Livré
-                              </AButton>
-                              <AButton
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                onClick={() =>
-                                  setFailDraft({
-                                    id: row.id,
-                                    number: row.number,
-                                    reason: "",
-                                  })
-                                }
-                              >
-                                Échec
-                              </AButton>
-                            </>
-                          ) : null}
-                        </div>
-                      </div>
-                      {row.status === "READY" || row.status === "ASSIGNED" ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <AInput
-                            value={
-                              assignDraft[row.id] ?? row.driverLabel ?? ""
-                            }
-                            onChange={(e) =>
-                              setAssignDraft({
-                                ...assignDraft,
-                                [row.id]: e.target.value,
-                              })
-                            }
-                            placeholder={
-                              row.preferredDriver
-                                ? `hint: ${row.preferredDriver}`
-                                : "Livreur"
-                            }
-                          />
-                          <AButton
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => void onAssign(row)}
-                          >
-                            Assigner
-                          </AButton>
-                        </div>
-                      ) : (
-                        <p className="text-[12px] text-a-fg-muted">
-                          Livreur · {row.driverLabel ?? "—"}
-                        </p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                          </ASoftTd>
+                          <ASoftTd>
+                            <ABadge tone={shipmentBadgeTone(row.status)}>
+                              {st(row.status)}
+                            </ABadge>
+                          </ASoftTd>
+                          <ASoftTd>
+                            {row.status === "READY" ||
+                            row.status === "ASSIGNED" ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <AInput
+                                  value={
+                                    assignDraft[row.id] ??
+                                    row.driverLabel ??
+                                    ""
+                                  }
+                                  onChange={(e) =>
+                                    setAssignDraft({
+                                      ...assignDraft,
+                                      [row.id]: e.target.value,
+                                    })
+                                  }
+                                  placeholder={
+                                    row.preferredDriver
+                                      ? `hint: ${row.preferredDriver}`
+                                      : "Livreur"
+                                  }
+                                />
+                                <AButton
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => void onAssign(row)}
+                                >
+                                  Assigner
+                                </AButton>
+                              </div>
+                            ) : (
+                              row.driverLabel ?? "—"
+                            )}
+                          </ASoftTd>
+                          <ASoftTd>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(row.status === "READY" ||
+                                row.status === "ASSIGNED") &&
+                              row.driverLabel ? (
+                                <AButton
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => void onDispatch(row)}
+                                >
+                                  En route
+                                </AButton>
+                              ) : null}
+                              {row.status === "READY" ||
+                              row.status === "ASSIGNED" ||
+                              row.status === "OUT" ? (
+                                <>
+                                  <AButton
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => void onComplete(row)}
+                                  >
+                                    Livré
+                                  </AButton>
+                                  <AButton
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() =>
+                                      setFailDraft({
+                                        id: row.id,
+                                        number: row.number,
+                                        reason: "",
+                                      })
+                                    }
+                                  >
+                                    Échec
+                                  </AButton>
+                                </>
+                              ) : null}
+                            </div>
+                          </ASoftTd>
+                        </ASoftTr>
+                      ))}
+                    </tbody>
+                  </ASoftTable>
+                </div>
               );
             })
           : null}

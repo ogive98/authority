@@ -8,6 +8,7 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
   AInput,
@@ -945,12 +946,5 @@ function Field({
   label: string;
   children: React.ReactNode;
 }) {
-  return (
-    <div className="space-y-1">
-      <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
+  return <AField label={label}>{children}</AField>;
 }

@@ -160,8 +160,8 @@ export function ShellSidebar() {
         >
           <Icon
             className={cn(
-              "h-5 w-5 shrink-0 text-a-orange",
-              on && "text-a-orange",
+              "h-5 w-5 shrink-0 text-a-accent",
+              on && "text-a-accent",
             )}
             strokeWidth={STROKE}
             aria-hidden
@@ -203,7 +203,7 @@ export function ShellSidebar() {
     const inner = (
       <>
         <Icon
-          className="h-5 w-5 shrink-0 text-a-orange"
+          className="h-5 w-5 shrink-0 text-a-sky"
           strokeWidth={STROKE}
           aria-hidden
         />

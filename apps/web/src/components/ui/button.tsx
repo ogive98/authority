@@ -4,9 +4,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 /**
- * Soft Glass buttons (D228):
- * - primary = grandes actions (Nouveau / Enregistrer / Créer) — encadrement accent
- * - secondary / outline / ghost = soulignement couleur icônes (orange) + hover
+ * Soft Glass buttons:
+ * - primary = grandes actions (Nouveau / Enregistrer / Créer) — fond accent bleu
+ * - secondary / outline / ghost = soulignement accent + hover
  */
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none",

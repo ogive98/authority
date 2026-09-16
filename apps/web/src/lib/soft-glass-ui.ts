@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Filter chips (D228) — soulignement orange (couleur icônes), pas de pastille teal.
+ * Soft Glass / Progressive OS filter chips — quiet underline, not framed pills.
  */
 export function softChipClass(active: boolean): string {
   return cn(

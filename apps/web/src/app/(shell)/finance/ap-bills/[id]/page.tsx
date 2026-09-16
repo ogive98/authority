@@ -17,6 +17,11 @@ import {
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
   ASwitch,
   type AOverflowItem,
 } from "@/components/a";
@@ -31,7 +36,6 @@ import {
   postApBill,
   type FinApBill,
 } from "@/lib/finance";
-import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 
 type Load =
@@ -394,50 +398,40 @@ export default function FinanceApBillFichePage() {
                       mappé (jamais inventé).
                     </p>
                   ) : (
-                    <div className={softTableWrap}>
-                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                        <thead className={softThead}>
-                          <tr>
-                            <th className="px-3 py-2 font-medium">#</th>
-                            <th className="px-3 py-2 font-medium">
-                              Description
-                            </th>
-                            <th className="px-3 py-2 font-medium">TVA</th>
-                            <th className="px-3 py-2 font-medium text-right">
-                              HT
-                            </th>
-                            <th className="px-3 py-2 font-medium text-right">
-                              Taxe
-                            </th>
-                            <th className="px-3 py-2 font-medium text-right">
-                              TTC
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {bill.lines?.map((l) => (
-                            <tr key={l.id} className={softTr}>
-                              <td className="px-3 py-2 font-mono tabular-nums">
-                                {l.lineNo}
-                              </td>
-                              <td className="px-3 py-2">{l.description}</td>
-                              <td className="px-3 py-2 font-mono text-a-muted">
-                                {l.taxCode ?? "—"}
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono tabular-nums">
-                                {l.amountHt}
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono tabular-nums">
-                                {l.amountTax}
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono tabular-nums">
-                                {l.amountTtc}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <ASoftTable>
+                      <ASoftThead>
+                        <ASoftTr>
+                          <ASoftTh>#</ASoftTh>
+                          <ASoftTh>Description</ASoftTh>
+                          <ASoftTh>TVA</ASoftTh>
+                          <ASoftTh numeric>HT</ASoftTh>
+                          <ASoftTh numeric>Taxe</ASoftTh>
+                          <ASoftTh numeric>TTC</ASoftTh>
+                        </ASoftTr>
+                      </ASoftThead>
+                      <tbody>
+                        {bill.lines?.map((l) => (
+                          <ASoftTr key={l.id}>
+                            <ASoftTd className="font-mono tabular-nums">
+                              {l.lineNo}
+                            </ASoftTd>
+                            <ASoftTd>{l.description}</ASoftTd>
+                            <ASoftTd className="font-mono text-a-muted">
+                              {l.taxCode ?? "—"}
+                            </ASoftTd>
+                            <ASoftTd numeric className="font-mono tabular-nums">
+                              {l.amountHt}
+                            </ASoftTd>
+                            <ASoftTd numeric className="font-mono tabular-nums">
+                              {l.amountTax}
+                            </ASoftTd>
+                            <ASoftTd numeric className="font-mono tabular-nums">
+                              {l.amountTtc}
+                            </ASoftTd>
+                          </ASoftTr>
+                        ))}
+                      </tbody>
+                    </ASoftTable>
                   )}
                 </APageSection>
                 <APageSection title="Décaissements liés">
@@ -449,42 +443,38 @@ export default function FinanceApBillFichePage() {
                         : "Poster la facture pour décaisser."}
                     </p>
                   ) : (
-                    <div className={softTableWrap}>
-                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                        <thead className={softThead}>
-                          <tr>
-                            <th className="px-3 py-2 font-medium">N°</th>
-                            <th className="px-3 py-2 font-medium">Date</th>
-                            <th className="px-3 py-2 font-medium text-right">
-                              Montant
-                            </th>
-                            <th className="px-3 py-2 font-medium">Banque</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {bill.payments?.map((p) => (
-                            <tr key={p.id} className={softTr}>
-                              <td className="px-3 py-2 font-mono tabular-nums">
-                                {p.number}
-                              </td>
-                              <td className="px-3 py-2 font-mono tabular-nums">
-                                {p.paymentDate}
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono tabular-nums">
-                                {p.amount} {p.currency}
-                              </td>
-                              <td className="px-3 py-2">
-                                <ABadge
-                                  tone={p.matched ? "success" : "neutral"}
-                                >
-                                  {p.matched ? "Rapproché" : "Ouvert"}
-                                </ABadge>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <ASoftTable>
+                      <ASoftThead>
+                        <ASoftTr>
+                          <ASoftTh>N°</ASoftTh>
+                          <ASoftTh>Date</ASoftTh>
+                          <ASoftTh numeric>Montant</ASoftTh>
+                          <ASoftTh>Banque</ASoftTh>
+                        </ASoftTr>
+                      </ASoftThead>
+                      <tbody>
+                        {bill.payments?.map((p) => (
+                          <ASoftTr key={p.id}>
+                            <ASoftTd className="font-mono tabular-nums">
+                              {p.number}
+                            </ASoftTd>
+                            <ASoftTd className="font-mono tabular-nums">
+                              {p.paymentDate}
+                            </ASoftTd>
+                            <ASoftTd numeric className="font-mono tabular-nums">
+                              {p.amount} {p.currency}
+                            </ASoftTd>
+                            <ASoftTd>
+                              <ABadge
+                                tone={p.matched ? "success" : "neutral"}
+                              >
+                                {p.matched ? "Rapproché" : "Ouvert"}
+                              </ABadge>
+                            </ASoftTd>
+                          </ASoftTr>
+                        ))}
+                      </tbody>
+                    </ASoftTable>
                   )}
                 </APageSection>
               </>

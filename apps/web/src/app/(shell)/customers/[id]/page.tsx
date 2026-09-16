@@ -17,6 +17,11 @@ import {
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
   ASwitch,
   type AOverflowItem,
 } from "@/components/a";
@@ -64,13 +69,7 @@ import {
   type PortalMembership,
   type PortalMembershipRole,
 } from "@/lib/customers";
-import {
-  softChipClass,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softChipClass, softSelect } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -1153,62 +1152,50 @@ export default function Customer360Page() {
                             ACTIVE.
                           </p>
                         ) : (
-                          <div className={`${softTableWrap} mb-3`}>
-                            <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                              <thead className={softThead}>
-                                <tr>
-                                  <th className="a-table-cell font-medium">
-                                    Code
-                                  </th>
-                                  <th className="a-table-cell font-medium">
-                                    Mode
-                                  </th>
-                                  <th className="a-table-cell font-medium">
-                                    Justification
-                                  </th>
-                                  <th className="a-table-cell font-medium">
-                                    Actions
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {fiscal.overrides.map((row) => (
-                                  <tr key={row.id} className={softTr}>
-                                    <td className="a-table-cell">
-                                      <span className="a-mono">{row.taxCode}</span>
-                                      <span className="text-a-fg-muted">
-                                        {" "}
-                                        · {row.taxLabel}
-                                      </span>
-                                    </td>
-                                    <td className="a-table-cell">
-                                      <ABadge tone="neutral">
-                                        {FISCAL_OVERRIDE_LABELS[row.mode]}
-                                      </ABadge>
-                                    </td>
-                                    <td className="a-table-cell">
-                                      {row.justification ?? "—"}
-                                    </td>
-                                    <td className="a-table-cell">
-                                      <AButton
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        disabled={fiscalBusy}
-                                        onClick={() =>
-                                          void onDeleteFiscalOverride(
-                                            row.taxCodeId,
-                                          )
-                                        }
-                                      >
-                                        Auto
-                                      </AButton>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                          <ASoftTable wrapClassName="mb-3">
+                            <ASoftThead>
+                              <ASoftTr>
+                                <ASoftTh>Code</ASoftTh>
+                                <ASoftTh>Mode</ASoftTh>
+                                <ASoftTh>Justification</ASoftTh>
+                                <ASoftTh>Actions</ASoftTh>
+                              </ASoftTr>
+                            </ASoftThead>
+                            <tbody>
+                              {fiscal.overrides.map((row) => (
+                                <ASoftTr key={row.id}>
+                                  <ASoftTd>
+                                    <span className="a-mono">{row.taxCode}</span>
+                                    <span className="text-a-fg-muted">
+                                      {" "}
+                                      · {row.taxLabel}
+                                    </span>
+                                  </ASoftTd>
+                                  <ASoftTd>
+                                    <ABadge tone="neutral">
+                                      {FISCAL_OVERRIDE_LABELS[row.mode]}
+                                    </ABadge>
+                                  </ASoftTd>
+                                  <ASoftTd>{row.justification ?? "—"}</ASoftTd>
+                                  <ASoftTd>
+                                    <AButton
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      disabled={fiscalBusy}
+                                      onClick={() =>
+                                        void onDeleteFiscalOverride(
+                                          row.taxCodeId,
+                                        )
+                                      }
+                                    >
+                                      Auto
+                                    </AButton>
+                                  </ASoftTd>
+                                </ASoftTr>
+                              ))}
+                            </tbody>
+                          </ASoftTable>
                         )}
                         <div className="grid gap-2 lg:grid-cols-[1fr_10rem_1fr_auto]">
                           <select
@@ -1293,94 +1280,88 @@ export default function Customer360Page() {
                       (création de compte = module Identité).
                     </p>
                   ) : (
-                    <div className={softTableWrap}>
-                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                        <thead className={softThead}>
-                          <tr>
-                            <th className="a-table-cell font-medium">
-                              Utilisateur
-                            </th>
-                            <th className="a-table-cell font-medium">Rôle</th>
-                            <th className="a-table-cell font-medium">Statut</th>
-                            <th className="a-table-cell font-medium">
-                              Actions
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {memberships.map((m) => (
-                            <tr key={m.id} className={softTr}>
-                              <td className="a-table-cell">
-                                <div className="font-medium">
-                                  {m.displayName}
-                                </div>
-                                <div className="a-mono text-a-fg-muted">
-                                  {m.email}
-                                </div>
-                              </td>
-                              <td className="a-table-cell">
-                                <select
-                                  className={softSelect}
-                                  value={
-                                    (["buyer", "viewer", "admin"] as const)
-                                      .includes(
-                                        m.role as PortalMembershipRole,
-                                      )
-                                      ? m.role
-                                      : "buyer"
-                                  }
-                                  disabled={busy || m.status !== "ACTIVE"}
-                                  onChange={(e) =>
-                                    void onChangeMembershipRole(
-                                      m,
-                                      e.target.value as PortalMembershipRole,
+                    <ASoftTable>
+                      <ASoftThead>
+                        <ASoftTr>
+                          <ASoftTh>Utilisateur</ASoftTh>
+                          <ASoftTh>Rôle</ASoftTh>
+                          <ASoftTh>Statut</ASoftTh>
+                          <ASoftTh>Actions</ASoftTh>
+                        </ASoftTr>
+                      </ASoftThead>
+                      <tbody>
+                        {memberships.map((m) => (
+                          <ASoftTr key={m.id}>
+                            <ASoftTd>
+                              <div className="font-medium">
+                                {m.displayName}
+                              </div>
+                              <div className="a-mono text-a-fg-muted">
+                                {m.email}
+                              </div>
+                            </ASoftTd>
+                            <ASoftTd>
+                              <select
+                                className={softSelect}
+                                value={
+                                  (["buyer", "viewer", "admin"] as const)
+                                    .includes(
+                                      m.role as PortalMembershipRole,
                                     )
-                                  }
-                                >
-                                  {(
-                                    Object.keys(
-                                      PORTAL_ROLE_LABELS,
-                                    ) as PortalMembershipRole[]
-                                  ).map((r) => (
-                                    <option key={r} value={r}>
-                                      {PORTAL_ROLE_LABELS[r]}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td className="a-table-cell">
-                                <ABadge
-                                  tone={
-                                    m.status === "ACTIVE"
-                                      ? "success"
-                                      : "neutral"
-                                  }
-                                >
-                                  {m.status === "ACTIVE"
-                                    ? "Actif"
-                                    : "Révoqué"}
-                                </ABadge>
-                              </td>
-                              <td className="a-table-cell">
-                                <AButton
-                                  type="button"
-                                  size="sm"
-                                  variant={
-                                    m.status === "ACTIVE" ? "ghost" : "secondary"
-                                  }
-                                  disabled={busy}
-                                  onClick={() => void onToggleMembership(m)}
-                                >
-                                  {m.status === "ACTIVE"
-                                    ? "Révoquer"
-                                    : "Réactiver"}
-                                </AButton>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                                    ? m.role
+                                    : "buyer"
+                                }
+                                disabled={busy || m.status !== "ACTIVE"}
+                                onChange={(e) =>
+                                  void onChangeMembershipRole(
+                                    m,
+                                    e.target.value as PortalMembershipRole,
+                                  )
+                                }
+                              >
+                                {(
+                                  Object.keys(
+                                    PORTAL_ROLE_LABELS,
+                                  ) as PortalMembershipRole[]
+                                ).map((r) => (
+                                  <option key={r} value={r}>
+                                    {PORTAL_ROLE_LABELS[r]}
+                                  </option>
+                                ))}
+                              </select>
+                            </ASoftTd>
+                            <ASoftTd>
+                              <ABadge
+                                tone={
+                                  m.status === "ACTIVE"
+                                    ? "success"
+                                    : "neutral"
+                                }
+                              >
+                                {m.status === "ACTIVE"
+                                  ? "Actif"
+                                  : "Révoqué"}
+                              </ABadge>
+                            </ASoftTd>
+                            <ASoftTd>
+                              <AButton
+                                type="button"
+                                size="sm"
+                                variant={
+                                  m.status === "ACTIVE" ? "ghost" : "secondary"
+                                }
+                                disabled={busy}
+                                onClick={() => void onToggleMembership(m)}
+                              >
+                                {m.status === "ACTIVE"
+                                  ? "Révoquer"
+                                  : "Réactiver"}
+                              </AButton>
+                            </ASoftTd>
+                          </ASoftTr>
+                        ))}
+                      </tbody>
+                    </ASoftTable>
                   )}
                 </APageSection>
 
@@ -1627,43 +1608,39 @@ export default function Customer360Page() {
                       Aucun événement récent.
                     </p>
                   ) : (
-                    <div className={softTableWrap}>
-                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                        <thead className={softThead}>
-                          <tr>
-                            <th className="a-table-cell font-medium">Date</th>
-                            <th className="a-table-cell font-medium">
-                              Événement
-                            </th>
-                            <th className="a-table-cell font-medium">Statut</th>
-                            <th className="a-table-cell font-medium">Montant</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {timeline.map((item) => (
-                            <tr key={item.id} className={softTr}>
-                              <td className="a-mono a-table-cell text-a-fg-muted">
-                                {item.at.slice(0, 10)}
-                              </td>
-                              <td className="a-table-cell">
-                                <Link
-                                  href={item.href}
-                                  className="text-a-accent hover:underline"
-                                >
-                                  {item.title}
-                                </Link>
-                              </td>
-                              <td className="a-table-cell text-a-fg-muted">
-                                {item.status}
-                              </td>
-                              <td className="a-mono a-table-cell">
-                                {item.amount ? money(item.amount) : "—"}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <ASoftTable>
+                      <ASoftThead>
+                        <ASoftTr>
+                          <ASoftTh>Date</ASoftTh>
+                          <ASoftTh>Événement</ASoftTh>
+                          <ASoftTh>Statut</ASoftTh>
+                          <ASoftTh>Montant</ASoftTh>
+                        </ASoftTr>
+                      </ASoftThead>
+                      <tbody>
+                        {timeline.map((item) => (
+                          <ASoftTr key={item.id}>
+                            <ASoftTd className="a-mono text-a-fg-muted">
+                              {item.at.slice(0, 10)}
+                            </ASoftTd>
+                            <ASoftTd>
+                              <Link
+                                href={item.href}
+                                className="text-a-accent hover:underline"
+                              >
+                                {item.title}
+                              </Link>
+                            </ASoftTd>
+                            <ASoftTd className="text-a-fg-muted">
+                              {item.status}
+                            </ASoftTd>
+                            <ASoftTd className="a-mono">
+                              {item.amount ? money(item.amount) : "—"}
+                            </ASoftTd>
+                          </ASoftTr>
+                        ))}
+                      </tbody>
+                    </ASoftTable>
                   )}
                 </APageSection>
                   </>
@@ -1696,50 +1673,44 @@ export default function Customer360Page() {
                         Aucun document rattaché.
                       </p>
                     ) : (
-                      <div className={softTableWrap}>
-                        <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                          <thead className={softThead}>
-                            <tr>
-                              <th className="a-table-cell font-medium">N°</th>
-                              <th className="a-table-cell font-medium">
-                                Titre
-                              </th>
-                              <th className="a-table-cell font-medium">Lien</th>
-                              <th className="a-table-cell font-medium">Vis.</th>
-                              <th className="a-table-cell font-medium">Date</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {docs.map((d) => (
-                              <tr key={d.id} className={softTr}>
-                                <td className="a-mono a-table-cell">
-                                  {d.number}
-                                </td>
-                                <td className="a-table-cell">{d.title}</td>
-                                <td className="a-table-cell text-a-fg-muted">
-                                  {d.linkType}
-                                </td>
-                                <td className="a-table-cell">
-                                  <ABadge
-                                    tone={
-                                      d.visibility === "CUSTOMER_PORTAL"
-                                        ? "accent"
-                                        : "neutral"
-                                    }
-                                  >
-                                    {d.visibility === "CUSTOMER_PORTAL"
-                                      ? "Portail"
-                                      : "Interne"}
-                                  </ABadge>
-                                </td>
-                                <td className="a-mono a-table-cell text-a-fg-muted">
-                                  {d.createdAt.slice(0, 10)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <ASoftTable>
+                        <ASoftThead>
+                          <ASoftTr>
+                            <ASoftTh>N°</ASoftTh>
+                            <ASoftTh>Titre</ASoftTh>
+                            <ASoftTh>Lien</ASoftTh>
+                            <ASoftTh>Vis.</ASoftTh>
+                            <ASoftTh>Date</ASoftTh>
+                          </ASoftTr>
+                        </ASoftThead>
+                        <tbody>
+                          {docs.map((d) => (
+                            <ASoftTr key={d.id}>
+                              <ASoftTd className="a-mono">{d.number}</ASoftTd>
+                              <ASoftTd>{d.title}</ASoftTd>
+                              <ASoftTd className="text-a-fg-muted">
+                                {d.linkType}
+                              </ASoftTd>
+                              <ASoftTd>
+                                <ABadge
+                                  tone={
+                                    d.visibility === "CUSTOMER_PORTAL"
+                                      ? "accent"
+                                      : "neutral"
+                                  }
+                                >
+                                  {d.visibility === "CUSTOMER_PORTAL"
+                                    ? "Portail"
+                                    : "Interne"}
+                                </ABadge>
+                              </ASoftTd>
+                              <ASoftTd className="a-mono text-a-fg-muted">
+                                {d.createdAt.slice(0, 10)}
+                              </ASoftTd>
+                            </ASoftTr>
+                          ))}
+                        </tbody>
+                      </ASoftTable>
                     )}
                   </APageSection>
                 ) : null}
@@ -1800,62 +1771,52 @@ export default function Customer360Page() {
                               Aucun contact.
                             </p>
                           ) : (
-                            <div className={softTableWrap}>
-                              <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                                <thead className={softThead}>
-                                  <tr>
-                                    <th className="a-table-cell font-medium">
-                                      Nom
-                                    </th>
-                                    <th className="a-table-cell font-medium">
-                                      E-mail
-                                    </th>
-                                    <th className="a-table-cell font-medium">
-                                      WhatsApp
-                                    </th>
-                                    <th className="a-table-cell font-medium">
-                                      Flags
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {comms.contacts.map((c) => (
-                                    <tr key={c.id} className={softTr}>
-                                      <td className="a-table-cell">
-                                        {c.name}
-                                        {c.isPrimary ? (
-                                          <ABadge
-                                            tone="accent"
-                                            className="ml-2"
-                                          >
-                                            Principal
-                                          </ABadge>
-                                        ) : null}
-                                      </td>
-                                      <td className="a-table-cell text-a-fg-muted">
-                                        {c.email ?? "—"}
-                                      </td>
-                                      <td className="a-mono a-table-cell text-a-fg-muted">
-                                        {c.whatsapp ?? "—"}
-                                      </td>
-                                      <td className="a-table-cell text-a-fg-muted">
-                                        {[
-                                          c.receiveInvoices
-                                            ? "Factures"
-                                            : null,
-                                          c.receiveDunning
-                                            ? "Relances"
-                                            : null,
-                                          c.portalAccess ? "Portail" : null,
-                                        ]
-                                          .filter(Boolean)
-                                          .join(" · ") || "—"}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
+                            <ASoftTable>
+                              <ASoftThead>
+                                <ASoftTr>
+                                  <ASoftTh>Nom</ASoftTh>
+                                  <ASoftTh>E-mail</ASoftTh>
+                                  <ASoftTh>WhatsApp</ASoftTh>
+                                  <ASoftTh>Flags</ASoftTh>
+                                </ASoftTr>
+                              </ASoftThead>
+                              <tbody>
+                                {comms.contacts.map((c) => (
+                                  <ASoftTr key={c.id}>
+                                    <ASoftTd>
+                                      {c.name}
+                                      {c.isPrimary ? (
+                                        <ABadge
+                                          tone="accent"
+                                          className="ml-2"
+                                        >
+                                          Principal
+                                        </ABadge>
+                                      ) : null}
+                                    </ASoftTd>
+                                    <ASoftTd className="text-a-fg-muted">
+                                      {c.email ?? "—"}
+                                    </ASoftTd>
+                                    <ASoftTd className="a-mono text-a-fg-muted">
+                                      {c.whatsapp ?? "—"}
+                                    </ASoftTd>
+                                    <ASoftTd className="text-a-fg-muted">
+                                      {[
+                                        c.receiveInvoices
+                                          ? "Factures"
+                                          : null,
+                                        c.receiveDunning
+                                          ? "Relances"
+                                          : null,
+                                        c.portalAccess ? "Portail" : null,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" · ") || "—"}
+                                    </ASoftTd>
+                                  </ASoftTr>
+                                ))}
+                              </tbody>
+                            </ASoftTable>
                           )}
                         </APageSection>
 
@@ -1865,58 +1826,44 @@ export default function Customer360Page() {
                               Aucune relance enregistrée.
                             </p>
                           ) : (
-                            <div className={softTableWrap}>
-                              <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                                <thead className={softThead}>
-                                  <tr>
-                                    <th className="a-table-cell font-medium">
-                                      N°
-                                    </th>
-                                    <th className="a-table-cell font-medium">
-                                      Canal
-                                    </th>
-                                    <th className="a-table-cell font-medium">
-                                      Statut
-                                    </th>
-                                    <th className="a-table-cell font-medium">
-                                      Montant
-                                    </th>
-                                    <th className="a-table-cell font-medium">
-                                      Date
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {comms.dunning.map((d) => (
-                                    <tr key={d.id} className={softTr}>
-                                      <td className="a-table-cell">
-                                        <Link
-                                          href={d.href}
-                                          className="a-mono text-a-accent hover:underline"
-                                        >
-                                          {d.number}
-                                        </Link>
-                                      </td>
-                                      <td className="a-table-cell">
-                                        {d.channel}
-                                      </td>
-                                      <td className="a-table-cell text-a-fg-muted">
-                                        {d.status}
-                                        {d.sendStatus !== "NONE"
-                                          ? ` · ${d.sendStatus}`
-                                          : ""}
-                                      </td>
-                                      <td className="a-mono a-table-cell">
-                                        {d.amountOpen} {d.currency}
-                                      </td>
-                                      <td className="a-mono a-table-cell text-a-fg-muted">
-                                        {(d.sentAt ?? d.createdAt).slice(0, 10)}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
+                            <ASoftTable>
+                              <ASoftThead>
+                                <ASoftTr>
+                                  <ASoftTh>N°</ASoftTh>
+                                  <ASoftTh>Canal</ASoftTh>
+                                  <ASoftTh>Statut</ASoftTh>
+                                  <ASoftTh>Montant</ASoftTh>
+                                  <ASoftTh>Date</ASoftTh>
+                                </ASoftTr>
+                              </ASoftThead>
+                              <tbody>
+                                {comms.dunning.map((d) => (
+                                  <ASoftTr key={d.id}>
+                                    <ASoftTd>
+                                      <Link
+                                        href={d.href}
+                                        className="a-mono text-a-accent hover:underline"
+                                      >
+                                        {d.number}
+                                      </Link>
+                                    </ASoftTd>
+                                    <ASoftTd>{d.channel}</ASoftTd>
+                                    <ASoftTd className="text-a-fg-muted">
+                                      {d.status}
+                                      {d.sendStatus !== "NONE"
+                                        ? ` · ${d.sendStatus}`
+                                        : ""}
+                                    </ASoftTd>
+                                    <ASoftTd className="a-mono">
+                                      {d.amountOpen} {d.currency}
+                                    </ASoftTd>
+                                    <ASoftTd className="a-mono text-a-fg-muted">
+                                      {(d.sentAt ?? d.createdAt).slice(0, 10)}
+                                    </ASoftTd>
+                                  </ASoftTr>
+                                ))}
+                              </tbody>
+                            </ASoftTable>
                           )}
                         </APageSection>
 
@@ -1926,49 +1873,39 @@ export default function Customer360Page() {
                               Aucune déclaration de paiement.
                             </p>
                           ) : (
-                            <div className={softTableWrap}>
-                              <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                                <thead className={softThead}>
-                                  <tr>
-                                    <th className="a-table-cell font-medium">
-                                      N°
-                                    </th>
-                                    <th className="a-table-cell font-medium">
-                                      Montant
-                                    </th>
-                                    <th className="a-table-cell font-medium">
-                                      Statut
-                                    </th>
-                                    <th className="a-table-cell font-medium">
-                                      Date
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {comms.paymentDeclarations.map((p) => (
-                                    <tr key={p.id} className={softTr}>
-                                      <td className="a-table-cell">
-                                        <Link
-                                          href={p.href}
-                                          className="a-mono text-a-accent hover:underline"
-                                        >
-                                          {p.number}
-                                        </Link>
-                                      </td>
-                                      <td className="a-mono a-table-cell">
-                                        {p.amount} {p.currency}
-                                      </td>
-                                      <td className="a-table-cell text-a-fg-muted">
-                                        {p.status}
-                                      </td>
-                                      <td className="a-mono a-table-cell text-a-fg-muted">
-                                        {p.paymentDate}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
+                            <ASoftTable>
+                              <ASoftThead>
+                                <ASoftTr>
+                                  <ASoftTh>N°</ASoftTh>
+                                  <ASoftTh>Montant</ASoftTh>
+                                  <ASoftTh>Statut</ASoftTh>
+                                  <ASoftTh>Date</ASoftTh>
+                                </ASoftTr>
+                              </ASoftThead>
+                              <tbody>
+                                {comms.paymentDeclarations.map((p) => (
+                                  <ASoftTr key={p.id}>
+                                    <ASoftTd>
+                                      <Link
+                                        href={p.href}
+                                        className="a-mono text-a-accent hover:underline"
+                                      >
+                                        {p.number}
+                                      </Link>
+                                    </ASoftTd>
+                                    <ASoftTd className="a-mono">
+                                      {p.amount} {p.currency}
+                                    </ASoftTd>
+                                    <ASoftTd className="text-a-fg-muted">
+                                      {p.status}
+                                    </ASoftTd>
+                                    <ASoftTd className="a-mono text-a-fg-muted">
+                                      {p.paymentDate}
+                                    </ASoftTd>
+                                  </ASoftTr>
+                                ))}
+                              </tbody>
+                            </ASoftTable>
                           )}
                         </APageSection>
                       </>

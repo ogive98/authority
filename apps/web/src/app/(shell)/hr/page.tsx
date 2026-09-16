@@ -4,15 +4,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import {
-  Briefcase,
-  CalendarDays,
-  FileStack,
-  FileText,
-  ScrollText,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
-import {
   ABadge,
   AButton,
   ADrawer,
@@ -21,17 +12,22 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
+import { ATabs } from "@/components/a/a-tabs";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { HrCongesPanel } from "@/components/hr/hr-conges-panel";
 import { hrTabHref, parseHrTab, hrEmployeeHref, type HrTab } from "@/lib/hr-tabs";
-import { localizeUiString } from "@/lib/i18n/route-labels";
 import { ribFieldHint } from "@/lib/rib-tn";
-import { useLocaleStore } from "@/stores/locale-store";
-import { cn } from "@/lib/utils";
 import {
   createDocKind,
   createEmployee,
@@ -60,14 +56,7 @@ import {
   type HrPrintTemplate,
 } from "@/lib/hr";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
-import {
-  softPanel,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-  softUnderlineTabClass,
-} from "@/lib/soft-glass-ui";
+import { softPanel, softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -107,7 +96,6 @@ export default function HrEmployeesPage() {
 function HrWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const locale = useLocaleStore((s) => s.locale);
   const [tab, setTab] = useState<HrTab>(() =>
     parseHrTab(searchParams.toString()),
   );
@@ -416,7 +404,18 @@ function HrWorkspace() {
                     ? "Congés"
                     : "Employés"
         }
-        description={
+        description={erpListDescription(
+          tab === "employees" && state.kind === "ok"
+            ? state.items.length
+            : tab === "postes" && state.kind === "ok"
+              ? jobTitles.length
+              : tab === "kinds" && state.kind === "ok"
+                ? docKinds.length
+                : tab === "bulletins" && state.kind === "ok"
+                  ? bulletins.length
+                  : tab === "templates" && state.kind === "ok"
+                    ? catalogue.length
+                    : null,
           tab === "postes"
             ? "Catalogue société — code + libellé, vide jusqu’à saisie. Pas de texte libre sur l’employé."
             : tab === "kinds"
@@ -427,8 +426,8 @@ function HrWorkspace() {
                   ? "Bulletins persistés (CNSS + IRPP). Création depuis la fiche salarié."
                   : tab === "conges"
                     ? "Demandes d’absence — approbation seulement. Pas de quotas inventés."
-                    : "Liste des salariés. Ouvrir la fiche pour contrats, fiscal, dossier."
-        }
+                    : "Liste des salariés. Ouvrir la fiche pour contrats, fiscal, dossier.",
+        )}
         primary={
           tab === "postes" ? (
             <AButton type="button" size="sm" onClick={openCreateJobTitle}>
@@ -463,40 +462,20 @@ function HrWorkspace() {
           />
         ) : null}
 
-        <div className="flex flex-wrap gap-5">
-          {(
-            [
-              ["employees", "Employés", Users],
-              ["postes", "Postes", Briefcase],
-              ["kinds", "Kinds", FileStack],
-              ["templates", "Templates", ScrollText],
-              ["bulletins", "Bulletins", FileText],
-              ["conges", "Congés", CalendarDays],
-            ] as const satisfies ReadonlyArray<
-              readonly [HrTab, string, LucideIcon]
-            >
-          ).map(([id, label, Icon]) => {
-            const active = tab === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                className={softUnderlineTabClass(active)}
-                onClick={() => goTab(id)}
-              >
-                <Icon
-                  className={cn(
-                    "h-4 w-4 shrink-0",
-                    active ? "text-a-fg" : "text-a-fg-muted",
-                  )}
-                  strokeWidth={1.5}
-                  aria-hidden
-                />
-                <span>{localizeUiString(label, locale) ?? label}</span>
-              </button>
-            );
-          })}
-        </div>
+        <ATabs
+          variant="underline"
+          ariaLabel="Sections RH"
+          value={tab}
+          onValueChange={(id) => goTab(id as HrTab)}
+          items={[
+            { id: "employees", label: "Employés" },
+            { id: "postes", label: "Postes" },
+            { id: "kinds", label: "Kinds" },
+            { id: "templates", label: "Templates" },
+            { id: "bulletins", label: "Bulletins" },
+            { id: "conges", label: "Congés" },
+          ]}
+        />
 
         {formError ? (
           <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
@@ -531,14 +510,7 @@ function HrWorkspace() {
                 />
               }
               utilities={
-                <AButton
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => void load(q)}
-                >
-                  Filtrer
-                </AButton>
+                <AListUtilities onFilter={() => void load(q)} />
               }
             />
 
@@ -550,87 +522,85 @@ function HrWorkspace() {
                 onAction={openCreateEmployee}
               />
             ) : (
-              <div className={softTableWrap}>
-                <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
-                  <thead className={softThead}>
-                    <tr>
-                      <th className="a-table-cell font-medium">Matricule</th>
-                      <th className="a-table-cell font-medium">Nom</th>
-                      <th className="a-table-cell font-medium">Poste</th>
-                      <th className="a-table-cell font-medium">CNSS n°</th>
-                      <th className="a-table-cell font-medium">Statut</th>
-                      <th className="a-table-cell font-medium">Contrats</th>
-                      <th className="a-table-cell font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {state.items.map((row) => {
-                      const active = row.contracts.filter(
-                        (c) => c.status === "ACTIVE",
-                      );
-                      return (
-                        <tr key={row.id} className={softTr}>
-                          <td className="a-table-cell">
-                            <Link
-                              href={hrEmployeeHref(row.id)}
-                              className="a-mono font-medium text-a-accent hover:underline"
-                            >
-                              {row.matricule}
-                            </Link>
-                          </td>
-                          <td className="a-table-cell">
-                            <span className="inline-flex items-center gap-2">
-                              {row.photoDocumentId ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={`${hrEmployeeDocumentContentHref(row.id, row.photoDocumentId)}?v=${row.photoDocumentId}`}
-                                  alt=""
-                                  className="h-8 w-8 shrink-0 rounded-full object-cover"
-                                />
-                              ) : (
-                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-a-surface-3 text-[length:var(--a-text-xs)] font-medium text-a-fg-muted">
-                                  {initials(row.displayName)}
-                                </span>
-                              )}
-                              {row.displayName}
-                            </span>
-                          </td>
-                          <td className="a-table-cell text-a-fg-muted">
-                            {[row.jobTitle, row.department]
-                              .filter(Boolean)
-                              .join(" · ") || "—"}
-                          </td>
-                          <td className="a-mono a-table-cell">
-                            {row.cnssNo ?? "—"}
-                          </td>
-                          <td className="a-table-cell">
-                            <ABadge tone={statusTone(row.status)}>
-                              {row.status}
-                            </ABadge>
-                          </td>
-                          <td className="a-table-cell">
-                            {active.length === 0 ? (
-                              <span className="text-a-fg-muted">—</span>
+              <ASoftTable className="min-w-[40rem]">
+                <ASoftThead>
+                  <ASoftTr>
+                    <ASoftTh>Matricule</ASoftTh>
+                    <ASoftTh>Nom</ASoftTh>
+                    <ASoftTh>Poste</ASoftTh>
+                    <ASoftTh>CNSS n°</ASoftTh>
+                    <ASoftTh>Statut</ASoftTh>
+                    <ASoftTh>Contrats</ASoftTh>
+                    <ASoftTh>Actions</ASoftTh>
+                  </ASoftTr>
+                </ASoftThead>
+                <tbody>
+                  {state.items.map((row) => {
+                    const active = row.contracts.filter(
+                      (c) => c.status === "ACTIVE",
+                    );
+                    return (
+                      <ASoftTr key={row.id}>
+                        <ASoftTd>
+                          <Link
+                            href={hrEmployeeHref(row.id)}
+                            className="a-mono font-medium text-a-accent hover:underline"
+                          >
+                            {row.matricule}
+                          </Link>
+                        </ASoftTd>
+                        <ASoftTd>
+                          <span className="inline-flex items-center gap-2">
+                            {row.photoDocumentId ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={`${hrEmployeeDocumentContentHref(row.id, row.photoDocumentId)}?v=${row.photoDocumentId}`}
+                                alt=""
+                                className="h-8 w-8 shrink-0 rounded-full object-cover"
+                              />
                             ) : (
-                              <span className="a-mono text-[length:var(--a-text-xs)]">
-                                {active.map((c) => c.number).join(" · ")}
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-a-surface-3 text-[length:var(--a-text-xs)] font-medium text-a-fg-muted">
+                                {initials(row.displayName)}
                               </span>
                             )}
-                          </td>
-                          <td className="a-table-cell">
-                            <Link
-                              href={hrEmployeeHref(row.id)}
-                              className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline"
-                            >
-                              Fiche
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            {row.displayName}
+                          </span>
+                        </ASoftTd>
+                        <ASoftTd className="text-a-fg-muted">
+                          {[row.jobTitle, row.department]
+                            .filter(Boolean)
+                            .join(" · ") || "—"}
+                        </ASoftTd>
+                        <ASoftTd className="a-mono">
+                          {row.cnssNo ?? "—"}
+                        </ASoftTd>
+                        <ASoftTd>
+                          <ABadge tone={statusTone(row.status)}>
+                            {row.status}
+                          </ABadge>
+                        </ASoftTd>
+                        <ASoftTd>
+                          {active.length === 0 ? (
+                            <span className="text-a-fg-muted">—</span>
+                          ) : (
+                            <span className="a-mono text-[length:var(--a-text-xs)]">
+                              {active.map((c) => c.number).join(" · ")}
+                            </span>
+                          )}
+                        </ASoftTd>
+                        <ASoftTd>
+                          <Link
+                            href={hrEmployeeHref(row.id)}
+                            className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline"
+                          >
+                            Fiche
+                          </Link>
+                        </ASoftTd>
+                      </ASoftTr>
+                    );
+                  })}
+                </tbody>
+              </ASoftTable>
             )}
           </>
         ) : null}
@@ -644,41 +614,39 @@ function HrWorkspace() {
               onAction={openCreateJobTitle}
             />
           ) : (
-            <div className={softTableWrap}>
-              <table className="w-full min-w-[480px] text-left text-[length:var(--a-text-sm)]">
-                <thead className={softThead}>
-                  <tr>
-                    <th className="a-table-cell font-medium">Code</th>
-                    <th className="a-table-cell font-medium">Libellé</th>
-                    <th className="a-table-cell font-medium">Statut</th>
-                    <th className="a-table-cell font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {jobTitles.map((t) => (
-                    <tr key={t.id} className={softTr}>
-                      <td className="a-mono a-table-cell">{t.code}</td>
-                      <td className="a-table-cell">{t.name}</td>
-                      <td className="a-table-cell">
-                        <ABadge tone={t.active ? "success" : "neutral"}>
-                          {t.active ? "ACTIF" : "ARCHIVÉ"}
-                        </ABadge>
-                      </td>
-                      <td className="a-table-cell">
-                        <AButton
-                          type="button"
-                          variant="ghost"
-                          disabled={busy}
-                          onClick={() => void onArchiveJobTitle(t.id, !t.active)}
-                        >
-                          {t.active ? "Archiver" : "Réactiver"}
-                        </AButton>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ASoftTable className="min-w-[30rem]">
+              <ASoftThead>
+                <ASoftTr>
+                  <ASoftTh>Code</ASoftTh>
+                  <ASoftTh>Libellé</ASoftTh>
+                  <ASoftTh>Statut</ASoftTh>
+                  <ASoftTh>Actions</ASoftTh>
+                </ASoftTr>
+              </ASoftThead>
+              <tbody>
+                {jobTitles.map((t) => (
+                  <ASoftTr key={t.id}>
+                    <ASoftTd className="a-mono">{t.code}</ASoftTd>
+                    <ASoftTd>{t.name}</ASoftTd>
+                    <ASoftTd>
+                      <ABadge tone={t.active ? "success" : "neutral"}>
+                        {t.active ? "ACTIF" : "ARCHIVÉ"}
+                      </ABadge>
+                    </ASoftTd>
+                    <ASoftTd>
+                      <AButton
+                        type="button"
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() => void onArchiveJobTitle(t.id, !t.active)}
+                      >
+                        {t.active ? "Archiver" : "Réactiver"}
+                      </AButton>
+                    </ASoftTd>
+                  </ASoftTr>
+                ))}
+              </tbody>
+            </ASoftTable>
           )
         ) : null}
 
@@ -691,41 +659,39 @@ function HrWorkspace() {
               onAction={openCreateDocKind}
             />
           ) : (
-            <div className={softTableWrap}>
-              <table className="w-full min-w-[480px] text-left text-[length:var(--a-text-sm)]">
-                <thead className={softThead}>
-                  <tr>
-                    <th className="a-table-cell font-medium">Code</th>
-                    <th className="a-table-cell font-medium">Libellé</th>
-                    <th className="a-table-cell font-medium">Statut</th>
-                    <th className="a-table-cell font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {docKinds.map((k) => (
-                    <tr key={k.id} className={softTr}>
-                      <td className="a-mono a-table-cell">{k.code}</td>
-                      <td className="a-table-cell">{k.name}</td>
-                      <td className="a-table-cell">
-                        <ABadge tone={k.active ? "success" : "neutral"}>
-                          {k.active ? "ACTIF" : "ARCHIVÉ"}
-                        </ABadge>
-                      </td>
-                      <td className="a-table-cell">
-                        <AButton
-                          type="button"
-                          variant="ghost"
-                          disabled={busy}
-                          onClick={() => void onArchiveDocKind(k.id, !k.active)}
-                        >
-                          {k.active ? "Archiver" : "Réactiver"}
-                        </AButton>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ASoftTable className="min-w-[30rem]">
+              <ASoftThead>
+                <ASoftTr>
+                  <ASoftTh>Code</ASoftTh>
+                  <ASoftTh>Libellé</ASoftTh>
+                  <ASoftTh>Statut</ASoftTh>
+                  <ASoftTh>Actions</ASoftTh>
+                </ASoftTr>
+              </ASoftThead>
+              <tbody>
+                {docKinds.map((k) => (
+                  <ASoftTr key={k.id}>
+                    <ASoftTd className="a-mono">{k.code}</ASoftTd>
+                    <ASoftTd>{k.name}</ASoftTd>
+                    <ASoftTd>
+                      <ABadge tone={k.active ? "success" : "neutral"}>
+                        {k.active ? "ACTIF" : "ARCHIVÉ"}
+                      </ABadge>
+                    </ASoftTd>
+                    <ASoftTd>
+                      <AButton
+                        type="button"
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() => void onArchiveDocKind(k.id, !k.active)}
+                      >
+                        {k.active ? "Archiver" : "Réactiver"}
+                      </AButton>
+                    </ASoftTd>
+                  </ASoftTr>
+                ))}
+              </tbody>
+            </ASoftTable>
           )
         ) : null}
 
@@ -919,34 +885,32 @@ function HrWorkspace() {
                   Catalogue vide.
                 </p>
               ) : (
-                <div className={softTableWrap}>
-                  <table className="w-full min-w-[480px] text-left text-[length:var(--a-text-sm)]">
-                    <thead className={softThead}>
-                      <tr>
-                        <th className="a-table-cell font-medium">Kind</th>
-                        <th className="a-table-cell font-medium">Code</th>
-                        <th className="a-table-cell font-medium">Libellé</th>
-                        <th className="a-table-cell font-medium">Statut</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {catalogue.map((t) => (
-                        <tr key={t.id} className={softTr}>
-                          <td className="a-table-cell">
-                            <ABadge tone="accent">{t.kind}</ABadge>
-                          </td>
-                          <td className="a-mono a-table-cell">{t.code}</td>
-                          <td className="a-table-cell">{t.name}</td>
-                          <td className="a-table-cell">
-                            <ABadge tone={t.active ? "success" : "neutral"}>
-                              {t.active ? "ACTIF" : "ARCHIVÉ"}
-                            </ABadge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <ASoftTable className="min-w-[30rem]">
+                  <ASoftThead>
+                    <ASoftTr>
+                      <ASoftTh>Kind</ASoftTh>
+                      <ASoftTh>Code</ASoftTh>
+                      <ASoftTh>Libellé</ASoftTh>
+                      <ASoftTh>Statut</ASoftTh>
+                    </ASoftTr>
+                  </ASoftThead>
+                  <tbody>
+                    {catalogue.map((t) => (
+                      <ASoftTr key={t.id}>
+                        <ASoftTd>
+                          <ABadge tone="accent">{t.kind}</ABadge>
+                        </ASoftTd>
+                        <ASoftTd className="a-mono">{t.code}</ASoftTd>
+                        <ASoftTd>{t.name}</ASoftTd>
+                        <ASoftTd>
+                          <ABadge tone={t.active ? "success" : "neutral"}>
+                            {t.active ? "ACTIF" : "ARCHIVÉ"}
+                          </ABadge>
+                        </ASoftTd>
+                      </ASoftTr>
+                    ))}
+                  </tbody>
+                </ASoftTable>
               )}
             </section>
           </div>
@@ -961,52 +925,50 @@ function HrWorkspace() {
               onAction={() => goTab("employees")}
             />
           ) : (
-            <div className={softTableWrap}>
-              <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
-                <thead className={softThead}>
-                  <tr>
-                    <th className="a-table-cell font-medium">N°</th>
-                    <th className="a-table-cell font-medium">Période</th>
-                    <th className="a-table-cell font-medium">Employé</th>
-                    <th className="a-table-cell font-medium">Net</th>
-                    <th className="a-table-cell font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bulletins.map((b) => (
-                    <tr key={b.id} className={softTr}>
-                      <td className="a-mono a-table-cell">{b.number}</td>
-                      <td className="a-mono a-table-cell">{b.periodYm}</td>
-                      <td className="a-table-cell">
-                        {b.matricule ? `${b.matricule} · ` : ""}
-                        {b.employeeName ?? "—"}
-                      </td>
-                      <td className="a-mono a-table-cell tabular-nums">
-                        {b.netPay} {b.currency}
-                      </td>
-                      <td className="a-table-cell">
-                        <div className="flex flex-wrap gap-2">
-                          <Link
-                            href={`/hr/bulletins/${b.id}`}
-                            className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline"
-                          >
-                            Imprimer
-                          </Link>
-                          <button
-                            type="button"
-                            className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline disabled:opacity-50"
-                            disabled={pdfBusyId === b.id}
-                            onClick={() => void onDownloadPdf(b.id)}
-                          >
-                            PDF
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ASoftTable className="min-w-[40rem]">
+              <ASoftThead>
+                <ASoftTr>
+                  <ASoftTh>N°</ASoftTh>
+                  <ASoftTh>Période</ASoftTh>
+                  <ASoftTh>Employé</ASoftTh>
+                  <ASoftTh>Net</ASoftTh>
+                  <ASoftTh>Actions</ASoftTh>
+                </ASoftTr>
+              </ASoftThead>
+              <tbody>
+                {bulletins.map((b) => (
+                  <ASoftTr key={b.id}>
+                    <ASoftTd className="a-mono">{b.number}</ASoftTd>
+                    <ASoftTd className="a-mono">{b.periodYm}</ASoftTd>
+                    <ASoftTd>
+                      {b.matricule ? `${b.matricule} · ` : ""}
+                      {b.employeeName ?? "—"}
+                    </ASoftTd>
+                    <ASoftTd className="a-mono tabular-nums">
+                      {b.netPay} {b.currency}
+                    </ASoftTd>
+                    <ASoftTd>
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/hr/bulletins/${b.id}`}
+                          className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline"
+                        >
+                          Imprimer
+                        </Link>
+                        <button
+                          type="button"
+                          className="text-[length:var(--a-text-sm)] font-medium text-a-accent hover:underline disabled:opacity-50"
+                          disabled={pdfBusyId === b.id}
+                          onClick={() => void onDownloadPdf(b.id)}
+                        >
+                          PDF
+                        </button>
+                      </div>
+                    </ASoftTd>
+                  </ASoftTr>
+                ))}
+              </tbody>
+            </ASoftTable>
           )
         ) : null}
 

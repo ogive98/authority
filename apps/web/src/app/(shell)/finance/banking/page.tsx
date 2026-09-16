@@ -11,11 +11,19 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
+import { ATabs } from "@/components/a/a-tabs";
 import {
   addBankLines,
   bankLineBadgeTone,
@@ -45,12 +53,7 @@ import {
   type FinBankAccount,
   type FinBankStatementLine,
 } from "@/lib/finance";
-import {
-  softChipClass,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -59,6 +62,13 @@ type LoadState =
   | { kind: "error"; message: string };
 
 type LineFilter = "" | "UNMATCHED" | "MATCHED" | "IGNORED";
+
+const LINE_STATUS_FILTERS: { id: LineFilter; label: string }[] = [
+  { id: "", label: "Toutes" },
+  { id: "UNMATCHED", label: "Non rapprochées" },
+  { id: "MATCHED", label: "Rapprochées" },
+  { id: "IGNORED", label: "Ignorées" },
+];
 
 export default function FinanceBankingPage() {
   const router = useRouter();
@@ -468,7 +478,10 @@ export default function FinanceBankingPage() {
       <AScreenHeader
         kicker="Finance"
         title="Banque"
-        description="Rapprochement soft AR (+) / AP (−) · CSV/OFX · ignore sans GL · frais (Prefs bank_fee)."
+        description={erpListDescription(
+          state.kind === "ok" ? state.accounts.length : null,
+          "Rapprochement soft AR (+) / AP (−) · CSV/OFX · ignore sans GL · frais (Prefs bank_fee)",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={() => openAccountCreate()}>
             Nouveau compte
@@ -544,28 +557,18 @@ export default function FinanceBankingPage() {
           <>
             <AFilterBar
               filters={
-                <div
-                  className="flex flex-wrap gap-2"
-                  role="tablist"
-                  aria-label="Comptes bancaires"
-                >
-                  {state.accounts.map((a) => {
-                    const active = a.id === selectedId;
-                    return (
-                      <button
-                        key={a.id}
-                        type="button"
-                        role="tab"
-                        aria-selected={active}
-                        onClick={() => setSelectedId(a.id)}
-                        className={softChipClass(active)}
-                      >
-                        {a.code}
-                        {a.unmatchedCount > 0 ? ` · ${a.unmatchedCount}` : ""}
-                      </button>
-                    );
-                  })}
-                </div>
+                <ATabs
+                  ariaLabel="Comptes bancaires"
+                  value={selectedId ?? state.accounts[0]?.id ?? ""}
+                  onValueChange={(id) => setSelectedId(id)}
+                  items={state.accounts.map((a) => ({
+                    id: a.id,
+                    label:
+                      a.unmatchedCount > 0
+                        ? `${a.code} · ${a.unmatchedCount}`
+                        : a.code,
+                  }))}
+                />
               }
             />
 
@@ -618,73 +621,62 @@ export default function FinanceBankingPage() {
                   rapprocher une ligne débit (−). Aucun GL.
                 </p>
               ) : (
-                <div className={softTableWrap}>
-                  <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                    <thead className={softThead}>
-                      <tr>
-                        <th className="px-3 py-2 font-medium">N°</th>
-                        <th className="px-3 py-2 font-medium">Fournisseur</th>
-                        <th className="px-3 py-2 font-medium">Facture</th>
-                        <th className="px-3 py-2 font-medium">Montant</th>
-                        <th className="px-3 py-2 font-medium">Date</th>
-                        <th className="px-3 py-2 font-medium">Banque</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {apPayments.map((p) => (
-                        <tr key={p.id} className={softTr}>
-                          <td className="px-3 py-2 a-mono">{p.number}</td>
-                          <td className="px-3 py-2">{p.vendorName}</td>
-                          <td className="px-3 py-2 a-mono">
-                            {p.apBillNumber ?? "—"}
-                          </td>
-                          <td className="px-3 py-2 a-mono tabular-nums">
-                            {p.amount} {p.currency}
-                          </td>
-                          <td className="px-3 py-2 a-mono">{p.paymentDate}</td>
-                          <td className="px-3 py-2">
-                            <ABadge tone={p.matched ? "success" : "neutral"}>
-                              {p.matched ? "Rapproché" : "Ouvert"}
-                            </ABadge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <ASoftTable className="min-w-[40rem]">
+                  <ASoftThead>
+                    <ASoftTr>
+                      <ASoftTh>N°</ASoftTh>
+                      <ASoftTh>Fournisseur</ASoftTh>
+                      <ASoftTh>Facture</ASoftTh>
+                      <ASoftTh numeric>Montant</ASoftTh>
+                      <ASoftTh>Date</ASoftTh>
+                      <ASoftTh>Banque</ASoftTh>
+                    </ASoftTr>
+                  </ASoftThead>
+                  <tbody>
+                    {apPayments.map((p) => (
+                      <ASoftTr key={p.id}>
+                        <ASoftTd className="a-mono">{p.number}</ASoftTd>
+                        <ASoftTd>{p.vendorName}</ASoftTd>
+                        <ASoftTd className="a-mono">
+                          {p.apBillNumber ?? "—"}
+                        </ASoftTd>
+                        <ASoftTd numeric>
+                          {p.amount} {p.currency}
+                        </ASoftTd>
+                        <ASoftTd className="a-mono">{p.paymentDate}</ASoftTd>
+                        <ASoftTd>
+                          <ABadge tone={p.matched ? "success" : "neutral"}>
+                            {p.matched ? "Rapproché" : "Ouvert"}
+                          </ABadge>
+                        </ASoftTd>
+                      </ASoftTr>
+                    ))}
+                  </tbody>
+                </ASoftTable>
               )}
             </div>
 
             <AFilterBar
               filters={
-                <div
-                  className="flex flex-wrap gap-2"
-                  role="tablist"
-                  aria-label="Filtrer les lignes"
-                >
-                  {(
-                    [
-                      { id: "" as LineFilter, label: "Toutes" },
-                      { id: "UNMATCHED" as LineFilter, label: "Non rapprochées" },
-                      { id: "MATCHED" as LineFilter, label: "Rapprochées" },
-                      { id: "IGNORED" as LineFilter, label: "Ignorées" },
-                    ] as const
-                  ).map((chip) => (
-                    <button
-                      key={chip.id || "all"}
-                      type="button"
-                      role="tab"
-                      aria-selected={lineFilter === chip.id}
-                      onClick={() => setLineFilter(chip.id)}
-                      className={softChipClass(lineFilter === chip.id)}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
+                <ATabs
+                  ariaLabel="Filtrer les lignes"
+                  value={lineFilter || "all"}
+                  onValueChange={(id) =>
+                    setLineFilter((id === "all" ? "" : id) as LineFilter)
+                  }
+                  items={LINE_STATUS_FILTERS.map((chip) => ({
+                    id: chip.id || "all",
+                    label: chip.label,
+                  }))}
+                />
               }
               utilities={
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <AListUtilities
+                    onFilter={() => {
+                      if (selectedId) void loadLines(selectedId, lineFilter);
+                    }}
+                  />
                   <AButton
                     type="button"
                     size="sm"
@@ -751,115 +743,112 @@ export default function FinanceBankingPage() {
             ) : null}
 
             {!linesLoading && lines.length > 0 ? (
-              <div className={softTableWrap}>
-                <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                  <thead className={softThead}>
-                    <tr>
-                      <th className="px-3 py-2 font-medium">Date</th>
-                      <th className="px-3 py-2 font-medium">Montant</th>
-                      <th className="px-3 py-2 font-medium">Réf.</th>
-                      <th className="px-3 py-2 font-medium">Statut</th>
-                      <th className="px-3 py-2 font-medium">Lien</th>
-                      <th className="px-3 py-2 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((line) => (
-                      <tr key={line.id} className={softTr}>
-                        <td className="px-3 py-2 a-mono">{line.lineDate}</td>
-                        <td className="px-3 py-2 a-mono tabular-nums">
-                          {line.amount} {line.currency}
-                        </td>
-                        <td className="px-3 py-2">
-                          {line.reference || line.counterparty || line.memo || "—"}
-                        </td>
-                        <td className="px-3 py-2">
-                          <ABadge tone={bankLineBadgeTone(line.status)}>
-                            {line.status === "MATCHED"
-                              ? "Rapproché"
-                              : line.status === "UNMATCHED"
-                                ? "Ouvert"
-                                : line.feePostedAt
-                                  ? "Ignoré · GL frais"
-                                  : "Ignoré"}
-                          </ABadge>
-                        </td>
-                        <td className="px-3 py-2 a-mono text-a-fg-muted">
-                          {line.match?.paymentNumber ||
-                            line.match?.instrumentNumber ||
-                            line.match?.apPaymentNumber ||
-                            line.fitId ||
-                            "—"}
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex flex-wrap gap-1">
-                            {line.status === "UNMATCHED" ? (
-                              <>
-                                <AButton
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() => void openMatch(line.id)}
-                                >
-                                  Rapprocher
-                                </AButton>
-                                <AButton
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() => void onIgnore(line.id)}
-                                >
-                                  Ignorer
-                                </AButton>
-                              </>
-                            ) : null}
-                            {line.status === "MATCHED" ? (
+              <ASoftTable className="min-w-[52rem]">
+                <ASoftThead>
+                  <ASoftTr>
+                    <ASoftTh>Date</ASoftTh>
+                    <ASoftTh numeric>Montant</ASoftTh>
+                    <ASoftTh>Réf.</ASoftTh>
+                    <ASoftTh>Statut</ASoftTh>
+                    <ASoftTh>Lien</ASoftTh>
+                    <ASoftTh>Actions</ASoftTh>
+                  </ASoftTr>
+                </ASoftThead>
+                <tbody>
+                  {lines.map((line) => (
+                    <ASoftTr key={line.id}>
+                      <ASoftTd className="a-mono">{line.lineDate}</ASoftTd>
+                      <ASoftTd numeric>
+                        {line.amount} {line.currency}
+                      </ASoftTd>
+                      <ASoftTd>
+                        {line.reference || line.counterparty || line.memo || "—"}
+                      </ASoftTd>
+                      <ASoftTd>
+                        <ABadge tone={bankLineBadgeTone(line.status)}>
+                          {line.status === "MATCHED"
+                            ? "Rapproché"
+                            : line.status === "UNMATCHED"
+                              ? "Ouvert"
+                              : line.feePostedAt
+                                ? "Ignoré · GL frais"
+                                : "Ignoré"}
+                        </ABadge>
+                      </ASoftTd>
+                      <ASoftTd className="a-mono text-a-fg-muted">
+                        {line.match?.paymentNumber ||
+                          line.match?.instrumentNumber ||
+                          line.match?.apPaymentNumber ||
+                          line.fitId ||
+                          "—"}
+                      </ASoftTd>
+                      <ASoftTd>
+                        <div className="flex flex-wrap gap-1">
+                          {line.status === "UNMATCHED" ? (
+                            <>
                               <AButton
                                 type="button"
                                 size="sm"
                                 variant="ghost"
                                 disabled={busy}
-                                onClick={() => void onUnmatch(line.id)}
+                                onClick={() => void openMatch(line.id)}
                               >
-                                Délier
+                                Rapprocher
                               </AButton>
-                            ) : null}
-                            {line.status === "IGNORED" ? (
-                              <>
-                                {!line.feePostedAt &&
-                                Number(line.amount) < 0 ? (
-                                  <AButton
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    disabled={busy}
-                                    onClick={() => void onPostFee(line.id)}
-                                  >
-                                    Comptabiliser frais
-                                  </AButton>
-                                ) : null}
-                                {!line.feePostedAt ? (
-                                  <AButton
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    disabled={busy}
-                                    onClick={() => void onUnignore(line.id)}
-                                  >
-                                    Réouvrir
-                                  </AButton>
-                                ) : null}
-                              </>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                              <AButton
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() => void onIgnore(line.id)}
+                              >
+                                Ignorer
+                              </AButton>
+                            </>
+                          ) : null}
+                          {line.status === "MATCHED" ? (
+                            <AButton
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              disabled={busy}
+                              onClick={() => void onUnmatch(line.id)}
+                            >
+                              Délier
+                            </AButton>
+                          ) : null}
+                          {line.status === "IGNORED" ? (
+                            <>
+                              {!line.feePostedAt && Number(line.amount) < 0 ? (
+                                <AButton
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={busy}
+                                  onClick={() => void onPostFee(line.id)}
+                                >
+                                  Comptabiliser frais
+                                </AButton>
+                              ) : null}
+                              {!line.feePostedAt ? (
+                                <AButton
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={busy}
+                                  onClick={() => void onUnignore(line.id)}
+                                >
+                                  Réouvrir
+                                </AButton>
+                              ) : null}
+                            </>
+                          ) : null}
+                        </div>
+                      </ASoftTd>
+                    </ASoftTr>
+                  ))}
+                </tbody>
+              </ASoftTable>
             ) : null}
           </>
         ) : null}
@@ -1234,7 +1223,7 @@ export default function FinanceBankingPage() {
                 Facture AP (optionnel)
               </span>
               <select
-                className="a-underlay w-full rounded-md px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg"
+                className={softSelect}
                 value={apForm.apBillId}
                 onChange={(e) => {
                   const apBillId = e.target.value;
@@ -1275,7 +1264,7 @@ export default function FinanceBankingPage() {
                 Mode
               </span>
               <select
-                className="a-underlay w-full rounded-md px-3 py-2 text-[length:var(--a-text-sm)] text-a-fg"
+                className={softSelect}
                 value={apForm.method}
                 onChange={(e) =>
                   setApForm({ ...apForm, method: e.target.value })

@@ -12,10 +12,17 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
   type AComboboxOption,
 } from "@/components/a";
 import { fetchCustomers } from "@/lib/customers";
@@ -36,14 +43,9 @@ import {
   type FinOpenItem,
   type OpenItemStatus,
 } from "@/lib/finance";
-import {
-  softChipClass,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softChipClass, softSelect } from "@/lib/soft-glass-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
+import { ATabs } from "@/components/a/a-tabs";
 
 type LoadState =
   | { kind: "loading" }
@@ -326,7 +328,10 @@ export default function FinancePage() {
       <AScreenHeader
         kicker="Finance"
         title="Créances"
-        description="Open items AR — montants enregistrés tels quels (pas de calcul TVA). Relance = mailto / WhatsApp (humain)."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "montants tels quels · relance mailto / WhatsApp (humain)",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             Nouvelle créance
@@ -379,37 +384,20 @@ export default function FinancePage() {
             />
           }
           filters={
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Filtrer par statut"
-            >
-              {STATUS_FILTERS.map((chip) => {
-                const active = statusFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setStatusFilter(chip.id)}
-                    className={softChipClass(active)}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                setStatusFilter((id === "all" ? "" : id) as FilterMode);
+              }}
+              items={STATUS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label: chip.label,
+              }))}
+            />
           }
           utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q, statusFilter)}
-            >
-              Filtrer
-            </AButton>
+            <AListUtilities onFilter={() => void load(q, statusFilter)} />
           }
         />
 
@@ -442,109 +430,107 @@ export default function FinancePage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[52rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">N°</th>
-                  <th className="a-table-cell font-medium">Client</th>
-                  <th className="a-table-cell font-medium">Libellé</th>
-                  <th className="a-table-cell font-medium">Total</th>
-                  <th className="a-table-cell font-medium">Ouvert</th>
-                  <th className="a-table-cell font-medium">Échéance</th>
-                  <th className="a-table-cell font-medium">Statut</th>
-                  <th className="a-table-cell font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row) => (
-                  <tr key={row.id} className={softTr}>
-                    <td className="a-mono a-table-cell">{row.number}</td>
-                    <td className="a-table-cell">
-                      {row.customerName ?? row.customerCode ?? "—"}
-                    </td>
-                    <td className="a-table-cell text-a-fg-muted">
-                      {row.label ?? "—"}
-                    </td>
-                    <td className="a-mono a-table-cell tabular-nums">
-                      {row.amountTotal} {row.currency}
-                    </td>
-                    <td className="a-mono a-table-cell tabular-nums font-medium">
-                      {row.amountOpen} {row.currency}
-                    </td>
-                    <td className="a-mono a-table-cell text-a-fg-muted">
-                      {row.dueDate ?? "—"}
-                      {isOpenItemOverdue(row) ? (
-                        <span className="ml-2 inline-block">
-                          <ABadge tone="warning">{st("OVERDUE")}</ABadge>
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="a-table-cell">
-                      <ABadge tone={openItemBadgeTone(row.status)}>
-                        {st(row.status)}
-                      </ABadge>
-                    </td>
-                    <td className="a-table-cell">
-                      {row.status !== "CLOSED" ? (
-                        <div className="flex flex-wrap gap-2">
+          <ASoftTable className="min-w-[52rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>N°</ASoftTh>
+                <ASoftTh>Client</ASoftTh>
+                <ASoftTh>Libellé</ASoftTh>
+                <ASoftTh numeric>Total</ASoftTh>
+                <ASoftTh numeric>Ouvert</ASoftTh>
+                <ASoftTh>Échéance</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh>Actions</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((row) => (
+                <ASoftTr key={row.id}>
+                  <ASoftTd className="a-mono font-semibold">{row.number}</ASoftTd>
+                  <ASoftTd>
+                    {row.customerName ?? row.customerCode ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd className="text-a-fg-muted">
+                    {row.label ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd numeric>
+                    {row.amountTotal} {row.currency}
+                  </ASoftTd>
+                  <ASoftTd numeric>
+                    {row.amountOpen} {row.currency}
+                  </ASoftTd>
+                  <ASoftTd className="a-mono text-a-fg-muted">
+                    {row.dueDate ?? "—"}
+                    {isOpenItemOverdue(row) ? (
+                      <span className="ml-2 inline-block">
+                        <ABadge tone="warning">{st("OVERDUE")}</ABadge>
+                      </span>
+                    ) : null}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={openItemBadgeTone(row.status)}>
+                      {st(row.status)}
+                    </ABadge>
+                  </ASoftTd>
+                  <ASoftTd>
+                    {row.status !== "CLOSED" ? (
+                      <div className="flex flex-wrap gap-2">
+                        <AButton
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() =>
+                            setAllocateDraft({
+                              id: row.id,
+                              number: row.number,
+                              amountOpen: row.amountOpen,
+                              amount: row.amountOpen,
+                              note: "",
+                            })
+                          }
+                        >
+                          Encaisser
+                        </AButton>
+                        <AButton
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            const in7 = new Date();
+                            in7.setUTCDate(in7.getUTCDate() + 7);
+                            setPromiseDraft({
+                              id: row.id,
+                              number: row.number,
+                              amountOpen: row.amountOpen,
+                              amount: row.amountOpen,
+                              promisedDate: in7.toISOString().slice(0, 10),
+                              notes: "",
+                            });
+                            setFormError(null);
+                          }}
+                        >
+                          Promesse
+                        </AButton>
+                        {isOpenItemOverdue(row) ? (
                           <AButton
                             type="button"
                             variant="secondary"
                             size="sm"
-                            onClick={() =>
-                              setAllocateDraft({
-                                id: row.id,
-                                number: row.number,
-                                amountOpen: row.amountOpen,
-                                amount: row.amountOpen,
-                                note: "",
-                              })
-                            }
+                            disabled={busy}
+                            onClick={() => void openDunning(row.id)}
                           >
-                            Encaisser
+                            Relancer
                           </AButton>
-                          <AButton
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              const in7 = new Date();
-                              in7.setUTCDate(in7.getUTCDate() + 7);
-                              setPromiseDraft({
-                                id: row.id,
-                                number: row.number,
-                                amountOpen: row.amountOpen,
-                                amount: row.amountOpen,
-                                promisedDate: in7.toISOString().slice(0, 10),
-                                notes: "",
-                              });
-                              setFormError(null);
-                            }}
-                          >
-                            Promesse
-                          </AButton>
-                          {isOpenItemOverdue(row) ? (
-                            <AButton
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              disabled={busy}
-                              onClick={() => void openDunning(row.id)}
-                            >
-                              Relancer
-                            </AButton>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <span className="text-a-fg-subtle">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-a-fg-subtle">—</span>
+                    )}
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

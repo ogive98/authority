@@ -2,8 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import { iconForFeature, iconForModule } from "./module-icons";
 
 /**
- * Per-feature visual identity: Soft Glass `--a-*` color + thematic motion.
- * Outline Lucide only — no filled chips / frames · no raw hex (Stage 1).
+ * Per-feature visual identity: Progressive OS blue / violet / sky only.
+ * Outline Lucide only — no filled chips / frames · no raw hex.
  */
 export type IconMotion =
   | "drive"
@@ -37,11 +37,11 @@ type Rule = {
   kind: string;
 };
 
-/** Soft Glass token classes only (`text-a-*` from @theme). */
+/** Chrome accents only: text-a-accent | text-a-violet | text-a-sky */
 const FEATURE_RULES: Rule[] = [
   {
     match: /deliver|livr|truck|shipment|tournée/i,
-    colorClass: "text-a-orange",
+    colorClass: "text-a-sky",
     motion: "drive",
     kind: "truck",
   },
@@ -59,13 +59,13 @@ const FEATURE_RULES: Rule[] = [
   },
   {
     match: /payment|paiement|encaiss|instrument/i,
-    colorClass: "text-a-success",
+    colorClass: "text-a-accent",
     motion: "coin",
     kind: "money",
   },
   {
     match: /promise|créance|open.?item|wallet|finance/i,
-    colorClass: "text-a-success",
+    colorClass: "text-a-accent",
     motion: "coin",
     kind: "wallet",
   },
@@ -77,13 +77,13 @@ const FEATURE_RULES: Rule[] = [
   },
   {
     match: /order|commande|clipboard/i,
-    colorClass: "text-a-warning",
+    colorClass: "text-a-accent",
     motion: "stamp",
     kind: "order",
   },
   {
     match: /sales|vente|shopping|bag/i,
-    colorClass: "text-a-danger",
+    colorClass: "text-a-accent",
     motion: "cart",
     kind: "sales",
   },
@@ -95,7 +95,7 @@ const FEATURE_RULES: Rule[] = [
   },
   {
     match: /bulletin|payslip|buste/i,
-    colorClass: "text-a-info",
+    colorClass: "text-a-sky",
     motion: "doc",
     kind: "doc",
   },
@@ -107,7 +107,7 @@ const FEATURE_RULES: Rule[] = [
   },
   {
     match: /tax|tva|fiscal|landmark|accounting|compta/i,
-    colorClass: "text-a-orange",
+    colorClass: "text-a-violet",
     motion: "stamp",
     kind: "tax",
   },
@@ -119,19 +119,19 @@ const FEATURE_RULES: Rule[] = [
   },
   {
     match: /alert|alerte|signal/i,
-    colorClass: "text-a-danger",
+    colorClass: "text-a-violet",
     motion: "alert",
     kind: "alert",
   },
   {
     match: /task|tâche|todo|check/i,
-    colorClass: "text-a-success",
+    colorClass: "text-a-accent",
     motion: "check",
     kind: "task",
   },
   {
     match: /report|rapport|kpi|chart|pilot/i,
-    colorClass: "text-a-info",
+    colorClass: "text-a-sky",
     motion: "chart",
     kind: "chart",
   },
@@ -158,7 +158,7 @@ const FEATURE_RULES: Rule[] = [
 const MODULE_RULES: Rule[] = [
   {
     match: /^delivery|supply$/i,
-    colorClass: "text-a-orange",
+    colorClass: "text-a-sky",
     motion: "drive",
     kind: "truck",
   },
@@ -170,7 +170,7 @@ const MODULE_RULES: Rule[] = [
   },
   {
     match: /^finance|accounting$/i,
-    colorClass: "text-a-success",
+    colorClass: "text-a-accent",
     motion: "coin",
     kind: "wallet",
   },
@@ -182,7 +182,7 @@ const MODULE_RULES: Rule[] = [
   },
   {
     match: /^sales|commercial$/i,
-    colorClass: "text-a-danger",
+    colorClass: "text-a-accent",
     motion: "cart",
     kind: "sales",
   },
@@ -194,7 +194,7 @@ const MODULE_RULES: Rule[] = [
   },
   {
     match: /^tax$/i,
-    colorClass: "text-a-orange",
+    colorClass: "text-a-violet",
     motion: "stamp",
     kind: "tax",
   },

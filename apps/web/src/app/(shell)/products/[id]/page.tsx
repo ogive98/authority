@@ -16,6 +16,11 @@ import {
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
   ASwitch,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
@@ -36,7 +41,7 @@ import {
   type ProductFiscal,
   type RefValue,
 } from "@/lib/products";
-import { softSelect, softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -588,62 +593,50 @@ export default function ProductEditPage() {
                           ACTIVE.
                         </p>
                       ) : (
-                        <div className={`${softTableWrap} mb-3`}>
-                          <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                            <thead className={softThead}>
-                              <tr>
-                                <th className="a-table-cell font-medium">
-                                  Code
-                                </th>
-                                <th className="a-table-cell font-medium">
-                                  Mode
-                                </th>
-                                <th className="a-table-cell font-medium">
-                                  Justification
-                                </th>
-                                <th className="a-table-cell font-medium">
-                                  Actions
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {fiscal.overrides.map((row) => (
-                                <tr key={row.id} className={softTr}>
-                                  <td className="a-table-cell">
-                                    <span className="a-mono">{row.taxCode}</span>
-                                    <span className="text-a-fg-muted">
-                                      {" "}
-                                      · {row.taxLabel}
-                                    </span>
-                                  </td>
-                                  <td className="a-table-cell">
-                                    <ABadge tone="neutral">
-                                      {FISCAL_OVERRIDE_LABELS[row.mode]}
-                                    </ABadge>
-                                  </td>
-                                  <td className="a-table-cell">
-                                    {row.justification ?? "—"}
-                                  </td>
-                                  <td className="a-table-cell">
-                                    <AButton
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      disabled={fiscalBusy}
-                                      onClick={() =>
-                                        void onDeleteFiscalOverride(
-                                          row.taxCodeId,
-                                        )
-                                      }
-                                    >
-                                      Auto
-                                    </AButton>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                        <ASoftTable wrapClassName="mb-3">
+                          <ASoftThead>
+                            <ASoftTr>
+                              <ASoftTh>Code</ASoftTh>
+                              <ASoftTh>Mode</ASoftTh>
+                              <ASoftTh>Justification</ASoftTh>
+                              <ASoftTh>Actions</ASoftTh>
+                            </ASoftTr>
+                          </ASoftThead>
+                          <tbody>
+                            {fiscal.overrides.map((row) => (
+                              <ASoftTr key={row.id}>
+                                <ASoftTd>
+                                  <span className="a-mono">{row.taxCode}</span>
+                                  <span className="text-a-fg-muted">
+                                    {" "}
+                                    · {row.taxLabel}
+                                  </span>
+                                </ASoftTd>
+                                <ASoftTd>
+                                  <ABadge tone="neutral">
+                                    {FISCAL_OVERRIDE_LABELS[row.mode]}
+                                  </ABadge>
+                                </ASoftTd>
+                                <ASoftTd>{row.justification ?? "—"}</ASoftTd>
+                                <ASoftTd>
+                                  <AButton
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={fiscalBusy}
+                                    onClick={() =>
+                                      void onDeleteFiscalOverride(
+                                        row.taxCodeId,
+                                      )
+                                    }
+                                  >
+                                    Auto
+                                  </AButton>
+                                </ASoftTd>
+                              </ASoftTr>
+                            ))}
+                          </tbody>
+                        </ASoftTable>
                       )}
                       <div className="grid gap-2 lg:grid-cols-[1fr_10rem_1fr_auto]">
                         <select

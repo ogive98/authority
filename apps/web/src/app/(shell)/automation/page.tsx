@@ -11,10 +11,17 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   APageBody,
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import {
   ATM_MODE_LABELS,
@@ -33,13 +40,7 @@ import {
   type AtmRun,
   type AtmTriggerKind,
 } from "@/lib/automation";
-import {
-  softChipClass,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -138,7 +139,10 @@ export default function AutomationPage() {
       <AScreenHeader
         kicker="Automatisation"
         title="Profils ASSISTED"
-        description="Suggestions human-gated (manuel ou Thunder events D289) — pas de FULL_AUTO critique."
+        description={erpListDescription(
+          state.kind === "ok" ? state.profiles.length : null,
+          "Suggestions human-gated (manuel ou Thunder events D289) — pas de FULL_AUTO critique",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={() => setDrawerOpen(true)}>
             Nouveau profil
@@ -165,17 +169,7 @@ export default function AutomationPage() {
               }}
             />
           }
-          filters={
-            <div className="flex flex-wrap gap-2" role="tablist">
-              <button
-                type="button"
-                className={softChipClass(true)}
-                onClick={() => void load(q)}
-              >
-                Actualiser
-              </button>
-            </div>
-          }
+          utilities={<AListUtilities onFilter={() => void load(q)} />}
         />
 
         {state.kind === "loading" ? (
@@ -202,50 +196,57 @@ export default function AutomationPage() {
                   canAct={false}
                 />
               ) : (
-                <div className={softTableWrap}>
-                  <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
-                    <thead className={softThead}>
-                      <tr>
-                        <th className="a-table-cell font-medium">Code</th>
-                        <th className="a-table-cell font-medium">Nom</th>
-                        <th className="a-table-cell font-medium">Mode</th>
-                        <th className="a-table-cell font-medium">Déclencheur</th>
-                        <th className="a-table-cell font-medium">Action</th>
-                        <th className="a-table-cell font-medium" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {state.profiles.map((p) => (
-                        <tr key={p.id} className={softTr}>
-                          <td className="a-table-cell">
-                            <button
-                              type="button"
-                              className="a-mono text-a-accent hover:underline"
-                              onClick={() =>
-                                router.push(`/automation/${p.id}`)
-                              }
-                            >
-                              {p.code}
-                            </button>
-                          </td>
-                          <td className="a-table-cell">{p.name}</td>
-                          <td className="a-table-cell">
-                            <ABadge tone={atmModeBadgeTone(p.mode)}>
-                              {ATM_MODE_LABELS[p.mode]}
+                <ASoftTable className="min-w-[640px]">
+                  <ASoftThead>
+                    <ASoftTr>
+                      <ASoftTh>Code</ASoftTh>
+                      <ASoftTh>Nom</ASoftTh>
+                      <ASoftTh>Mode</ASoftTh>
+                      <ASoftTh>Déclencheur</ASoftTh>
+                      <ASoftTh>Action</ASoftTh>
+                      <ASoftTh> </ASoftTh>
+                    </ASoftTr>
+                  </ASoftThead>
+                  <tbody>
+                    {state.profiles.map((p) => (
+                      <ASoftTr
+                        key={p.id}
+                        onClick={() => router.push(`/automation/${p.id}`)}
+                      >
+                        <ASoftTd>
+                          <button
+                            type="button"
+                            className="a-mono font-semibold text-a-accent hover:underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/automation/${p.id}`);
+                            }}
+                          >
+                            {p.code}
+                          </button>
+                        </ASoftTd>
+                        <ASoftTd>{p.name}</ASoftTd>
+                        <ASoftTd>
+                          <ABadge tone={atmModeBadgeTone(p.mode)}>
+                            {ATM_MODE_LABELS[p.mode]}
+                          </ABadge>
+                          {p.shadowMode ? (
+                            <ABadge tone="neutral" className="ml-1">
+                              Shadow
                             </ABadge>
-                            {p.shadowMode ? (
-                              <ABadge tone="neutral" className="ml-1">
-                                Shadow
-                              </ABadge>
-                            ) : null}
-                          </td>
-                          <td className="a-table-cell text-a-fg-muted">
-                            {p.triggerKind}
-                          </td>
-                          <td className="a-table-cell text-a-fg-muted">
-                            {p.actionKind}
-                          </td>
-                          <td className="a-table-cell text-right">
+                          ) : null}
+                        </ASoftTd>
+                        <ASoftTd className="text-a-fg-muted">
+                          {p.triggerKind}
+                        </ASoftTd>
+                        <ASoftTd className="text-a-fg-muted">
+                          {p.actionKind}
+                        </ASoftTd>
+                        <ASoftTd>
+                          <div
+                            className="flex justify-end"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <AButton
                               type="button"
                               size="sm"
@@ -255,12 +256,12 @@ export default function AutomationPage() {
                             >
                               Exécuter
                             </AButton>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          </div>
+                        </ASoftTd>
+                      </ASoftTr>
+                    ))}
+                  </tbody>
+                </ASoftTable>
               )}
             </APageSection>
 
@@ -270,44 +271,40 @@ export default function AutomationPage() {
                   Aucune exécution — lancez un profil pour créer une suggestion.
                 </p>
               ) : (
-                <div className={softTableWrap}>
-                  <table className="w-full min-w-[560px] text-left text-[length:var(--a-text-sm)]">
-                    <thead className={softThead}>
-                      <tr>
-                        <th className="a-table-cell font-medium">N°</th>
-                        <th className="a-table-cell font-medium">Profil</th>
-                        <th className="a-table-cell font-medium">Résumé</th>
-                        <th className="a-table-cell font-medium">Statut</th>
-                        <th className="a-table-cell font-medium">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {state.runs.map((r) => (
-                        <tr key={r.id} className={softTr}>
-                          <td className="a-mono a-table-cell">{r.number}</td>
-                          <td className="a-table-cell">
-                            {r.profileCode ?? "—"}
-                          </td>
-                          <td className="a-table-cell">{r.summary}</td>
-                          <td className="a-table-cell">
-                            <ABadge tone={atmRunBadgeTone(r.status)}>
-                              {ATM_RUN_STATUS_LABELS[r.status]}
+                <ASoftTable className="min-w-[560px]">
+                  <ASoftThead>
+                    <ASoftTr>
+                      <ASoftTh>N°</ASoftTh>
+                      <ASoftTh>Profil</ASoftTh>
+                      <ASoftTh>Résumé</ASoftTh>
+                      <ASoftTh>Statut</ASoftTh>
+                      <ASoftTh>Date</ASoftTh>
+                    </ASoftTr>
+                  </ASoftThead>
+                  <tbody>
+                    {state.runs.map((r) => (
+                      <ASoftTr key={r.id}>
+                        <ASoftTd className="a-mono">{r.number}</ASoftTd>
+                        <ASoftTd>{r.profileCode ?? "—"}</ASoftTd>
+                        <ASoftTd>{r.summary}</ASoftTd>
+                        <ASoftTd>
+                          <ABadge tone={atmRunBadgeTone(r.status)}>
+                            {ATM_RUN_STATUS_LABELS[r.status]}
+                          </ABadge>
+                          {r.resultJson?.source === "event" ||
+                          r.triggerRef?.startsWith("evt:") ? (
+                            <ABadge tone="info" className="ml-1">
+                              Event
                             </ABadge>
-                            {r.resultJson?.source === "event" ||
-                            r.triggerRef?.startsWith("evt:") ? (
-                              <ABadge tone="info" className="ml-1">
-                                Event
-                              </ABadge>
-                            ) : null}
-                          </td>
-                          <td className="a-mono a-table-cell text-a-fg-muted">
-                            {r.createdAt.slice(0, 16).replace("T", " ")}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          ) : null}
+                        </ASoftTd>
+                        <ASoftTd className="a-mono text-a-fg-muted">
+                          {r.createdAt.slice(0, 16).replace("T", " ")}
+                        </ASoftTd>
+                      </ASoftTr>
+                    ))}
+                  </tbody>
+                </ASoftTable>
               )}
             </APageSection>
           </>

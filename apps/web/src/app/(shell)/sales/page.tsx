@@ -12,6 +12,7 @@ import {
   AErrorState,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   APageBody,
@@ -26,6 +27,7 @@ import {
   type AComboboxOption,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
+import { FulfillmentDocToggle } from "@/components/fulfillment-doc-toggle";
 import {
   fetchWarehouses,
   type InventoryWarehouse,
@@ -43,7 +45,12 @@ import {
   type SalesOrder,
   type SalesOrderStatus,
 } from "@/lib/sales";
-import { suggestCustomerPrice } from "@/lib/customers";
+import {
+  fetchCustomer,
+  suggestCustomerPrice,
+  updateCustomer,
+  type FulfillmentDoc,
+} from "@/lib/customers";
 import { useStatusLabel } from "@/hooks/use-status-label";
 import { ATabs } from "@/components/a/a-tabs";
 
@@ -93,6 +100,9 @@ type LineDraft = {
 type FormState = {
   customerId: string | null;
   customerLabel: string;
+  customerVersion: number | null;
+  customerLegalName: string;
+  fulfillmentDoc: FulfillmentDoc;
   warehouseId: string | null;
   warehouseLabel: string;
   requestedDate: string;
@@ -261,6 +271,9 @@ function SalesPageInner() {
     setForm({
       customerId: null,
       customerLabel: "",
+      customerVersion: null,
+      customerLegalName: "",
+      fulfillmentDoc: "DELIVERY_NOTE",
       warehouseId: wh?.id ?? null,
       warehouseLabel: wh ? `${wh.code} — ${wh.name}` : "",
       requestedDate: todayIsoDate(),
@@ -573,7 +586,7 @@ function SalesPageInner() {
         }
       >
         {form ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <p className="rounded-[var(--a-radius-sm)] bg-a-surface-3/80 px-3 py-2 text-[12px] text-a-fg-muted">
               Workflow auto à la confirmation : {workflowHint}
               {settings?.autoConfirmOnCreate
@@ -581,6 +594,7 @@ function SalesPageInner() {
                 : ""}
             </p>
 
+            <AFormSection title="Client & document">
             <ACombobox
               label="Client (surnom, code ou raison sociale)"
               valueId={form.customerId}
@@ -590,15 +604,35 @@ function SalesPageInner() {
                   ...form,
                   customerLabel: text,
                   customerId: null,
+                  customerVersion: null,
+                  customerLegalName: "",
+                  fulfillmentDoc: "DELIVERY_NOTE",
                 })
               }
-              onSelect={(opt) =>
+              onSelect={(opt) => {
                 setForm({
                   ...form,
                   customerId: opt.id,
                   customerLabel: opt.label,
-                })
-              }
+                  customerVersion: null,
+                  customerLegalName: opt.label,
+                  fulfillmentDoc: "DELIVERY_NOTE",
+                });
+                void fetchCustomer(opt.id).then((detail) => {
+                  if (!detail.ok) return;
+                  setForm((prev) =>
+                    prev && prev.customerId === opt.id
+                      ? {
+                          ...prev,
+                          customerVersion: detail.data.version,
+                          customerLegalName: detail.data.legalName,
+                          fulfillmentDoc:
+                            detail.data.fulfillmentDoc ?? "DELIVERY_NOTE",
+                        }
+                      : prev,
+                  );
+                });
+              }}
               onOpen={() => refreshCustomers(form.customerLabel.trim())}
               options={customerOpts}
               loading={customerLoading}
@@ -606,6 +640,44 @@ function SalesPageInner() {
               emptyText="Aucun client — créez-en un ou affinez la saisie"
             />
 
+            {form.customerId ? (
+              <FulfillmentDocToggle
+                value={form.fulfillmentDoc}
+                onChange={(fulfillmentDoc) => {
+                  setForm({ ...form, fulfillmentDoc });
+                  if (
+                    form.customerId &&
+                    form.customerVersion != null &&
+                    form.customerLegalName
+                  ) {
+                    void updateCustomer(form.customerId, {
+                      legalName: form.customerLegalName,
+                      fulfillmentDoc,
+                      version: form.customerVersion,
+                    }).then((res) => {
+                      if (!res.ok) {
+                        setFormError(res.message);
+                        return;
+                      }
+                      setForm((prev) =>
+                        prev && prev.customerId === form.customerId
+                          ? {
+                              ...prev,
+                              fulfillmentDoc:
+                                res.data.fulfillmentDoc ?? fulfillmentDoc,
+                              customerVersion: res.data.version,
+                            }
+                          : prev,
+                      );
+                    });
+                  }
+                }}
+                hint="Préférence client (BL ou facture) — enregistrée sur la fiche, utilisée à la facturation."
+              />
+            ) : null}
+            </AFormSection>
+
+            <AFormSection title="Expédition">
             <ACombobox
               label="Entrepôt (réserve stock)"
               valueId={form.warehouseId}
@@ -652,9 +724,13 @@ function SalesPageInner() {
             />
 
             <div className="space-y-1">
-              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+              <label className="a-field-label">
                 Date demandée
-                {settings?.requireRequestedDate ? " *" : ""}
+                {settings?.requireRequestedDate ? (
+                  <span className="text-a-accent" aria-hidden>
+                    *
+                  </span>
+                ) : null}
               </label>
               <AInput
                 type="date"
@@ -666,9 +742,7 @@ function SalesPageInner() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Livreur souhaité
-              </label>
+              <label className="a-field-label">Livreur souhaité</label>
               <AInput
                 value={form.preferredDriver}
                 onChange={(e) =>
@@ -676,17 +750,18 @@ function SalesPageInner() {
                 }
                 placeholder="Nom libre — assignation tournée = module Delivery"
               />
-              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+              <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
                 Hint pour la préparation. L’affectation véhicule/chauffeur réelle
                 est portée par Delivery (phase suivante).
               </p>
             </div>
+            </AFormSection>
 
-            <div className="space-y-3 pt-4">
-              <div className="flex items-center justify-between">
-                <p className="text-[13px] font-medium text-a-fg">
-                  Articles
-                </p>
+            <AFormSection
+              title="Articles"
+              description="Multi-lignes · prix client suggéré si tarif fiche"
+            >
+              <div className="flex items-center justify-end">
                 <AButton
                   type="button"
                   size="sm"
@@ -784,9 +859,7 @@ function SalesPageInner() {
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                        Qté
-                      </label>
+                      <label className="a-field-label">Qté</label>
                       <AInput
                         value={line.qty}
                         onChange={(e) =>
@@ -802,9 +875,7 @@ function SalesPageInner() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                        Prix u.
-                      </label>
+                      <label className="a-field-label">Prix u.</label>
                       <AInput
                         value={line.unitPrice}
                         disabled={settings?.allowManualPrice === false}
@@ -823,17 +894,14 @@ function SalesPageInner() {
                   </div>
                 </div>
               ))}
-            </div>
+            </AFormSection>
 
-            <div className="space-y-1">
-              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Notes
-              </label>
+            <AFormSection title="Notes">
               <AInput
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
               />
-            </div>
+            </AFormSection>
 
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-[color:var(--a-danger)]">

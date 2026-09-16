@@ -10,17 +10,19 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
-import {
-  softChipClass,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
+import { ATabs } from "@/components/a/a-tabs";
 
 type DocRow = {
   id: string;
@@ -211,7 +213,10 @@ export default function DocumentsPage() {
       <AScreenHeader
         kicker="Documents"
         title="Bibliothèque"
-        description="Fichiers SOC-09 · lien CUSTOMER/CLAIM/ORDER/SHIPMENT/HR · signed URL portal."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "lien CUSTOMER/CLAIM/ORDER/SHIPMENT/HR · signed URL portal",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={() => setDrawerOpen(true)}>
             Déposer un fichier
@@ -233,41 +238,25 @@ export default function DocumentsPage() {
             />
           }
           filters={
-            <div
-              role="tablist"
-              aria-label="Filtre visibilité"
-              className="flex flex-wrap gap-2"
-            >
-              {VIS_FILTERS.map((chip) => {
-                const active = visFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() =>
-                      setVisFilter(
-                        chip.id as "" | "INTERNAL" | "CUSTOMER_PORTAL",
-                      )
-                    }
-                    className={softChipClass(active)}
-                  >
-                    {chip.label}
-                  </button>
+            <ATabs
+              ariaLabel="Filtre visibilité"
+              value={visFilter || "all"}
+              onValueChange={(id) => {
+                setVisFilter(
+                  (id === "all" ? "" : id) as
+                    | ""
+                    | "INTERNAL"
+                    | "CUSTOMER_PORTAL",
                 );
-              })}
-            </div>
+              }}
+              items={VIS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label: chip.label,
+              }))}
+            />
           }
           utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q, visFilter)}
-            >
-              Filtrer
-            </AButton>
+            <AListUtilities onFilter={() => void load(q, visFilter)} />
           }
         />
 
@@ -296,56 +285,54 @@ export default function DocumentsPage() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[48rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">N°</th>
-                  <th className="a-table-cell font-medium">Titre</th>
-                  <th className="a-table-cell font-medium">Visibilité</th>
-                  <th className="a-table-cell font-medium">Lien</th>
-                  <th className="a-table-cell font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row) => (
-                  <tr key={row.id} className={softTr}>
-                    <td className="a-mono a-table-cell">{row.number}</td>
-                    <td className="a-table-cell">{row.title}</td>
-                    <td className="a-table-cell">
-                      <ABadge tone={visibilityTone(row.visibility)}>
-                        {row.visibility === "CUSTOMER_PORTAL"
-                          ? "Portal"
-                          : "Interne"}
-                      </ABadge>
-                    </td>
-                    <td className="a-table-cell">
-                      {row.linkType === "NONE" ? (
-                        <span className="text-a-fg-muted">—</span>
-                      ) : (
-                        <span className="a-mono text-[length:var(--a-text-xs)]">
-                          {row.linkType}
-                          {row.linkId
-                            ? ` · ${row.linkId.slice(0, 8)}…`
-                            : ""}
-                        </span>
-                      )}
-                    </td>
-                    <td className="a-table-cell">
-                      <AButton
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => void onDownload(row.id)}
-                      >
-                        Télécharger
-                      </AButton>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ASoftTable className="min-w-[48rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>N°</ASoftTh>
+                <ASoftTh>Titre</ASoftTh>
+                <ASoftTh>Visibilité</ASoftTh>
+                <ASoftTh>Lien</ASoftTh>
+                <ASoftTh>Actions</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((row) => (
+                <ASoftTr key={row.id}>
+                  <ASoftTd className="a-mono font-semibold">{row.number}</ASoftTd>
+                  <ASoftTd>{row.title}</ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={visibilityTone(row.visibility)}>
+                      {row.visibility === "CUSTOMER_PORTAL"
+                        ? "Portal"
+                        : "Interne"}
+                    </ABadge>
+                  </ASoftTd>
+                  <ASoftTd>
+                    {row.linkType === "NONE" ? (
+                      <span className="text-a-fg-muted">—</span>
+                    ) : (
+                      <span className="a-mono text-[length:var(--a-text-xs)]">
+                        {row.linkType}
+                        {row.linkId
+                          ? ` · ${row.linkId.slice(0, 8)}…`
+                          : ""}
+                      </span>
+                    )}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <AButton
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => void onDownload(row.id)}
+                    >
+                      Télécharger
+                    </AButton>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

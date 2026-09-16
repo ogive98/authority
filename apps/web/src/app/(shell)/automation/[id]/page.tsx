@@ -15,6 +15,11 @@ import {
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
 } from "@/components/a";
 import {
   ATM_MODE_LABELS,
@@ -29,7 +34,6 @@ import {
   type AtmProfile,
   type AtmRun,
 } from "@/lib/automation";
-import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -220,59 +224,55 @@ export default function AutomationProfilePage() {
                       Aucune exécution.
                     </p>
                   ) : (
-                    <div className={softTableWrap}>
-                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                        <thead className={softThead}>
-                          <tr>
-                            <th className="a-table-cell font-medium">N°</th>
-                            <th className="a-table-cell font-medium">Résumé</th>
-                            <th className="a-table-cell font-medium">Statut</th>
-                            <th className="a-table-cell font-medium">Revue</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {state.runs.map((r) => (
-                            <tr key={r.id} className={softTr}>
-                              <td className="a-mono a-table-cell">
-                                {r.number}
-                              </td>
-                              <td className="a-table-cell">{r.summary}</td>
-                              <td className="a-table-cell">
-                                <ABadge tone={atmRunBadgeTone(r.status)}>
-                                  {ATM_RUN_STATUS_LABELS[r.status]}
-                                </ABadge>
-                              </td>
-                              <td className="a-table-cell">
-                                {r.status === "SUGGESTED" ||
-                                r.status === "PENDING_APPROVAL" ? (
-                                  <div className="flex flex-wrap gap-2">
-                                    <AButton
-                                      type="button"
-                                      size="sm"
-                                      disabled={busy}
-                                      onClick={() => void onApprove(r)}
-                                    >
-                                      Approuver
-                                    </AButton>
-                                    <AButton
-                                      type="button"
-                                      size="sm"
-                                      variant="secondary"
-                                      disabled={busy}
-                                      onClick={() => void onReject(r)}
-                                    >
-                                      Refuser
-                                    </AButton>
-                                  </div>
-                                ) : (
-                                  <span className="text-a-fg-muted">—</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <ASoftTable>
+                      <ASoftThead>
+                        <ASoftTr>
+                          <ASoftTh>N°</ASoftTh>
+                          <ASoftTh>Résumé</ASoftTh>
+                          <ASoftTh>Statut</ASoftTh>
+                          <ASoftTh>Revue</ASoftTh>
+                        </ASoftTr>
+                      </ASoftThead>
+                      <tbody>
+                        {state.runs.map((r) => (
+                          <ASoftTr key={r.id}>
+                            <ASoftTd className="a-mono">{r.number}</ASoftTd>
+                            <ASoftTd>{r.summary}</ASoftTd>
+                            <ASoftTd>
+                              <ABadge tone={atmRunBadgeTone(r.status)}>
+                                {ATM_RUN_STATUS_LABELS[r.status]}
+                              </ABadge>
+                            </ASoftTd>
+                            <ASoftTd>
+                              {r.status === "SUGGESTED" ||
+                              r.status === "PENDING_APPROVAL" ? (
+                                <div className="flex flex-wrap gap-2">
+                                  <AButton
+                                    type="button"
+                                    size="sm"
+                                    disabled={busy}
+                                    onClick={() => void onApprove(r)}
+                                  >
+                                    Approuver
+                                  </AButton>
+                                  <AButton
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    disabled={busy}
+                                    onClick={() => void onReject(r)}
+                                  >
+                                    Refuser
+                                  </AButton>
+                                </div>
+                              ) : (
+                                <span className="text-a-fg-muted">—</span>
+                              )}
+                            </ASoftTd>
+                          </ASoftTr>
+                        ))}
+                      </tbody>
+                    </ASoftTable>
                   )}
                 </APageSection>
               </>

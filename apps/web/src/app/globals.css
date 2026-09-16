@@ -34,9 +34,10 @@
   --a-violet-soft: rgb(124 58 237 / 0.12);
   --a-sky: #0891b2;
   --a-sky-soft: rgb(8 145 178 / 0.12);
-  --a-orange: #ea580c;
-  --a-orange-soft: rgb(234 88 12 / 0.12);
-  --a-orange-fg: #c2410c;
+  /* Legacy alias — chrome accents are blue / violet / sky only */
+  --a-orange: #7c3aed;
+  --a-orange-soft: rgb(124 58 237 / 0.12);
+  --a-orange-fg: #6d28d9;
 
   --a-success: #059669;
   --a-success-fg: #047857;
@@ -65,18 +66,18 @@
   --a-lightning-blur: var(--a-glass-blur);
 
   --a-gradient-canvas: #e8eef7;
-  --a-gradient-accent: linear-gradient(180deg, #2dd4bf 0%, #0d9488 100%);
+  --a-gradient-accent: linear-gradient(180deg, #2563eb 0%, #7c3aed 100%);
   --a-gradient-pro: linear-gradient(
     135deg,
-    #0ea5e9 0%,
-    #0d9488 50%,
-    #10b981 100%
+    #2563eb 0%,
+    #0891b2 50%,
+    #7c3aed 100%
   );
   --a-gradient-pro-soft: linear-gradient(
     135deg,
-    rgb(14 165 233 / 0.75) 0%,
-    rgb(13 148 136 / 0.7) 50%,
-    rgb(16 185 129 / 0.75) 100%
+    rgb(37 99 235 / 0.75) 0%,
+    rgb(8 145 178 / 0.7) 50%,
+    rgb(124 58 237 / 0.75) 100%
   );
 
   --a-focus-ring: #2563eb;
@@ -168,9 +169,10 @@
   --a-violet-soft: rgb(167 139 250 / 0.18);
   --a-sky: #22d3ee;
   --a-sky-soft: rgb(34 211 238 / 0.16);
-  --a-orange: #fb923c;
-  --a-orange-soft: rgb(251 146 60 / 0.18);
-  --a-orange-fg: #ffedd5;
+  /* Legacy alias — chrome accents are blue / violet / sky only */
+  --a-orange: #a78bfa;
+  --a-orange-soft: rgb(167 139 250 / 0.18);
+  --a-orange-fg: #ddd6fe;
 
   --a-success: #34d399;
   --a-success-fg: #6ee7b7;
@@ -484,7 +486,7 @@
   .a-field-label svg {
     width: 0.875rem;
     height: 0.875rem;
-    color: var(--a-orange);
+    color: var(--a-accent);
     flex-shrink: 0;
   }
 
@@ -646,26 +648,26 @@
   }
 
   /**
-   * Primary CTA — luminous accent (ZIP « + New order »), not heavy framed button.
+   * Primary CTA — solid blue fill (ZIP « + New order »).
    */
   .a-action-primary {
     border-radius: var(--a-radius-md);
-    background: var(--a-accent-muted);
-    color: var(--a-accent);
-    border: 1px solid color-mix(in srgb, var(--a-accent) 35%, transparent);
-    box-shadow: none;
+    background: var(--a-accent);
+    color: var(--a-accent-fg);
+    border: 1px solid transparent;
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--a-accent) 28%, transparent);
     font-weight: 600;
     transition:
       background-color 160ms ease,
       color 160ms ease,
-      border-color 160ms ease;
+      box-shadow 160ms ease;
   }
 
   .a-action-primary:hover {
-    background: color-mix(in srgb, var(--a-accent) 28%, transparent);
-    color: var(--a-accent-hover);
-    border-color: var(--a-accent);
-    box-shadow: none;
+    background: var(--a-accent-hover);
+    color: var(--a-accent-fg);
+    border-color: transparent;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--a-accent) 35%, transparent);
   }
 
   .a-nav-row {
@@ -683,7 +685,7 @@
     bottom: 0.15rem;
     height: 1.5px;
     border-radius: 1px;
-    background: var(--a-orange);
+    background: var(--a-accent);
     transform: scaleX(0);
     transform-origin: center;
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -1150,7 +1152,7 @@
     transform: translate(0, -50%);
   }
 
-  /* Flat orange glyphs — same family as left sidebar (no disc frame). */
+  /* Flat accent glyphs — same family as left sidebar (no disc frame). */
   .a-toolbox-glyph,
   .a-liquid-icon {
     position: relative;
@@ -1161,7 +1163,7 @@
     height: 2.5rem;
     border-radius: 0;
     overflow: visible;
-    color: var(--a-orange);
+    color: var(--a-accent);
     isolation: auto;
     background: transparent;
     box-shadow: none;
@@ -1205,7 +1207,7 @@
   .a-toolbox-tone-orange,
   .a-toolbox-tone-accent,
   .a-toolbox-tone-neutral {
-    color: var(--a-orange);
+    color: var(--a-accent);
   }
 
   /* Phone-like momentum scroll (notifications / drawers) */

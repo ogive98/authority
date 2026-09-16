@@ -12,10 +12,17 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import {
@@ -27,16 +34,11 @@ import {
   type ApBillStatus,
   type FinApBill,
 } from "@/lib/finance";
-import {
-  softChipClass,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import { fetchSuppliers, type Supplier } from "@/lib/suppliers";
 import { fetchTaxCodes, type TaxCode } from "@/lib/tax";
+import { ATabs } from "@/components/a/a-tabs";
 
 type LoadState =
   | { kind: "loading" }
@@ -263,7 +265,10 @@ function FinanceApBillsPageInner() {
       <AScreenHeader
         kicker="Finance"
         title="Factures fournisseurs"
-        description="Factures AP Soft Glass — HT+TVA optionnel (stub TVA19) · TTC sinon · RAS si Prefs VALIDATED · GL Thunder (D276)."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "HT+TVA optionnel · TTC sinon · RAS si Prefs VALIDATED · GL Thunder",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             {LAYOUT_ACTIONS.newApBill}
@@ -307,41 +312,23 @@ function FinanceApBillsPageInner() {
             />
           }
           filters={
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Filtrer par statut"
-            >
-              {AP_BILL_STATUS_FILTERS.map((chip) => {
-                const active = statusFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => {
-                      setStatusFilter(chip.id);
-                      syncStatusUrl(chip.id);
-                      void load(q, chip.id);
-                    }}
-                    className={softChipClass(active)}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                const next = (id === "all" ? "" : id) as "" | ApBillStatus;
+                setStatusFilter(next);
+                syncStatusUrl(next);
+                void load(q, next);
+              }}
+              items={AP_BILL_STATUS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label: chip.label,
+              }))}
+            />
           }
           utilities={
-            <AButton
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => void load(q, statusFilter)}
-            >
-              Actualiser
-            </AButton>
+            <AListUtilities onFilter={() => void load(q, statusFilter)} />
           }
         />
 
@@ -374,54 +361,51 @@ function FinanceApBillsPageInner() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="px-3 py-2 font-medium">N°</th>
-                  <th className="px-3 py-2 font-medium">Fournisseur</th>
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium">Échéance</th>
-                  <th className="px-3 py-2 font-medium text-right">Montant</th>
-                  <th className="px-3 py-2 font-medium">Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((bill) => (
-                  <tr
-                    key={bill.id}
-                    className={`${softTr} cursor-pointer`}
-                    onClick={() => router.push(`/finance/ap-bills/${bill.id}`)}
-                  >
-                    <td className="px-3 py-2 font-mono tabular-nums">
-                      <Link
-                        href={`/finance/ap-bills/${bill.id}`}
-                        className="text-a-accent hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {bill.number}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2">{bill.vendorName}</td>
-                    <td className="px-3 py-2 font-mono tabular-nums">
-                      {bill.billDate}
-                    </td>
-                    <td className="px-3 py-2 font-mono tabular-nums">
-                      {bill.dueDate ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono tabular-nums">
-                      {bill.amountTotal} {bill.currency}
-                    </td>
-                    <td className="px-3 py-2">
-                      <ABadge tone={apBillBadgeTone(bill.status)}>
-                        {AP_BILL_STATUS_LABELS[bill.status]}
-                      </ABadge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ASoftTable>
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>N°</ASoftTh>
+                <ASoftTh>Fournisseur</ASoftTh>
+                <ASoftTh>Date</ASoftTh>
+                <ASoftTh>Échéance</ASoftTh>
+                <ASoftTh numeric>Montant</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((bill) => (
+                <ASoftTr
+                  key={bill.id}
+                  onClick={() => router.push(`/finance/ap-bills/${bill.id}`)}
+                >
+                  <ASoftTd>
+                    <Link
+                      href={`/finance/ap-bills/${bill.id}`}
+                      className="a-mono font-semibold text-a-accent hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {bill.number}
+                    </Link>
+                  </ASoftTd>
+                  <ASoftTd>{bill.vendorName}</ASoftTd>
+                  <ASoftTd className="a-mono text-a-fg-muted">
+                    {bill.billDate}
+                  </ASoftTd>
+                  <ASoftTd className="a-mono text-a-fg-muted">
+                    {bill.dueDate ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd numeric>
+                    {bill.amountTotal} {bill.currency}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={apBillBadgeTone(bill.status)}>
+                      {AP_BILL_STATUS_LABELS[bill.status]}
+                    </ABadge>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

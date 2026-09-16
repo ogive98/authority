@@ -10,18 +10,20 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
   ASwitch,
+  erpListDescription,
 } from "@/components/a";
-import {
-  softChipClass,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
+import { ATabs } from "@/components/a/a-tabs";
 import {
   STATUS_LABELS,
   createCompanyUser,
@@ -353,7 +355,10 @@ export default function UsersPage() {
       <AScreenHeader
         kicker="Identité"
         title="Utilisateurs"
-        description="Invitation par lien (Outlook) ou mot de passe immédiat · Admin / Comptable / Opérateur"
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "invitation lien / mot de passe · Admin / Comptable / Opérateur",
+        )}
         status={
           mailStatus ? (
             <ABadge
@@ -400,43 +405,24 @@ export default function UsersPage() {
             />
           }
           filters={
-            <div
-              className="flex flex-wrap gap-1.5"
-              role="tablist"
-              aria-label="Filtrer par statut"
-            >
-              {STATUS_FILTERS.map((chip) => {
-                const active = statusFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setStatusFilter(chip.id)}
-                    className={softChipClass(active)}
-                  >
-                    {chip.label}
-                    {state.kind === "ok" ? (
-                      <span className="a-mono ml-1.5 opacity-80">
-                        {statusCounts[chip.id] ?? 0}
-                      </span>
-                    ) : null}
-                  </button>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                setStatusFilter(
+                  (id === "all" ? "" : id) as "" | CompanyUserStatus,
                 );
-              })}
-            </div>
+              }}
+              items={STATUS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label:
+                  state.kind === "ok"
+                    ? `${chip.label} (${statusCounts[chip.id] ?? 0})`
+                    : chip.label,
+              }))}
+            />
           }
-          utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q)}
-            >
-              Filtrer
-            </AButton>
-          }
+          utilities={<AListUtilities onFilter={() => void load(q)} />}
         />
 
         {state.kind === "loading" ? (
@@ -477,91 +463,89 @@ export default function UsersPage() {
         ) : null}
 
         {state.kind === "ok" && visibleItems.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[40rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">Nom</th>
-                  <th className="a-table-cell font-medium">E-mail</th>
-                  <th className="a-table-cell font-medium">Rôle</th>
-                  <th className="a-table-cell font-medium">Statut</th>
-                  <th className="a-table-cell font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleItems.map((row) => (
-                  <tr key={row.id} className={softTr}>
-                    <td className="a-table-cell font-medium text-a-fg">
-                      {row.displayName}
-                    </td>
-                    <td className="a-mono a-table-cell text-a-fg-muted">
-                      {row.email}
-                    </td>
-                    <td className="a-table-cell text-a-fg">
-                      <ABadge tone={roleTone(row.roleCode)}>
-                        {roleLabel(row.roleCode)}
+          <ASoftTable className="min-w-[40rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>Nom</ASoftTh>
+                <ASoftTh>E-mail</ASoftTh>
+                <ASoftTh>Rôle</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh>Actions</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {visibleItems.map((row) => (
+                <ASoftTr key={row.id}>
+                  <ASoftTd className="font-medium text-a-fg">
+                    {row.displayName}
+                  </ASoftTd>
+                  <ASoftTd className="a-mono text-a-fg-muted">
+                    {row.email}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={roleTone(row.roleCode)}>
+                      {roleLabel(row.roleCode)}
+                    </ABadge>
+                  </ASoftTd>
+                  <ASoftTd>
+                    <div className="space-y-0.5">
+                      <ABadge
+                        tone={
+                          row.status === "INVITED" &&
+                          row.inviteExpiresAt &&
+                          Date.parse(row.inviteExpiresAt) < Date.now()
+                            ? "danger"
+                            : statusTone(row.status)
+                        }
+                      >
+                        {STATUS_LABELS[row.status]}
                       </ABadge>
-                    </td>
-                    <td className="a-table-cell">
-                      <div className="space-y-0.5">
-                        <ABadge
-                          tone={
-                            row.status === "INVITED" &&
-                            row.inviteExpiresAt &&
-                            Date.parse(row.inviteExpiresAt) < Date.now()
-                              ? "danger"
-                              : statusTone(row.status)
-                          }
-                        >
-                          {STATUS_LABELS[row.status]}
-                        </ABadge>
-                        {row.status === "INVITED" && row.inviteExpiresAt ? (
-                          <p className="text-[11px] text-a-fg-muted">
-                            {Date.parse(row.inviteExpiresAt) < Date.now()
-                              ? "Lien expiré"
-                              : `Expire le ${new Date(
-                                  row.inviteExpiresAt,
-                                ).toLocaleDateString("fr-TN")}`}
-                          </p>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className="a-table-cell">
-                      <div className="flex flex-wrap gap-2">
+                      {row.status === "INVITED" && row.inviteExpiresAt ? (
+                        <p className="text-[11px] text-a-fg-muted">
+                          {Date.parse(row.inviteExpiresAt) < Date.now()
+                            ? "Lien expiré"
+                            : `Expire le ${new Date(
+                                row.inviteExpiresAt,
+                              ).toLocaleDateString("fr-TN")}`}
+                        </p>
+                      ) : null}
+                    </div>
+                  </ASoftTd>
+                  <ASoftTd>
+                    <div className="flex flex-wrap gap-2">
+                      <AButton
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => openEdit(row)}
+                      >
+                        Éditer
+                      </AButton>
+                      {row.status === "INVITED" ? (
                         <AButton
                           type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => openEdit(row)}
-                        >
-                          Éditer
-                        </AButton>
-                        {row.status === "INVITED" ? (
-                          <AButton
-                            type="button"
-                            variant={
-                              row.inviteExpiresAt &&
-                              Date.parse(row.inviteExpiresAt) < Date.now()
-                                ? "primary"
-                                : "secondary"
-                            }
-                            size="sm"
-                            disabled={busy}
-                            onClick={() => void onReinvite(row)}
-                          >
-                            {row.inviteExpiresAt &&
+                          variant={
+                            row.inviteExpiresAt &&
                             Date.parse(row.inviteExpiresAt) < Date.now()
-                              ? "Renvoyer (expiré)"
-                              : "Renvoyer"}
-                          </AButton>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                              ? "primary"
+                              : "secondary"
+                          }
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void onReinvite(row)}
+                        >
+                          {row.inviteExpiresAt &&
+                          Date.parse(row.inviteExpiresAt) < Date.now()
+                            ? "Renvoyer (expiré)"
+                            : "Renvoyer"}
+                        </AButton>
+                      ) : null}
+                    </div>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

@@ -8,12 +8,20 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import {
@@ -22,7 +30,6 @@ import {
   FORGE_FR_STATUS_LABELS,
   type ForgeFeatureRequest,
 } from "@/lib/forge";
-import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -84,7 +91,10 @@ export default function ForgeFeatureRequestsPage() {
         }
         kicker="FORGE"
         title="Demandes"
-        description="Intake humain — pas d’implémentation automatique en Phase 1."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "Intake humain — pas d’implémentation automatique en Phase 1",
+        )}
         primary={
           <AButton
             type="button"
@@ -126,6 +136,10 @@ export default function ForgeFeatureRequestsPage() {
         }
       />
       <APageBody>
+        <AFilterBar
+          utilities={<AListUtilities onFilter={() => void load()} />}
+        />
+
         {state.kind === "loading" ? (
           <ASkeleton className="h-24 w-full" />
         ) : null}
@@ -148,43 +162,39 @@ export default function ForgeFeatureRequestsPage() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="px-3 py-2 font-medium">Titre</th>
-                  <th className="px-3 py-2 font-medium">Statut</th>
-                  <th className="px-3 py-2 font-medium text-right">Priorité</th>
-                  <th className="px-3 py-2 font-medium">Créée</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((fr) => (
-                  <tr key={fr.id} className={softTr}>
-                    <td className="px-3 py-2">
-                      <div className="font-medium">{fr.title}</div>
-                      {fr.description ? (
-                        <div className="text-[length:var(--a-text-xs)] text-a-muted">
-                          {fr.description}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-2">
-                      <ABadge tone="neutral">
-                        {FORGE_FR_STATUS_LABELS[fr.status]}
-                      </ABadge>
-                    </td>
-                    <td className="px-3 py-2 text-right a-mono tabular-nums">
-                      {fr.priority}
-                    </td>
-                    <td className="px-3 py-2 a-mono tabular-nums text-a-muted">
-                      {fr.createdAt.slice(0, 10)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ASoftTable className="min-w-[40rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>Titre</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh numeric>Priorité</ASoftTh>
+                <ASoftTh>Créée</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((fr) => (
+                <ASoftTr key={fr.id}>
+                  <ASoftTd>
+                    <div className="font-medium">{fr.title}</div>
+                    {fr.description ? (
+                      <div className="text-[length:var(--a-text-xs)] text-a-muted">
+                        {fr.description}
+                      </div>
+                    ) : null}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone="neutral">
+                      {FORGE_FR_STATUS_LABELS[fr.status]}
+                    </ABadge>
+                  </ASoftTd>
+                  <ASoftTd numeric>{fr.priority}</ASoftTd>
+                  <ASoftTd className="a-mono tabular-nums text-a-muted">
+                    {fr.createdAt.slice(0, 10)}
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

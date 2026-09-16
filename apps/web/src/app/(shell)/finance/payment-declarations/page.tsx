@@ -9,10 +9,17 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import {
   PAYMENT_DECLARATION_STATUS_FILTERS,
@@ -23,12 +30,7 @@ import {
   type FinPaymentDeclaration,
   type PaymentDeclarationStatus,
 } from "@/lib/finance";
-import {
-  softChipClass,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { ATabs } from "@/components/a/a-tabs";
 
 type LoadState =
   | { kind: "loading" }
@@ -135,7 +137,10 @@ function FinancePaymentDeclarationsPageInner() {
       <AScreenHeader
         kicker="Finance"
         title="Déclarations portail"
-        description="Signalements client de paiement — prise en compte humaine, sans encaissement automatique."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "signalements client · prise en compte humaine",
+        )}
         more={
           <AOverflowMenu
             items={[
@@ -166,31 +171,25 @@ function FinancePaymentDeclarationsPageInner() {
             />
           }
           filters={
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Filtrer par statut"
-            >
-              {PAYMENT_DECLARATION_STATUS_FILTERS.map((chip) => {
-                const active = statusFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    className={softChipClass(active)}
-                    onClick={() => {
-                      setStatusFilter(chip.id);
-                      syncStatusUrl(chip.id);
-                      void load(q, chip.id);
-                    }}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                const next = (id === "all" ? "" : id) as
+                  | ""
+                  | PaymentDeclarationStatus;
+                setStatusFilter(next);
+                syncStatusUrl(next);
+                void load(q, next);
+              }}
+              items={PAYMENT_DECLARATION_STATUS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label: chip.label,
+              }))}
+            />
+          }
+          utilities={
+            <AListUtilities onFilter={() => void load(q, statusFilter)} />
           }
         />
 
@@ -211,58 +210,45 @@ function FinancePaymentDeclarationsPageInner() {
             canAct={false}
           />
         ) : (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[720px] text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">N°</th>
-                  <th className="a-table-cell font-medium">Client</th>
-                  <th className="a-table-cell font-medium">Montant</th>
-                  <th className="a-table-cell font-medium">Mode</th>
-                  <th className="a-table-cell font-medium">Date</th>
-                  <th className="a-table-cell font-medium">Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row, i) => (
-                  <tr
-                    key={row.id}
-                    className={softTr(i)}
-                    role="link"
-                    tabIndex={0}
-                    onClick={() =>
-                      router.push(`/finance/payment-declarations/${row.id}`)
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        router.push(
-                          `/finance/payment-declarations/${row.id}`,
-                        );
-                      }
-                    }}
-                  >
-                    <td className="a-table-cell a-mono">{row.number}</td>
-                    <td className="a-table-cell">
-                      {row.customerName ?? row.customerCode ?? "—"}
-                    </td>
-                    <td className="a-table-cell a-mono tabular-nums">
-                      {row.amount} {row.currency}
-                    </td>
-                    <td className="a-table-cell">
-                      {PAYMENT_METHOD_LABELS[row.method] ?? row.method}
-                    </td>
-                    <td className="a-table-cell a-mono">{row.paymentDate}</td>
-                    <td className="a-table-cell">
-                      <ABadge tone={paymentDeclarationBadgeTone(row.status)}>
-                        {PAYMENT_DECLARATION_STATUS_LABELS[row.status]}
-                      </ABadge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ASoftTable className="min-w-[720px]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>N°</ASoftTh>
+                <ASoftTh>Client</ASoftTh>
+                <ASoftTh numeric>Montant</ASoftTh>
+                <ASoftTh>Mode</ASoftTh>
+                <ASoftTh>Date</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((row) => (
+                <ASoftTr
+                  key={row.id}
+                  onClick={() =>
+                    router.push(`/finance/payment-declarations/${row.id}`)
+                  }
+                >
+                  <ASoftTd className="a-mono font-semibold">{row.number}</ASoftTd>
+                  <ASoftTd>
+                    {row.customerName ?? row.customerCode ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd numeric>
+                    {row.amount} {row.currency}
+                  </ASoftTd>
+                  <ASoftTd>
+                    {PAYMENT_METHOD_LABELS[row.method] ?? row.method}
+                  </ASoftTd>
+                  <ASoftTd className="a-mono">{row.paymentDate}</ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={paymentDeclarationBadgeTone(row.status)}>
+                      {PAYMENT_DECLARATION_STATUS_LABELS[row.status]}
+                    </ABadge>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         )}
       </APageBody>
     </>

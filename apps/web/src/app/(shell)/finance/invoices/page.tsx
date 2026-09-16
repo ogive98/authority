@@ -13,10 +13,17 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
   type AComboboxOption,
 } from "@/components/a";
 import { FulfillmentDocToggle } from "@/components/fulfillment-doc-toggle";
@@ -43,13 +50,8 @@ import {
   type Product,
 } from "@/lib/products";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
-import {
-  softChipClass,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
+import { ATabs } from "@/components/a/a-tabs";
 
 const STATUS_FILTERS: { id: "" | InvoiceStatus; label: string }[] = [
   { id: "", label: "Tout" },
@@ -369,7 +371,10 @@ function FinanceInvoicesPageInner() {
       <AScreenHeader
         kicker="Finance"
         title="Factures"
-        description="Factures HT / TVA / TTC — TVA auto depuis le produit (stub TVA19 jusqu’au comptable). FODEC·timbre seulement si validés en Préférences."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "HT / TVA / TTC · TVA produit · FODEC·timbre si Prefs VALIDATED",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             {LAYOUT_ACTIONS.newInvoice}
@@ -419,41 +424,23 @@ function FinanceInvoicesPageInner() {
             />
           }
           filters={
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Filtrer par statut"
-            >
-              {STATUS_FILTERS.map((chip) => {
-                const active = statusFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => {
-                      setStatusFilter(chip.id);
-                      syncStatusUrl(chip.id);
-                      void load(q, chip.id);
-                    }}
-                    className={softChipClass(active)}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                const next = (id === "all" ? "" : id) as "" | InvoiceStatus;
+                setStatusFilter(next);
+                syncStatusUrl(next);
+                void load(q, next);
+              }}
+              items={STATUS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label: chip.label,
+              }))}
+            />
           }
           utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q, statusFilter)}
-            >
-              Filtrer
-            </AButton>
+            <AListUtilities onFilter={() => void load(q, statusFilter)} />
           }
         />
 
@@ -482,105 +469,106 @@ function FinanceInvoicesPageInner() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[56rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">N°</th>
-                  <th className="a-table-cell font-medium">Document</th>
-                  <th className="a-table-cell font-medium">Client</th>
-                  <th className="a-table-cell font-medium">Statut</th>
-                  <th className="a-table-cell font-medium text-right">HT</th>
-                  <th className="a-table-cell font-medium text-right">TVA</th>
-                  <th className="a-table-cell font-medium text-right">TTC</th>
-                  <th className="a-table-cell font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((inv) => (
-                  <tr key={inv.id} className={softTr}>
-                    <td className="a-mono a-table-cell">
-                      <Link
-                        href={`/finance/invoices/${inv.id}`}
-                        className="font-semibold text-a-accent hover:underline"
-                      >
-                        {inv.number}
+          <ASoftTable className="min-w-[56rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>N°</ASoftTh>
+                <ASoftTh>Document</ASoftTh>
+                <ASoftTh>Client</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh numeric>HT</ASoftTh>
+                <ASoftTh numeric>TVA</ASoftTh>
+                <ASoftTh numeric>TTC</ASoftTh>
+                <ASoftTh>Actions</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((inv) => (
+                <ASoftTr
+                  key={inv.id}
+                  onClick={() => router.push(`/finance/invoices/${inv.id}`)}
+                >
+                  <ASoftTd>
+                    <Link
+                      href={`/finance/invoices/${inv.id}`}
+                      className="a-mono font-semibold text-a-accent hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {inv.number}
+                    </Link>
+                  </ASoftTd>
+                  <ASoftTd>
+                    {
+                      FULFILLMENT_DOC_LABELS[
+                        inv.fulfillmentDoc ?? "DELIVERY_NOTE"
+                      ]
+                    }
+                  </ASoftTd>
+                  <ASoftTd>
+                    {inv.customerName ?? inv.customerCode ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={invoiceBadgeTone(inv.status)}>
+                      {INVOICE_STATUS_LABELS[inv.status]}
+                    </ABadge>
+                  </ASoftTd>
+                  <ASoftTd numeric>{inv.amountHt ?? "—"}</ASoftTd>
+                  <ASoftTd numeric>{inv.amountTax ?? "—"}</ASoftTd>
+                  <ASoftTd numeric>
+                    {inv.amountTotal} {inv.currency}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <div
+                      className="flex flex-wrap gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Link href={`/finance/invoices/${inv.id}`}>
+                        <AButton type="button" variant="secondary" size="sm">
+                          Fiche
+                        </AButton>
                       </Link>
-                    </td>
-                    <td className="a-table-cell">
-                      {
-                        FULFILLMENT_DOC_LABELS[
-                          inv.fulfillmentDoc ?? "DELIVERY_NOTE"
-                        ]
-                      }
-                    </td>
-                    <td className="a-table-cell">
-                      {inv.customerName ?? inv.customerCode ?? "—"}
-                    </td>
-                    <td className="a-table-cell">
-                      <ABadge tone={invoiceBadgeTone(inv.status)}>
-                        {INVOICE_STATUS_LABELS[inv.status]}
-                      </ABadge>
-                    </td>
-                    <td className="a-mono a-table-cell tabular-nums text-right">
-                      {inv.amountHt ?? "—"}
-                    </td>
-                    <td className="a-mono a-table-cell tabular-nums text-right">
-                      {inv.amountTax ?? "—"}
-                    </td>
-                    <td className="a-mono a-table-cell tabular-nums text-right font-medium">
-                      {inv.amountTotal} {inv.currency}
-                    </td>
-                    <td className="a-table-cell">
-                      <div className="flex flex-wrap gap-2">
-                        <Link href={`/finance/invoices/${inv.id}`}>
-                          <AButton type="button" variant="secondary" size="sm">
-                            Fiche
-                          </AButton>
-                        </Link>
-                        {inv.status === "DRAFT" ? (
+                      {inv.status === "DRAFT" ? (
+                        <AButton
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void onIssue(inv.id)}
+                        >
+                          Émettre
+                        </AButton>
+                      ) : null}
+                      {inv.status === "ISSUED" ? (
+                        <Link
+                          href={`/finance/credit-notes?invoiceId=${encodeURIComponent(inv.id)}`}
+                          className="inline-flex"
+                        >
                           <AButton
                             type="button"
                             variant="secondary"
                             size="sm"
-                            disabled={busy}
-                            onClick={() => void onIssue(inv.id)}
                           >
-                            Émettre
+                            Avoir
                           </AButton>
-                        ) : null}
-                        {inv.status === "ISSUED" ? (
-                          <Link
-                            href={`/finance/credit-notes?invoiceId=${encodeURIComponent(inv.id)}`}
-                            className="inline-flex"
-                          >
-                            <AButton
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                            >
-                              Avoir
-                            </AButton>
-                          </Link>
-                        ) : null}
-                        {inv.status === "DRAFT" || inv.status === "ISSUED" ? (
-                          <AButton
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            disabled={busy}
-                            onClick={() => void onCancel(inv.id)}
-                          >
-                            Annuler
-                          </AButton>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        </Link>
+                      ) : null}
+                      {inv.status === "DRAFT" || inv.status === "ISSUED" ? (
+                        <AButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void onCancel(inv.id)}
+                        >
+                          Annuler
+                        </AButton>
+                      ) : null}
+                    </div>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

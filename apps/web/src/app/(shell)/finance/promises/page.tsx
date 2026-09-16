@@ -4,16 +4,22 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ABadge,
-  AButton,
   AEmptyState,
   AErrorState,
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import {
   PROMISE_STATUS_FILTERS,
@@ -23,12 +29,7 @@ import {
   type FinPromise,
   type PromiseStatus,
 } from "@/lib/finance";
-import {
-  softChipClass,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { ATabs } from "@/components/a/a-tabs";
 
 type LoadState =
   | { kind: "loading" }
@@ -129,7 +130,10 @@ function FinancePromisesPageInner() {
       <AScreenHeader
         kicker="Finance"
         title="Promesses de paiement"
-        description="Engagements client sur créances AR — sans blocage automatique des ventes."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "engagements client sur créances AR · sans blocage auto ventes",
+        )}
         more={
           <AOverflowMenu
             items={[
@@ -165,40 +169,22 @@ function FinancePromisesPageInner() {
             />
           }
           filters={
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Filtrer par statut"
-            >
-              {PROMISE_STATUS_FILTERS.map((chip) => {
-                const active = statusFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => {
-                      setStatusFilter(chip.id);
-                      syncStatusUrl(chip.id);
-                    }}
-                    className={softChipClass(active)}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                const next = (id === "all" ? "" : id) as "" | PromiseStatus;
+                setStatusFilter(next);
+                syncStatusUrl(next);
+              }}
+              items={PROMISE_STATUS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label: chip.label,
+              }))}
+            />
           }
           utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q, statusFilter)}
-            >
-              Filtrer
-            </AButton>
+            <AListUtilities onFilter={() => void load(q, statusFilter)} />
           }
         />
 
@@ -220,46 +206,43 @@ function FinancePromisesPageInner() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[40rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="px-2 py-2 font-medium">N°</th>
-                  <th className="px-2 py-2 font-medium">Client</th>
-                  <th className="px-2 py-2 font-medium">Créance</th>
-                  <th className="px-2 py-2 font-medium text-right">Montant</th>
-                  <th className="px-2 py-2 font-medium">Échéance</th>
-                  <th className="px-2 py-2 font-medium">Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row) => (
-                  <tr
-                    key={row.id}
-                    className={`${softTr} cursor-pointer`}
-                    onClick={() => router.push(`/finance/promises/${row.id}`)}
-                  >
-                    <td className="a-mono px-2 py-2">{row.number}</td>
-                    <td className="px-2 py-2">
-                      {row.customerName ?? row.customerCode ?? "—"}
-                    </td>
-                    <td className="a-mono px-2 py-2">
-                      {row.openItemNumber ?? "—"}
-                    </td>
-                    <td className="a-mono px-2 py-2 text-right">
-                      {row.amount} {row.currency}
-                    </td>
-                    <td className="a-mono px-2 py-2">{row.promisedDate}</td>
-                    <td className="px-2 py-2">
-                      <ABadge tone={promiseBadgeTone(row.status)}>
-                        {PROMISE_STATUS_LABELS[row.status]}
-                      </ABadge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ASoftTable className="min-w-[40rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>N°</ASoftTh>
+                <ASoftTh>Client</ASoftTh>
+                <ASoftTh>Créance</ASoftTh>
+                <ASoftTh numeric>Montant</ASoftTh>
+                <ASoftTh>Échéance</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((row) => (
+                <ASoftTr
+                  key={row.id}
+                  onClick={() => router.push(`/finance/promises/${row.id}`)}
+                >
+                  <ASoftTd className="a-mono font-semibold">{row.number}</ASoftTd>
+                  <ASoftTd>
+                    {row.customerName ?? row.customerCode ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd className="a-mono">
+                    {row.openItemNumber ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd numeric>
+                    {row.amount} {row.currency}
+                  </ASoftTd>
+                  <ASoftTd className="a-mono">{row.promisedDate}</ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={promiseBadgeTone(row.status)}>
+                      {PROMISE_STATUS_LABELS[row.status]}
+                    </ABadge>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
     </>

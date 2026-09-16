@@ -15,6 +15,11 @@ import {
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
   type AOverflowItem,
 } from "@/components/a";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
@@ -31,7 +36,7 @@ import {
   generateTejInvoicePack,
 } from "@/lib/tax";
 import { FULFILLMENT_DOC_LABELS } from "@/lib/customers";
-import { softPanel, softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import { softPanel } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -345,60 +350,49 @@ export default function FinanceInvoiceFichePage() {
 
                 <APageSection title="Lignes">
                   {(inv.lines?.length ?? 0) > 0 ? (
-                    <div className={softTableWrap}>
-                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                        <thead className={softThead}>
-                          <tr>
-                            <th className="px-4 py-3 font-medium">#</th>
-                            <th className="px-4 py-3 font-medium">
-                              Description
-                            </th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              Qté
-                            </th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              PU HT
-                            </th>
-                            <th className="px-4 py-3 font-medium">TVA</th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              HT
-                            </th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              Taxe
-                            </th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              TTC
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {inv.lines.map((l) => (
-                            <tr key={l.id} className={softTr}>
-                              <td className="a-mono px-4 py-3">{l.lineNo}</td>
-                              <td className="px-4 py-3">{l.description}</td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums">
-                                {l.qty}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums">
-                                {l.unitPriceHt}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-a-fg-muted">
-                                {l.taxCode ?? "—"}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums">
-                                {l.amountHt}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums">
-                                {l.amountTax}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums font-medium">
-                                {l.amountTtc}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <ASoftTable>
+                      <ASoftThead>
+                        <ASoftTr>
+                          <ASoftTh>#</ASoftTh>
+                          <ASoftTh>Description</ASoftTh>
+                          <ASoftTh numeric>Qté</ASoftTh>
+                          <ASoftTh numeric>PU HT</ASoftTh>
+                          <ASoftTh>TVA</ASoftTh>
+                          <ASoftTh numeric>HT</ASoftTh>
+                          <ASoftTh numeric>Taxe</ASoftTh>
+                          <ASoftTh numeric>TTC</ASoftTh>
+                        </ASoftTr>
+                      </ASoftThead>
+                      <tbody>
+                        {inv.lines.map((l) => (
+                          <ASoftTr key={l.id}>
+                            <ASoftTd className="a-mono">{l.lineNo}</ASoftTd>
+                            <ASoftTd>{l.description}</ASoftTd>
+                            <ASoftTd numeric className="a-mono tabular-nums">
+                              {l.qty}
+                            </ASoftTd>
+                            <ASoftTd numeric className="a-mono tabular-nums">
+                              {l.unitPriceHt}
+                            </ASoftTd>
+                            <ASoftTd className="a-mono text-a-fg-muted">
+                              {l.taxCode ?? "—"}
+                            </ASoftTd>
+                            <ASoftTd numeric className="a-mono tabular-nums">
+                              {l.amountHt}
+                            </ASoftTd>
+                            <ASoftTd numeric className="a-mono tabular-nums">
+                              {l.amountTax}
+                            </ASoftTd>
+                            <ASoftTd
+                              numeric
+                              className="a-mono tabular-nums font-medium"
+                            >
+                              {l.amountTtc}
+                            </ASoftTd>
+                          </ASoftTr>
+                        ))}
+                      </tbody>
+                    </ASoftTable>
                   ) : (
                     <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                       Aucune ligne (facture legacy).

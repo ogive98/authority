@@ -12,10 +12,17 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
   type AComboboxOption,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
@@ -32,13 +39,8 @@ import {
   type FinInvoice,
 } from "@/lib/finance";
 import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
-import {
-  softChipClass,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
+import { ATabs } from "@/components/a/a-tabs";
 
 type LoadState =
   | { kind: "loading" }
@@ -304,7 +306,10 @@ function FinanceCreditNotesPageInner() {
       <AScreenHeader
         kicker="Finance"
         title="Avoirs"
-        description="Avoirs liés à une facture émise — partiel ou total via lignes. Pas de restauration stock. FODEC·timbre seulement si validés."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "liés à facture émise · pas de restauration stock · FODEC·timbre si validés",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={() => openCreate()}>
             {LAYOUT_ACTIONS.newCreditNote}
@@ -349,41 +354,25 @@ function FinanceCreditNotesPageInner() {
             />
           }
           filters={
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Filtrer par statut"
-            >
-              {CREDIT_NOTE_STATUS_FILTERS.map((chip) => {
-                const active = statusFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => {
-                      setStatusFilter(chip.id);
-                      syncStatusUrl(chip.id);
-                      void load(q, prefillInvoiceId, chip.id);
-                    }}
-                    className={softChipClass(active)}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                const next = (id === "all" ? "" : id) as "" | CreditNoteStatus;
+                setStatusFilter(next);
+                syncStatusUrl(next);
+                void load(q, prefillInvoiceId, next);
+              }}
+              items={CREDIT_NOTE_STATUS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label: chip.label,
+              }))}
+            />
           }
           utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q, prefillInvoiceId, statusFilter)}
-            >
-              Filtrer
-            </AButton>
+            <AListUtilities
+              onFilter={() => void load(q, prefillInvoiceId, statusFilter)}
+            />
           }
         />
 
@@ -410,58 +399,47 @@ function FinanceCreditNotesPageInner() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[56rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">N°</th>
-                  <th className="a-table-cell font-medium">Facture</th>
-                  <th className="a-table-cell font-medium">Client</th>
-                  <th className="a-table-cell font-medium">Statut</th>
-                  <th className="a-table-cell font-medium text-right">TTC</th>
-                  <th className="a-table-cell font-medium text-right">
-                    Appliqué AR
-                  </th>
-                  <th className="a-table-cell font-medium text-right">
-                    Non appliqué
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((cn) => (
-                  <tr
-                    key={cn.id}
-                    className={`${softTr} cursor-pointer`}
-                    onClick={() =>
-                      router.push(`/finance/credit-notes/${cn.id}`)
-                    }
-                  >
-                    <td className="a-mono a-table-cell">{cn.number}</td>
-                    <td className="a-mono a-table-cell">
-                      {cn.invoiceNumber ?? "—"}
-                    </td>
-                    <td className="a-table-cell">
-                      {cn.customerName ?? cn.customerCode ?? "—"}
-                    </td>
-                    <td className="a-table-cell">
-                      <ABadge tone={creditNoteBadgeTone(cn.status)}>
-                        {CREDIT_NOTE_STATUS_LABELS[cn.status]}
-                      </ABadge>
-                    </td>
-                    <td className="a-mono a-table-cell tabular-nums text-right font-medium">
-                      {cn.amountTotal} {cn.currency}
-                    </td>
-                    <td className="a-mono a-table-cell tabular-nums text-right">
-                      {cn.amountAppliedToAr}
-                    </td>
-                    <td className="a-mono a-table-cell tabular-nums text-right">
-                      {cn.amountUnapplied}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ASoftTable className="min-w-[56rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>N°</ASoftTh>
+                <ASoftTh>Facture</ASoftTh>
+                <ASoftTh>Client</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh numeric>TTC</ASoftTh>
+                <ASoftTh numeric>Appliqué AR</ASoftTh>
+                <ASoftTh numeric>Non appliqué</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((cn) => (
+                <ASoftTr
+                  key={cn.id}
+                  onClick={() =>
+                    router.push(`/finance/credit-notes/${cn.id}`)
+                  }
+                >
+                  <ASoftTd className="a-mono font-semibold">{cn.number}</ASoftTd>
+                  <ASoftTd className="a-mono">
+                    {cn.invoiceNumber ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd>
+                    {cn.customerName ?? cn.customerCode ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={creditNoteBadgeTone(cn.status)}>
+                      {CREDIT_NOTE_STATUS_LABELS[cn.status]}
+                    </ABadge>
+                  </ASoftTd>
+                  <ASoftTd numeric>
+                    {cn.amountTotal} {cn.currency}
+                  </ASoftTd>
+                  <ASoftTd numeric>{cn.amountAppliedToAr}</ASoftTd>
+                  <ASoftTd numeric>{cn.amountUnapplied}</ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

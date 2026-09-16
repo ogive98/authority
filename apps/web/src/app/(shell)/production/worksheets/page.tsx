@@ -11,9 +11,16 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import {
   cancelWorksheet,
@@ -27,12 +34,7 @@ import {
   type Worksheet,
 } from "@/lib/production";
 import { cn } from "@/lib/utils";
-import {
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -204,7 +206,10 @@ export default function ProductionWorksheetsPage() {
       <AScreenHeader
         kicker="Production"
         title="Fiches digitales"
-        description="Prep → Pesage manuel → Contrôle — sans OF auto · sans balance · sans facturation (D292)."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "Prep → Pesage manuel → Contrôle — sans OF auto · sans balance · sans facturation (D292)",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={() => setCreateOpen(true)}>
             Nouvelle fiche
@@ -234,16 +239,7 @@ export default function ProductionWorksheetsPage() {
               }}
             />
           }
-          utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q)}
-            >
-              Filtrer
-            </AButton>
-          }
+          utilities={<AListUtilities onFilter={() => void load(q)} />}
         />
 
         {state.kind === "loading" ? (
@@ -269,71 +265,69 @@ export default function ProductionWorksheetsPage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">N°</th>
-                  <th className="a-table-cell font-medium">Statut</th>
-                  <th className="a-table-cell font-medium">Lignes</th>
-                  <th className="a-table-cell font-medium">Créée</th>
-                  <th className="a-table-cell font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row) => (
-                  <tr key={row.id} className={softTr}>
-                    <td className="a-table-cell">
-                      <span className="a-mono font-medium">{row.number}</span>
-                    </td>
-                    <td className="a-table-cell">
-                      <ABadge tone={statusTone(row.status)}>
-                        {row.status}
-                      </ABadge>
-                    </td>
-                    <td className="a-mono a-tabular a-table-cell">
-                      {row.lines.length}
-                    </td>
-                    <td className="a-table-cell text-a-fg-muted">
-                      {new Date(row.createdAt).toLocaleString("fr-TN")}
-                    </td>
-                    <td className="a-table-cell">
-                      <div className="flex flex-wrap gap-2">
-                        {["DRAFT", "PREPARED", "WEIGHED"].includes(
-                          row.status,
-                        ) ? (
-                          <AButton
-                            type="button"
-                            size="sm"
-                            onClick={() => openFlow(row)}
-                          >
-                            {row.status === "DRAFT"
-                              ? "Préparer"
-                              : row.status === "PREPARED"
-                                ? "Peser"
-                                : "Contrôler"}
-                          </AButton>
-                        ) : null}
-                        {["DRAFT", "PREPARED", "WEIGHED", "REJECTED"].includes(
-                          row.status,
-                        ) ? (
-                          <AButton
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            disabled={busy}
-                            onClick={() => void onCancel(row)}
-                          >
-                            Annuler
-                          </AButton>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ASoftTable className="min-w-[640px]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>N°</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh>Lignes</ASoftTh>
+                <ASoftTh>Créée</ASoftTh>
+                <ASoftTh>Actions</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((row) => (
+                <ASoftTr key={row.id}>
+                  <ASoftTd>
+                    <span className="a-mono font-medium">{row.number}</span>
+                  </ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={statusTone(row.status)}>
+                      {row.status}
+                    </ABadge>
+                  </ASoftTd>
+                  <ASoftTd className="a-mono a-tabular">
+                    {row.lines.length}
+                  </ASoftTd>
+                  <ASoftTd className="text-a-fg-muted">
+                    {new Date(row.createdAt).toLocaleString("fr-TN")}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <div className="flex flex-wrap gap-2">
+                      {["DRAFT", "PREPARED", "WEIGHED"].includes(
+                        row.status,
+                      ) ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          onClick={() => openFlow(row)}
+                        >
+                          {row.status === "DRAFT"
+                            ? "Préparer"
+                            : row.status === "PREPARED"
+                              ? "Peser"
+                              : "Contrôler"}
+                        </AButton>
+                      ) : null}
+                      {["DRAFT", "PREPARED", "WEIGHED", "REJECTED"].includes(
+                        row.status,
+                      ) ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={busy}
+                          onClick={() => void onCancel(row)}
+                        >
+                          Annuler
+                        </AButton>
+                      ) : null}
+                    </div>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

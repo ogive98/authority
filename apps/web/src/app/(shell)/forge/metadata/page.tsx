@@ -8,12 +8,20 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import {
@@ -26,7 +34,7 @@ import {
   type ForgeMetadataStatus,
   type ForgeMetadataType,
 } from "@/lib/forge";
-import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -135,7 +143,10 @@ export default function ForgeMetadataPage() {
         }
         kicker="FORGE"
         title="Métadonnées"
-        description="FrgMetadataDefinition — complète le catalog Soft Glass · schemaJson.commandId pour le pont ⌘K."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "FrgMetadataDefinition — complète le catalog Soft Glass · schemaJson.commandId pour le pont ⌘K",
+        )}
         primary={
           <AButton
             type="button"
@@ -177,6 +188,10 @@ export default function ForgeMetadataPage() {
         }
       />
       <APageBody>
+        <AFilterBar
+          utilities={<AListUtilities onFilter={() => void load()} />}
+        />
+
         {actionError ? (
           <p className="text-[length:var(--a-text-sm)] text-a-danger">
             {actionError}
@@ -204,86 +219,78 @@ export default function ForgeMetadataPage() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="px-3 py-2 font-medium">Clé</th>
-                  <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium">Module</th>
-                  <th className="px-3 py-2 font-medium">commandId</th>
-                  <th className="px-3 py-2 font-medium">Statut</th>
-                  <th className="px-3 py-2 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row) => {
-                  const cmd =
-                    typeof row.schemaJson.commandId === "string"
-                      ? row.schemaJson.commandId
-                      : "—";
-                  return (
-                    <tr key={row.id} className={softTr}>
-                      <td className="px-3 py-2 a-mono">{row.key}</td>
-                      <td className="px-3 py-2">
-                        {FORGE_METADATA_TYPE_LABELS[row.type]}
-                      </td>
-                      <td className="px-3 py-2">{row.moduleKey}</td>
-                      <td className="px-3 py-2 a-mono text-a-muted">{cmd}</td>
-                      <td className="px-3 py-2">
-                        <ABadge tone={metaTone(row.status)}>
-                          {FORGE_METADATA_STATUS_LABELS[row.status]}
-                        </ABadge>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex flex-wrap gap-2">
-                          {row.status === "DRAFT" ? (
-                            <AButton
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              disabled={busy}
-                              onClick={() =>
-                                void onTransition(row.id, "ACTIVE")
-                              }
-                            >
-                              Activer
-                            </AButton>
-                          ) : null}
-                          {row.status === "ACTIVE" ? (
-                            <AButton
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              disabled={busy}
-                              onClick={() =>
-                                void onTransition(row.id, "DRAFT")
-                              }
-                            >
-                              Repasser brouillon
-                            </AButton>
-                          ) : null}
-                          {row.status !== "ARCHIVED" ? (
-                            <AButton
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              disabled={busy}
-                              onClick={() =>
-                                void onTransition(row.id, "ARCHIVED")
-                              }
-                            >
-                              Archiver
-                            </AButton>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ASoftTable className="min-w-[56rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>Clé</ASoftTh>
+                <ASoftTh>Type</ASoftTh>
+                <ASoftTh>Module</ASoftTh>
+                <ASoftTh>commandId</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh>Actions</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((row) => {
+                const cmd =
+                  typeof row.schemaJson.commandId === "string"
+                    ? row.schemaJson.commandId
+                    : "—";
+                return (
+                  <ASoftTr key={row.id}>
+                    <ASoftTd className="a-mono">{row.key}</ASoftTd>
+                    <ASoftTd>{FORGE_METADATA_TYPE_LABELS[row.type]}</ASoftTd>
+                    <ASoftTd>{row.moduleKey}</ASoftTd>
+                    <ASoftTd className="a-mono text-a-muted">{cmd}</ASoftTd>
+                    <ASoftTd>
+                      <ABadge tone={metaTone(row.status)}>
+                        {FORGE_METADATA_STATUS_LABELS[row.status]}
+                      </ABadge>
+                    </ASoftTd>
+                    <ASoftTd>
+                      <div className="flex flex-wrap gap-2">
+                        {row.status === "DRAFT" ? (
+                          <AButton
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy}
+                            onClick={() => void onTransition(row.id, "ACTIVE")}
+                          >
+                            Activer
+                          </AButton>
+                        ) : null}
+                        {row.status === "ACTIVE" ? (
+                          <AButton
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy}
+                            onClick={() => void onTransition(row.id, "DRAFT")}
+                          >
+                            Repasser brouillon
+                          </AButton>
+                        ) : null}
+                        {row.status !== "ARCHIVED" ? (
+                          <AButton
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy}
+                            onClick={() =>
+                              void onTransition(row.id, "ARCHIVED")
+                            }
+                          >
+                            Archiver
+                          </AButton>
+                        ) : null}
+                      </div>
+                    </ASoftTd>
+                  </ASoftTr>
+                );
+              })}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 
@@ -325,7 +332,7 @@ export default function ForgeMetadataPage() {
               Type
             </span>
             <select
-              className="w-full rounded-[var(--a-radius-sm)] bg-transparent px-2 py-2 text-[length:var(--a-text-sm)] outline-none ring-1 ring-a-border/40"
+              className={softSelect}
               value={type}
               onChange={(e) => setType(e.target.value as ForgeMetadataType)}
             >

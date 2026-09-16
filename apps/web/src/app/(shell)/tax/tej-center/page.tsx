@@ -9,14 +9,23 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
+import { ATabs } from "@/components/a/a-tabs";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
   ackTejImport,
@@ -38,7 +47,7 @@ import {
   type TaxWithholding,
   type TejCenterOverview,
 } from "@/lib/tax";
-import { softChipClass, softPanel, softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import { softPanel } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -293,7 +302,10 @@ export default function TejCenterPage() {
         }
         kicker="Fiscalité"
         title="TEJ Center"
-        description="Plateforme Soft Glass RAS → TEJ — retenues AP & AR · certificat · lot XML · accusé import Tej (local). Transmission DISABLED · brouillon local (pas d’XSD officiel)."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "RAS → TEJ · AP & AR · certificat · lot XML · accusé import local · Transmission DISABLED",
+        )}
         primary={
           <AButton
             type="button"
@@ -368,40 +380,40 @@ export default function TejCenterPage() {
 
         <ExpertiseHintsStrip keys={["tax.ras", "tax.tej"]} />
 
-        <div className="mb-4 flex flex-wrap items-end gap-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-              Période
-            </span>
-            <AInput
-              value={periodLabel}
-              onChange={(e) => setPeriodLabel(e.target.value)}
-              placeholder="2026-09"
-              className="w-36"
+        <AFilterBar
+          search={
+            <label className="flex flex-col gap-1">
+              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                Période
+              </span>
+              <AInput
+                value={periodLabel}
+                onChange={(e) => setPeriodLabel(e.target.value)}
+                placeholder="2026-09"
+                className="w-36"
+                aria-label="Période"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void load();
+                }}
+              />
+            </label>
+          }
+          filters={
+            <ATabs
+              ariaLabel="Filtrer par côté"
+              value={sideFilter}
+              onValueChange={(id) =>
+                setSideFilter(id as "ALL" | "AP" | "AR")
+              }
+              items={[
+                { id: "ALL", label: "Tous" },
+                { id: "AP", label: "Fournisseurs" },
+                { id: "AR", label: "Clients" },
+              ]}
             />
-          </label>
-          <div className="flex flex-wrap gap-1 pb-0.5">
-            {(
-              [
-                ["ALL", "Tous"],
-                ["AP", "Fournisseurs"],
-                ["AR", "Clients"],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className={softChipClass(sideFilter === id)}
-                onClick={() => setSideFilter(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <AButton type="button" size="sm" onClick={() => void load()}>
-            Actualiser
-          </AButton>
-        </div>
+          }
+          utilities={<AListUtilities onFilter={() => void load()} />}
+        />
 
         {state.kind === "loading" ? (
           <ASkeleton className="h-32 w-full" />
@@ -487,55 +499,51 @@ export default function TejCenterPage() {
 
         {overview?.tejExports.recent && overview.tejExports.recent.length > 0 ? (
           <APageSection title="Lots XML récents" className="mb-4">
-            <div className={softTableWrap}>
-              <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                <thead className={softThead}>
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Période</th>
-                    <th className="px-3 py-2 font-medium">Pack</th>
-                    <th className="px-3 py-2 font-medium text-right">Lignes</th>
-                    <th className="px-3 py-2 font-medium">SHA</th>
-                    <th className="px-3 py-2 font-medium text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {overview.tejExports.recent.map((ex) => (
-                    <tr key={ex.id} className={softTr}>
-                      <td className="px-3 py-2 a-mono">{ex.periodLabel}</td>
-                      <td className="px-3 py-2">
-                        <ABadge
-                          tone={
-                            ex.packKind === "WITHHOLDING_PACK"
-                              ? "info"
-                              : "neutral"
-                          }
-                        >
-                          {ex.packKind === "WITHHOLDING_PACK"
-                            ? "Lot retenues"
-                            : "Meta"}
-                        </ABadge>
-                      </td>
-                      <td className="px-3 py-2 text-right a-mono tabular-nums">
-                        {ex.withholdingCount}
-                      </td>
-                      <td className="px-3 py-2 a-mono text-[length:var(--a-text-xs)] text-a-muted">
-                        {ex.contentSha256.slice(0, 12)}…
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <AButton
-                          type="button"
-                          size="sm"
-                          disabled={busy}
-                          onClick={() => void onRedownloadExport(ex.id)}
-                        >
-                          Télécharger
-                        </AButton>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ASoftTable className="min-w-[40rem]">
+              <ASoftThead>
+                <ASoftTr>
+                  <ASoftTh>Période</ASoftTh>
+                  <ASoftTh>Pack</ASoftTh>
+                  <ASoftTh numeric>Lignes</ASoftTh>
+                  <ASoftTh>SHA</ASoftTh>
+                  <ASoftTh numeric>Action</ASoftTh>
+                </ASoftTr>
+              </ASoftThead>
+              <tbody>
+                {overview.tejExports.recent.map((ex) => (
+                  <ASoftTr key={ex.id}>
+                    <ASoftTd className="a-mono">{ex.periodLabel}</ASoftTd>
+                    <ASoftTd>
+                      <ABadge
+                        tone={
+                          ex.packKind === "WITHHOLDING_PACK"
+                            ? "info"
+                            : "neutral"
+                        }
+                      >
+                        {ex.packKind === "WITHHOLDING_PACK"
+                          ? "Lot retenues"
+                          : "Meta"}
+                      </ABadge>
+                    </ASoftTd>
+                    <ASoftTd numeric>{ex.withholdingCount}</ASoftTd>
+                    <ASoftTd className="a-mono text-[length:var(--a-text-xs)] text-a-muted">
+                      {ex.contentSha256.slice(0, 12)}…
+                    </ASoftTd>
+                    <ASoftTd numeric>
+                      <AButton
+                        type="button"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => void onRedownloadExport(ex.id)}
+                      >
+                        Télécharger
+                      </AButton>
+                    </ASoftTd>
+                  </ASoftTr>
+                ))}
+              </tbody>
+            </ASoftTable>
           </APageSection>
         ) : null}
 
@@ -549,185 +557,177 @@ export default function TejCenterPage() {
         ) : null}
 
         {state.kind === "ok" && items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="px-3 py-2 font-medium">Tiers</th>
-                  <th className="px-3 py-2 font-medium">Côté</th>
-                  <th className="px-3 py-2 font-medium">Statut</th>
-                  <th className="px-3 py-2 font-medium text-right">Base</th>
-                  <th className="px-3 py-2 font-medium text-right">RAS</th>
-                  <th className="px-3 py-2 font-medium text-right">Net</th>
-                  <th className="px-3 py-2 font-medium">Décision</th>
-                  <th className="px-3 py-2 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((row) => (
-                  <tr key={row.id} className={softTr}>
-                    <td className="px-3 py-2">
-                      <div className="font-medium">{row.vendorName}</div>
-                      <div className="text-[length:var(--a-text-xs)] text-a-muted">
-                        {row.periodLabel ?? "—"}
-                        {row.certificateNumber
-                          ? ` · ${row.certificateNumber}`
-                          : ""}
-                        {row.isStubRate ? " · stub" : ""}
-                        {row.apPaymentId ? " · AP pay" : ""}
-                        {row.arInvoiceId ? (
-                          <>
-                            {" · "}
-                            <Link
-                              href={`/finance/invoices/${row.arInvoiceId}`}
-                              className="text-a-accent hover:underline"
-                            >
-                              Facture
-                            </Link>
-                          </>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <ABadge tone={row.side === "AR" ? "info" : "neutral"}>
-                        {row.side === "AR" ? "Client" : "Fournisseur"}
-                      </ABadge>
-                    </td>
-                    <td className="px-3 py-2">
-                      <ABadge tone={statusTone(row.status)}>
-                        {WH_STATUS_LABELS[row.status]}
-                      </ABadge>
-                    </td>
-                    <td className="px-3 py-2 text-right a-mono tabular-nums">
-                      {row.baseAmount}
-                    </td>
-                    <td className="px-3 py-2 text-right a-mono tabular-nums">
-                      {row.withholdingAmount}
-                    </td>
-                    <td className="px-3 py-2 text-right a-mono tabular-nums">
-                      {row.netPayable ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 max-w-[16rem] text-[length:var(--a-text-xs)] text-a-muted">
-                      {row.decisionCode}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex flex-wrap justify-end gap-1">
-                        {(row.status === "CALCULATED" ||
-                          row.status === "DETECTED") &&
-                        row.applicable === true &&
-                        !row.isStubRate ? (
-                          <AButton
-                            type="button"
-                            size="sm"
-                            onClick={() => void onValidate(row.id)}
+          <ASoftTable className="min-w-[64rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>Tiers</ASoftTh>
+                <ASoftTh>Côté</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh numeric>Base</ASoftTh>
+                <ASoftTh numeric>RAS</ASoftTh>
+                <ASoftTh numeric>Net</ASoftTh>
+                <ASoftTh>Décision</ASoftTh>
+                <ASoftTh numeric>Action</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {items.map((row) => (
+                <ASoftTr key={row.id}>
+                  <ASoftTd>
+                    <div className="font-medium">{row.vendorName}</div>
+                    <div className="text-[length:var(--a-text-xs)] text-a-muted">
+                      {row.periodLabel ?? "—"}
+                      {row.certificateNumber
+                        ? ` · ${row.certificateNumber}`
+                        : ""}
+                      {row.isStubRate ? " · stub" : ""}
+                      {row.apPaymentId ? " · AP pay" : ""}
+                      {row.arInvoiceId ? (
+                        <>
+                          {" · "}
+                          <Link
+                            href={`/finance/invoices/${row.arInvoiceId}`}
+                            className="text-a-accent hover:underline"
                           >
-                            Valider
-                          </AButton>
-                        ) : null}
-                        {row.status === "VALIDATED" ? (
+                            Facture
+                          </Link>
+                        </>
+                      ) : null}
+                    </div>
+                  </ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={row.side === "AR" ? "info" : "neutral"}>
+                      {row.side === "AR" ? "Client" : "Fournisseur"}
+                    </ABadge>
+                  </ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={statusTone(row.status)}>
+                      {WH_STATUS_LABELS[row.status]}
+                    </ABadge>
+                  </ASoftTd>
+                  <ASoftTd numeric>{row.baseAmount}</ASoftTd>
+                  <ASoftTd numeric>{row.withholdingAmount}</ASoftTd>
+                  <ASoftTd numeric>{row.netPayable ?? "—"}</ASoftTd>
+                  <ASoftTd className="max-w-[16rem] text-[length:var(--a-text-xs)] text-a-muted">
+                    {row.decisionCode}
+                  </ASoftTd>
+                  <ASoftTd numeric>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {(row.status === "CALCULATED" ||
+                        row.status === "DETECTED") &&
+                      row.applicable === true &&
+                      !row.isStubRate ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          onClick={() => void onValidate(row.id)}
+                        >
+                          Valider
+                        </AButton>
+                      ) : null}
+                      {row.status === "VALIDATED" ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          onClick={() => void onCertificate(row.id)}
+                        >
+                          Certificat
+                        </AButton>
+                      ) : null}
+                      {row.status === "CERTIFICATE_READY" ? (
+                        <>
                           <AButton
                             type="button"
                             size="sm"
                             onClick={() => void onCertificate(row.id)}
                           >
-                            Certificat
+                            Télécharger
                           </AButton>
-                        ) : null}
-                        {row.status === "CERTIFICATE_READY" ? (
-                          <>
-                            <AButton
-                              type="button"
-                              size="sm"
-                              onClick={() => void onCertificate(row.id)}
-                            >
-                              Télécharger
-                            </AButton>
-                            {row.arInvoiceId ? (
-                              <AButton
-                                type="button"
-                                size="sm"
-                                disabled={busy}
-                                onClick={() =>
-                                  void onPrepareInvoicePack(row.arInvoiceId!)
-                                }
-                              >
-                                XML facture
-                              </AButton>
-                            ) : null}
-                          </>
-                        ) : null}
-                        {row.status === "TEJ_PREPARED" ? (
-                          <AButton
-                            type="button"
-                            size="sm"
-                            disabled={busy}
-                            onClick={() => void onAckImport(row.id)}
-                          >
-                            Accusé import
-                          </AButton>
-                        ) : null}
-                        {row.status === "TRANSMITTED" ? (
-                          <>
+                          {row.arInvoiceId ? (
                             <AButton
                               type="button"
                               size="sm"
                               disabled={busy}
-                              onClick={() => void onAcceptTej(row.id)}
+                              onClick={() =>
+                                void onPrepareInvoicePack(row.arInvoiceId!)
+                              }
                             >
-                              Accepté Tej
+                              XML facture
                             </AButton>
-                            <AButton
-                              type="button"
-                              size="sm"
-                              disabled={busy}
-                              onClick={() => {
-                                setRejectId(row.id);
-                                setRejectReason("");
-                              }}
-                            >
-                              Rejeté Tej
-                            </AButton>
-                          </>
-                        ) : null}
-                        {row.status === "ACCEPTED" ||
-                        row.status === "REJECTED" ? (
+                          ) : null}
+                        </>
+                      ) : null}
+                      {row.status === "TEJ_PREPARED" ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void onAckImport(row.id)}
+                        >
+                          Accusé import
+                        </AButton>
+                      ) : null}
+                      {row.status === "TRANSMITTED" ? (
+                        <>
                           <AButton
                             type="button"
                             size="sm"
                             disabled={busy}
-                            onClick={() => void onArchive(row.id)}
+                            onClick={() => void onAcceptTej(row.id)}
                           >
-                            Archiver
+                            Accepté Tej
                           </AButton>
-                        ) : null}
-                        {row.status === "REJECTED" && row.tejRejectReason ? (
-                          <span className="text-[length:var(--a-text-xs)] text-a-danger">
-                            {row.tejRejectReason}
-                          </span>
-                        ) : null}
-                        {row.isStubRate && row.applicable === true ? (
-                          <span className="text-[length:var(--a-text-xs)] text-a-warning">
-                            Stub — Prefs
-                          </span>
-                        ) : null}
-                        {!row.isStubRate &&
-                        row.status !== "CALCULATED" &&
-                        row.status !== "DETECTED" &&
-                        row.status !== "VALIDATED" &&
-                        row.status !== "CERTIFICATE_READY" &&
-                        row.status !== "TEJ_PREPARED" &&
-                        row.status !== "TRANSMITTED" &&
-                        row.status !== "ACCEPTED" &&
-                        row.status !== "REJECTED" ? (
-                          <span className="text-a-muted">—</span>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                          <AButton
+                            type="button"
+                            size="sm"
+                            disabled={busy}
+                            onClick={() => {
+                              setRejectId(row.id);
+                              setRejectReason("");
+                            }}
+                          >
+                            Rejeté Tej
+                          </AButton>
+                        </>
+                      ) : null}
+                      {row.status === "ACCEPTED" ||
+                      row.status === "REJECTED" ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void onArchive(row.id)}
+                        >
+                          Archiver
+                        </AButton>
+                      ) : null}
+                      {row.status === "REJECTED" && row.tejRejectReason ? (
+                        <span className="text-[length:var(--a-text-xs)] text-a-danger">
+                          {row.tejRejectReason}
+                        </span>
+                      ) : null}
+                      {row.isStubRate && row.applicable === true ? (
+                        <span className="text-[length:var(--a-text-xs)] text-a-warning">
+                          Stub — Prefs
+                        </span>
+                      ) : null}
+                      {!row.isStubRate &&
+                      row.status !== "CALCULATED" &&
+                      row.status !== "DETECTED" &&
+                      row.status !== "VALIDATED" &&
+                      row.status !== "CERTIFICATE_READY" &&
+                      row.status !== "TEJ_PREPARED" &&
+                      row.status !== "TRANSMITTED" &&
+                      row.status !== "ACCEPTED" &&
+                      row.status !== "REJECTED" ? (
+                        <span className="text-a-muted">—</span>
+                      ) : null}
+                    </div>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

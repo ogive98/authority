@@ -11,9 +11,16 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import {
   createWorkOrder,
@@ -27,12 +34,7 @@ import {
   type WorkOrder,
 } from "@/lib/production";
 import { cn } from "@/lib/utils";
-import {
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -209,7 +211,10 @@ export default function ProductionPage() {
       <AScreenHeader
         kicker="Production"
         title="Ordres de fabrication"
-        description="OF light — créer, libérer, déclarer conso / output (stock via Inventory)."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "OF light — créer, libérer, déclarer conso / output (stock via Inventory)",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             Nouvel OF
@@ -239,16 +244,7 @@ export default function ProductionPage() {
               }}
             />
           }
-          utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q)}
-            >
-              Filtrer
-            </AButton>
-          }
+          utilities={<AListUtilities onFilter={() => void load(q)} />}
         />
 
       {state.kind === "loading" ? <ASkeleton className="h-48 w-full" /> : null}
@@ -272,92 +268,88 @@ export default function ProductionPage() {
       ) : null}
 
       {state.kind === "ok" && state.items.length > 0 ? (
-        <div className={softTableWrap}>
-          <table className="w-full min-w-[720px] text-left text-[length:var(--a-text-sm)]">
-            <thead className={softThead}>
-              <tr>
-                <th className="a-table-cell font-medium">OF</th>
-                <th className="a-table-cell font-medium">Produit</th>
-                <th className="a-table-cell font-medium">Entrepôt</th>
-                <th className="a-table-cell font-medium text-right">Planifié</th>
-                <th className="a-table-cell font-medium text-right">Réel</th>
-                <th className="a-table-cell font-medium">Statut</th>
-                <th className="a-table-cell font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {state.items.map((row) => (
-                <tr key={row.id} className={softTr}>
-                  <td className="a-table-cell">
-                    <span className="a-mono font-medium">{row.number}</span>
-                    {row.lotOut ? (
-                      <span className="mt-0.5 block text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                        Lot {row.lotOut}
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="a-table-cell">
-                    <span className="a-mono text-a-fg-muted">
-                      {row.productSku ?? "—"}
-                    </span>{" "}
-                    {row.productName}
-                  </td>
-                  <td className="a-mono a-table-cell">
-                    {row.warehouseCode ?? "—"}
-                  </td>
-                  <td className="a-mono a-tabular a-table-cell text-right">
-                    {row.plannedQty}
-                  </td>
-                  <td className="a-mono a-tabular a-table-cell text-right">
-                    {row.actualQty ?? "—"}
-                    {row.yieldRatio ? (
-                      <span
-                        className={cn(
-                          "ml-2 text-[length:var(--a-text-xs)]",
-                          Number(row.yieldRatio) < 0.85 ||
-                            Number(row.yieldRatio) > 1.15
-                            ? "text-a-danger"
-                            : "text-a-fg-subtle",
-                        )}
+        <ASoftTable className="min-w-[720px]">
+          <ASoftThead>
+            <ASoftTr>
+              <ASoftTh>OF</ASoftTh>
+              <ASoftTh>Produit</ASoftTh>
+              <ASoftTh>Entrepôt</ASoftTh>
+              <ASoftTh numeric>Planifié</ASoftTh>
+              <ASoftTh numeric>Réel</ASoftTh>
+              <ASoftTh>Statut</ASoftTh>
+              <ASoftTh>Actions</ASoftTh>
+            </ASoftTr>
+          </ASoftThead>
+          <tbody>
+            {state.items.map((row) => (
+              <ASoftTr key={row.id}>
+                <ASoftTd>
+                  <span className="a-mono font-medium">{row.number}</span>
+                  {row.lotOut ? (
+                    <span className="mt-0.5 block text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                      Lot {row.lotOut}
+                    </span>
+                  ) : null}
+                </ASoftTd>
+                <ASoftTd>
+                  <span className="a-mono text-a-fg-muted">
+                    {row.productSku ?? "—"}
+                  </span>{" "}
+                  {row.productName}
+                </ASoftTd>
+                <ASoftTd className="a-mono">
+                  {row.warehouseCode ?? "—"}
+                </ASoftTd>
+                <ASoftTd numeric>{row.plannedQty}</ASoftTd>
+                <ASoftTd numeric>
+                  {row.actualQty ?? "—"}
+                  {row.yieldRatio ? (
+                    <span
+                      className={cn(
+                        "ml-2 text-[length:var(--a-text-xs)]",
+                        Number(row.yieldRatio) < 0.85 ||
+                          Number(row.yieldRatio) > 1.15
+                          ? "text-a-danger"
+                          : "text-a-fg-subtle",
+                      )}
+                    >
+                      {(Number(row.yieldRatio) * 100).toFixed(0)}%
+                    </span>
+                  ) : null}
+                </ASoftTd>
+                <ASoftTd>
+                  <ABadge tone={statusTone(row.status)}>{row.status}</ABadge>
+                </ASoftTd>
+                <ASoftTd>
+                  <div className="flex flex-wrap gap-2">
+                    {row.status === "PLANNED" ? (
+                      <AButton
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() => void onRelease(row)}
                       >
-                        {(Number(row.yieldRatio) * 100).toFixed(0)}%
-                      </span>
+                        Libérer
+                      </AButton>
                     ) : null}
-                  </td>
-                  <td className="a-table-cell">
-                    <ABadge tone={statusTone(row.status)}>{row.status}</ABadge>
-                  </td>
-                  <td className="a-table-cell">
-                    <div className="flex flex-wrap gap-2">
-                      {row.status === "PLANNED" ? (
-                        <AButton
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          disabled={busy}
-                          onClick={() => void onRelease(row)}
-                        >
-                          Libérer
-                        </AButton>
-                      ) : null}
-                      {row.status === "RELEASED" ||
-                      row.status === "IN_PROGRESS" ? (
-                        <AButton
-                          type="button"
-                          size="sm"
-                          disabled={busy}
-                          onClick={() => openDeclare(row)}
-                        >
-                          Déclarer
-                        </AButton>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    {row.status === "RELEASED" ||
+                    row.status === "IN_PROGRESS" ? (
+                      <AButton
+                        type="button"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => openDeclare(row)}
+                      >
+                        Déclarer
+                      </AButton>
+                    ) : null}
+                  </div>
+                </ASoftTd>
+              </ASoftTr>
+            ))}
+          </tbody>
+        </ASoftTable>
       ) : null}
       </APageBody>
 

@@ -17,6 +17,11 @@ import {
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
   type AComboboxOption,
   type AOverflowItem,
 } from "@/components/a";
@@ -35,7 +40,6 @@ import {
   type SalesOrder,
   type SalesOrderStatus,
 } from "@/lib/sales";
-import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
 
 function orderBadgeTone(
@@ -556,59 +560,41 @@ export default function SalesOrderFichePage() {
                       ))}
                     </div>
                   ) : (
-                    <div className={softTableWrap}>
-                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                        <thead className={softThead}>
-                          <tr>
-                            <th className="px-4 py-3 font-medium">#</th>
-                            <th className="px-4 py-3 font-medium">Produit</th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              Qté
-                            </th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              Livré
-                            </th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              Reste
-                            </th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              PU
-                            </th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              Total
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {order.lines.map((l) => (
-                            <tr key={l.id} className={softTr}>
-                              <td className="a-mono px-4 py-3">{l.lineNo}</td>
-                              <td className="px-4 py-3">
-                                <span className="a-mono text-a-fg-muted">
-                                  {l.productSku}
-                                </span>{" "}
-                                {l.productName}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums">
-                                {l.qty}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums">
-                                {l.deliveredQty ?? "0"}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums">
-                                {l.remainingQty ?? l.qty}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums">
-                                {l.unitPrice}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums">
-                                {l.lineTotal}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <ASoftTable>
+                      <ASoftThead>
+                        <ASoftTr>
+                          <ASoftTh>#</ASoftTh>
+                          <ASoftTh>Produit</ASoftTh>
+                          <ASoftTh numeric>Qté</ASoftTh>
+                          <ASoftTh numeric>Livré</ASoftTh>
+                          <ASoftTh numeric>Reste</ASoftTh>
+                          <ASoftTh numeric>PU</ASoftTh>
+                          <ASoftTh numeric>Total</ASoftTh>
+                        </ASoftTr>
+                      </ASoftThead>
+                      <tbody>
+                        {order.lines.map((l) => (
+                          <ASoftTr key={l.id}>
+                            <ASoftTd className="a-mono">{l.lineNo}</ASoftTd>
+                            <ASoftTd>
+                              <span className="a-mono text-a-fg-muted">
+                                {l.productSku}
+                              </span>{" "}
+                              {l.productName}
+                            </ASoftTd>
+                            <ASoftTd numeric>{l.qty}</ASoftTd>
+                            <ASoftTd numeric>
+                              {l.deliveredQty ?? "0"}
+                            </ASoftTd>
+                            <ASoftTd numeric>
+                              {l.remainingQty ?? l.qty}
+                            </ASoftTd>
+                            <ASoftTd numeric>{l.unitPrice}</ASoftTd>
+                            <ASoftTd numeric>{l.lineTotal}</ASoftTd>
+                          </ASoftTr>
+                        ))}
+                      </tbody>
+                    </ASoftTable>
                   )}
                 </APageSection>
               </>

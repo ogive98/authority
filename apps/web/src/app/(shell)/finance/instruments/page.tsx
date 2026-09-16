@@ -4,15 +4,21 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ABadge,
-  AButton,
   AEmptyState,
   AErrorState,
   AFilterBar,
   AForbiddenState,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import {
   INSTRUMENT_STATUS_FILTERS,
@@ -22,12 +28,7 @@ import {
   type FinInstrument,
   type InstrumentStatus,
 } from "@/lib/finance";
-import {
-  softChipClass,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { ATabs } from "@/components/a/a-tabs";
 
 type LoadState =
   | { kind: "loading" }
@@ -123,7 +124,10 @@ function FinanceInstrumentsPageInner() {
       <AScreenHeader
         kicker="Finance"
         title="Instruments"
-        description="Chèques et traites — rejet = restauration des créances AR."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "chèques et traites · rejet = restauration AR",
+        )}
         more={
           <AOverflowMenu
             items={[
@@ -149,41 +153,23 @@ function FinanceInstrumentsPageInner() {
       <APageBody>
         <AFilterBar
           filters={
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Filtrer par statut"
-            >
-              {INSTRUMENT_STATUS_FILTERS.map((chip) => {
-                const active = statusFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => {
-                      setStatusFilter(chip.id);
-                      syncStatusUrl(chip.id);
-                      void load(chip.id);
-                    }}
-                    className={softChipClass(active)}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                const next = (id === "all" ? "" : id) as "" | InstrumentStatus;
+                setStatusFilter(next);
+                syncStatusUrl(next);
+                void load(next);
+              }}
+              items={INSTRUMENT_STATUS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label: chip.label,
+              }))}
+            />
           }
           utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(statusFilter)}
-            >
-              Filtrer
-            </AButton>
+            <AListUtilities onFilter={() => void load(statusFilter)} />
           }
         />
 
@@ -207,44 +193,39 @@ function FinanceInstrumentsPageInner() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[48rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">Type</th>
-                  <th className="a-table-cell font-medium">N°</th>
-                  <th className="a-table-cell font-medium">Montant</th>
-                  <th className="a-table-cell font-medium">Échéance</th>
-                  <th className="a-table-cell font-medium">Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((row) => (
-                  <tr
-                    key={row.id}
-                    className={`${softTr} cursor-pointer`}
-                    onClick={() =>
-                      router.push(`/finance/instruments/${row.id}`)
-                    }
-                  >
-                    <td className="a-table-cell">{TYPE_LABELS[row.type]}</td>
-                    <td className="a-mono a-table-cell">{row.number}</td>
-                    <td className="a-mono a-table-cell tabular-nums">
-                      {row.amount}
-                    </td>
-                    <td className="a-mono a-table-cell text-a-fg-muted">
-                      {row.dueDate ?? "—"}
-                    </td>
-                    <td className="a-table-cell">
-                      <ABadge tone={instrumentBadgeTone(row.status)}>
-                        {INSTRUMENT_STATUS_LABELS[row.status]}
-                      </ABadge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ASoftTable className="min-w-[48rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>Type</ASoftTh>
+                <ASoftTh>N°</ASoftTh>
+                <ASoftTh numeric>Montant</ASoftTh>
+                <ASoftTh>Échéance</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((row) => (
+                <ASoftTr
+                  key={row.id}
+                  onClick={() =>
+                    router.push(`/finance/instruments/${row.id}`)
+                  }
+                >
+                  <ASoftTd>{TYPE_LABELS[row.type]}</ASoftTd>
+                  <ASoftTd className="a-mono font-semibold">{row.number}</ASoftTd>
+                  <ASoftTd numeric>{row.amount}</ASoftTd>
+                  <ASoftTd className="a-mono text-a-fg-muted">
+                    {row.dueDate ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={instrumentBadgeTone(row.status)}>
+                      {INSTRUMENT_STATUS_LABELS[row.status]}
+                    </ABadge>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
     </>

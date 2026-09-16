@@ -17,6 +17,11 @@ import {
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
   ASwitch,
   type AOverflowItem,
 } from "@/components/a";
@@ -68,12 +73,7 @@ import {
   type IrppPreview,
   type LevyPreview,
 } from "@/lib/hr";
-import {
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -1278,90 +1278,88 @@ export default function HrEmployeeFichePage() {
                   automatiquement.
                 </p>
               ) : (
-                <div className={softTableWrap}>
-                  <table className="w-full min-w-[640px] text-left text-[length:var(--a-text-sm)]">
-                    <thead className={softThead}>
-                      <tr>
-                        <th className="a-table-cell font-medium">N°</th>
-                        <th className="a-table-cell font-medium">Type</th>
-                        <th className="a-table-cell font-medium">Période</th>
-                        <th className="a-table-cell font-medium">Base TND</th>
-                        <th className="a-table-cell font-medium">Statut</th>
-                        <th className="a-table-cell font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {employee.contracts.map((c) => (
-                        <tr key={c.id} className={softTr}>
-                          <td className="a-mono a-table-cell">{c.number}</td>
-                          <td className="a-table-cell">
-                            <ABadge tone="accent">{c.type}</ABadge>
-                          </td>
-                          <td className="a-mono a-table-cell">
-                            {c.startDate}
-                            {c.endDate ? ` → ${c.endDate}` : ""}
-                          </td>
-                          <td className="a-mono a-table-cell tabular-nums">
-                            {c.wageBase ?? "—"}
-                          </td>
-                          <td className="a-table-cell">
-                            <ABadge tone={statusTone(c.status)}>
-                              {c.status}
-                            </ABadge>
-                          </td>
-                          <td className="a-table-cell">
-                            {c.status === "ACTIVE" ? (
-                              <div className="flex flex-wrap gap-1">
-                                <AButton
-                                  type="button"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() => openEditContract(c)}
-                                >
-                                  Modifier
-                                </AButton>
-                                <AButton
-                                  type="button"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() => void openCnss(c)}
-                                >
-                                  CNSS
-                                </AButton>
-                                <AButton
-                                  type="button"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() => void openIrpp(c)}
-                                >
-                                  IRPP
-                                </AButton>
-                                <AButton
-                                  type="button"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() => void openBulletin(c)}
-                                >
-                                  Bulletin
-                                </AButton>
-                                <AButton
-                                  type="button"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() => void onEndContract(c.id)}
-                                >
-                                  Clôturer
-                                </AButton>
-                              </div>
-                            ) : (
-                              <span className="text-a-fg-muted">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <ASoftTable className="min-w-[640px]">
+                  <ASoftThead>
+                    <ASoftTr>
+                      <ASoftTh>N°</ASoftTh>
+                      <ASoftTh>Type</ASoftTh>
+                      <ASoftTh>Période</ASoftTh>
+                      <ASoftTh>Base TND</ASoftTh>
+                      <ASoftTh>Statut</ASoftTh>
+                      <ASoftTh>Actions</ASoftTh>
+                    </ASoftTr>
+                  </ASoftThead>
+                  <tbody>
+                    {employee.contracts.map((c) => (
+                      <ASoftTr key={c.id}>
+                        <ASoftTd className="a-mono">{c.number}</ASoftTd>
+                        <ASoftTd>
+                          <ABadge tone="accent">{c.type}</ABadge>
+                        </ASoftTd>
+                        <ASoftTd className="a-mono">
+                          {c.startDate}
+                          {c.endDate ? ` → ${c.endDate}` : ""}
+                        </ASoftTd>
+                        <ASoftTd className="a-mono tabular-nums">
+                          {c.wageBase ?? "—"}
+                        </ASoftTd>
+                        <ASoftTd>
+                          <ABadge tone={statusTone(c.status)}>
+                            {c.status}
+                          </ABadge>
+                        </ASoftTd>
+                        <ASoftTd>
+                          {c.status === "ACTIVE" ? (
+                            <div className="flex flex-wrap gap-1">
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() => openEditContract(c)}
+                              >
+                                Modifier
+                              </AButton>
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() => void openCnss(c)}
+                              >
+                                CNSS
+                              </AButton>
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() => void openIrpp(c)}
+                              >
+                                IRPP
+                              </AButton>
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() => void openBulletin(c)}
+                              >
+                                Bulletin
+                              </AButton>
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                disabled={busy}
+                                onClick={() => void onEndContract(c.id)}
+                              >
+                                Clôturer
+                              </AButton>
+                            </div>
+                          ) : (
+                            <span className="text-a-fg-muted">—</span>
+                          )}
+                        </ASoftTd>
+                      </ASoftTr>
+                    ))}
+                  </tbody>
+                </ASoftTable>
               )}
             </APageSection>
 
@@ -1374,94 +1372,92 @@ export default function HrEmployeeFichePage() {
                   Aucun document.
                 </p>
               ) : (
-                <div className={softTableWrap}>
-                  <table className="w-full min-w-[560px] text-left text-[length:var(--a-text-sm)]">
-                    <thead className={softThead}>
-                      <tr>
-                        <th className="a-table-cell font-medium">Fichier</th>
-                        <th className="a-table-cell font-medium">Kind</th>
-                        <th className="a-table-cell font-medium">MIME</th>
-                        <th className="a-table-cell font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {docs.map((d) => {
-                        const href = hrEmployeeDocumentContentHref(id, d.id);
-                        const previewable = isHrPreviewableMime(d.mime);
-                        const image = isHrImageMime(d.mime);
-                        return (
-                          <tr key={d.id} className={softTr}>
-                            <td className="a-table-cell">
-                              <span className="a-mono">{d.number}</span>
-                              {" · "}
-                              {d.title}
-                              {d.id === employee.photoDocumentId ? (
-                                <>
-                                  {" "}
-                                  <ABadge tone="accent">Photo</ABadge>
-                                </>
+                <ASoftTable className="min-w-[560px]">
+                  <ASoftThead>
+                    <ASoftTr>
+                      <ASoftTh>Fichier</ASoftTh>
+                      <ASoftTh>Kind</ASoftTh>
+                      <ASoftTh>MIME</ASoftTh>
+                      <ASoftTh>Actions</ASoftTh>
+                    </ASoftTr>
+                  </ASoftThead>
+                  <tbody>
+                    {docs.map((d) => {
+                      const href = hrEmployeeDocumentContentHref(id, d.id);
+                      const previewable = isHrPreviewableMime(d.mime);
+                      const image = isHrImageMime(d.mime);
+                      return (
+                        <ASoftTr key={d.id}>
+                          <ASoftTd>
+                            <span className="a-mono">{d.number}</span>
+                            {" · "}
+                            {d.title}
+                            {d.id === employee.photoDocumentId ? (
+                              <>
+                                {" "}
+                                <ABadge tone="accent">Photo</ABadge>
+                              </>
+                            ) : null}
+                          </ASoftTd>
+                          <ASoftTd>
+                            {d.hrDocKind
+                              ? `${d.hrDocKind.code} · ${d.hrDocKind.name}`
+                              : "—"}
+                          </ASoftTd>
+                          <ASoftTd className="text-a-fg-muted">
+                            {d.mime || "—"}
+                          </ASoftTd>
+                          <ASoftTd>
+                            <div className="flex flex-wrap gap-1">
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                disabled={!previewable}
+                                onClick={() => openPreview(d)}
+                              >
+                                Aperçu
+                              </AButton>
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  void downloadEmployeeDocument(id, d.id)
+                                }
+                              >
+                                Télécharger
+                              </AButton>
+                              <AButton
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                disabled={!previewable}
+                                onClick={() =>
+                                  printHrDocument(href, d.mime, d.title)
+                                }
+                              >
+                                Imprimer
+                              </AButton>
+                              {image &&
+                              d.id !== employee.photoDocumentId ? (
+                                <AButton
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={busy}
+                                  onClick={() => void onUseAsPhoto(d)}
+                                >
+                                  Utiliser comme photo
+                                </AButton>
                               ) : null}
-                            </td>
-                            <td className="a-table-cell">
-                              {d.hrDocKind
-                                ? `${d.hrDocKind.code} · ${d.hrDocKind.name}`
-                                : "—"}
-                            </td>
-                            <td className="a-table-cell text-a-fg-muted">
-                              {d.mime || "—"}
-                            </td>
-                            <td className="a-table-cell">
-                              <div className="flex flex-wrap gap-1">
-                                <AButton
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={!previewable}
-                                  onClick={() => openPreview(d)}
-                                >
-                                  Aperçu
-                                </AButton>
-                                <AButton
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    void downloadEmployeeDocument(id, d.id)
-                                  }
-                                >
-                                  Télécharger
-                                </AButton>
-                                <AButton
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={!previewable}
-                                  onClick={() =>
-                                    printHrDocument(href, d.mime, d.title)
-                                  }
-                                >
-                                  Imprimer
-                                </AButton>
-                                {image &&
-                                d.id !== employee.photoDocumentId ? (
-                                  <AButton
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={busy}
-                                    onClick={() => void onUseAsPhoto(d)}
-                                  >
-                                    Utiliser comme photo
-                                  </AButton>
-                                ) : null}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                            </div>
+                          </ASoftTd>
+                        </ASoftTr>
+                      );
+                    })}
+                  </tbody>
+                </ASoftTable>
               )}
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">

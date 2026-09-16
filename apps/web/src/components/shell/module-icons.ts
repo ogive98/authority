@@ -120,11 +120,12 @@ export function toneClasses(tone: NavTone, active: boolean) {
     };
   }
   if (tone === "orange") {
+    /* Legacy tone key — maps to violet (blue/violet/sky chrome only). */
     return {
       chip: active
-        ? "bg-a-orange text-white"
-        : "bg-a-orange-soft text-a-orange",
-      text: active ? "text-a-orange" : "text-a-fg-muted",
+        ? "bg-a-violet text-white"
+        : "bg-a-violet-soft text-a-violet",
+      text: active ? "text-a-violet" : "text-a-fg-muted",
       ring: "",
     };
   }

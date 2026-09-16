@@ -53,7 +53,7 @@ export function ADrawer({
               )}
             </div>
             <Dialog.Close
-              className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted hover:bg-white/50 hover:text-a-fg"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
               aria-label="Fermer"
             >
               <X className="h-4 w-4" strokeWidth={1.75} />

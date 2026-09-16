@@ -15,6 +15,11 @@ import {
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
   type AOverflowItem,
 } from "@/components/a";
 import {
@@ -24,7 +29,6 @@ import {
   reverseEntry,
   type AccJournalEntry,
 } from "@/lib/accounting";
-import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
 
 type Load =
@@ -257,62 +261,59 @@ export default function AccountingEntryFichePage() {
 
                 <APageSection title="Lignes">
                   {(entry.lines?.length ?? 0) > 0 ? (
-                    <div className={softTableWrap}>
-                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                        <thead className={softThead}>
-                          <tr>
-                            <th className="px-4 py-3 font-medium">#</th>
-                            <th className="px-4 py-3 font-medium">Compte</th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              Débit
-                            </th>
-                            <th className="px-4 py-3 font-medium text-right">
-                              Crédit
-                            </th>
-                            <th className="px-4 py-3 font-medium">Mémo</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {entry.lines.map((line) => (
-                            <tr key={line.id} className={softTr}>
-                              <td className="a-mono px-4 py-3">{line.lineNo}</td>
-                              <td className="px-4 py-3">
-                                <span className="a-mono">
-                                  {line.accountCode ?? "—"}
-                                </span>{" "}
-                                {line.accountName ?? ""}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums">
-                                {line.debit}
-                              </td>
-                              <td className="a-mono px-4 py-3 text-right tabular-nums">
-                                {line.credit}
-                              </td>
-                              <td className="px-4 py-3 text-a-fg-muted">
-                                {line.memo ?? "—"}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot>
-                          <tr className={softTr}>
-                            <td
-                              className="px-4 py-3 font-medium"
-                              colSpan={2}
-                            >
-                              Totaux
-                            </td>
-                            <td className="a-mono px-4 py-3 text-right tabular-nums font-medium">
-                              {totals.debit.toFixed(3)}
-                            </td>
-                            <td className="a-mono px-4 py-3 text-right tabular-nums font-medium">
-                              {totals.credit.toFixed(3)}
-                            </td>
-                            <td />
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
+                    <ASoftTable>
+                      <ASoftThead>
+                        <ASoftTr>
+                          <ASoftTh>#</ASoftTh>
+                          <ASoftTh>Compte</ASoftTh>
+                          <ASoftTh numeric>Débit</ASoftTh>
+                          <ASoftTh numeric>Crédit</ASoftTh>
+                          <ASoftTh>Mémo</ASoftTh>
+                        </ASoftTr>
+                      </ASoftThead>
+                      <tbody>
+                        {entry.lines.map((line) => (
+                          <ASoftTr key={line.id}>
+                            <ASoftTd className="a-mono">{line.lineNo}</ASoftTd>
+                            <ASoftTd>
+                              <span className="a-mono">
+                                {line.accountCode ?? "—"}
+                              </span>{" "}
+                              {line.accountName ?? ""}
+                            </ASoftTd>
+                            <ASoftTd numeric className="a-mono tabular-nums">
+                              {line.debit}
+                            </ASoftTd>
+                            <ASoftTd numeric className="a-mono tabular-nums">
+                              {line.credit}
+                            </ASoftTd>
+                            <ASoftTd className="text-a-fg-muted">
+                              {line.memo ?? "—"}
+                            </ASoftTd>
+                          </ASoftTr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <ASoftTr>
+                          <ASoftTd className="font-medium" colSpan={2}>
+                            Totaux
+                          </ASoftTd>
+                          <ASoftTd
+                            numeric
+                            className="a-mono tabular-nums font-medium"
+                          >
+                            {totals.debit.toFixed(3)}
+                          </ASoftTd>
+                          <ASoftTd
+                            numeric
+                            className="a-mono tabular-nums font-medium"
+                          >
+                            {totals.credit.toFixed(3)}
+                          </ASoftTd>
+                          <ASoftTd />
+                        </ASoftTr>
+                      </tfoot>
+                    </ASoftTable>
                   ) : (
                     <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                       Aucune ligne.

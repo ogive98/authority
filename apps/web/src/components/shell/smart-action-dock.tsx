@@ -222,8 +222,6 @@ const DOCK_SPARK = [
   "text-a-accent",
   "text-a-sky",
   "text-a-violet",
-  "text-a-success",
-  "text-a-orange",
 ] as const;
 
 function ActionTile({
@@ -445,7 +443,7 @@ export function SmartActionDock() {
               aria-label={t("thunderCoreOpen")}
             >
               <Zap
-                className="h-5 w-5 shrink-0 text-a-orange"
+                className="h-5 w-5 shrink-0 text-a-accent"
                 strokeWidth={SIDEBAR_STROKE}
               />
               {!dockCollapsed ? (
@@ -465,7 +463,7 @@ export function SmartActionDock() {
             className="a-nav-row flex items-center gap-2.5 rounded-md px-1.5 py-1.5 text-[12.5px] font-medium text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
           >
             <Settings2
-              className="h-5 w-5 shrink-0 text-a-orange"
+              className="h-5 w-5 shrink-0 text-a-violet"
               strokeWidth={SIDEBAR_STROKE}
             />
             {t("preferences")}
@@ -476,7 +474,7 @@ export function SmartActionDock() {
           <Link
             href="/settings#apparence"
             aria-label={t("preferences")}
-            className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)] text-a-orange"
+            className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)] text-a-violet"
           >
             <Settings2 className="h-5 w-5" strokeWidth={SIDEBAR_STROKE} />
           </Link>

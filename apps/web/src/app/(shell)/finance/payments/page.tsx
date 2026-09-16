@@ -13,10 +13,17 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
   type AComboboxOption,
 } from "@/components/a";
 import { fetchCustomers } from "@/lib/customers";
@@ -36,13 +43,8 @@ import {
   type PaymentMethod,
   type PaymentStatus,
 } from "@/lib/finance";
-import {
-  softChipClass,
-  softSelect,
-  softTableWrap,
-  softThead,
-  softTr,
-} from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
+import { ATabs } from "@/components/a/a-tabs";
 
 type LoadState =
   | { kind: "loading" }
@@ -330,7 +332,10 @@ function FinancePaymentsPageInner() {
       <AScreenHeader
         kicker="Finance"
         title="Encaissements"
-        description="Paiements AR Soft Glass — affectation A–G · fiche détail · GL via Thunder (D238)."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "affectation A–G · fiche détail · GL via Thunder",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             Nouveau paiement
@@ -378,41 +383,23 @@ function FinancePaymentsPageInner() {
             />
           }
           filters={
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Filtrer par statut"
-            >
-              {PAYMENT_STATUS_FILTERS.map((chip) => {
-                const active = statusFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => {
-                      setStatusFilter(chip.id);
-                      syncStatusUrl(chip.id);
-                      void load(q, chip.id);
-                    }}
-                    className={softChipClass(active)}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                const next = (id === "all" ? "" : id) as "" | PaymentStatus;
+                setStatusFilter(next);
+                syncStatusUrl(next);
+                void load(q, next);
+              }}
+              items={PAYMENT_STATUS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label: chip.label,
+              }))}
+            />
           }
           utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q, statusFilter)}
-            >
-              Actualiser
-            </AButton>
+            <AListUtilities onFilter={() => void load(q, statusFilter)} />
           }
         />
 
@@ -438,94 +425,89 @@ function FinancePaymentsPageInner() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full min-w-[52rem] border-collapse text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="a-table-cell font-medium">N°</th>
-                  <th className="a-table-cell font-medium">Client</th>
-                  <th className="a-table-cell font-medium">Méthode</th>
-                  <th className="a-table-cell font-medium">Montant</th>
-                  <th className="a-table-cell font-medium">Non affecté</th>
-                  <th className="a-table-cell font-medium">Statut</th>
-                  <th className="a-table-cell font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((p) => (
-                  <tr
-                    key={p.id}
-                    className={`${softTr} cursor-pointer`}
-                    onClick={() => router.push(`/finance/payments/${p.id}`)}
-                  >
-                    <td className="a-mono a-table-cell">
-                      <Link
-                        href={`/finance/payments/${p.id}`}
-                        className="text-a-accent hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {p.number}
-                      </Link>
-                    </td>
-                    <td className="a-table-cell">
-                      {p.customerName ?? p.customerCode ?? "—"}
-                    </td>
-                    <td className="a-table-cell">{p.method}</td>
-                    <td className="a-mono a-table-cell tabular-nums">
-                      {p.amount} {p.currency}
-                    </td>
-                    <td className="a-mono a-table-cell tabular-nums">
-                      {p.amountUnallocated}
-                    </td>
-                    <td className="a-table-cell">
-                      <ABadge tone={paymentBadgeTone(p.status)}>
-                        {PAYMENT_STATUS_LABELS[p.status]}
-                      </ABadge>
-                    </td>
-                    <td
-                      className="a-table-cell"
+          <ASoftTable className="min-w-[52rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>N°</ASoftTh>
+                <ASoftTh>Client</ASoftTh>
+                <ASoftTh>Méthode</ASoftTh>
+                <ASoftTh numeric>Montant</ASoftTh>
+                <ASoftTh numeric>Non affecté</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh>Actions</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((p) => (
+                <ASoftTr
+                  key={p.id}
+                  onClick={() => router.push(`/finance/payments/${p.id}`)}
+                >
+                  <ASoftTd>
+                    <Link
+                      href={`/finance/payments/${p.id}`}
+                      className="a-mono font-semibold text-a-accent hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="flex flex-wrap gap-1.5">
-                        {p.status === "POSTED" &&
-                        Number(p.amountUnallocated) > 0 ? (
-                          <AButton
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            disabled={busy}
-                            onClick={() => {
-                              setAllocTarget(p);
-                              setPolicy("OLDEST_FIRST");
-                              setPlan(null);
-                              setFormError(null);
-                              setAllocOpen(true);
-                            }}
-                          >
-                            Affecter
-                          </AButton>
-                        ) : null}
-                        {p.status === "POSTED" ? (
-                          <AButton
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            disabled={busy}
-                            onClick={() => void onReverse(p.id)}
-                          >
-                            Contrepasser
-                          </AButton>
-                        ) : null}
-                        {p.status !== "POSTED" ? (
-                          <span className="text-a-fg-subtle">—</span>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      {p.number}
+                    </Link>
+                  </ASoftTd>
+                  <ASoftTd>
+                    {p.customerName ?? p.customerCode ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd>{p.method}</ASoftTd>
+                  <ASoftTd numeric>
+                    {p.amount} {p.currency}
+                  </ASoftTd>
+                  <ASoftTd numeric>{p.amountUnallocated}</ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={paymentBadgeTone(p.status)}>
+                      {PAYMENT_STATUS_LABELS[p.status]}
+                    </ABadge>
+                  </ASoftTd>
+                  <ASoftTd>
+                    <div
+                      className="flex flex-wrap gap-1.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {p.status === "POSTED" &&
+                      Number(p.amountUnallocated) > 0 ? (
+                        <AButton
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => {
+                            setAllocTarget(p);
+                            setPolicy("OLDEST_FIRST");
+                            setPlan(null);
+                            setFormError(null);
+                            setAllocOpen(true);
+                          }}
+                        >
+                          Affecter
+                        </AButton>
+                      ) : null}
+                      {p.status === "POSTED" ? (
+                        <AButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void onReverse(p.id)}
+                        >
+                          Contrepasser
+                        </AButton>
+                      ) : null}
+                      {p.status !== "POSTED" ? (
+                        <span className="text-a-fg-subtle">—</span>
+                      ) : null}
+                    </div>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

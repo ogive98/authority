@@ -16,6 +16,11 @@ import {
   APageSection,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
   type AOverflowItem,
 } from "@/components/a";
 import {
@@ -31,7 +36,7 @@ import {
   type AllocationPolicy,
   type FinPayment,
 } from "@/lib/finance";
-import { softSelect, softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -286,39 +291,35 @@ export default function FinancePaymentFichePage() {
                       Aucun instrument (espèces / virement / carte).
                     </p>
                   ) : (
-                    <div className={softTableWrap}>
-                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                        <thead className={softThead}>
-                          <tr>
-                            <th className="px-3 py-2 font-medium">Type</th>
-                            <th className="px-3 py-2 font-medium">N°</th>
-                            <th className="px-3 py-2 font-medium text-right">
-                              Montant
-                            </th>
-                            <th className="px-3 py-2 font-medium">Statut</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {pay.instruments.map((inst) => (
-                            <tr key={inst.id} className={softTr}>
-                              <td className="px-3 py-2">{inst.type}</td>
-                              <td className="px-3 py-2 font-mono tabular-nums">
-                                {inst.number}
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono tabular-nums">
-                                {inst.amount}
-                              </td>
-                              <td className="px-3 py-2">
-                                <ABadge tone="neutral">
-                                  {INSTRUMENT_STATUS_LABELS[inst.status] ??
-                                    inst.status}
-                                </ABadge>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <ASoftTable>
+                      <ASoftThead>
+                        <ASoftTr>
+                          <ASoftTh>Type</ASoftTh>
+                          <ASoftTh>N°</ASoftTh>
+                          <ASoftTh numeric>Montant</ASoftTh>
+                          <ASoftTh>Statut</ASoftTh>
+                        </ASoftTr>
+                      </ASoftThead>
+                      <tbody>
+                        {pay.instruments.map((inst) => (
+                          <ASoftTr key={inst.id}>
+                            <ASoftTd>{inst.type}</ASoftTd>
+                            <ASoftTd className="font-mono tabular-nums">
+                              {inst.number}
+                            </ASoftTd>
+                            <ASoftTd numeric className="font-mono tabular-nums">
+                              {inst.amount}
+                            </ASoftTd>
+                            <ASoftTd>
+                              <ABadge tone="neutral">
+                                {INSTRUMENT_STATUS_LABELS[inst.status] ??
+                                  inst.status}
+                              </ABadge>
+                            </ASoftTd>
+                          </ASoftTr>
+                        ))}
+                      </tbody>
+                    </ASoftTable>
                   )}
                 </APageSection>
 
@@ -331,34 +332,30 @@ export default function FinancePaymentFichePage() {
                         : null}
                     </p>
                   ) : (
-                    <div className={softTableWrap}>
-                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
-                        <thead className={softThead}>
-                          <tr>
-                            <th className="px-3 py-2 font-medium">Créance</th>
-                            <th className="px-3 py-2 font-medium text-right">
-                              Montant
-                            </th>
-                            <th className="px-3 py-2 font-medium">Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {pay.allocations.map((a) => (
-                            <tr key={a.id} className={softTr}>
-                              <td className="px-3 py-2 font-mono tabular-nums text-[length:var(--a-text-xs)]">
-                                {a.openItemId.slice(0, 8)}…
-                              </td>
-                              <td className="px-3 py-2 text-right font-mono tabular-nums">
-                                {a.amount} {pay.currency}
-                              </td>
-                              <td className="px-3 py-2 font-mono tabular-nums">
-                                {a.paidAt.slice(0, 10)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <ASoftTable>
+                      <ASoftThead>
+                        <ASoftTr>
+                          <ASoftTh>Créance</ASoftTh>
+                          <ASoftTh numeric>Montant</ASoftTh>
+                          <ASoftTh>Date</ASoftTh>
+                        </ASoftTr>
+                      </ASoftThead>
+                      <tbody>
+                        {pay.allocations.map((a) => (
+                          <ASoftTr key={a.id}>
+                            <ASoftTd className="font-mono tabular-nums text-[length:var(--a-text-xs)]">
+                              {a.openItemId.slice(0, 8)}…
+                            </ASoftTd>
+                            <ASoftTd numeric className="font-mono tabular-nums">
+                              {a.amount} {pay.currency}
+                            </ASoftTd>
+                            <ASoftTd className="font-mono tabular-nums">
+                              {a.paidAt.slice(0, 10)}
+                            </ASoftTd>
+                          </ASoftTr>
+                        ))}
+                      </tbody>
+                    </ASoftTable>
                   )}
                 </APageSection>
               </>

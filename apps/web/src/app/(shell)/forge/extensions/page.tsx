@@ -8,12 +8,20 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import {
@@ -27,7 +35,6 @@ import {
   type ForgeExtension,
   type ForgeExtensionStatus,
 } from "@/lib/forge";
-import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -131,7 +138,10 @@ export default function ForgeExtensionsPage() {
         }
         kicker="FORGE"
         title="Extensions"
-        description="Manifestes tenant — données seulement · lifecycle sans saut DRAFT→ACTIVE."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "Manifestes tenant — données seulement · lifecycle sans saut DRAFT→ACTIVE",
+        )}
         primary={
           <AButton
             type="button"
@@ -173,6 +183,10 @@ export default function ForgeExtensionsPage() {
         }
       />
       <APageBody>
+        <AFilterBar
+          utilities={<AListUtilities onFilter={() => void load()} />}
+        />
+
         {actionError ? (
           <p className="text-[length:var(--a-text-sm)] text-a-danger">
             {actionError}
@@ -200,94 +214,92 @@ export default function ForgeExtensionsPage() {
           />
         ) : null}
         {state.kind === "ok" && state.items.length > 0 ? (
-          <div className={softTableWrap}>
-            <table className="w-full text-left text-[length:var(--a-text-sm)]">
-              <thead className={softThead}>
-                <tr>
-                  <th className="px-3 py-2 font-medium">Clé</th>
-                  <th className="px-3 py-2 font-medium">Nom</th>
-                  <th className="px-3 py-2 font-medium">Version</th>
-                  <th className="px-3 py-2 font-medium">Statut</th>
-                  <th className="px-3 py-2 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.items.map((ext) => (
-                  <tr key={ext.id} className={softTr}>
-                    <td className="px-3 py-2 a-mono">{ext.key}</td>
-                    <td className="px-3 py-2">{ext.name}</td>
-                    <td className="px-3 py-2 a-mono tabular-nums">
-                      {ext.manifestVersion}
-                    </td>
-                    <td className="px-3 py-2">
-                      <ABadge tone={forgeExtBadgeTone(ext.status)}>
-                        {FORGE_EXTENSION_STATUS_LABELS[ext.status]}
-                      </ABadge>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex flex-wrap gap-2">
-                        {(
-                          {
-                            DRAFT: "ANALYZING",
-                            ANALYZING: "VALIDATING",
-                            VALIDATING: "TESTING",
-                            TESTING: "READY_FOR_REVIEW",
-                          } as Partial<
-                            Record<ForgeExtensionStatus, ForgeExtensionStatus>
-                          >
-                        )[ext.status] ? (
-                          <AButton
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() => {
-                              const next = (
-                                {
-                                  DRAFT: "ANALYZING",
-                                  ANALYZING: "VALIDATING",
-                                  VALIDATING: "TESTING",
-                                  TESTING: "READY_FOR_REVIEW",
-                                } as Partial<
-                                  Record<
-                                    ForgeExtensionStatus,
-                                    ForgeExtensionStatus
-                                  >
+          <ASoftTable className="min-w-[48rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>Clé</ASoftTh>
+                <ASoftTh>Nom</ASoftTh>
+                <ASoftTh>Version</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh>Actions</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((ext) => (
+                <ASoftTr key={ext.id}>
+                  <ASoftTd className="a-mono">{ext.key}</ASoftTd>
+                  <ASoftTd>{ext.name}</ASoftTd>
+                  <ASoftTd className="a-mono tabular-nums">
+                    {ext.manifestVersion}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <ABadge tone={forgeExtBadgeTone(ext.status)}>
+                      {FORGE_EXTENSION_STATUS_LABELS[ext.status]}
+                    </ABadge>
+                  </ASoftTd>
+                  <ASoftTd>
+                    <div className="flex flex-wrap gap-2">
+                      {(
+                        {
+                          DRAFT: "ANALYZING",
+                          ANALYZING: "VALIDATING",
+                          VALIDATING: "TESTING",
+                          TESTING: "READY_FOR_REVIEW",
+                        } as Partial<
+                          Record<ForgeExtensionStatus, ForgeExtensionStatus>
+                        >
+                      )[ext.status] ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => {
+                            const next = (
+                              {
+                                DRAFT: "ANALYZING",
+                                ANALYZING: "VALIDATING",
+                                VALIDATING: "TESTING",
+                                TESTING: "READY_FOR_REVIEW",
+                              } as Partial<
+                                Record<
+                                  ForgeExtensionStatus,
+                                  ForgeExtensionStatus
                                 >
-                              )[ext.status];
-                              if (next) void onTransition(ext.id, next);
-                            }}
-                          >
-                            Avancer
-                          </AButton>
-                        ) : null}
-                        {ext.status === "READY_FOR_REVIEW" ? (
-                          <AButton
-                            type="button"
-                            size="sm"
-                            disabled={busy}
-                            onClick={() => void onApprove(ext.id)}
-                          >
-                            Approuver
-                          </AButton>
-                        ) : null}
-                        {ext.status === "APPROVED" ? (
-                          <AButton
-                            type="button"
-                            size="sm"
-                            disabled={busy}
-                            onClick={() => void onActivate(ext.id)}
-                          >
-                            Activer
-                          </AButton>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                              >
+                            )[ext.status];
+                            if (next) void onTransition(ext.id, next);
+                          }}
+                        >
+                          Avancer
+                        </AButton>
+                      ) : null}
+                      {ext.status === "READY_FOR_REVIEW" ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void onApprove(ext.id)}
+                        >
+                          Approuver
+                        </AButton>
+                      ) : null}
+                      {ext.status === "APPROVED" ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void onActivate(ext.id)}
+                        >
+                          Activer
+                        </AButton>
+                      ) : null}
+                    </div>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

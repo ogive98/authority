@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ABadge,
@@ -11,10 +11,17 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import {
   adjustLot,
@@ -27,7 +34,15 @@ import {
   type InventoryWarehouse,
   type ProductOption,
 } from "@/lib/inventory";
-import { softList, softListRow, softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
+import { ATabs } from "@/components/a/a-tabs";
+
+const STATUS_FILTERS = [
+  { id: "all", label: "Tous" },
+  { id: "OPEN", label: "Ouverts" },
+  { id: "QUARANTINE", label: "Quarantaine" },
+  { id: "CLOSED", label: "Clos" },
+] as const;
 
 type LoadState =
   | { kind: "loading" }
@@ -102,11 +117,6 @@ export default function InventoryLotsPage() {
       if (pr.ok) setProducts(pr.items);
     })();
   }, []);
-
-  const openCount = useMemo(() => {
-    if (state.kind !== "ok") return 0;
-    return state.items.filter((i) => i.status === "OPEN").length;
-  }, [state]);
 
   function openCreate() {
     setFormError(null);
@@ -189,7 +199,10 @@ export default function InventoryLotsPage() {
       <AScreenHeader
         kicker="Stock"
         title="Lots"
-        description="Lots / DLC fromagerie — ajustement synchronisé avec le solde SKU."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "DLC fromagerie · ajustement synchro solde SKU",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             Nouveau lot
@@ -224,35 +237,18 @@ export default function InventoryLotsPage() {
             />
           }
           filters={
-            <select
-              className={softSelect}
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              aria-label="Filtrer par statut"
-            >
-              <option value="all">Tous</option>
-              <option value="OPEN">Ouverts</option>
-              <option value="QUARANTINE">Quarantaine</option>
-              <option value="CLOSED">Clos</option>
-            </select>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => setStatusFilter(id)}
+              items={STATUS_FILTERS.map((chip) => ({
+                id: chip.id,
+                label: chip.label,
+              }))}
+            />
           }
-          utilities={
-            <AButton
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => void load()}
-            >
-              Actualiser
-            </AButton>
-          }
+          utilities={<AListUtilities onFilter={() => void load()} />}
         />
-
-        {state.kind === "ok" ? (
-          <p className="text-[12px] text-a-fg-muted">
-            {state.items.length} lot(s) · {openCount} ouvert(s)
-          </p>
-        ) : null}
 
         {formError ? (
           <p className="rounded-[10px] bg-a-danger-soft px-3 py-2 text-[13px] text-a-danger-fg">
@@ -277,81 +273,105 @@ export default function InventoryLotsPage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <ul className={softList}>
-            {state.items.map((lot) => (
-              <li key={lot.id} className={softListRow}>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="a-mono text-[13px] font-semibold text-a-fg">
-                      {lot.lotCode}
+          <ASoftTable className="min-w-[52rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>Lot</ASoftTh>
+                <ASoftTh>Produit</ASoftTh>
+                <ASoftTh>Entrepôt</ASoftTh>
+                <ASoftTh numeric>Qté</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh>Actions</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((lot) => (
+                <ASoftTr key={lot.id}>
+                  <ASoftTd>
+                    <div className="space-y-0.5">
+                      <span className="a-mono font-semibold">{lot.lotCode}</span>
+                      {(lot.packDate || lot.dlc) && (
+                        <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                          {lot.packDate ? `emb. ${lot.packDate}` : ""}
+                          {lot.packDate && lot.dlc ? " · " : ""}
+                          {lot.dlc ? `DLC ${lot.dlc}` : ""}
+                        </p>
+                      )}
+                    </div>
+                  </ASoftTd>
+                  <ASoftTd>
+                    <span className="a-mono text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      {lot.productSku ?? "—"}
                     </span>
+                    <span className="ml-1.5">
+                      {lot.productName ?? "Produit"}
+                    </span>
+                  </ASoftTd>
+                  <ASoftTd className="a-mono">{lot.warehouseCode}</ASoftTd>
+                  <ASoftTd numeric>
+                    {lot.qtyOnHand}
+                    <span className="ml-1 text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                      {lot.productUom ?? "kg"}
+                    </span>
+                  </ASoftTd>
+                  <ASoftTd>
                     <ABadge tone={statusTone(lot.status)}>
                       {statusLabel(lot.status)}
                     </ABadge>
-                  </div>
-                  <p className="mt-0.5 truncate text-[12px] text-a-fg-muted">
-                    {lot.productSku ?? "—"} · {lot.productName ?? "Produit"} ·{" "}
-                    {lot.warehouseCode}
-                    {lot.packDate ? ` · emb. ${lot.packDate}` : ""}
-                    {lot.dlc ? ` · DLC ${lot.dlc}` : ""}
-                  </p>
-                </div>
-                <div className="a-mono text-right text-[13px] tabular-nums text-a-fg">
-                  {lot.qtyOnHand}
-                  <span className="ml-1 text-[11px] text-a-fg-subtle">
-                    {lot.productUom ?? "kg"}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <AButton
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => {
-                      setAdjustId(lot.id);
-                      setAdjustQty("");
-                      setFormError(null);
-                    }}
-                  >
-                    Ajuster
-                  </AButton>
-                  {lot.status !== "QUARANTINE" ? (
-                    <AButton
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => void setStatus(lot.id, "QUARANTINE")}
-                    >
-                      Quarantaine
-                    </AButton>
-                  ) : (
-                    <AButton
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => void setStatus(lot.id, "OPEN")}
-                    >
-                      Rouvrir
-                    </AButton>
-                  )}
-                  {lot.status !== "CLOSED" ? (
-                    <AButton
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => void setStatus(lot.id, "CLOSED")}
-                    >
-                      Clôturer
-                    </AButton>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+                  </ASoftTd>
+                  <ASoftTd>
+                    <div className="flex flex-wrap gap-1.5">
+                      <AButton
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => {
+                          setAdjustId(lot.id);
+                          setAdjustQty("");
+                          setFormError(null);
+                        }}
+                      >
+                        Ajuster
+                      </AButton>
+                      {lot.status !== "QUARANTINE" ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => void setStatus(lot.id, "QUARANTINE")}
+                        >
+                          Quarantaine
+                        </AButton>
+                      ) : (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => void setStatus(lot.id, "OPEN")}
+                        >
+                          Rouvrir
+                        </AButton>
+                      )}
+                      {lot.status !== "CLOSED" ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => void setStatus(lot.id, "CLOSED")}
+                        >
+                          Clôturer
+                        </AButton>
+                      ) : null}
+                    </div>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 
