@@ -363,6 +363,7 @@ export default function TejCenterPage() {
             </p>
           </div>
           <ABadge tone="warning">Transmission DISABLED</ABadge>
+          <ABadge tone="neutral">AUTHORITY_LOCAL_DRAFT · v1</ABadge>
         </div>
 
         <ExpertiseHintsStrip keys={["tax.ras", "tax.tej"]} />

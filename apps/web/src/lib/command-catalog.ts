@@ -115,6 +115,15 @@ export const COMMAND_CATALOG: CommandItem[] = [
     permissionKey: "production.read",
   },
   {
+    id: "nav-analytics",
+    label: "Analytics",
+    group: "navigation",
+    href: "/analytics",
+    keywords: ["analytics", "kpi", "synthèse", "cube", "statistiques"],
+    requiresModule: "analytics",
+    permissionKey: "analytics.read",
+  },
+  {
     id: "nav-hr",
     label: "Employés",
     group: "navigation",

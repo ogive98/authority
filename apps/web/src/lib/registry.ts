@@ -185,6 +185,17 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       ],
     },
     {
+      key: "analytics",
+      name: "Analytics",
+      features: [
+        {
+          id: "analytics-home",
+          label: "Synthèse live",
+          href: "/analytics",
+        },
+      ],
+    },
+    {
       key: "repair",
       name: "Réparation",
       features: [

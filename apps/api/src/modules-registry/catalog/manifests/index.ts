@@ -1,5 +1,6 @@
 import type { ModuleManifest } from '../manifest.types';
 import { accountingManifest } from './accounting.manifest';
+import { analyticsManifest } from './analytics.manifest';
 import { attendanceManifest } from './attendance.manifest';
 import { automationManifest } from './automation.manifest';
 import { customersManifest } from './customers.manifest';
@@ -54,4 +55,5 @@ export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   portalsManifest,
   automationManifest,
   forgeManifest,
+  analyticsManifest,
 ] as const;

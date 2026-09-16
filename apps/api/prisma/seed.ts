@@ -155,6 +155,7 @@ async function main() {
     'repair',
     'automation',
     'forge',
+    'analytics',
   ] as const;
 
   for (const moduleKey of businessModules) {
@@ -178,7 +179,8 @@ async function main() {
       moduleKey === 'hr' ||
       moduleKey === 'attendance' ||
       moduleKey === 'automation' ||
-      moduleKey === 'forge'
+      moduleKey === 'forge' ||
+      moduleKey === 'analytics'
         ? 'ENABLED'
         : 'DISABLED';
     await prisma.modModuleState.upsert({
@@ -665,6 +667,12 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'forge.approve',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'analytics.read',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,

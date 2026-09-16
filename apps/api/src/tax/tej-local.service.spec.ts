@@ -107,6 +107,8 @@ describe('TejLocalService (D265/D285)', () => {
     expect(result.xmlContent).toContain('transmission="DISABLED"');
     expect(result.xmlContent).toContain('Do not upload or transmit');
     expect(result.xmlContent).toContain('AUTHORITY_LOCAL_DRAFT');
+    expect(result.xmlContent).toContain('schemaVersion="AUTHORITY_LOCAL_DRAFT@1"');
+    expect(result.schemaVersion).toBe('AUTHORITY_LOCAL_DRAFT@1');
     expect(result.xmlContent).toContain('not an official TEJ XSD');
     expect(result.contentSha256).toBe(
       createHash('sha256').update(result.xmlContent!, 'utf8').digest('hex'),

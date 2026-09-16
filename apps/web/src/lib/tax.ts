@@ -87,6 +87,8 @@ export type TejExport = {
   prefsValueLabel: string;
   lawRef: string | null;
   schemaNote: string;
+  /** D293 — e.g. AUTHORITY_LOCAL_DRAFT@1 */
+  schemaVersion?: string;
   transmission: "DISABLED";
   packKind?: "META_DRAFT" | "WITHHOLDING_PACK";
   withholdingCount?: number;

@@ -11,6 +11,7 @@ export const COMMAND_LABELS_IT: Record<string, string> = {
   "nav-inventory": "Scorte",
   "nav-production": "Produzione",
   "nav-production-worksheets": "Schede digitali",
+  "nav-analytics": "Analytics",
   "nav-hr": "Dipendenti",
   "nav-sales": "Ordini",
   "nav-delivery": "Consegne",

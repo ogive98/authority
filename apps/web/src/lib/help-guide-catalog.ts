@@ -1492,7 +1492,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Ou ligne AR « XML facture » / bandeau facture → pack par `arInvoiceId`.",
             "Les lignes passent en TEJ_PREPARED et sont liées au lot.",
             "Ensuite : Accusé import → Accepté/Rejeté Tej → Archiver (cycle local D287).",
-            "Schéma = AUTHORITY_LOCAL_DRAFT — pas un XSD TEJ officiel ; ne pas uploader via AUTHORITY.",
+            "Schéma = AUTHORITY_LOCAL_DRAFT@1 (registry D293) — pas un XSD TEJ officiel ; ne pas uploader via AUTHORITY.",
             "Transmission DISABLED forever côté AUTHORITY jusqu’à unlock produit + XSD fourni.",
           ],
           it: [
@@ -1503,7 +1503,7 @@ export const HELP_MODULES: HelpModule[] = [
             "O riga AR « XML fattura » / fascia fattura → pack per `arInvoiceId`.",
             "Le righe passano a TEJ_PREPARED e sono collegate al lotto.",
             "Poi: Ricevuta import → Accettato/Rifiutato Tej → Archivia (ciclo locale D287).",
-            "Schema = AUTHORITY_LOCAL_DRAFT — non un XSD TEJ ufficiale; non caricare via AUTHORITY.",
+            "Schema = AUTHORITY_LOCAL_DRAFT@1 (registry D293) — non un XSD TEJ ufficiale; non caricare via AUTHORITY.",
             "Trasmissione DISABLED forever lato AUTHORITY fino a unlock prodotto + XSD fornito.",
           ],
         },
@@ -1756,6 +1756,57 @@ export const HELP_MODULES: HelpModule[] = [
         "Pesatura manuale V4 — niente Devices / TSC.",
         "Nessun impatto fattura / scorte sulle transizioni scheda.",
         "Niente OF auto da ordine (solo hint D290).",
+      ],
+    },
+  },
+  {
+    id: "analytics",
+    href: "/analytics",
+    title: { fr: "Analytics", it: "Analytics" },
+    summary: {
+      fr: "Synthèse live — agrégats réels Sales / Finance / Stock / Livraison (pas de KPI inventés).",
+      it: "Sintesi live — aggregati reali Sales / Finance / Scorte / Consegne (niente KPI inventati).",
+    },
+    when: {
+      fr: "Vue transverse des compteurs métier déjà présents dans Mission Control.",
+      it: "Vista trasversale dei contatori business già in Mission Control.",
+    },
+    features: [
+      {
+        name: {
+          fr: "Synthèse live (D293)",
+          it: "Sintesi live (D293)",
+        },
+        when: {
+          fr: "Lire les compteurs sans cube BI persisté.",
+          it: "Leggere i contatori senza cube BI persistito.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/analytics` (module Analytics activé).",
+            "Sections = modules sources ON uniquement (sinon badge « désactivé »).",
+            "Montants TND = encours AR as-recorded — jamais inventés.",
+            "Actualiser pour recharger · Mission Control garde ses home-kpis.",
+          ],
+          it: [
+            "Apri `/analytics` (modulo Analytics attivo).",
+            "Sezioni = solo moduli sorgente ON (altrimenti badge « disattivato »).",
+            "Importi TND = crediti AR as-recorded — mai inventati.",
+            "Aggiorna per ricaricare · Mission Control mantiene i home-kpis.",
+          ],
+        },
+      },
+    ],
+    locks: {
+      fr: [
+        "Pas de KPI inventés / CA fictif.",
+        "Pas de snapshot cube persisté V0 · pas d’IA.",
+        "TEJ XSD officiel reste bloqué jusqu’à artefact MF (registry swap-ready).",
+      ],
+      it: [
+        "Niente KPI inventati / fatturato fittizio.",
+        "Niente snapshot cube persistito V0 · niente IA.",
+        "XSD TEJ ufficiale resta bloccato fino ad artefatto MF (registry swap-ready).",
       ],
     },
   },

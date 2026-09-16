@@ -34,6 +34,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { AutomationModule } from './automation/automation.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ForgeModule } from './forge/forge.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { ForgeModule } from './forge/forge.module';
     AutomationModule,
     NotificationsModule,
     ForgeModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}

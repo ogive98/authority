@@ -6,10 +6,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
 import { TAX_ERROR_CODES, TAX_EVENT_TYPES } from './tax.constants';
 import { TaxException } from './tax.exception';
+import {
+  getActiveTejSchema,
+  listTejSchemas,
+  type TejSchemaEntry,
+} from './tej-schema.registry';
 
 /** Explicit non-official marker — never claim TEJ compliance. */
-export const TEJ_LOCAL_SCHEMA_NOTE =
-  'AUTHORITY_LOCAL_DRAFT — not an official TEJ XSD; awaiting validated schema; transmission DISABLED';
+export const TEJ_LOCAL_SCHEMA_NOTE = getActiveTejSchema().note;
 
 export type TejPackKind = 'META_DRAFT' | 'WITHHOLDING_PACK';
 
@@ -21,6 +25,8 @@ export type TejExportDto = {
   prefsValueLabel: string;
   lawRef: string | null;
   schemaNote: string;
+  /** D293 — registry id e.g. AUTHORITY_LOCAL_DRAFT@1 */
+  schemaVersion: string;
   transmission: 'DISABLED';
   packKind: TejPackKind;
   withholdingCount: number;
@@ -39,7 +45,12 @@ export class TejLocalService {
   async list(
     companyId: string,
     opts?: { limit?: number },
-  ): Promise<{ items: TejExportDto[]; transmission: 'DISABLED' }> {
+  ): Promise<{
+    items: TejExportDto[];
+    transmission: 'DISABLED';
+    activeSchema: TejSchemaEntry;
+    schemas: readonly TejSchemaEntry[];
+  }> {
     const limit = Math.min(Math.max(opts?.limit ?? 20, 1), 50);
     const rows = await this.prisma.taxTejExport.findMany({
       where: { companyId, deletedAt: null },
@@ -49,6 +60,8 @@ export class TejLocalService {
     return {
       items: rows.map((r) => serializeTej(r, false)),
       transmission: 'DISABLED',
+      activeSchema: getActiveTejSchema(),
+      schemas: listTejSchemas(),
     };
   }
 
@@ -378,9 +391,10 @@ function buildLocalTejXml(input: {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
 
+  const active = getActiveTejSchema();
   const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    `<AuthorityTejLocalDraft schema="${esc(TEJ_LOCAL_SCHEMA_NOTE)}" transmission="DISABLED" packKind="${input.withholdings.length > 0 ? 'WITHHOLDING_PACK' : 'META_DRAFT'}">`,
+    `<AuthorityTejLocalDraft schema="${esc(active.note)}" schemaVersion="${esc(active.id)}" transmission="DISABLED" packKind="${input.withholdings.length > 0 ? 'WITHHOLDING_PACK' : 'META_DRAFT'}">`,
     `  <meta>`,
     `    <companyId>${esc(input.companyId)}</companyId>`,
     input.withholderName
@@ -390,6 +404,7 @@ function buildLocalTejXml(input: {
     `    <generatedAt>${esc(input.generatedAt)}</generatedAt>`,
     `    <prefsValueLabel>${esc(input.valueLabel)}</prefsValueLabel>`,
     `    <lawRef>${esc(input.lawRef ?? '')}</lawRef>`,
+    `    <schemaVersion>${esc(active.id)}</schemaVersion>`,
     `    <withholdingCount>${input.withholdings.length}</withholdingCount>`,
     `  </meta>`,
     `  <disclaimer>Local draft only. Not an official TEJ filing. Do not upload or transmit. Official XSD not provided.</disclaimer>`,
@@ -451,6 +466,7 @@ function serializeTej(
 ): TejExportDto {
   const packKind =
     row.packKind === 'WITHHOLDING_PACK' ? 'WITHHOLDING_PACK' : 'META_DRAFT';
+  const active = getActiveTejSchema();
   return {
     id: row.id,
     companyId: row.companyId,
@@ -459,6 +475,7 @@ function serializeTej(
     prefsValueLabel: row.prefsValueLabel,
     lawRef: row.lawRef,
     schemaNote: row.schemaNote,
+    schemaVersion: active.id,
     transmission: 'DISABLED',
     packKind,
     withholdingCount: row.withholdingCount ?? 0,
