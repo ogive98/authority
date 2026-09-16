@@ -9,13 +9,37 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
-/** Ban raw hex colors in product components — use --a-* / Tailwind a-* tokens. */
-const noRawHex = {
+/** Ban raw hex color literals — use --a-* / text-a-* tokens. */
+const noRawHexLiteral = {
   selector:
     "Literal[value=/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?([0-9a-fA-F]{2})?$/]",
   message:
-    "Raw hex colors are forbidden in components/. Use --a-* design tokens.",
+    "Raw hex colors are forbidden in Soft Glass chrome. Use --a-* design tokens.",
 };
+
+/**
+ * Stage 1 — ban Tailwind arbitrary hex in class strings
+ * (e.g. text-[#ff9f0a], bg-[#0b1220]/35). Soft Glass uses text-a-* / bg-a-*.
+ */
+const noTailwindArbitraryHex = {
+  selector:
+    "Literal[value=/(?:text|bg|border|from|to|via|ring|outline|fill|stroke|decoration|shadow|caret|accent)-\\[#[0-9a-fA-F]{3,8}/]",
+  message:
+    "Tailwind arbitrary hex is forbidden in Soft Glass chrome. Use text-a-* / bg-a-*.",
+};
+
+const noTailwindArbitraryHexInTemplate = {
+  selector:
+    "TemplateElement[value.raw=/(?:text|bg|border|from|to|via|ring|outline|fill|stroke|decoration|shadow|caret|accent)-\\[#[0-9a-fA-F]{3,8}/]",
+  message:
+    "Tailwind arbitrary hex is forbidden in Soft Glass chrome. Use text-a-* / bg-a-*.",
+};
+
+const softGlassHexRules = [
+  noRawHexLiteral,
+  noTailwindArbitraryHex,
+  noTailwindArbitraryHexInTemplate,
+];
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
@@ -28,10 +52,17 @@ const eslintConfig = [
       "next-env.d.ts",
     ],
   },
+  /**
+   * Stage 1 chrome only — Soft Glass primitives + shell.
+   * Out of scope (documented): repair canvases, print, SA repair, a11y fixtures.
+   */
   {
-    files: ["src/components/**/*.{ts,tsx}"],
+    files: [
+      "src/components/a/**/*.{ts,tsx}",
+      "src/components/shell/**/*.{ts,tsx}",
+    ],
     rules: {
-      "no-restricted-syntax": ["error", noRawHex],
+      "no-restricted-syntax": ["error", ...softGlassHexRules],
     },
   },
 ];

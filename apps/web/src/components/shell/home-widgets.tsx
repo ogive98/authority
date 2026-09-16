@@ -460,7 +460,7 @@ export function HomeKpiStrip() {
             href={card.href}
             className="a-glass a-stagger-in flex min-h-[7.5rem] flex-col justify-between rounded-[var(--a-radius-lg)] p-4 transition-colors hover:bg-a-surface-3/40"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#f97316]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-a-orange">
               {label}
             </p>
             <div>

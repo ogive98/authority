@@ -39,7 +39,7 @@ function WidgetChrome({
       )}
     >
       {title ? (
-        <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#f97316]">
+        <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-a-orange">
           {title}
         </h3>
       ) : null}
@@ -128,7 +128,7 @@ export function MissionControl({ className }: { className?: string }) {
 
         <div className="flex min-h-0 flex-col gap-3 lg:col-span-5">
           <div className="flex items-baseline justify-between gap-2 px-1">
-            <h3 className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#f97316]">
+            <h3 className="text-[10px] font-semibold uppercase tracking-[0.1em] text-a-orange">
               {t("featuresPrefix")} · {mod?.name ?? "Module"}
             </h3>
             <Link

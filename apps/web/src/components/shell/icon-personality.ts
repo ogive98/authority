@@ -2,8 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import { iconForFeature, iconForModule } from "./module-icons";
 
 /**
- * Per-feature visual identity: dedicated color + thematic motion.
- * Outline Lucide only — no filled chips / frames.
+ * Per-feature visual identity: Soft Glass `--a-*` color + thematic motion.
+ * Outline Lucide only — no filled chips / frames · no raw hex (Stage 1).
  */
 export type IconMotion =
   | "drive"
@@ -37,118 +37,119 @@ type Rule = {
   kind: string;
 };
 
+/** Soft Glass token classes only (`text-a-*` from @theme). */
 const FEATURE_RULES: Rule[] = [
   {
-    match: /deliver|livr|tour|shipment|tournée/i,
-    colorClass: "text-[#ff9f0a]",
+    match: /deliver|livr|truck|shipment|tournée/i,
+    colorClass: "text-a-orange",
     motion: "drive",
     kind: "truck",
   },
   {
     match: /prod|wo|usine|factory|atelier/i,
-    colorClass: "text-[#636366]",
+    colorClass: "text-a-fg-muted",
     motion: "smoke",
     kind: "factory",
   },
   {
     match: /invoice|facture|document/i,
-    colorClass: "text-[#0a84ff]",
+    colorClass: "text-a-sky",
     motion: "doc",
     kind: "doc",
   },
   {
     match: /payment|paiement|encaiss|instrument/i,
-    colorClass: "text-[#30d158]",
+    colorClass: "text-a-success",
     motion: "coin",
     kind: "money",
   },
   {
     match: /promise|créance|open.?item|wallet|finance/i,
-    colorClass: "text-[#34c759]",
+    colorClass: "text-a-success",
     motion: "coin",
     kind: "wallet",
   },
   {
     match: /stock|lot|invent|package|colis/i,
-    colorClass: "text-[#5e5ce6]",
+    colorClass: "text-a-violet",
     motion: "lift",
     kind: "package",
   },
   {
     match: /order|commande|clipboard/i,
-    colorClass: "text-[#ffd60a]",
+    colorClass: "text-a-warning",
     motion: "stamp",
     kind: "order",
   },
   {
     match: /sales|vente|shopping|bag/i,
-    colorClass: "text-[#ff375f]",
+    colorClass: "text-a-danger",
     motion: "cart",
     kind: "sales",
   },
   {
     match: /job.?title|poste|mansioni/i,
-    colorClass: "text-[#64d2ff]",
+    colorClass: "text-a-sky",
     motion: "stamp",
     kind: "job",
   },
   {
     match: /bulletin|payslip|buste/i,
-    colorClass: "text-[#0a84ff]",
+    colorClass: "text-a-info",
     motion: "doc",
     kind: "doc",
   },
   {
     match: /customer|client|employé|contrat|hr|rh|user|people/i,
-    colorClass: "text-[#bf5af2]",
+    colorClass: "text-a-violet",
     motion: "people",
     kind: "people",
   },
   {
     match: /tax|tva|fiscal|landmark|accounting|compta/i,
-    colorClass: "text-[#ff9500]",
+    colorClass: "text-a-orange",
     motion: "stamp",
     kind: "tax",
   },
   {
     match: /repair|répar|wrench/i,
-    colorClass: "text-[#64d2ff]",
+    colorClass: "text-a-sky",
     motion: "wrench",
     kind: "repair",
   },
   {
     match: /alert|alerte|signal/i,
-    colorClass: "text-[#ff453a]",
+    colorClass: "text-a-danger",
     motion: "alert",
     kind: "alert",
   },
   {
     match: /task|tâche|todo|check/i,
-    colorClass: "text-[#30d158]",
+    colorClass: "text-a-success",
     motion: "check",
     kind: "task",
   },
   {
     match: /report|rapport|kpi|chart|pilot/i,
-    colorClass: "text-[#0071e3]",
+    colorClass: "text-a-info",
     motion: "chart",
     kind: "chart",
   },
   {
     match: /setting|préf|param|gear/i,
-    colorClass: "text-[#8e8e93]",
+    colorClass: "text-a-fg-subtle",
     motion: "gear",
     kind: "settings",
   },
   {
     match: /dash|accueil|home|board|vue/i,
-    colorClass: "text-[#0071e3]",
+    colorClass: "text-a-accent",
     motion: "home",
     kind: "home",
   },
   {
     match: /preview|aperçu|spark/i,
-    colorClass: "text-[#af52de]",
+    colorClass: "text-a-violet",
     motion: "spark",
     kind: "spark",
   },
@@ -157,61 +158,61 @@ const FEATURE_RULES: Rule[] = [
 const MODULE_RULES: Rule[] = [
   {
     match: /^delivery|supply$/i,
-    colorClass: "text-[#ff9f0a]",
+    colorClass: "text-a-orange",
     motion: "drive",
     kind: "truck",
   },
   {
     match: /^production|usine$/i,
-    colorClass: "text-[#636366]",
+    colorClass: "text-a-fg-muted",
     motion: "smoke",
     kind: "factory",
   },
   {
     match: /^finance|accounting$/i,
-    colorClass: "text-[#34c759]",
+    colorClass: "text-a-success",
     motion: "coin",
     kind: "wallet",
   },
   {
     match: /^inventory|stock$/i,
-    colorClass: "text-[#5e5ce6]",
+    colorClass: "text-a-violet",
     motion: "lift",
     kind: "package",
   },
   {
     match: /^sales|commercial$/i,
-    colorClass: "text-[#ff375f]",
+    colorClass: "text-a-danger",
     motion: "cart",
     kind: "sales",
   },
   {
     match: /^hr|rh|payroll|identity|customers|suppliers$/i,
-    colorClass: "text-[#bf5af2]",
+    colorClass: "text-a-violet",
     motion: "people",
     kind: "people",
   },
   {
     match: /^tax$/i,
-    colorClass: "text-[#ff9500]",
+    colorClass: "text-a-orange",
     motion: "stamp",
     kind: "tax",
   },
   {
     match: /^repair$/i,
-    colorClass: "text-[#64d2ff]",
+    colorClass: "text-a-sky",
     motion: "wrench",
     kind: "repair",
   },
   {
     match: /^home|dashboard$/i,
-    colorClass: "text-[#0071e3]",
+    colorClass: "text-a-accent",
     motion: "home",
     kind: "home",
   },
   {
     match: /^settings$/i,
-    colorClass: "text-[#8e8e93]",
+    colorClass: "text-a-fg-subtle",
     motion: "gear",
     kind: "settings",
   },

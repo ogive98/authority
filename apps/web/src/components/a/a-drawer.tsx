@@ -29,7 +29,7 @@ export function ADrawer({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[var(--a-z-modal)] bg-[#0b1220]/35 backdrop-blur-sm data-[state=open]:animate-in" />
+        <Dialog.Overlay className="fixed inset-0 z-[var(--a-z-modal)] bg-a-fg/35 backdrop-blur-sm data-[state=open]:animate-in" />
         <Dialog.Content
           className={cn(
             "a-glass-strong fixed inset-y-0 right-0 z-[var(--a-z-modal)] flex w-full max-w-lg flex-col",

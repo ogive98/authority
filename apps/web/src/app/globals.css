@@ -1,10 +1,13 @@
 @import "tailwindcss";
 
 /*
-  AUTHORITY design tokens — Soft Glass ERP (D160 — 2026-09-10)
+  AUTHORITY design tokens — Soft Glass ERP (D160/D161 — 2026-09-10)
   Borderless · glassmorphism · teal/navy · aggressive readable type.
   Supersedes Contiental Apple D095 product chrome.
   Source of truth: --a-* variables.
+
+  Stage 1 (Progressive Refactor): token map FROZEN — do not rewrite values
+  without an explicit product decision. Document: 04_UI_UX/SOFT_GLASS_TOKEN_MAP.md
 */
 
 :root,
