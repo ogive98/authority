@@ -325,17 +325,19 @@ function buildLocalTejXml(input: {
         `      <currency>${esc(w.currency)}</currency>`,
         `      <lawRef>${esc(w.lawRef ?? '')}</lawRef>`,
         `      <certificateSha256>${esc(w.certificateSha256 ?? '')}</certificateSha256>`,
-        w.apPaymentId
-          ? `      <apPaymentId>${esc(w.apPaymentId)}</apPaymentId>`
-          : null,
-        `    </withholding>`,
       );
+      if (w.apPaymentId) {
+        lines.push(
+          `      <apPaymentId>${esc(w.apPaymentId)}</apPaymentId>`,
+        );
+      }
+      lines.push(`    </withholding>`);
     }
     lines.push('  </withholdings>');
   }
 
   lines.push('</AuthorityTejLocalDraft>', '');
-  return lines.filter((l) => l != null).join('\n');
+  return lines.join('\n');
 }
 
 function serializeTej(
