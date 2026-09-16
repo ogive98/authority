@@ -6,7 +6,7 @@ export const automationManifest: ModuleManifest = {
   version: '0.1.0',
   apiVersion: '1',
   description:
-    'ASSISTED / REQUIRES_APPROVAL automation profiles — human-gated suggestions (D245)',
+    'ASSISTED / REQUIRES_APPROVAL automation profiles — human-gated suggestions; Thunder event→suggest (D245/D289); FULL_AUTO forbidden',
   capabilities: [
     {
       key: 'automation.profiles.read',

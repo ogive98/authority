@@ -2,11 +2,13 @@ export type AtmProfileMode = "ASSISTED" | "REQUIRES_APPROVAL" | "FULL_AUTO";
 export type AtmTriggerKind =
   | "FINANCE_OVERDUE_OPEN_ITEMS"
   | "PORTAL_PAYMENT_DECLARATION_SUBMITTED"
-  | "SALES_DRAFT_ORDER_STALE";
+  | "SALES_DRAFT_ORDER_STALE"
+  | "TAX_TEJ_PACK_PREPARED";
 export type AtmActionKind =
   | "NOTIFY"
   | "PREPARE_DUNNING_HINT"
-  | "ORDER_REVIEW_HINT";
+  | "ORDER_REVIEW_HINT"
+  | "TEJ_IMPORT_HINT";
 export type AtmRunStatus =
   | "SUGGESTED"
   | "PENDING_APPROVAL"

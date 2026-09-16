@@ -125,5 +125,89 @@ describe('AutomationService', () => {
     expect(cat.modes.find((m) => m.id === AtmProfileMode.FULL_AUTO)?.allowed).toBe(
       false,
     );
+    expect(
+      cat.triggers.some((t) => t.id === AtmTriggerKind.TAX_TEJ_PACK_PREPARED),
+    ).toBe(true);
+    expect(
+      cat.actions.some((a) => a.id === AtmActionKind.TEJ_IMPORT_HINT),
+    ).toBe(true);
+  });
+
+  it('suggestFromEvent creates idempotent ASSISTED run (D289)', async () => {
+    const tejProfile = profile({
+      id: 'tej-profile',
+      code: 'TEJ_HINT',
+      triggerKind: AtmTriggerKind.TAX_TEJ_PACK_PREPARED,
+      actionKind: AtmActionKind.TEJ_IMPORT_HINT,
+    });
+    const run = {
+      id: 'run-tej',
+      companyId,
+      profileId: 'tej-profile',
+      number: 'ATM-2026-0002',
+      status: AtmRunStatus.SUGGESTED,
+      triggerRef: 'evt:e1',
+      summary: 'Lot TEJ 2026-09 prêt',
+      payloadJson: { tejExportId: 'tej-1' },
+      resultJson: { noMutation: true, source: 'event' },
+      version: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      reviewedAt: null,
+      reviewNote: null,
+      createdByUserId: null,
+      profile: { code: 'TEJ_HINT', name: 'TEJ hint' },
+    };
+    const prisma = {
+      atmProfile: {
+        findMany: jest.fn().mockResolvedValue([tejProfile]),
+        findFirst: jest.fn().mockResolvedValue(tejProfile),
+      },
+      atmRunLog: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValueOnce(null) // idempotency miss
+          .mockResolvedValueOnce(null) // nextRunNumber
+          .mockResolvedValueOnce({ id: 'run-tej' }), // idempotency hit
+        create: jest.fn().mockResolvedValue(run),
+        findMany: jest.fn(),
+      },
+      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          atmRunLog: {
+            create: jest.fn().mockResolvedValue(run),
+          },
+        }),
+      ),
+    };
+    const outbox = { enqueue: jest.fn().mockResolvedValue(undefined) };
+    const service = new AutomationService(prisma as never, outbox as never);
+
+    const first = await service.suggestFromEvent(companyId, {
+      eventType: 'tax.tej.pack_prepared.v1',
+      eventId: 'e1',
+      aggregateId: 'tej-1',
+      payload: { tejExportId: 'tej-1', periodLabel: '2026-09', withholdingCount: 2 },
+    });
+    expect(first.created).toBe(1);
+    expect(first.runs[0]?.resultJson.noMutation).toBe(true);
+    expect(first.runs[0]?.resultJson.source).toBe('event');
+
+    const second = await service.suggestFromEvent(companyId, {
+      eventType: 'tax.tej.pack_prepared.v1',
+      eventId: 'e1',
+      aggregateId: 'tej-1',
+    });
+    expect(second.created).toBe(0);
+    expect(second.skipped).toBe(1);
+  });
+
+  it('suggestFromEvent ignores unknown events', async () => {
+    const { service } = build();
+    const res = await service.suggestFromEvent(companyId, {
+      eventType: 'unknown.event.v1',
+      eventId: 'x',
+    });
+    expect(res).toEqual({ created: 0, skipped: 0, runs: [] });
   });
 });

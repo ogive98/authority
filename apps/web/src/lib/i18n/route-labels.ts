@@ -134,6 +134,8 @@ export const UI_STRINGS_IT: Record<string, string> = {
   Bibliothèque: "Biblioteca",
   Automatisation: "Automazione",
   "Nouveau profil": "Nuovo profilo",
+  Event: "Evento",
+  "Profils ASSISTED": "Profili ASSISTED",
   Exécuter: "Esegui",
   Approuver: "Approva",
   "Profils ASSISTED": "Profili ASSISTED",

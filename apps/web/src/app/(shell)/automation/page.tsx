@@ -138,7 +138,7 @@ export default function AutomationPage() {
       <AScreenHeader
         kicker="Automatisation"
         title="Profils ASSISTED"
-        description="Suggestions human-gated — pas de FULL_AUTO sur confirmations critiques (D245)."
+        description="Suggestions human-gated (manuel ou Thunder events D289) — pas de FULL_AUTO critique."
         primary={
           <AButton type="button" size="sm" onClick={() => setDrawerOpen(true)}>
             Nouveau profil
@@ -293,6 +293,12 @@ export default function AutomationPage() {
                             <ABadge tone={atmRunBadgeTone(r.status)}>
                               {ATM_RUN_STATUS_LABELS[r.status]}
                             </ABadge>
+                            {r.resultJson?.source === "event" ||
+                            r.triggerRef?.startsWith("evt:") ? (
+                              <ABadge tone="info" className="ml-1">
+                                Event
+                              </ABadge>
+                            ) : null}
                           </td>
                           <td className="a-mono a-table-cell text-a-fg-muted">
                             {r.createdAt.slice(0, 16).replace("T", " ")}

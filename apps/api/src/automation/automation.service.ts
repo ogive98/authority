@@ -91,6 +91,10 @@ export class AutomationService {
           id: AtmTriggerKind.SALES_DRAFT_ORDER_STALE,
           label: 'Commandes brouillon anciennes',
         },
+        {
+          id: AtmTriggerKind.TAX_TEJ_PACK_PREPARED,
+          label: 'Lot TEJ XML préparé',
+        },
       ],
       actions: [
         { id: AtmActionKind.NOTIFY, label: 'Notifier (suggestion)' },
@@ -101,6 +105,10 @@ export class AutomationService {
         {
           id: AtmActionKind.ORDER_REVIEW_HINT,
           label: 'Hint revue commande (pas de confirm)',
+        },
+        {
+          id: AtmActionKind.TEJ_IMPORT_HINT,
+          label: 'Hint import Tej (pas d’upload)',
         },
       ],
     };
@@ -320,7 +328,16 @@ export class AutomationService {
     companyId: string,
     profileId: string,
     userId: string | null,
-    opts: { triggerRef?: string; staleDays?: number } = {},
+    opts: {
+      triggerRef?: string;
+      staleDays?: number;
+      eventContext?: {
+        eventType: string;
+        eventId: string;
+        aggregateId?: string;
+        payload: Record<string, unknown>;
+      };
+    } = {},
   ): Promise<AtmRunDto> {
     const profile = await this.findProfile(companyId, profileId);
     if (!profile.enabled) {
@@ -332,13 +349,24 @@ export class AutomationService {
     }
 
     const evidence = await this.collectEvidence(companyId, profile, opts);
+    if (evidence.payload.skipSuggest === true) {
+      throw new AutomationException(
+        AUTOMATION_ERROR_CODES.INVALID_STATUS,
+        'No suggestion for this event context.',
+        HttpStatus.CONFLICT,
+      );
+    }
     if (profile.shadowMode) {
       return this.persistRun(companyId, profile, userId, {
         status: AtmRunStatus.SKIPPED,
         summary: `Shadow · ${evidence.summary}`,
         triggerRef: opts.triggerRef ?? null,
         payloadJson: evidence.payload,
-        resultJson: { shadow: true, hint: evidence.hint },
+        resultJson: {
+          shadow: true,
+          hint: evidence.hint,
+          source: opts.eventContext ? 'event' : 'manual',
+        },
       });
     }
 
@@ -356,8 +384,84 @@ export class AutomationService {
         hint: evidence.hint,
         actionKind: profile.actionKind,
         noMutation: true,
+        source: opts.eventContext ? 'event' : 'manual',
       },
     });
+  }
+
+  /**
+   * D289 — Thunder outbox → ASSISTED suggest runs (idempotent per eventId+profile).
+   * Never mutates domain data. Unknown event types → no-op.
+   */
+  async suggestFromEvent(
+    companyId: string,
+    input: {
+      eventType: string;
+      eventId: string;
+      aggregateId?: string;
+      payload?: Record<string, unknown>;
+    },
+  ): Promise<{ created: number; skipped: number; runs: AtmRunDto[] }> {
+    const triggerKind = mapEventToTrigger(input.eventType);
+    if (!triggerKind) {
+      return { created: 0, skipped: 0, runs: [] };
+    }
+    const eventId = input.eventId?.trim();
+    if (!eventId) {
+      return { created: 0, skipped: 0, runs: [] };
+    }
+
+    const profiles = await this.prisma.atmProfile.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        enabled: true,
+        triggerKind,
+      },
+      take: 50,
+    });
+    if (profiles.length === 0) {
+      return { created: 0, skipped: 0, runs: [] };
+    }
+
+    const triggerRef = `evt:${eventId}`;
+    const runs: AtmRunDto[] = [];
+    let created = 0;
+    let skipped = 0;
+
+    for (const profile of profiles) {
+      const existing = await this.prisma.atmRunLog.findFirst({
+        where: {
+          companyId,
+          profileId: profile.id,
+          triggerRef,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        skipped += 1;
+        continue;
+      }
+
+      try {
+        const run = await this.runProfile(companyId, profile.id, null, {
+          triggerRef,
+          eventContext: {
+            eventType: input.eventType,
+            eventId,
+            aggregateId: input.aggregateId,
+            payload: input.payload ?? {},
+          },
+        });
+        runs.push(run);
+        created += 1;
+      } catch {
+        skipped += 1;
+      }
+    }
+
+    return { created, skipped, runs };
   }
 
   async approveRun(
@@ -533,7 +637,15 @@ export class AutomationService {
       actionKind: AtmActionKind;
       configJson: Prisma.JsonValue;
     },
-    opts: { staleDays?: number },
+    opts: {
+      staleDays?: number;
+      eventContext?: {
+        eventType: string;
+        eventId: string;
+        aggregateId?: string;
+        payload: Record<string, unknown>;
+      };
+    },
   ): Promise<{
     summary: string;
     hint: string;
@@ -543,12 +655,91 @@ export class AutomationService {
     const staleDays =
       opts.staleDays ??
       (typeof cfg.staleDays === 'number' ? cfg.staleDays : 3);
+    const ctx = opts.eventContext;
+
+    if (profile.triggerKind === AtmTriggerKind.TAX_TEJ_PACK_PREPARED) {
+      const tejExportId =
+        (typeof ctx?.payload.tejExportId === 'string'
+          ? ctx.payload.tejExportId
+          : null) ||
+        ctx?.aggregateId ||
+        null;
+      const periodLabel =
+        typeof ctx?.payload.periodLabel === 'string'
+          ? ctx.payload.periodLabel
+          : null;
+      const withholdingCount =
+        typeof ctx?.payload.withholdingCount === 'number'
+          ? ctx.payload.withholdingCount
+          : null;
+      return {
+        summary: periodLabel
+          ? `Lot TEJ ${periodLabel} prêt (${withholdingCount ?? '?'} ligne(s))`
+          : 'Lot TEJ XML préparé',
+        hint:
+          profile.actionKind === AtmActionKind.TEJ_IMPORT_HINT
+            ? 'Importer le XML dans Tej puis Accusé import dans TEJ Center — pas d’upload AUTHORITY.'
+            : 'Ouvrir TEJ Center — suggestion uniquement.',
+        payload: {
+          tejExportId,
+          periodLabel,
+          withholdingCount,
+          eventType: ctx?.eventType ?? null,
+          href: '/tax/tej-center',
+        },
+      };
+    }
 
     if (profile.triggerKind === AtmTriggerKind.FINANCE_OVERDUE_OPEN_ITEMS) {
       const today = new Date();
       const start = new Date(
-        Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+        Date.UTC(
+          today.getUTCFullYear(),
+          today.getUTCMonth(),
+          today.getUTCDate(),
+        ),
       );
+      if (ctx?.aggregateId) {
+        const item = await this.prisma.finOpenItem.findFirst({
+          where: {
+            id: ctx.aggregateId,
+            companyId,
+            deletedAt: null,
+            side: FinOpenItemSide.AR,
+            status: {
+              in: [FinOpenItemStatus.OPEN, FinOpenItemStatus.PARTIAL],
+            },
+          },
+          select: { id: true, number: true, dueDate: true },
+        });
+        const overdue =
+          item?.dueDate != null && item.dueDate.getTime() < start.getTime();
+        if (!overdue) {
+          return {
+            summary: 'Créance AR non échue — pas de suggestion',
+            hint: 'Aucune action.',
+            payload: {
+              openItemId: ctx.aggregateId,
+              overdue: false,
+              skipSuggest: true,
+            },
+          };
+        }
+        return {
+          summary: `Créance AR échue ${item!.number}`,
+          hint:
+            profile.actionKind === AtmActionKind.PREPARE_DUNNING_HINT
+              ? 'Préparer relance manuellement dans Finance (pas de draft auto).'
+              : 'Notifier ADV — aucune mutation.',
+          payload: {
+            openItemId: item!.id,
+            number: item!.number,
+            dueDate: item!.dueDate?.toISOString().slice(0, 10) ?? null,
+            eventType: ctx.eventType,
+            href: '/finance',
+          },
+        };
+      }
       const count = await this.prisma.finOpenItem.count({
         where: {
           companyId,
@@ -572,6 +763,17 @@ export class AutomationService {
       profile.triggerKind ===
       AtmTriggerKind.PORTAL_PAYMENT_DECLARATION_SUBMITTED
     ) {
+      if (ctx?.aggregateId) {
+        return {
+          summary: 'Déclaration paiement portail soumise',
+          hint: 'Revue ADV sur /finance/payment-declarations — pas d’encaissement auto.',
+          payload: {
+            declarationId: ctx.aggregateId,
+            eventType: ctx.eventType,
+            href: `/finance/payment-declarations/${ctx.aggregateId}`,
+          },
+        };
+      }
       const count = await this.prisma.ptlPaymentDeclaration.count({
         where: {
           companyId,
@@ -583,6 +785,25 @@ export class AutomationService {
         summary: `${count} déclaration(s) portail soumise(s)`,
         hint: 'Revue ADV sur /finance/payment-declarations — pas d’encaissement auto.',
         payload: { submittedCount: count },
+      };
+    }
+
+    if (
+      profile.triggerKind === AtmTriggerKind.SALES_DRAFT_ORDER_STALE &&
+      (ctx?.aggregateId || typeof ctx?.payload.orderId === 'string')
+    ) {
+      const orderId =
+        (typeof ctx.payload.orderId === 'string'
+          ? ctx.payload.orderId
+          : null) || ctx.aggregateId!;
+      return {
+        summary: 'Brouillon commande à revoir (WA / portail)',
+        hint: 'Revue ADV — confirmation commande reste humaine (pas de FULL_AUTO).',
+        payload: {
+          orderId,
+          eventType: ctx.eventType,
+          href: `/sales/${orderId}`,
+        },
       };
     }
 
@@ -618,6 +839,36 @@ export class AutomationService {
     action: AtmActionKind,
   ): void {
     if (
+      action === AtmActionKind.TEJ_IMPORT_HINT &&
+      trigger !== AtmTriggerKind.TAX_TEJ_PACK_PREPARED
+    ) {
+      throw new AutomationException(
+        AUTOMATION_ERROR_CODES.VALIDATION,
+        'TEJ_IMPORT_HINT requires TAX_TEJ_PACK_PREPARED trigger.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (
+      trigger === AtmTriggerKind.TAX_TEJ_PACK_PREPARED &&
+      action === AtmActionKind.PREPARE_DUNNING_HINT
+    ) {
+      throw new AutomationException(
+        AUTOMATION_ERROR_CODES.VALIDATION,
+        'PREPARE_DUNNING_HINT cannot pair with TAX_TEJ_PACK_PREPARED.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (
+      trigger === AtmTriggerKind.TAX_TEJ_PACK_PREPARED &&
+      action === AtmActionKind.ORDER_REVIEW_HINT
+    ) {
+      throw new AutomationException(
+        AUTOMATION_ERROR_CODES.VALIDATION,
+        'ORDER_REVIEW_HINT cannot pair with TAX_TEJ_PACK_PREPARED.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (
       trigger === AtmTriggerKind.FINANCE_OVERDUE_OPEN_ITEMS &&
       action === AtmActionKind.ORDER_REVIEW_HINT
     ) {
@@ -634,6 +885,18 @@ export class AutomationService {
       throw new AutomationException(
         AUTOMATION_ERROR_CODES.VALIDATION,
         'PREPARE_DUNNING_HINT requires FINANCE_OVERDUE_OPEN_ITEMS trigger.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (
+      (trigger === AtmTriggerKind.FINANCE_OVERDUE_OPEN_ITEMS ||
+        trigger === AtmTriggerKind.PORTAL_PAYMENT_DECLARATION_SUBMITTED ||
+        trigger === AtmTriggerKind.SALES_DRAFT_ORDER_STALE) &&
+      action === AtmActionKind.TEJ_IMPORT_HINT
+    ) {
+      throw new AutomationException(
+        AUTOMATION_ERROR_CODES.VALIDATION,
+        'TEJ_IMPORT_HINT requires TAX_TEJ_PACK_PREPARED trigger.',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -673,6 +936,21 @@ function asObject(value: Prisma.JsonValue): Record<string, unknown> | null {
     return value as Record<string, unknown>;
   }
   return null;
+}
+
+function mapEventToTrigger(eventType: string): AtmTriggerKind | null {
+  switch (eventType) {
+    case 'portals.payment_declaration.submitted.v1':
+      return AtmTriggerKind.PORTAL_PAYMENT_DECLARATION_SUBMITTED;
+    case 'finance.open_item.created.v1':
+      return AtmTriggerKind.FINANCE_OVERDUE_OPEN_ITEMS;
+    case 'sales.wa_inbox.draft_created.v1':
+      return AtmTriggerKind.SALES_DRAFT_ORDER_STALE;
+    case 'tax.tej.pack_prepared.v1':
+      return AtmTriggerKind.TAX_TEJ_PACK_PREPARED;
+    default:
+      return null;
+  }
 }
 
 function serializeProfile(row: {

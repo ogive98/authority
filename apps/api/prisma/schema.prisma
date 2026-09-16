@@ -3578,6 +3578,8 @@ enum AtmTriggerKind {
   FINANCE_OVERDUE_OPEN_ITEMS
   PORTAL_PAYMENT_DECLARATION_SUBMITTED
   SALES_DRAFT_ORDER_STALE
+  /** D289 — TEJ local pack prepared (human import hint). */
+  TAX_TEJ_PACK_PREPARED
 }
 
 enum AtmActionKind {
@@ -3587,6 +3589,8 @@ enum AtmActionKind {
   PREPARE_DUNNING_HINT
   /** Hint only — no sales confirm. */
   ORDER_REVIEW_HINT
+  /** D289 — hint to ack Tej import locally — no upload. */
+  TEJ_IMPORT_HINT
 }
 
 enum AtmRunStatus {

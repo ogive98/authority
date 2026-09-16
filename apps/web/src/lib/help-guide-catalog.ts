@@ -1724,12 +1724,12 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/automation",
     title: { fr: "Automatisation", it: "Automazione" },
     summary: {
-      fr: "Profils ASSISTED / Approbation — suggestions human-gated, pas de FULL_AUTO critique.",
-      it: "Profili ASSISTED / Approvazione — suggerimenti human-gated, niente FULL_AUTO critico.",
+      fr: "Profils ASSISTED / Approbation — suggestions human-gated (manuel ou events Thunder), pas de FULL_AUTO critique.",
+      it: "Profili ASSISTED / Approvazione — suggerimenti human-gated (manuale o eventi Thunder), niente FULL_AUTO critico.",
     },
     when: {
-      fr: "Piloter des suggestions (créances échues, déclarations portail, brouillons stale).",
-      it: "Guidare suggerimenti (crediti scaduti, dichiarazioni portale, bozze stale).",
+      fr: "Piloter des suggestions (créances échues, déclarations portail, brouillons, lot TEJ).",
+      it: "Guidare suggerimenti (crediti scaduti, dichiarazioni portale, bozze, lotto TEJ).",
     },
     features: [
       {
@@ -1758,17 +1758,45 @@ export const HELP_MODULES: HelpModule[] = [
           ],
         },
       },
+      {
+        name: {
+          fr: "Suggestions via Thunder (events)",
+          it: "Suggerimenti via Thunder (eventi)",
+        },
+        when: {
+          fr: "Un événement métier crée automatiquement un run ASSISTED (idempotent).",
+          it: "Un evento business crea automaticamente un run ASSISTED (idempotente).",
+        },
+        steps: {
+          fr: [
+            "Activez un profil pour le déclencheur concerné (ex. Lot TEJ XML préparé + Hint import Tej).",
+            "Events : déclaration portail · créance AR créée (si déjà échue) · draft WA · lot TEJ préparé.",
+            "Thunder consumer `automation.suggestFromEvent` → run badge Event.",
+            "Toujours zéro mutation — Approuver ≠ exécuter le métier.",
+            "Pas d’upload TEJ · pas de confirm commande · pas de FinPayment auto.",
+          ],
+          it: [
+            "Attivare un profilo per il trigger (es. Lotto TEJ XML preparato + Hint import Tej).",
+            "Eventi: dichiarazione portale · credito AR creato (se già scaduto) · draft WA · lotto TEJ.",
+            "Consumer Thunder `automation.suggestFromEvent` → run badge Event.",
+            "Sempre zero mutazioni — Approvare ≠ eseguire il business.",
+            "Niente upload TEJ · niente confirm ordine · niente FinPayment auto.",
+          ],
+        },
+      },
     ],
     locks: {
       fr: [
-        "FULL_AUTO interdit V0 (D245).",
-        "Pas de confirm commande / FinPayment / draft dunning auto.",
+        "FULL_AUTO interdit V0 (D245/D289).",
+        "Pas de confirm commande / FinPayment / draft dunning auto / upload TEJ.",
         "Approuver ≠ exécuter la mutation métier.",
+        "Thunder orchestre seulement des suggestions (HOW).",
       ],
       it: [
-        "FULL_AUTO vietato V0 (D245).",
-        "Niente confirm ordine / FinPayment / draft sollecito auto.",
+        "FULL_AUTO vietato V0 (D245/D289).",
+        "Niente confirm ordine / FinPayment / draft sollecito auto / upload TEJ.",
         "Approvare ≠ eseguire la mutazione business.",
+        "Thunder orchestra solo suggerimenti (HOW).",
       ],
     },
   },

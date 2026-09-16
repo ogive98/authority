@@ -3,6 +3,7 @@ import { AuditModule } from '../audit/audit.module';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { FinanceModule } from '../finance/finance.module';
 import { AccountingModule } from '../accounting/accounting.module';
+import { AutomationModule } from '../automation/automation.module';
 import { IdentityModule } from '../identity/identity.module';
 import { InfrastructureModule } from '../infrastructure/infrastructure.module';
 import { InventoryModule } from '../inventory/inventory.module';
@@ -13,6 +14,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AdapterRegistryService } from './adapters/adapter.registry';
 import { ThunderAdaptersRegistrar } from './adapters/thunder-adapters.registrar';
+import { ThunderAutomationRegistrar } from './automation/thunder-automation.registrar';
 import { AdmissionOrchestratorService } from './admission/admission-orchestrator.service';
 import { ThunderDomainRegistrar } from './domain/thunder-domain.registrar';
 import { ConsumerRegistryService } from './events/consumer-registry.service';
@@ -63,6 +65,7 @@ import { IntentPrepareService } from './intent/intent-prepare.service';
     InventoryModule,
     FinanceModule,
     AccountingModule,
+    AutomationModule,
   ],
   controllers: [ThunderController],
   providers: [
@@ -100,6 +103,7 @@ import { IntentPrepareService } from './intent/intent-prepare.service';
     RecommendationService,
     ThunderIntelRegistrar,
     ThunderDomainRegistrar,
+    ThunderAutomationRegistrar,
     ThunderModuleHooksRegistrar,
     ModuleHookBootstrap,
   ],
