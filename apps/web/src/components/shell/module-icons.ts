@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   MessageSquare,
   Package,
+  Puzzle,
   Settings,
   ShoppingBag,
   ShoppingCart,
@@ -63,6 +64,8 @@ const ICONS: Record<string, LucideIcon> = {
   comms: MessageSquare,
   documents: FileText,
   orders: ClipboardList,
+  automation: Sparkles,
+  forge: Puzzle,
 };
 
 const FEATURE_ICONS: { match: RegExp; icon: LucideIcon }[] = [

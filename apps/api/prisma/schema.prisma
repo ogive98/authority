@@ -3740,3 +3740,128 @@ model MntWo {
   @@index([companyId, assetId])
   @@map("mnt_wo")
 }
+
+// --- frg_* FORGE extension foundation (D277) — contracts only, no AI runtime ---
+
+enum FrgExtensionStatus {
+  DRAFT
+  ANALYZING
+  GENERATING
+  VALIDATING
+  TESTING
+  READY_FOR_REVIEW
+  APPROVED
+  ACTIVE
+  SUSPENDED
+  DISABLED
+  FAILED
+  ARCHIVED
+}
+
+enum FrgFeatureRequestStatus {
+  RECEIVED
+  ANALYZING
+  PLANNED
+  WAITING_APPROVAL
+  IMPLEMENTING
+  TESTING
+  READY
+  DEPLOYED
+  REJECTED
+  FAILED
+}
+
+enum FrgMetadataType {
+  entity
+  field
+  action
+  view
+  form
+  table
+  workflow
+  report
+  automation
+}
+
+enum FrgMetadataStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+/** Tenant-scoped extension manifest (Phase 1 — data only, not executable bundle). */
+model FrgExtension {
+  id                    String             @id @default(uuid()) @db.Uuid
+  companyId             String             @map("company_id") @db.Uuid
+  key                   String
+  name                  String
+  description           String?
+  manifestVersion       String             @map("manifest_version")
+  status                FrgExtensionStatus @default(DRAFT)
+  tenantScope           String             @default("company") @map("tenant_scope")
+  manifestJson          Json               @default("{}") @map("manifest_json")
+  dependenciesJson      Json               @default("[]") @map("dependencies_json")
+  compatibleCoreVersion String?            @map("compatible_core_version")
+  createdByUserId       String?            @map("created_by_user_id") @db.Uuid
+  version               Int                @default(0)
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt             DateTime?          @map("deleted_at") @db.Timestamptz(6)
+
+  metadataDefinitions FrgMetadataDefinition[]
+  featureRequests     FrgFeatureRequest[]
+
+  @@unique([companyId, key])
+  @@index([companyId, status])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("frg_extension")
+}
+
+/** Human intake for tenant-specific functionality — no auto-implementation in Phase 1. */
+model FrgFeatureRequest {
+  id                  String                  @id @default(uuid()) @db.Uuid
+  companyId           String                  @map("company_id") @db.Uuid
+  title               String
+  description         String?
+  status              FrgFeatureRequestStatus @default(RECEIVED)
+  priority            Int                     @default(0)
+  source              String                  @default("manual")
+  requestedByUserId   String?                 @map("requested_by_user_id") @db.Uuid
+  affectedModulesJson Json                    @default("[]") @map("affected_modules_json")
+  extensionId         String?                 @map("extension_id") @db.Uuid
+  version             Int                     @default(0)
+  createdAt           DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt           DateTime?               @map("deleted_at") @db.Timestamptz(6)
+
+  extension FrgExtension? @relation(fields: [extensionId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, extensionId])
+  @@map("frg_feature_request")
+}
+
+/** Extensible metadata definitions — complements manifests/command-catalog, does not replace them. */
+model FrgMetadataDefinition {
+  id           String            @id @default(uuid()) @db.Uuid
+  companyId    String            @map("company_id") @db.Uuid
+  key          String
+  type         FrgMetadataType
+  moduleKey    String            @map("module_key")
+  extensionId  String?           @map("extension_id") @db.Uuid
+  schemaJson   Json              @default("{}") @map("schema_json")
+  status       FrgMetadataStatus @default(DRAFT)
+  version      Int               @default(0)
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  extension FrgExtension? @relation(fields: [extensionId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, key])
+  @@index([companyId, type])
+  @@index([companyId, moduleKey])
+  @@index([companyId, extensionId])
+  @@map("frg_metadata_definition")
+}

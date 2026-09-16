@@ -6,6 +6,7 @@ import { customersManifest } from './customers.manifest';
 import { deliveryManifest } from './delivery.manifest';
 import { suppliersManifest } from './suppliers.manifest';
 import { documentsManifest } from './documents.manifest';
+import { forgeManifest } from './forge.manifest';
 import { financeManifest } from './finance.manifest';
 import { fleetManifest } from './fleet.manifest';
 import { hrManifest } from './hr.manifest';
@@ -52,4 +53,5 @@ export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   productsManifest,
   portalsManifest,
   automationManifest,
+  forgeManifest,
 ] as const;

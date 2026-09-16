@@ -1560,6 +1560,63 @@ export const HELP_MODULES: HelpModule[] = [
     },
   },
   {
+    id: "forge",
+    href: "/forge",
+    title: { fr: "FORGE", it: "FORGE" },
+    summary: {
+      fr: "Fondation d’extensions tenant — manifests, demandes, métadonnées. Pas d’agent IA en Phase 1.",
+      it: "Fondazione estensioni tenant — manifest, richieste, metadata. Nessun agente IA in Fase 1.",
+    },
+    when: {
+      fr: "Enregistrer une extension ou une demande de fonctionnalité spécifique au tenant.",
+      it: "Registrare un’estensione o una richiesta di funzionalità specifica del tenant.",
+    },
+    features: [
+      {
+        name: {
+          fr: "Vue d’ensemble · Extensions · Demandes · Métadonnées",
+          it: "Panoramica · Estensioni · Richieste · Metadati",
+        },
+        when: {
+          fr: "Piloter le lifecycle DRAFT → … → ACTIVE et le pont Soft Glass.",
+          it: "Governare il lifecycle DRAFT → … → ACTIVE e il ponte Soft Glass.",
+        },
+        steps: {
+          fr: [
+            "Activez le module `forge` (seed ENABLED démo) et droits `forge.read` / `write` / `approve`.",
+            "Ouvrez `/forge` — compteurs extensions / demandes / métadonnées · IA & sandbox UNAVAILABLE.",
+            "`/forge/extensions` → Nouvelle extension (clé + version) → statut DRAFT.",
+            "Transitions write : Analyser… ; Approuver / Activer exigent `forge.approve`.",
+            "`/forge/feature-requests` → intake humain — aucune implémentation auto.",
+            "`/forge/metadata` → définition DRAFT (clé, type, module, commandId optionnel) → Activer pour le pont ⌘K.",
+          ],
+          it: [
+            "Attiva il modulo `forge` (seed ENABLED demo) e permessi `forge.read` / `write` / `approve`.",
+            "Apri `/forge` — contatori estensioni / richieste / metadati · IA & sandbox UNAVAILABLE.",
+            "`/forge/extensions` → Nuova estensione (chiave + versione) → stato DRAFT.",
+            "Transizioni write: Analizza… ; Approva / Attiva richiedono `forge.approve`.",
+            "`/forge/feature-requests` → intake umano — nessuna implementazione auto.",
+            "`/forge/metadata` → definizione DRAFT (chiave, tipo, modulo, commandId opzionale) → Attiva per il ponte ⌘K.",
+          ],
+        },
+      },
+    ],
+    locks: {
+      fr: [
+        "Soft Glass D161 — pas de 2ᵉ design system.",
+        "Pas d’exécution de code / sandbox / agent IA.",
+        "Extensions : DRAFT → ACTIVE interdit sans APPROVED.",
+        "Métadonnées ACTIVE + schemaJson.commandId enrichissent ⌘K — pas de 2ᵉ ActionRegistry.",
+      ],
+      it: [
+        "Soft Glass D161 — niente secondo design system.",
+        "Niente esecuzione codice / sandbox / agente IA.",
+        "Estensioni: DRAFT → ACTIVE vietato senza APPROVED.",
+        "Metadati ACTIVE + schemaJson.commandId arricchiscono ⌘K — niente secondo ActionRegistry.",
+      ],
+    },
+  },
+  {
     id: "documents",
     href: "/documents",
     title: { fr: "Documents", it: "Documenti" },

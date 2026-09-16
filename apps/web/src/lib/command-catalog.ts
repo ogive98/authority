@@ -133,6 +133,48 @@ export const COMMAND_CATALOG: CommandItem[] = [
     permissionKey: "delivery.read",
   },
   {
+    id: "nav-finance",
+    label: "Finance",
+    group: "navigation",
+    href: "/finance",
+    keywords: ["finance", "ar", "créances", "cash"],
+    requiresModule: "finance",
+    permissionKey: "finance.ar.read",
+  },
+  {
+    id: "nav-ap-bills",
+    label: "Factures fournisseurs",
+    group: "navigation",
+    href: "/finance/ap-bills",
+    keywords: [
+      "ap",
+      "facture fournisseur",
+      "ap bill",
+      "fournisseur",
+      "achats",
+    ],
+    requiresModule: "finance",
+    permissionKey: "finance.ar.write",
+  },
+  {
+    id: "nav-automation",
+    label: "Automatisation",
+    group: "navigation",
+    href: "/automation",
+    keywords: ["automation", "assisté", "profil"],
+    requiresModule: "automation",
+    permissionKey: "automation.read",
+  },
+  {
+    id: "nav-forge",
+    label: "FORGE",
+    group: "navigation",
+    href: "/forge",
+    keywords: ["forge", "extension", "personnalisation", "tenant"],
+    requiresModule: "forge",
+    permissionKey: "forge.read",
+  },
+  {
     id: "nav-tokens",
     label: "Dev — Tokens",
     group: "navigation",
@@ -249,6 +291,12 @@ export const DEMO_PERMISSION_GRANTS = new Set([
   "delivery.prepare",
   "delivery.complete",
   "delivery.fail",
+  "finance.ar.read",
+  "finance.ar.write",
+  "forge.read",
+  "forge.write",
+  "forge.approve",
+  "automation.read",
   "settings.read",
 ]);
 
@@ -269,6 +317,8 @@ export const DEMO_ENABLED_MODULES = new Set([
   "finance",
   "documents",
   "accounting",
+  "automation",
+  "forge",
 ]);
 
 export function filterCommands(

@@ -19,6 +19,12 @@ export const AUDIT_ACTIONS = {
   thunderBreakerForceOpen: 'thunder.breaker.force_open',
   thunderBreakerReset: 'thunder.breaker.reset',
   thunderRecoApply: 'thunder.recommendation.apply',
+  forgeExtensionCreate: 'forge.extension.create',
+  forgeExtensionStatus: 'forge.extension.status_change',
+  forgeFeatureRequestCreate: 'forge.feature_request.create',
+  forgeFeatureRequestStatus: 'forge.feature_request.status_change',
+  forgeMetadataCreate: 'forge.metadata.create',
+  forgeMetadataStatus: 'forge.metadata.status_change',
 } as const;
 
 export const OUTBOX_EVENT_TYPES = {
@@ -30,6 +36,12 @@ export const OUTBOX_EVENT_TYPES = {
   settingsExpertiseValidated: 'settings.expertise.validated.v1',
   moduleEnabled: 'module.enabled.v1',
   moduleDisabled: 'module.disabled.v1',
+  forgeExtensionCreated: 'forge.extension.created.v1',
+  forgeExtensionStatusChanged: 'forge.extension.status_changed.v1',
+  forgeFeatureRequestCreated: 'forge.feature_request.created.v1',
+  forgeFeatureRequestStatusChanged: 'forge.feature_request.status_changed.v1',
+  forgeMetadataCreated: 'forge.metadata.created.v1',
+  forgeMetadataStatusChanged: 'forge.metadata.status_changed.v1',
 } as const;
 
 export const AUDIT_ENTITY_TYPES = {
@@ -41,4 +53,7 @@ export const AUDIT_ENTITY_TYPES = {
   modModuleState: 'mod_module_state',
   thunderCircuitBreaker: 'thunder_circuit_breaker',
   thuRecommendation: 'thu_recommendation',
+  frgExtension: 'frg_extension',
+  frgFeatureRequest: 'frg_feature_request',
+  frgMetadataDefinition: 'frg_metadata_definition',
 } as const;

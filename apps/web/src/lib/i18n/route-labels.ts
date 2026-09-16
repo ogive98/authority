@@ -35,6 +35,7 @@ export const ROUTE_LABELS_FR: Record<string, string> = {
   banking: "Banque",
   "ap-bills": "Factures fournisseurs",
   automation: "Automatisation",
+  forge: "FORGE",
   tax: "Fiscalité",
   hr: "Ressources humaines",
   employees: "Employés",
@@ -51,6 +52,9 @@ export const ROUTE_LABELS_FR: Record<string, string> = {
   identity: "Identité",
   detail: "Détail",
   fiche: "Fiche",
+  extensions: "Extensions",
+  metadata: "Métadonnées",
+  "feature-requests": "Demandes",
 };
 
 export const ROUTE_LABELS_IT: Record<string, string> = {
@@ -79,6 +83,7 @@ export const ROUTE_LABELS_IT: Record<string, string> = {
   banking: "Banca",
   "ap-bills": "Fatture fornitori",
   automation: "Automazione",
+  forge: "FORGE",
   tax: "Fiscalità",
   hr: "Risorse umane",
   employees: "Dipendenti",
@@ -95,6 +100,9 @@ export const ROUTE_LABELS_IT: Record<string, string> = {
   identity: "Identità",
   detail: "Dettaglio",
   fiche: "Scheda",
+  extensions: "Estensioni",
+  metadata: "Metadati",
+  "feature-requests": "Richieste",
 };
 
 /** Exact FR → IT for chrome, actions, empty states (D188). */
@@ -165,7 +173,14 @@ export const UI_STRINGS_IT: Record<string, string> = {
   "Journal ventes": "Giornale vendite",
   "Journal banque": "Giornale banca",
   "Journal achats": "Giornale acquisti",
-  "Vide jusqu’à saisie": "Vuoto fino a input",
+  "Nouvelle extension": "Nuova estensione",
+  "Nouvelle demande": "Nuova richiesta",
+  Extensions: "Estensioni",
+  Demandes: "Richieste",
+  Analyser: "Analizza",
+  Approuver: "Approva",
+  Activer: "Attiva",
+  "Vue d’ensemble": "Panoramica",
   Poster: "Contabilizza",
   Décomptabiliser: "Storna",
   Ouvrir: "Apri",
@@ -649,6 +664,10 @@ export const UI_STRINGS_IT: Record<string, string> = {
   "Activer SPECTRE MODE": "Attiva SPECTRE MODE",
   "Activer PATCH MODE": "Attiva PATCH MODE",
   "Activer GHOST MODE": "Attiva GHOST MODE",
+  Métadonnées: "Metadati",
+  "Nouvelle définition": "Nuova definizione",
+  "Repasser brouillon": "Torna a bozza",
+  Archiver: "Archivia",
 
   // Layout actions & extras (D225)
   "Nouveau compte bancaire": "Nuovo conto bancario",

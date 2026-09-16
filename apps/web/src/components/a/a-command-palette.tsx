@@ -15,6 +15,11 @@ import { cn } from "@/lib/utils";
 import { useLocaleStore, useShellT } from "@/stores/locale-store";
 import { getActionRegistry } from "@/lib/action-registry";
 import {
+  enrichmentsFromForgeMetadataBridge,
+  searchFeatureMetadataWithOverlays,
+} from "@/lib/feature-metadata";
+import { fetchForgeMetadataBridge } from "@/lib/forge";
+import {
   DEMO_ENABLED_MODULES,
   DEMO_PERMISSION_GRANTS,
   filterCommands,
@@ -44,20 +49,56 @@ export function ACommandPalette({
   const locale = useLocaleStore((s) => s.locale);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const [forgeOverlays, setForgeOverlays] = useState<
+    ReturnType<typeof enrichmentsFromForgeMetadataBridge>
+  >({});
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const catalog = useMemo(() => getActionRegistry(locale), [locale]);
 
-  const filtered = useMemo(
-    () =>
-      filterCommands(catalog, {
-        query,
-        grants,
-        enabledModules,
-      }),
-    [catalog, query, grants, enabledModules],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const res = await fetchForgeMetadataBridge();
+      if (cancelled || !res.ok) return;
+      setForgeOverlays(enrichmentsFromForgeMetadataBridge(res.data.items));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filtered = useMemo(() => {
+    const base = filterCommands(catalog, {
+      query,
+      grants,
+      enabledModules,
+    });
+    if (!query.trim()) return base;
+    // FeatureMetadata + FORGE ACTIVE bridge overlays (D279) — no parallel registry
+    const metaHits = searchFeatureMetadataWithOverlays(
+      query,
+      locale,
+      30,
+      forgeOverlays,
+    );
+    const byId = new Map(base.map((c) => [c.id, c]));
+    for (const m of metaHits) {
+      if (byId.has(m.id)) continue;
+      const hit = catalog.find((c) => c.id === m.id);
+      if (!hit) continue;
+      if (hit.permissionKey && !grants.has(hit.permissionKey)) continue;
+      if (
+        hit.requiresModule &&
+        !enabledModules.has(hit.requiresModule)
+      ) {
+        continue;
+      }
+      byId.set(hit.id, hit);
+    }
+    return [...byId.values()];
+  }, [catalog, query, grants, enabledModules, locale, forgeOverlays]);
 
   const groups = useMemo(
     () => groupCommands(filtered, locale),

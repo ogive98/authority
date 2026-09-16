@@ -33,6 +33,7 @@ import { HrModule } from './hr/hr.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { AutomationModule } from './automation/automation.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ForgeModule } from './forge/forge.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     ProductionModule,
     AutomationModule,
     NotificationsModule,
+    ForgeModule,
   ],
 })
 export class AppModule {}

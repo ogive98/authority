@@ -1,0 +1,108 @@
+import type { ModuleManifest } from '../manifest.types';
+
+/** FORGE extension layer — Phase 1 foundation (D277). Disabled by default in seed. */
+export const forgeManifest: ModuleManifest = {
+  id: 'forge',
+  name: 'FORGE',
+  version: '0.1.0',
+  apiVersion: '1',
+  description:
+    'Tenant extension foundation — manifests, feature requests, metadata bridge (no AI runtime)',
+  capabilities: [
+    {
+      key: 'forge.extensions.read',
+      moduleId: 'forge',
+      version: '1',
+      description: 'List and read FORGE extensions for the company',
+      permissionKey: 'forge.read',
+      riskLevel: 'low',
+    },
+    {
+      key: 'forge.extensions.write',
+      moduleId: 'forge',
+      version: '1',
+      description: 'Register and update FORGE extensions (lifecycle-gated)',
+      permissionKey: 'forge.write',
+      riskLevel: 'medium',
+      requiresAudit: true,
+    },
+    {
+      key: 'forge.extensions.approve',
+      moduleId: 'forge',
+      version: '1',
+      description: 'Approve extensions for activation',
+      permissionKey: 'forge.approve',
+      riskLevel: 'high',
+      requiresAudit: true,
+    },
+    {
+      key: 'forge.metadata.read',
+      moduleId: 'forge',
+      version: '1',
+      description: 'List metadata definitions and Soft Glass bridge overlays',
+      permissionKey: 'forge.read',
+      riskLevel: 'low',
+    },
+    {
+      key: 'forge.metadata.write',
+      moduleId: 'forge',
+      version: '1',
+      description: 'Create and transition metadata definitions',
+      permissionKey: 'forge.write',
+      riskLevel: 'medium',
+      requiresAudit: true,
+    },
+  ],
+  commands: [
+    'forge.extension.register',
+    'forge.extension.transition',
+    'forge.feature_request.create',
+    'forge.metadata.create',
+    'forge.metadata.transition',
+  ],
+  queries: [
+    'forge.extensions.list',
+    'forge.extensions.get',
+    'forge.feature_requests.list',
+    'forge.metadata.list',
+    'forge.metadata.bridge',
+    'forge.metadata.coverage',
+  ],
+  permissions: ['forge.read', 'forge.write', 'forge.approve'],
+  dependencies: ['platform', 'organization', 'settings'],
+  publishedEvents: [
+    'forge.extension.created.v1',
+    'forge.extension.status_changed.v1',
+    'forge.feature_request.created.v1',
+    'forge.feature_request.status_changed.v1',
+    'forge.metadata.created.v1',
+    'forge.metadata.status_changed.v1',
+  ],
+  navigationEntries: [
+    {
+      id: 'forge-home',
+      label: 'FORGE',
+      href: '/forge',
+      permissionKey: 'forge.read',
+    },
+    {
+      id: 'forge-extensions',
+      label: 'Extensions',
+      href: '/forge/extensions',
+      permissionKey: 'forge.read',
+    },
+    {
+      id: 'forge-requests',
+      label: 'Demandes',
+      href: '/forge/feature-requests',
+      permissionKey: 'forge.read',
+    },
+    {
+      id: 'forge-metadata',
+      label: 'Métadonnées',
+      href: '/forge/metadata',
+      permissionKey: 'forge.read',
+    },
+  ],
+  dashboardWidgets: [],
+};
