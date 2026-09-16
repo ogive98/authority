@@ -10,10 +10,17 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import {
   adjustStock,
@@ -24,7 +31,7 @@ import {
   type InventoryWarehouse,
   type ProductOption,
 } from "@/lib/inventory";
-import { softList, softListRow, softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type LoadState =
   | { kind: "loading" }
@@ -131,9 +138,11 @@ export default function InventoryPage() {
   return (
     <>
       <AScreenHeader
-        kicker="Stock"
-        title="Inventaire"
-        description="Soldes on-hand / reserved par entrepôt."
+        title="Stock"
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "soldes on-hand / réservé / dispo",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={() => openAdjust()}>
             Ajuster
@@ -163,23 +172,14 @@ export default function InventoryPage() {
               id="inv-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="SKU ou nom produit"
+              placeholder="Rechercher SKU, produit, entrepôt…"
               aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q);
               }}
             />
           }
-          utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q)}
-            >
-              Filtrer
-            </AButton>
-          }
+          utilities={<AListUtilities onFilter={() => void load(q)} />}
         />
 
         {state.kind === "loading" ? (
@@ -211,50 +211,58 @@ export default function InventoryPage() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <ul className={softList}>
-            {state.items.map((row) => (
-              <li key={row.id} className={softListRow}>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="a-mono text-[13px] font-semibold text-a-fg">
-                      {row.productSku ?? "—"}
-                    </span>
-                    <span className="text-[12px] text-a-fg-subtle">
-                      {row.warehouseCode}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 truncate text-[12px] text-a-fg-muted">
-                    {row.productName ?? "—"}
-                  </p>
-                </div>
-                <div className="flex gap-4 text-right text-[13px] tabular-nums">
-                  <div>
-                    <p className="text-[11px] text-a-fg-subtle">On hand</p>
-                    <p className="a-mono text-a-fg">
-                      {row.onHand}
-                      {row.productUom ? ` ${row.productUom}` : ""}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-a-fg-subtle">Réservé</p>
-                    <p className="a-mono text-a-fg-muted">{row.reserved}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-a-fg-subtle">Dispo</p>
-                    <p className="a-mono font-medium text-a-fg">{row.available}</p>
-                  </div>
-                </div>
-                <AButton
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => openAdjust(row)}
-                >
-                  Ajuster
-                </AButton>
-              </li>
-            ))}
-          </ul>
+          <ASoftTable className="min-w-[48rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>SKU</ASoftTh>
+                <ASoftTh>Produit</ASoftTh>
+                <ASoftTh>Entrepôt</ASoftTh>
+                <ASoftTh numeric>On hand</ASoftTh>
+                <ASoftTh numeric>Réservé</ASoftTh>
+                <ASoftTh numeric>Dispo</ASoftTh>
+                <ASoftTh>Actions</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((row) => (
+                <ASoftTr key={row.id}>
+                  <ASoftTd className="a-mono font-semibold">
+                    {row.productSku ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd>{row.productName ?? "—"}</ASoftTd>
+                  <ASoftTd className="text-a-fg-muted">
+                    {row.warehouseCode}
+                  </ASoftTd>
+                  <ASoftTd numeric className="a-mono tabular-nums">
+                    {row.onHand}
+                    {row.productUom ? ` ${row.productUom}` : ""}
+                  </ASoftTd>
+                  <ASoftTd
+                    numeric
+                    className="a-mono tabular-nums text-a-fg-muted"
+                  >
+                    {row.reserved}
+                  </ASoftTd>
+                  <ASoftTd
+                    numeric
+                    className="a-mono tabular-nums font-medium"
+                  >
+                    {row.available}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <AButton
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => openAdjust(row)}
+                    >
+                      Ajuster
+                    </AButton>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

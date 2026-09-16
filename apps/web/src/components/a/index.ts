@@ -33,6 +33,7 @@ export { APageBody } from "./a-page-body";
 export { AOverflowMenu, type AOverflowItem } from "./a-overflow-menu";
 export { APageSection } from "./a-page-section";
 export { AFilterBar } from "./a-filter-bar";
+export { AListUtilities, erpListDescription } from "./a-list-utilities";
 export { ASoftTable, ASoftThead, ASoftTr, ASoftTh, ASoftTd } from "./a-soft-table";
 export { ADialog } from "./a-dialog";
 export { ATabs, type ATabItem, type ATabsVariant } from "./a-tabs";

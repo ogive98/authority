@@ -13,9 +13,16 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASoftTable,
+  ASoftTd,
+  ASoftTh,
+  ASoftThead,
+  ASoftTr,
+  erpListDescription,
   type AComboboxOption,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
@@ -37,12 +44,8 @@ import {
   type SalesOrderStatus,
 } from "@/lib/sales";
 import { suggestCustomerPrice } from "@/lib/customers";
-import {
-  softChipClass,
-  softList,
-  softListRow,
-} from "@/lib/soft-glass-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
+import { ATabs } from "@/components/a/a-tabs";
 
 const STATUS_FILTERS: { id: "" | SalesOrderStatus; label: string }[] = [
   { id: "", label: "Tout" },
@@ -363,12 +366,16 @@ function SalesPageInner() {
       ].join(" → ")
     : "Crédit → prix → stock → réserve → confirm";
 
+  const recordCount = state.kind === "ok" ? state.items.length : null;
+
   return (
     <>
       <AScreenHeader
-        kicker="Ventes"
         title="Commandes"
-        description={`Prise de commande multi-lignes. Workflow: ${workflowHint}.`}
+        description={erpListDescription(
+          recordCount,
+          workflowHint,
+        )}
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             {LAYOUT_ACTIONS.newOrder}
@@ -382,7 +389,7 @@ function SalesPageInner() {
               id="so-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="N° · client · surnom · notes"
+              placeholder="Rechercher commandes, clients, références…"
               aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q, statusFilter);
@@ -390,41 +397,25 @@ function SalesPageInner() {
             />
           }
           filters={
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Filtrer par statut"
-            >
-              {STATUS_FILTERS.map((chip) => {
-                const active = statusFilter === chip.id;
-                return (
-                  <button
-                    key={chip.id || "all"}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => {
-                      setStatusFilter(chip.id);
-                      syncStatusUrl(chip.id);
-                      void load(q, chip.id);
-                    }}
-                    className={softChipClass(active)}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                const next = (id === "all" ? "" : id) as "" | SalesOrderStatus;
+                setStatusFilter(next);
+                syncStatusUrl(next);
+                void load(q, next);
+              }}
+              items={STATUS_FILTERS.map((chip) => ({
+                id: chip.id || "all",
+                label: chip.label,
+              }))}
+            />
           }
           utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q, statusFilter)}
-            >
-              Filtrer
-            </AButton>
+            <AListUtilities
+              onFilter={() => void load(q, statusFilter)}
+            />
           }
         />
 
@@ -457,79 +448,91 @@ function SalesPageInner() {
         ) : null}
 
         {state.kind === "ok" && state.items.length > 0 ? (
-          <ul className={softList}>
-            {state.items.map((row) => (
-              <li key={row.id} className={softListRow}>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
+          <ASoftTable className="min-w-[52rem]">
+            <ASoftThead>
+              <ASoftTr>
+                <ASoftTh>Commande</ASoftTh>
+                <ASoftTh>Client</ASoftTh>
+                <ASoftTh>Date</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh numeric>Montant</ASoftTh>
+                <ASoftTh>Livraison</ASoftTh>
+                <ASoftTh>Actions</ASoftTh>
+              </ASoftTr>
+            </ASoftThead>
+            <tbody>
+              {state.items.map((row) => (
+                <ASoftTr
+                  key={row.id}
+                  onClick={() => router.push(`/sales/${row.id}`)}
+                >
+                  <ASoftTd>
                     <Link
                       href={`/sales/${row.id}`}
-                      className="a-mono text-[13px] font-semibold text-a-accent hover:underline"
+                      className="a-mono font-semibold text-a-accent hover:underline"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       {row.number}
                     </Link>
+                  </ASoftTd>
+                  <ASoftTd>
+                    {row.customerName ?? row.customerCode ?? "—"}
+                  </ASoftTd>
+                  <ASoftTd className="a-mono text-a-fg-muted">
+                    {row.requestedDate
+                      ? row.requestedDate.slice(0, 10)
+                      : row.createdAt.slice(0, 10)}
+                  </ASoftTd>
+                  <ASoftTd>
                     <ABadge tone={orderBadgeTone(row.status)}>
                       {st(row.status)}
                     </ABadge>
+                  </ASoftTd>
+                  <ASoftTd numeric className="a-mono tabular-nums">
+                    {row.amountTotal}{" "}
+                    <span className="text-a-fg-subtle">{row.currency}</span>
+                  </ASoftTd>
+                  <ASoftTd>
                     {row.status === "CONFIRMED" && row.fulfillmentStatus ? (
                       <ABadge
                         tone={fulfillmentBadgeTone(row.fulfillmentStatus)}
                       >
                         {fulfillmentLabel(row.fulfillmentStatus)}
                       </ABadge>
-                    ) : null}
-                  </div>
-                  <p className="mt-0.5 truncate text-[12px] text-a-fg-muted">
-                    {row.customerName ?? row.customerCode ?? "—"}
-                    {" · "}
-                    {row.lines.length} ligne(s)
-                    {row.status === "CONFIRMED" &&
-                    row.fulfillmentStatus &&
-                    row.fulfillmentStatus !== "NONE"
-                      ? ` · livré ${row.lines
-                          .map((l) => Number(l.deliveredQty ?? 0))
-                          .reduce((a, b) => a + b, 0)} / ${row.lines
-                          .map((l) => Number(l.qty))
-                          .reduce((a, b) => a + b, 0)}`
-                      : ""}
-                  </p>
-                </div>
-                <div className="a-mono text-right text-[13px] tabular-nums text-a-fg">
-                  {row.amountTotal}
-                  <span className="ml-1 text-[11px] text-a-fg-subtle">
-                    {row.currency}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <Link
-                    href={`/sales/${row.id}`}
-                    className="inline-flex items-center rounded-[var(--a-radius-md)] bg-a-surface-3 px-2.5 py-1.5 text-[length:var(--a-text-xs)] font-medium text-a-fg hover:opacity-90"
-                  >
-                    Fiche
-                  </Link>
-                  {row.status === "DRAFT" ? (
-                    <AButton
-                      type="button"
-                      size="sm"
-                      onClick={() => void onConfirm(row)}
+                    ) : (
+                      <span className="text-a-fg-subtle">—</span>
+                    )}
+                  </ASoftTd>
+                  <ASoftTd>
+                    <div
+                      className="flex flex-wrap gap-1.5"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      Confirmer
-                    </AButton>
-                  ) : null}
-                  {row.status !== "CANCELLED" ? (
-                    <AButton
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => void onCancel(row)}
-                    >
-                      Annuler
-                    </AButton>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+                      {row.status === "DRAFT" ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          onClick={() => void onConfirm(row)}
+                        >
+                          Confirmer
+                        </AButton>
+                      ) : null}
+                      {row.status !== "CANCELLED" ? (
+                        <AButton
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void onCancel(row)}
+                        >
+                          Annuler
+                        </AButton>
+                      ) : null}
+                    </div>
+                  </ASoftTd>
+                </ASoftTr>
+              ))}
+            </tbody>
+          </ASoftTable>
         ) : null}
       </APageBody>
 

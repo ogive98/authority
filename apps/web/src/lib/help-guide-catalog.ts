@@ -229,14 +229,14 @@ export const HELP_MODULES: HelpModule[] = [
           fr: [
             "Ouvrez `/sales`.",
             "Filtrez par statut (Tout / Brouillon / Confirmée / Annulée) — URL `?status=` partageable.",
-            "Recherchez par N°, client, surnom ou notes puis Filtrer.",
-            "Cliquez le numéro pour ouvrir la fiche.",
+            "Recherchez commandes / clients / références ; utilisez Filtrer · Densité (Grouper / Colonnes bientôt).",
+            "Lisez le tableau (Commande · Client · Date · Statut · Montant · Livraison) — cliquez une ligne ou le N° pour la fiche.",
           ],
           it: [
             "Apri `/sales`.",
             "Filtra per stato (Tutto / Bozza / Confermato / Annullato) — URL `?status=` condividibile.",
-            "Cerca per N°, cliente, nickname o note poi Filtra.",
-            "Clicca il numero per aprire la scheda.",
+            "Cerca ordini / clienti / riferimenti ; usa Filtra · Densità (Raggruppa / Colonne presto).",
+            "Leggi la tabella (Ordine · Cliente · Data · Stato · Importo · Consegna) — clicca riga o N° per la scheda.",
           ],
         },
       },

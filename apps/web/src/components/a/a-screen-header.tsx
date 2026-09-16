@@ -67,7 +67,7 @@ export function AScreenHeader({
           ) : null}
           <h1
             className={cn(
-              "text-[22px] font-semibold tracking-[-0.022em] text-a-fg",
+              "text-[clamp(1.35rem,2.2vw,1.75rem)] font-semibold tracking-[-0.03em] text-a-fg",
               kickerL && "mt-1",
             )}
           >

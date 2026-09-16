@@ -10,6 +10,7 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   APageBody,
   AScreenHeader,
   ASkeleton,
@@ -17,6 +18,7 @@ import {
   ASoftThead,
   ASoftTr,
   ASwitch,
+  erpListDescription,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import {
@@ -173,9 +175,11 @@ export default function ProductsPage() {
   return (
     <>
       <AScreenHeader
-        kicker="Produits"
-        title="Catalogue"
-        description="Listes paramétrables · conservation (jours) pour certificat de salubrité."
+        title="Produits"
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "catalogue · conservation · salubrité",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             {LAYOUT_ACTIONS.newProduct}
@@ -189,23 +193,14 @@ export default function ProductsPage() {
               id="prd-q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="SKU ou nom"
+              placeholder="Rechercher SKU, nom…"
               aria-label="Recherche"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void load(q);
               }}
             />
           }
-          utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q)}
-            >
-              Filtrer
-            </AButton>
-          }
+          utilities={<AListUtilities onFilter={() => void load(q)} />}
         />
 
         {state.kind === "loading" ? (
