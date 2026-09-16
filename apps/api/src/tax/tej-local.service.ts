@@ -205,6 +205,7 @@ export class TejLocalService {
         certificateSha256: string | null;
         apPaymentId: string | null;
         arInvoiceId?: string | null;
+        certificateNumber?: string | null;
       }>;
       createdByUserId: string | null;
     },
@@ -231,6 +232,7 @@ export class TejLocalService {
         currency: r.currency,
         lawRef: r.lawRef,
         certificateSha256: r.certificateSha256,
+        certificateNumber: r.certificateNumber ?? null,
         apPaymentId: r.apPaymentId,
         arInvoiceId: r.arInvoiceId ?? null,
       })),
@@ -364,6 +366,7 @@ function buildLocalTejXml(input: {
     currency: string;
     lawRef: string | null;
     certificateSha256: string | null;
+    certificateNumber?: string | null;
     apPaymentId: string | null;
     arInvoiceId?: string | null;
   }>;
@@ -406,6 +409,11 @@ function buildLocalTejXml(input: {
         `      <lawRef>${esc(w.lawRef ?? '')}</lawRef>`,
         `      <certificateSha256>${esc(w.certificateSha256 ?? '')}</certificateSha256>`,
       );
+      if (w.certificateNumber) {
+        lines.push(
+          `      <certificateNumber>${esc(w.certificateNumber)}</certificateNumber>`,
+        );
+      }
       if (w.apPaymentId) {
         lines.push(
           `      <apPaymentId>${esc(w.apPaymentId)}</apPaymentId>`,

@@ -569,6 +569,9 @@ export default function TejCenterPage() {
                       <div className="font-medium">{row.vendorName}</div>
                       <div className="text-[length:var(--a-text-xs)] text-a-muted">
                         {row.periodLabel ?? "—"}
+                        {row.certificateNumber
+                          ? ` · ${row.certificateNumber}`
+                          : ""}
                         {row.isStubRate ? " · stub" : ""}
                         {row.apPaymentId ? " · AP pay" : ""}
                         {row.arInvoiceId ? (

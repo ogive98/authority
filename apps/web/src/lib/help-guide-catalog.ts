@@ -1455,6 +1455,7 @@ export const HELP_MODULES: HelpModule[] = [
           fr: [
             "Sur `/tax/tej-center`, ligne statut Validée → bouton Certificat.",
             "Génère une attestation texte + empreinte SHA-256 ; statut → Certificat prêt.",
+            "Numéro local `RAS-CERT-YYYY-####` (série AUTHORITY — pas un n° MF officiel).",
             "Téléchargement `.txt` local — marquage AUTHORITY_LOCAL_CERTIFICATE.",
             "Ce n’est pas un formulaire officiel MF ; ne remplace pas une pièce fiscale légale.",
             "Stub : certificat impossible tant que Prefs tax.ras n’est pas remplacé.",
@@ -1463,6 +1464,7 @@ export const HELP_MODULES: HelpModule[] = [
           it: [
             "Su `/tax/tej-center`, riga stato Validata → pulsante Certificato.",
             "Genera attestazione testo + hash SHA-256; stato → Certificato pronto.",
+            "Numero locale `RAS-CERT-YYYY-####` (serie AUTHORITY — non un n° MF ufficiale).",
             "Download `.txt` locale — marcatura AUTHORITY_LOCAL_CERTIFICATE.",
             "Non è un modulo ufficiale MF; non sostituisce un documento fiscale legale.",
             "Stub: certificato impossibile finché Prefs tax.ras non è sostituito.",
@@ -1566,7 +1568,7 @@ export const HELP_MODULES: HelpModule[] = [
         "Stub STUB_UNTIL_EXPERT bloque validate et certificat (D280).",
         "Décaissement AP RAS → TaxWithholding 1:1 idempotent (D283).",
         "Facture client ISSUED + flag RAS AR → TaxWithholding AR (D286) — totaux facture inchangés.",
-        "Certificat = attestation interne AUTHORITY_LOCAL_CERTIFICATE — pas formulaire MF.",
+        "Certificat = attestation interne AUTHORITY_LOCAL_CERTIFICATE + n° RAS-CERT-YYYY-#### — pas formulaire MF.",
         "Lot XML = AUTHORITY_LOCAL_DRAFT WITHHOLDING_PACK (période ou par facture) — pas XSD officiel · pas transmission.",
         "Après import manuel Tej : Accusé import → Accepté/Rejeté → Archiver (D287) — pas d’upload AUTHORITY.",
         "TEJ transmission pretend interdite jusqu’à unlock + XSD MF fourni.",
@@ -1578,7 +1580,7 @@ export const HELP_MODULES: HelpModule[] = [
         "Pipeline RAS Soft Glass: DETECTED/CALCULATED → VALIDATED → CERTIFICATE_READY → TEJ_PREPARED.",
         "Stub STUB_UNTIL_EXPERT blocca validate e certificato (D280).",
         "Pagamento AP RAS → TaxWithholding 1:1 idempotente (D283).",
-        "Certificato = attestazione interna AUTHORITY_LOCAL_CERTIFICATE — non modulo MF.",
+        "Certificato = attestazione interna AUTHORITY_LOCAL_CERTIFICATE + n° RAS-CERT-YYYY-#### — non modulo MF.",
         "Lotto XML = AUTHORITY_LOCAL_DRAFT WITHHOLDING_PACK — no XSD ufficiale · no transmission.",
         "TEJ transmission pretend vietata fino a unlock + XSD MF fornito.",
         "Regola fiscale ACTIVE solo dopo validazione esperto (D259).",

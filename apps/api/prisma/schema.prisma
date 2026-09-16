@@ -2648,6 +2648,8 @@ model TaxWithholding {
   certificateBody    String?               @map("certificate_body") @db.Text
   certificateSha256  String?               @map("certificate_sha256")
   certificateAt      DateTime?             @map("certificate_at") @db.Timestamptz(6)
+  /** D288 — local certificate series RAS-CERT-YYYY-#### (not MF form number). */
+  certificateNumber  String?               @map("certificate_number")
   /** D285 — TEJ local XML pack that consumed this row. */
   tejExportId        String?               @map("tej_export_id") @db.Uuid
   /** D287 — human ack that XML was imported into Tej (NOT AUTHORITY transmission). */
@@ -2666,8 +2668,10 @@ model TaxWithholding {
   @@index([companyId, supplierId])
   @@index([companyId, arInvoiceId])
   @@index([companyId, side])
+  @@index([companyId, certificateNumber])
   @@unique([companyId, apPaymentId])
   @@unique([companyId, arInvoiceId])
+  @@unique([companyId, certificateNumber])
   @@map("tax_withholding")
 }
 

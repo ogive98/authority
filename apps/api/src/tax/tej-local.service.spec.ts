@@ -126,8 +126,8 @@ describe('TejLocalService (D265/D285)', () => {
   it('generatePack packs CERTIFICATE_READY and marks TEJ_PREPARED (D285)', async () => {
     const { service, outbox, prisma } = build({
       withholdings: [
-        {
-          id: 'wh-1',
+      {
+        id: 'wh-1',
           vendorName: 'Nord',
           baseAmount: { toString: () => '1000.000' },
           rateBps: 150,
@@ -136,6 +136,7 @@ describe('TejLocalService (D265/D285)', () => {
           currency: 'TND',
           lawRef: 'LF',
           certificateSha256: 'abc123',
+          certificateNumber: 'RAS-CERT-2026-0001',
           apPaymentId: 'pay-1',
         },
       ],
@@ -147,6 +148,7 @@ describe('TejLocalService (D265/D285)', () => {
     expect(result.withholdingCount).toBe(1);
     expect(result.xmlContent).toContain('<withholdings>');
     expect(result.xmlContent).toContain('Nord');
+    expect(result.xmlContent).toContain('RAS-CERT-2026-0001');
     expect(result.xmlContent).toContain('packKind="WITHHOLDING_PACK"');
     expect(result.transmission).toBe('DISABLED');
     expect(prisma.taxWithholding.findMany).toHaveBeenCalled();

@@ -250,6 +250,7 @@ export type TaxWithholding = {
   prefsSnapshot: Record<string, unknown>;
   certificateSha256?: string | null;
   certificateAt?: string | null;
+  certificateNumber?: string | null;
   tejExportId?: string | null;
   tejImportAckAt?: string | null;
   tejImportNote?: string | null;
@@ -501,6 +502,7 @@ export type RasCertificate = {
   status: TaxWithholdingStatus;
   schemaNote: string;
   contentSha256: string;
+  certificateNumber?: string | null;
   generatedAt: string;
   body: string;
   withholding: TaxWithholding;
@@ -543,7 +545,10 @@ export function downloadRasCertificate(cert: RasCertificate): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `ras-certificat-${cert.withholdingId.slice(0, 8)}-${cert.contentSha256.slice(0, 8)}.txt`;
+  const slug =
+    cert.certificateNumber?.replace(/[^a-zA-Z0-9-]/g, "") ||
+    cert.withholdingId.slice(0, 8);
+  a.download = `ras-certificat-${slug}-${cert.contentSha256.slice(0, 8)}.txt`;
   a.click();
   URL.revokeObjectURL(url);
 }

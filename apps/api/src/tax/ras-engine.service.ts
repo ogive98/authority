@@ -75,6 +75,7 @@ export type TaxWithholdingDto = {
   prefsSnapshot: Record<string, unknown>;
   certificateSha256: string | null;
   certificateAt: string | null;
+  certificateNumber: string | null;
   tejExportId: string | null;
   tejImportAckAt: string | null;
   tejImportNote: string | null;
@@ -89,6 +90,7 @@ export type RasCertificateDto = {
   status: TaxWithholdingStatus;
   schemaNote: string;
   contentSha256: string;
+  certificateNumber: string | null;
   generatedAt: string;
   body: string;
   withholding: TaxWithholdingDto;
@@ -603,6 +605,7 @@ export class RasEngineService {
         status: row.status,
         schemaNote: RAS_CERT_SCHEMA_NOTE,
         contentSha256: row.certificateSha256,
+        certificateNumber: row.certificateNumber ?? null,
         generatedAt: row.certificateAt.toISOString(),
         body: row.certificateBody,
         withholding: serializeWithholding(row),
@@ -629,23 +632,30 @@ export class RasEngineService {
     });
     const withholderName = company?.legalName?.trim() || 'Société (nom Prefs)';
     const generatedAt = new Date();
-    const body = buildLocalRasCertificate({
-      withholderName,
-      vendorName: row.vendorName,
-      baseAmount: row.baseAmount.toString(),
-      rateBps: row.rateBps,
-      withholdingAmount: row.withholdingAmount.toString(),
-      netPayable: row.netPayable?.toString() ?? null,
-      currency: row.currency,
-      lawRef: row.lawRef,
-      periodLabel: row.periodLabel,
-      apPaymentId: row.apPaymentId,
-      withholdingId: row.id,
-      generatedAt: generatedAt.toISOString(),
-    });
-    const sha = createHash('sha256').update(body, 'utf8').digest('hex');
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      const certificateNumber = await allocateCertificateNumber(
+        tx,
+        companyId,
+        generatedAt,
+      );
+      const body = buildLocalRasCertificate({
+        withholderName,
+        vendorName: row.vendorName,
+        baseAmount: row.baseAmount.toString(),
+        rateBps: row.rateBps!,
+        withholdingAmount: row.withholdingAmount.toString(),
+        netPayable: row.netPayable?.toString() ?? null,
+        currency: row.currency,
+        lawRef: row.lawRef,
+        periodLabel: row.periodLabel,
+        apPaymentId: row.apPaymentId,
+        arInvoiceId: row.arInvoiceId,
+        withholdingId: row.id,
+        certificateNumber,
+        generatedAt: generatedAt.toISOString(),
+      });
+      const sha = createHash('sha256').update(body, 'utf8').digest('hex');
       const next = await tx.taxWithholding.update({
         where: { id: row.id },
         data: {
@@ -653,6 +663,7 @@ export class RasEngineService {
           certificateBody: body,
           certificateSha256: sha,
           certificateAt: generatedAt,
+          certificateNumber,
           version: { increment: 1 },
         },
       });
@@ -666,6 +677,7 @@ export class RasEngineService {
           from: row.status,
           to: next.status,
           contentSha256: sha,
+          certificateNumber,
         },
       });
       return next;
@@ -675,9 +687,10 @@ export class RasEngineService {
       withholdingId: updated.id,
       status: updated.status,
       schemaNote: RAS_CERT_SCHEMA_NOTE,
-      contentSha256: sha,
-      generatedAt: generatedAt.toISOString(),
-      body,
+      contentSha256: updated.certificateSha256!,
+      certificateNumber: updated.certificateNumber ?? null,
+      generatedAt: updated.certificateAt!.toISOString(),
+      body: updated.certificateBody!,
       withholding: serializeWithholding(updated),
     };
   }
@@ -863,6 +876,7 @@ export class RasEngineService {
       status: row.status,
       schemaNote: RAS_CERT_SCHEMA_NOTE,
       contentSha256: row.certificateSha256,
+      certificateNumber: row.certificateNumber ?? null,
       generatedAt: row.certificateAt.toISOString(),
       body: row.certificateBody,
       withholding: serializeWithholding(row),
@@ -909,6 +923,7 @@ function serializeWithholding(row: {
   certificateSha256?: string | null;
   certificateAt?: Date | null;
   certificateBody?: string | null;
+  certificateNumber?: string | null;
   tejExportId?: string | null;
   tejImportAckAt?: Date | null;
   tejImportNote?: string | null;
@@ -941,6 +956,7 @@ function serializeWithholding(row: {
     prefsSnapshot: (row.prefsSnapshotJson ?? {}) as Record<string, unknown>,
     certificateSha256: row.certificateSha256 ?? null,
     certificateAt: row.certificateAt?.toISOString() ?? null,
+    certificateNumber: row.certificateNumber ?? null,
     tejExportId: row.tejExportId ?? null,
     tejImportAckAt: row.tejImportAckAt?.toISOString() ?? null,
     tejImportNote: row.tejImportNote ?? null,
@@ -949,6 +965,23 @@ function serializeWithholding(row: {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+async function allocateCertificateNumber(
+  tx: Prisma.TransactionClient,
+  companyId: string,
+  at: Date,
+): Promise<string> {
+  const year = at.getUTCFullYear();
+  const prefix = `RAS-CERT-${year}-`;
+  const count = await tx.taxWithholding.count({
+    where: {
+      companyId,
+      deletedAt: null,
+      certificateNumber: { startsWith: prefix },
+    },
+  });
+  return `${prefix}${String(count + 1).padStart(4, '0')}`;
 }
 
 function buildLocalRasCertificate(input: {
@@ -962,7 +995,9 @@ function buildLocalRasCertificate(input: {
   lawRef: string | null;
   periodLabel: string | null;
   apPaymentId: string | null;
+  arInvoiceId?: string | null;
   withholdingId: string;
+  certificateNumber: string;
   generatedAt: string;
 }): string {
   const ratePct = (input.rateBps / 100).toFixed(2);
@@ -973,11 +1008,13 @@ function buildLocalRasCertificate(input: {
     '',
     RAS_CERT_SCHEMA_NOTE,
     '',
+    `N° certificat       : ${input.certificateNumber}`,
     `Émetteur (reteneur) : ${input.withholderName}`,
     `Bénéficiaire        : ${input.vendorName}`,
     `Période             : ${input.periodLabel ?? '—'}`,
     `Réf. retenue        : ${input.withholdingId}`,
     input.apPaymentId ? `Réf. décaissement AP : ${input.apPaymentId}` : null,
+    input.arInvoiceId ? `Réf. facture AR      : ${input.arInvoiceId}` : null,
     '',
     `Base imposable      : ${input.baseAmount} ${input.currency}`,
     `Taux (Prefs)        : ${ratePct} % (${input.rateBps} bps)`,

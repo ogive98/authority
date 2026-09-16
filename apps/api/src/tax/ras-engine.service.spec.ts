@@ -500,17 +500,15 @@ describe('RasEngineService (D282)', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    const updated = {
-      ...validated,
-      status: 'CERTIFICATE_READY',
-      certificateBody: 'body',
-      certificateSha256: 'abc',
-      certificateAt: new Date('2026-09-16T10:00:00Z'),
-      version: 2,
-    };
     const taxWithholding = {
       findFirst: jest.fn().mockResolvedValue(validated),
-      update: jest.fn().mockResolvedValue(updated),
+      count: jest.fn().mockResolvedValue(0),
+      update: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
+        ...validated,
+        ...data,
+        status: 'CERTIFICATE_READY',
+        version: 2,
+      })),
     };
     const prisma = {
       taxWithholding,
@@ -525,8 +523,10 @@ describe('RasEngineService (D282)', () => {
     const svc = build(expertise, prisma, outbox);
     const cert = await svc.generateCertificate(companyId, 'wh-1');
     expect(cert.status).toBe('CERTIFICATE_READY');
+    expect(cert.certificateNumber).toMatch(/^RAS-CERT-\d{4}-0001$/);
     expect(cert.body).toContain('ATTESTATION DE RETENUE');
     expect(cert.body).toContain('AUTHORITY_LOCAL_CERTIFICATE');
+    expect(cert.body).toContain(cert.certificateNumber!);
     expect(cert.body).toContain('Demo SARL');
     expect(cert.contentSha256).toHaveLength(64);
     expect(taxWithholding.update).toHaveBeenCalled();
