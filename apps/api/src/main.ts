@@ -11,6 +11,27 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableShutdownHooks();
   app.use(cookieParser());
+  app.enableCors({
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      const ok = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(origin);
+      callback(null, ok);
+    },
+    credentials: true,
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Authority-Company-Id',
+      'X-Authority-Site-Id',
+      'X-Correlation-Id',
+    ],
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

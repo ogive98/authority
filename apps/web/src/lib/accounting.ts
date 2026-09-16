@@ -109,6 +109,8 @@ export const GL_MAPPING_KEYS = {
   salesJournal: "accounting.gl.sales_journal",
   bankJournal: "accounting.gl.bank_journal",
   purchasesJournal: "accounting.gl.purchases_journal",
+  ras: "accounting.gl.ras",
+  vatInput: "accounting.gl.vat_input",
 } as const;
 
 export const GL_MAPPING_DEFAULTS = {
@@ -123,6 +125,10 @@ export const GL_MAPPING_DEFAULTS = {
   salesJournal: "VEN",
   bankJournal: "BQ",
   purchasesJournal: "ACH",
+  /** Empty until human Prefs — never invent RAS CoA. */
+  ras: "",
+  /** Empty until human Prefs — never invent input VAT CoA. */
+  vatInput: "",
 } as const;
 
 type ApiFail = { ok: false; status: number; code?: string; message: string };
@@ -308,15 +314,20 @@ export async function fetchGlMapping(): Promise<
   {
     ok: true;
     data: {
-      codes: {
-        ar: string;
-        bank: string;
-        revenue: string;
-        vat: string;
-        bankFee: string;
-        salesJournal: string;
-        bankJournal: string;
-      };
+        codes: {
+          ar: string;
+          bank: string;
+          revenue: string;
+          vat: string;
+          ap?: string;
+          expense?: string;
+          bankFee: string;
+          salesJournal: string;
+          bankJournal: string;
+          purchasesJournal?: string;
+          ras?: string;
+          vatInput?: string;
+        };
     };
   } | ApiFail
 > {
@@ -335,9 +346,14 @@ export async function fetchGlMapping(): Promise<
           bank: string;
           revenue: string;
           vat: string;
+          ap?: string;
+          expense?: string;
           bankFee: string;
           salesJournal: string;
           bankJournal: string;
+          purchasesJournal?: string;
+          ras?: string;
+          vatInput?: string;
         };
       },
     };

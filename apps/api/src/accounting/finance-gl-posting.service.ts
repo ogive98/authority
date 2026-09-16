@@ -488,8 +488,9 @@ export class FinanceGlPostingService {
   }
 
   /**
-   * AP bill posted (D273) — Dr Charges / Cr Fournisseurs (amount as-recorded).
-   * No tax invention — AP bills carry a single total.
+   * AP bill posted (D273/D276) — Dr Charges / Cr Fournisseurs (TTC as-recorded).
+   * If amountTax > 0 and Prefs `accounting.gl.vat_input` mapped:
+   * Dr expense HT / Dr VAT input / Cr AP TTC. Never invent input-VAT CoA.
    */
   async postApBillPosted(
     companyId: string,
@@ -499,6 +500,8 @@ export class FinanceGlPostingService {
       amount: number;
       entryDate: string;
       description?: string;
+      amountHt?: number;
+      amountTax?: number;
     },
   ): Promise<FinanceGlPostResult> {
     const amount = round3(input.amount);
@@ -520,17 +523,84 @@ export class FinanceGlPostingService {
     }
 
     const map = await this.glMapping.resolve(companyId);
-    const accounts = await this.resolveAccounts(companyId, [
-      map.expense,
-      map.ap,
-    ]);
+    const tax = round3(input.amountTax ?? 0);
+    const ht = round3(input.amountHt ?? 0);
+    const vatCode = map.vatInput.trim();
+    const splitVat = tax > 0 && ht > 0 && vatCode.length > 0;
+
+    const accounts = await this.resolveAccounts(
+      companyId,
+      splitVat ? [map.expense, map.ap, vatCode] : [map.expense, map.ap],
+    );
     if (!accounts) {
+      if (splitVat) {
+        const fallback = await this.resolveAccounts(companyId, [
+          map.expense,
+          map.ap,
+        ]);
+        if (!fallback) {
+          return {
+            outcome: 'skipped',
+            reason: `missing CoA ${map.expense}/${map.ap}`,
+          };
+        }
+        return this.postApBillTwoLine(
+          companyId,
+          input,
+          amount,
+          map,
+          fallback,
+        );
+      }
       return {
         outcome: 'skipped',
         reason: `missing CoA ${map.expense}/${map.ap}`,
       };
     }
 
+    if (splitVat) {
+      return this.createAndPost(companyId, {
+        sourceType: 'fin_ap_bill',
+        sourceId: input.sourceId,
+        entryDate: input.entryDate,
+        description: input.description ?? `ap_bill:${input.billId}`,
+        journalCode: map.purchasesJournal,
+        lines: [
+          {
+            accountId: accounts[map.expense]!,
+            debit: ht,
+            credit: 0,
+            lineNo: 1,
+            memo: 'AP expense HT',
+          },
+          {
+            accountId: accounts[vatCode]!,
+            debit: tax,
+            credit: 0,
+            lineNo: 2,
+            memo: 'VAT deductible',
+          },
+          {
+            accountId: accounts[map.ap]!,
+            debit: 0,
+            credit: amount,
+            lineNo: 3,
+            memo: 'AP liability TTC',
+          },
+        ],
+      });
+    }
+
+    return this.postApBillTwoLine(companyId, input, amount, map, accounts);
+  }
+
+  private postApBillTwoLine(
+    companyId: string,
+    input: { sourceId: string; billId: string; entryDate: string; description?: string },
+    amount: number,
+    map: { expense: string; ap: string; purchasesJournal: string },
+    accounts: Record<string, string>,
+  ): Promise<FinanceGlPostResult> {
     return this.createAndPost(companyId, {
       sourceType: 'fin_ap_bill',
       sourceId: input.sourceId,
@@ -633,8 +703,9 @@ export class FinanceGlPostingService {
   }
 
   /**
-   * AP payment posted (D273) — Dr Fournisseurs / Cr Banque (net as-recorded).
-   * RAS withheld is not split to a RAS GL account in V0.
+   * AP payment posted (D273/D275) — Dr Fournisseurs / Cr Banque (net).
+   * If RAS withheld and Prefs `accounting.gl.ras` mapped to an active CoA:
+   * Dr AP (gross) / Cr Banque (net) / Cr RAS (withheld). Never invent RAS CoA.
    */
   async postApPaymentPosted(
     companyId: string,
@@ -643,6 +714,8 @@ export class FinanceGlPostingService {
       apPaymentId: string;
       amount: number;
       entryDate: string;
+      amountRas?: number;
+      rasApplied?: boolean;
     },
   ): Promise<FinanceGlPostResult> {
     const amount = round3(input.amount);
@@ -664,17 +737,85 @@ export class FinanceGlPostingService {
     }
 
     const map = await this.glMapping.resolve(companyId);
-    const accounts = await this.resolveAccounts(companyId, [
-      map.ap,
-      map.bank,
-    ]);
+    const rasAmount =
+      input.rasApplied === true ? round3(input.amountRas ?? 0) : 0;
+    const rasCode = map.ras.trim();
+    const splitRas = rasAmount > 0 && rasCode.length > 0;
+
+    const accounts = await this.resolveAccounts(
+      companyId,
+      splitRas ? [map.ap, map.bank, rasCode] : [map.ap, map.bank],
+    );
     if (!accounts) {
+      if (splitRas) {
+        const fallback = await this.resolveAccounts(companyId, [
+          map.ap,
+          map.bank,
+        ]);
+        if (!fallback) {
+          return {
+            outcome: 'skipped',
+            reason: `missing CoA ${map.ap}/${map.bank}`,
+          };
+        }
+        return this.postApPaymentTwoLine(
+          companyId,
+          input,
+          amount,
+          map,
+          fallback,
+        );
+      }
       return {
         outcome: 'skipped',
         reason: `missing CoA ${map.ap}/${map.bank}`,
       };
     }
 
+    if (splitRas) {
+      const gross = round3(amount + rasAmount);
+      return this.createAndPost(companyId, {
+        sourceType: 'fin_ap_payment',
+        sourceId: input.sourceId,
+        entryDate: input.entryDate,
+        description: `ap_payment:${input.apPaymentId}`,
+        journalCode: map.bankJournal,
+        lines: [
+          {
+            accountId: accounts[map.ap]!,
+            debit: gross,
+            credit: 0,
+            lineNo: 1,
+            memo: 'AP settle (gross)',
+          },
+          {
+            accountId: accounts[map.bank]!,
+            debit: 0,
+            credit: amount,
+            lineNo: 2,
+            memo: 'Bank (net)',
+          },
+          {
+            accountId: accounts[rasCode]!,
+            debit: 0,
+            credit: rasAmount,
+            lineNo: 3,
+            memo: 'RAS withheld',
+          },
+        ],
+      });
+    }
+
+    return this.postApPaymentTwoLine(companyId, input, amount, map, accounts);
+  }
+
+  private postApPaymentTwoLine(
+    companyId: string,
+    input: { sourceId: string; apPaymentId: string; entryDate: string },
+    amount: number,
+    map: { ap: string; bank: string; bankJournal: string },
+    accounts: Record<string, string>,
+  ): Promise<FinanceGlPostResult> {
     return this.createAndPost(companyId, {
       sourceType: 'fin_ap_payment',
       sourceId: input.sourceId,

@@ -12,9 +12,11 @@ const {
   nativeImage,
   ipcMain,
   screen,
+  safeStorage,
 } = require("electron");
 const path = require("path");
 const http = require("http");
+const fs = require("fs");
 
 const isDev = !app.isPackaged;
 const DEV_URL = "http://127.0.0.1:5173";
@@ -59,6 +61,46 @@ function createTrayIcon() {
     }
   }
   return nativeImage.createFromBuffer(canvas, { width: size, height: size });
+}
+
+function deviceAuthPath() {
+  return path.join(app.getPath("userData"), "authority-x-device.bin");
+}
+
+function readDeviceAuth() {
+  try {
+    const buf = fs.readFileSync(deviceAuthPath());
+    const raw = safeStorage.isEncryptionAvailable()
+      ? safeStorage.decryptString(buf)
+      : buf.toString("utf8");
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.token !== "string") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeDeviceAuth(auth) {
+  const json = JSON.stringify({
+    token: auth.token,
+    deviceId: auth.deviceId,
+    companyId: auth.companyId,
+    displayName: auth.displayName,
+    expiresAt: auth.expiresAt,
+  });
+  const payload = safeStorage.isEncryptionAvailable()
+    ? safeStorage.encryptString(json)
+    : Buffer.from(json, "utf8");
+  fs.writeFileSync(deviceAuthPath(), payload);
+}
+
+function clearDeviceAuthFile() {
+  try {
+    fs.unlinkSync(deviceAuthPath());
+  } catch {
+    /* missing is fine */
+  }
 }
 
 function getOverlayBounds() {
@@ -377,10 +419,31 @@ app.whenReady().then(() => {
     return { ok: true };
   });
 
-  ipcMain.handle("authority-x:connection-stub", () => ({
-    state: "Connected",
-    note: "Phase 2 shell — auth/device pairing Phase 4+",
-  }));
+  ipcMain.handle("authority-x:connection-stub", () => {
+    const auth = readDeviceAuth();
+    return {
+      state: auth ? "Paired" : "Local",
+      paired: Boolean(auth),
+      note: auth
+        ? "Device token in OS keyring — Thunder prepare uses Bearer."
+        : "Unpaired — paste Soft Glass Poste code (D274).",
+    };
+  });
+
+  ipcMain.handle("authority-x:get-device-auth", () => readDeviceAuth());
+
+  ipcMain.handle("authority-x:set-device-auth", (_e, auth) => {
+    if (!auth || typeof auth.token !== "string") {
+      return { ok: false };
+    }
+    writeDeviceAuth(auth);
+    return { ok: true };
+  });
+
+  ipcMain.handle("authority-x:clear-device-auth", () => {
+    clearDeviceAuthFile();
+    return { ok: true };
+  });
 
   ipcMain.handle("authority-x:open-authority", async (_e, url) => {
     const { shell } = require("electron");

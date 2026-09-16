@@ -365,6 +365,8 @@ export class ThunderDomainRegistrar implements OnModuleInit {
       const billId =
         stringPayload(envelope.payload, 'billId') || envelope.aggregateId;
       const amount = numberPayload(envelope.payload, 'amountTotal');
+      const amountHt = numberPayload(envelope.payload, 'amountHt') ?? 0;
+      const amountTax = numberPayload(envelope.payload, 'amountTax') ?? 0;
       const entryDate =
         stringPayload(envelope.payload, 'billDate') || today;
       if (!billId || amount == null) {
@@ -377,6 +379,8 @@ export class ThunderDomainRegistrar implements OnModuleInit {
         sourceId: envelope.eventId,
         billId,
         amount,
+        amountHt,
+        amountTax,
         entryDate,
         description: `ap_bill:${billId}`,
       });
@@ -418,6 +422,8 @@ export class ThunderDomainRegistrar implements OnModuleInit {
         stringPayload(envelope.payload, 'apPaymentId') ||
         envelope.aggregateId;
       const amount = numberPayload(envelope.payload, 'amount');
+      const amountRas = numberPayload(envelope.payload, 'amountRas') ?? 0;
+      const rasApplied = booleanPayload(envelope.payload, 'rasApplied');
       const entryDate =
         stringPayload(envelope.payload, 'paymentDate') ||
         stringPayload(envelope.payload, 'accountingDate') ||
@@ -432,6 +438,8 @@ export class ThunderDomainRegistrar implements OnModuleInit {
         sourceId: envelope.eventId,
         apPaymentId,
         amount,
+        amountRas,
+        rasApplied,
         entryDate,
       });
       this.logger.log(
@@ -477,4 +485,14 @@ function numberPayload(
     return Number.isFinite(n) ? n : null;
   }
   return null;
+}
+
+function booleanPayload(
+  payload: Record<string, unknown>,
+  key: string,
+): boolean {
+  const v = payload[key];
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') return v === 'true' || v === '1';
+  return false;
 }

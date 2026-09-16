@@ -256,17 +256,29 @@ model IamSuperAdminMembership {
 }
 
 model IamDevice {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
-  name      String?
-  fingerprint String?
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+  id            String             @id @default(uuid()) @db.Uuid
+  userId        String             @map("user_id") @db.Uuid
+  companyId     String             @map("company_id") @db.Uuid
+  kind          String             @default("AUTHORITY_X")
+  name          String?
+  fingerprint   String?
+  tokenHash     String?            @unique @map("token_hash")
+  pairCodeHash  String?            @map("pair_code_hash")
+  pairExpiresAt DateTime?          @map("pair_expires_at") @db.Timestamptz(6)
+  lastSeenAt    DateTime?          @map("last_seen_at") @db.Timestamptz(6)
+  expiresAt     DateTime?          @map("expires_at") @db.Timestamptz(6)
+  status        IamLifecycleStatus @default(ACTIVE)
+  revokedAt     DateTime?          @map("revoked_at") @db.Timestamptz(6)
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime?          @map("deleted_at") @db.Timestamptz(6)
 
-  user IamUser @relation(fields: [userId], references: [id])
+  user    IamUser    @relation(fields: [userId], references: [id])
+  company OrgCompany @relation(fields: [companyId], references: [id])
 
   @@index([userId])
+  @@index([companyId])
+  @@index([pairCodeHash])
   @@map("iam_device")
 }
 
@@ -347,6 +359,7 @@ model OrgCompany {
 
   sites       OrgSite[]
   assignments OrgUserAssignment[]
+  devices     IamDevice[]
 
   @@map("org_company")
 }
@@ -2231,6 +2244,8 @@ model FinApBill {
   billDate    DateTime       @map("bill_date") @db.Date
   dueDate     DateTime?      @map("due_date") @db.Date
   amountTotal Decimal        @map("amount_total") @db.Decimal(18, 3)
+  amountHt    Decimal        @default(0) @map("amount_ht") @db.Decimal(18, 3)
+  amountTax   Decimal        @default(0) @map("amount_tax") @db.Decimal(18, 3)
   currency    String         @default("TND")
   label       String?
   reference   String?
@@ -2243,12 +2258,37 @@ model FinApBill {
 
   payments FinApPayment[]
   supplier SupSupplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  lines    FinApBillLine[]
 
   @@unique([companyId, number])
   @@index([companyId, billDate(sort: Desc)])
   @@index([companyId, status])
   @@index([companyId, supplierId])
   @@map("fin_ap_bill")
+}
+
+/** AP bill commercial + tax snapshot lines (D276). Optional — header-only bills stay TTC as-recorded. */
+model FinApBillLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  billId      String   @map("bill_id") @db.Uuid
+  lineNo      Int      @map("line_no")
+  description String
+  amountHt    Decimal  @map("amount_ht") @db.Decimal(18, 3)
+  amountTax   Decimal  @map("amount_tax") @db.Decimal(18, 3)
+  amountTtc   Decimal  @map("amount_ttc") @db.Decimal(18, 3)
+  taxCodeId   String   @map("tax_code_id") @db.Uuid
+  taxLineId   String?  @map("tax_line_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  bill    FinApBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  taxCode TaxCode   @relation(fields: [taxCodeId], references: [id])
+  taxLine TaxLine?  @relation(fields: [taxLineId], references: [id], onDelete: SetNull)
+
+  @@unique([billId, lineNo])
+  @@index([companyId, billId])
+  @@map("fin_ap_bill_line")
 }
 
 /**
@@ -2440,6 +2480,7 @@ model TaxCode {
   rates           TaxRate[]
   invoiceLines    FinInvoiceLine[]
   creditNoteLines FinCreditNoteLine[]
+  apBillLines     FinApBillLine[]
   taxLines        TaxLine[]
   customerOverrides CusFiscalRuleOverride[]
   productOverrides  PrdFiscalRuleOverride[]
@@ -2524,6 +2565,7 @@ model TaxLine {
   taxRate         TaxRate?            @relation(fields: [taxRateId], references: [id], onDelete: SetNull)
   invoiceLines    FinInvoiceLine[]
   creditNoteLines FinCreditNoteLine[]
+  apBillLines     FinApBillLine[]
 
   @@index([companyId, sourceType, sourceId])
   @@index([companyId, taxCodeId])

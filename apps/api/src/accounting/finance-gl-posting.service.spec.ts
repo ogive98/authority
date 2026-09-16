@@ -15,6 +15,8 @@ describe('FinanceGlPostingService', () => {
       salesJournal: DEFAULT_GL_CODES.salesJournal,
       bankJournal: DEFAULT_GL_CODES.bankJournal,
       purchasesJournal: DEFAULT_GL_CODES.purchasesJournal,
+      ras: '',
+      vatInput: '',
     }),
   };
 
@@ -425,6 +427,124 @@ describe('FinanceGlPostingService', () => {
     );
   });
 
+  it('posts AP bill VAT split when Prefs vat_input mapped (D276)', async () => {
+    glMapping.resolve.mockResolvedValueOnce({
+      ar: DEFAULT_GL_CODES.ar,
+      bank: DEFAULT_GL_CODES.bank,
+      revenue: DEFAULT_GL_CODES.revenue,
+      vat: DEFAULT_GL_CODES.vat,
+      ap: DEFAULT_GL_CODES.ap,
+      expense: DEFAULT_GL_CODES.expense,
+      bankFee: '',
+      ras: '',
+      vatInput: '4366',
+      salesJournal: DEFAULT_GL_CODES.salesJournal,
+      bankJournal: DEFAULT_GL_CODES.bankJournal,
+      purchasesJournal: DEFAULT_GL_CODES.purchasesJournal,
+    });
+    const prisma = {
+      accJournalEntry: { findFirst: jest.fn().mockResolvedValue(null) },
+      accAccount: {
+        findMany: jest.fn().mockResolvedValue([
+          { code: '601', id: 'a-exp' },
+          { code: '401', id: 'a-ap' },
+          { code: '4366', id: 'a-vat-in' },
+        ]),
+      },
+      accJournal: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'j-ach' }),
+      },
+      accFiscalPeriod: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'p-open',
+          code: '2026-09',
+          status: 'OPEN',
+        }),
+      },
+    };
+    const accounting = {
+      createEntry: jest.fn().mockResolvedValue({ id: 'draft-vat' }),
+      postEntry: jest
+        .fn()
+        .mockResolvedValue({ id: 'je-vat', number: 'JE-VAT-IN' }),
+      reverseEntry: jest.fn(),
+    };
+    const svc = new FinanceGlPostingService(
+      prisma as never,
+      accounting as never,
+      glMapping as never,
+    );
+    await svc.postApBillPosted(companyId, {
+      sourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaac',
+      billId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbd',
+      amount: 119,
+      amountHt: 100,
+      amountTax: 19,
+      entryDate: '2026-09-16',
+    });
+    expect(accounting.createEntry).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        lines: [
+          expect.objectContaining({ accountId: 'a-exp', debit: 100 }),
+          expect.objectContaining({ accountId: 'a-vat-in', debit: 19 }),
+          expect.objectContaining({ accountId: 'a-ap', credit: 119 }),
+        ],
+      }),
+    );
+  });
+
+  it('keeps two-line AP bill TTC when vat_input Prefs empty (D276)', async () => {
+    const prisma = {
+      accJournalEntry: { findFirst: jest.fn().mockResolvedValue(null) },
+      accAccount: {
+        findMany: jest.fn().mockResolvedValue([
+          { code: '601', id: 'a-exp' },
+          { code: '401', id: 'a-ap' },
+        ]),
+      },
+      accJournal: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'j-ach' }),
+      },
+      accFiscalPeriod: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'p-open',
+          code: '2026-09',
+          status: 'OPEN',
+        }),
+      },
+    };
+    const accounting = {
+      createEntry: jest.fn().mockResolvedValue({ id: 'draft-ttc' }),
+      postEntry: jest
+        .fn()
+        .mockResolvedValue({ id: 'je-ttc', number: 'JE-TTC' }),
+      reverseEntry: jest.fn(),
+    };
+    const svc = new FinanceGlPostingService(
+      prisma as never,
+      accounting as never,
+      glMapping as never,
+    );
+    await svc.postApBillPosted(companyId, {
+      sourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaad',
+      billId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbe',
+      amount: 119,
+      amountHt: 100,
+      amountTax: 19,
+      entryDate: '2026-09-16',
+    });
+    expect(accounting.createEntry).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        lines: [
+          expect.objectContaining({ accountId: 'a-exp', debit: 119 }),
+          expect.objectContaining({ accountId: 'a-ap', credit: 119 }),
+        ],
+      }),
+    );
+  });
+
   it('posts AP payment Dr AP / Cr bank (D273)', async () => {
     const prisma = {
       accJournalEntry: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -481,6 +601,125 @@ describe('FinanceGlPostingService', () => {
             accountId: 'a-bank',
             credit: 100,
           }),
+        ],
+      }),
+    );
+  });
+
+  it('posts AP payment RAS split when Prefs ras mapped', async () => {
+    glMapping.resolve.mockResolvedValueOnce({
+      ar: DEFAULT_GL_CODES.ar,
+      bank: DEFAULT_GL_CODES.bank,
+      revenue: DEFAULT_GL_CODES.revenue,
+      vat: DEFAULT_GL_CODES.vat,
+      ap: DEFAULT_GL_CODES.ap,
+      expense: DEFAULT_GL_CODES.expense,
+      bankFee: '',
+      ras: '4326',
+      vatInput: '',
+      salesJournal: DEFAULT_GL_CODES.salesJournal,
+      bankJournal: DEFAULT_GL_CODES.bankJournal,
+      purchasesJournal: DEFAULT_GL_CODES.purchasesJournal,
+    });
+    const prisma = {
+      accJournalEntry: { findFirst: jest.fn().mockResolvedValue(null) },
+      accAccount: {
+        findMany: jest.fn().mockResolvedValue([
+          { code: '401', id: 'a-ap' },
+          { code: '512', id: 'a-bank' },
+          { code: '4326', id: 'a-ras' },
+        ]),
+      },
+      accJournal: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'j-bq' }),
+      },
+      accFiscalPeriod: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'p-open',
+          code: '2026-09',
+          status: 'OPEN',
+        }),
+      },
+    };
+    const accounting = {
+      createEntry: jest.fn().mockResolvedValue({ id: 'draft-ras' }),
+      postEntry: jest
+        .fn()
+        .mockResolvedValue({ id: 'je-ras', number: 'JE-RAS' }),
+      reverseEntry: jest.fn(),
+    };
+    const svc = new FinanceGlPostingService(
+      prisma as never,
+      accounting as never,
+      glMapping as never,
+    );
+    const result = await svc.postApPaymentPosted(companyId, {
+      sourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      apPaymentId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      amount: 950,
+      amountRas: 50,
+      rasApplied: true,
+      entryDate: '2026-09-16',
+    });
+    expect(result.outcome).toBe('posted');
+    expect(accounting.createEntry).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        lines: [
+          expect.objectContaining({ accountId: 'a-ap', debit: 1000 }),
+          expect.objectContaining({ accountId: 'a-bank', credit: 950 }),
+          expect.objectContaining({ accountId: 'a-ras', credit: 50 }),
+        ],
+      }),
+    );
+  });
+
+  it('keeps two-line AP payment when RAS applied but Prefs ras empty', async () => {
+    const prisma = {
+      accJournalEntry: { findFirst: jest.fn().mockResolvedValue(null) },
+      accAccount: {
+        findMany: jest.fn().mockResolvedValue([
+          { code: '401', id: 'a-ap' },
+          { code: '512', id: 'a-bank' },
+        ]),
+      },
+      accJournal: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'j-bq' }),
+      },
+      accFiscalPeriod: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'p-open',
+          code: '2026-09',
+          status: 'OPEN',
+        }),
+      },
+    };
+    const accounting = {
+      createEntry: jest.fn().mockResolvedValue({ id: 'draft-2' }),
+      postEntry: jest
+        .fn()
+        .mockResolvedValue({ id: 'je-pay', number: 'JE-AP-PAY' }),
+      reverseEntry: jest.fn(),
+    };
+    const svc = new FinanceGlPostingService(
+      prisma as never,
+      accounting as never,
+      glMapping as never,
+    );
+    await svc.postApPaymentPosted(companyId, {
+      sourceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab',
+      apPaymentId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbc',
+      amount: 950,
+      amountRas: 50,
+      rasApplied: true,
+      entryDate: '2026-09-16',
+    });
+    expect(accounting.createEntry).toHaveBeenCalledWith(
+      companyId,
+      expect.objectContaining({
+        lines: [
+          expect.objectContaining({ accountId: 'a-ap', debit: 950 }),
+          expect.objectContaining({ accountId: 'a-bank', credit: 950 }),
         ],
       }),
     );

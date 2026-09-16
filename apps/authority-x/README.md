@@ -8,6 +8,7 @@ Desktop companion Soft Glass — **not** an ERP module.
 |-------|--------|
 | 2–5 | Done — shell · engine · Thunder · AP workflow · solid unit UI |
 | **6** | **Done** — AR encaissement prefill · Cut-safe CTRL+X · ⌃X/Cut toggles |
+| **7** | **Done** — device pairing (Soft Glass code → OS keyring Bearer) |
 
 ## Run
 
@@ -27,5 +28,7 @@ CTRL+X → commande → pick entity
 ```
 
 **Cut-safe ON** (défaut) : dans un champ Edit Win32, CTRL+X = Couper (X ne vole pas). Tray / boutons ⌃X · Cut.
+
+**Device auth (D274)** : Préférences Soft Glass → Poste → Générer un code → coller dans X. Jeton `axd_` dans le keyring OS. Intent Thunder = Bearer. **Pas** de cookie tray. **Pas** d’écriture silencieuse.
 
 **Transfer** = Banque Soft Glass only (`Treasury pending`) — pas de CREATE_TRANSFER inventé.

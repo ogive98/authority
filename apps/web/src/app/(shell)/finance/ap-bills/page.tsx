@@ -36,6 +36,7 @@ import {
 } from "@/lib/soft-glass-ui";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import { fetchSuppliers, type Supplier } from "@/lib/suppliers";
+import { fetchTaxCodes, type TaxCode } from "@/lib/tax";
 
 type LoadState =
   | { kind: "loading" }
@@ -47,6 +48,8 @@ type FormState = {
   supplierId: string;
   vendorName: string;
   amountTotal: string;
+  amountHt: string;
+  taxCodeId: string;
   billDate: string;
   dueDate: string;
   label: string;
@@ -88,6 +91,7 @@ function FinanceApBillsPageInner() {
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
   const axPrefillDone = useRef(false);
 
   const load = useCallback(
@@ -113,8 +117,9 @@ function FinanceApBillsPageInner() {
   useEffect(() => {
     void load("", statusFilter);
     void (async () => {
-      const res = await fetchSuppliers();
-      if (res.ok) setSuppliers(res.data.items);
+      const [sup, tax] = await Promise.all([fetchSuppliers(), fetchTaxCodes()]);
+      if (sup.ok) setSuppliers(sup.data.items);
+      if (tax.ok) setTaxCodes(tax.data.items.filter((c) => c.kind === "VAT"));
     })();
     // initial hydrate only
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -164,6 +169,8 @@ function FinanceApBillsPageInner() {
       supplierId: match?.id ?? "",
       vendorName: match?.legalName ?? vendorName,
       amountTotal: amount,
+      amountHt: "",
+      taxCodeId: "",
       billDate: todayIso(),
       dueDate: "",
       label: source === "authority_x" ? "AUTHORITY X" : "",
@@ -189,6 +196,8 @@ function FinanceApBillsPageInner() {
       supplierId: "",
       vendorName: "",
       amountTotal: "",
+      amountHt: "",
+      taxCodeId: "",
       billDate: todayIso(),
       dueDate: "",
       label: "",
@@ -202,13 +211,15 @@ function FinanceApBillsPageInner() {
     if (!form) return;
     const vendorName = form.vendorName.trim();
     const supplierId = form.supplierId.trim() || undefined;
+    const amountHt = Number(form.amountHt.replace(",", "."));
     const amountTotal = Number(form.amountTotal.replace(",", "."));
     if (!vendorName && !supplierId) {
       setFormError("Choisissez un fournisseur master ou saisissez un nom libre.");
       return;
     }
-    if (!Number.isFinite(amountTotal) || amountTotal <= 0) {
-      setFormError("Montant total TND doit être > 0.");
+    const useTax = Number.isFinite(amountHt) && amountHt > 0;
+    if (!useTax && (!Number.isFinite(amountTotal) || amountTotal <= 0)) {
+      setFormError("Montant TTC ou HT (TVA) doit être > 0.");
       return;
     }
     if (!form.billDate) {
@@ -220,7 +231,17 @@ function FinanceApBillsPageInner() {
     const res = await createApBill({
       vendorName: vendorName || undefined,
       supplierId,
-      amountTotal,
+      ...(useTax
+        ? {
+            lines: [
+              {
+                amountHt,
+                taxCodeId: form.taxCodeId || undefined,
+                description: form.label.trim() || vendorName || "AP",
+              },
+            ],
+          }
+        : { amountTotal }),
       billDate: form.billDate,
       dueDate: form.dueDate || undefined,
       label: form.label.trim() || undefined,
@@ -242,7 +263,7 @@ function FinanceApBillsPageInner() {
       <AScreenHeader
         kicker="Finance"
         title="Factures fournisseurs"
-        description="Factures AP Soft Glass — lien master `/suppliers` optionnel · vendorName libre sinon · RAS si Prefs VALIDATED · GL Thunder à la validation (D273)."
+        description="Factures AP Soft Glass — HT+TVA optionnel (stub TVA19) · TTC sinon · RAS si Prefs VALIDATED · GL Thunder (D276)."
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             {LAYOUT_ACTIONS.newApBill}
@@ -408,7 +429,7 @@ function FinanceApBillsPageInner() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         title="Nouvelle facture fournisseur"
-        description="Master `/suppliers` optionnel — sinon vendorName libre. Pas de TVA inventée. Poster → GL Achats/Fournisseurs (D273)."
+        description="Master `/suppliers` optionnel. HT + code TVA (stub TVA19) ou TTC sans TVA. Poster freeze tax_line (D276)."
       >
         {form ? (
           <div className="space-y-3">
@@ -460,17 +481,52 @@ function FinanceApBillsPageInner() {
             </label>
             <label className="block space-y-1">
               <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                Montant total TND *
+                Montant HT TND (TVA)
               </span>
               <AInput
-                value={form.amountTotal}
+                value={form.amountHt}
                 onChange={(e) =>
-                  setForm({ ...form, amountTotal: e.target.value })
+                  setForm({ ...form, amountHt: e.target.value })
                 }
                 inputMode="decimal"
-                placeholder="0.000"
+                placeholder="vide = TTC seul"
               />
             </label>
+            {form.amountHt.trim() ? (
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-muted">
+                  Code TVA
+                </span>
+                <select
+                  className={softSelect}
+                  value={form.taxCodeId}
+                  onChange={(e) =>
+                    setForm({ ...form, taxCodeId: e.target.value })
+                  }
+                >
+                  <option value="">TVA19 stub si dispo</option>
+                  {taxCodes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.code} — {c.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <label className="block space-y-1">
+                <span className="text-[length:var(--a-text-xs)] text-a-muted">
+                  Montant total TTC TND *
+                </span>
+                <AInput
+                  value={form.amountTotal}
+                  onChange={(e) =>
+                    setForm({ ...form, amountTotal: e.target.value })
+                  }
+                  inputMode="decimal"
+                  placeholder="0.000"
+                />
+              </label>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <label className="block space-y-1">
                 <span className="text-[length:var(--a-text-xs)] text-a-muted">

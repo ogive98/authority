@@ -6,6 +6,9 @@ export const AUDIT_ACTIONS = {
   identityUserInviteAdminActivate: 'identity.user.invite_admin_activate',
   identityUserInviteEmailSent: 'identity.user.invite_email_sent',
   identityUserInviteEmailFailed: 'identity.user.invite_email_failed',
+  identityDevicePair: 'identity.device.pair',
+  identityDeviceClaim: 'identity.device.claim',
+  identityDeviceRevoke: 'identity.device.revoke',
   organizationSiteCreate: 'organization.site.create',
   settingsValueUpdate: 'settings.value.update',
   settingsExpertiseValidate: 'settings.expertise.validate',
@@ -31,6 +34,7 @@ export const OUTBOX_EVENT_TYPES = {
 
 export const AUDIT_ENTITY_TYPES = {
   iamUser: 'iam_user',
+  iamDevice: 'iam_device',
   orgSite: 'org_site',
   setValue: 'set_value',
   setExpertise: 'set_expertise',

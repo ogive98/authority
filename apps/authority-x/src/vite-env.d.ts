@@ -13,7 +13,22 @@ export type AuthorityXBridge = {
   setShortcut: (accelerator: string) => Promise<unknown>;
   hide: () => Promise<{ ok: boolean }>;
   show: () => Promise<{ ok: boolean }>;
-  connectionStub: () => Promise<{ state: string; note: string }>;
+  connectionStub: () => Promise<{ state: string; note: string; paired?: boolean }>;
+  getDeviceAuth: () => Promise<{
+    token: string;
+    deviceId: string;
+    companyId: string;
+    displayName: string;
+    expiresAt: string;
+  } | null>;
+  setDeviceAuth: (auth: {
+    token: string;
+    deviceId: string;
+    companyId: string;
+    displayName: string;
+    expiresAt: string;
+  }) => Promise<{ ok: boolean }>;
+  clearDeviceAuth: () => Promise<{ ok: boolean }>;
   openAuthority: (
     url?: string,
   ) => Promise<{ ok: boolean; url: string; error?: string }>;

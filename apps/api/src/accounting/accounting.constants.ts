@@ -41,6 +41,16 @@ export const DEFAULT_GL_CODES = {
    * Never invent a Tunisian fee CoA code.
    */
   bankFee: '',
+  /**
+   * RAS withheld payable — empty until human Prefs (D275).
+   * Never invent a Tunisian RAS CoA code.
+   */
+  ras: '',
+  /**
+   * VAT deductible (AP) — empty until human Prefs (D276).
+   * Never invent a Tunisian input-VAT CoA code.
+   */
+  vatInput: '',
 } as const;
 
 /** Company prefs — CoA / journal codes for Finance→GL (D179/D180/D193/D273). */
@@ -56,6 +66,10 @@ export const ACCOUNTING_SETTING_KEYS = {
   SALES_JOURNAL: 'accounting.gl.sales_journal',
   BANK_JOURNAL: 'accounting.gl.bank_journal',
   PURCHASES_JOURNAL: 'accounting.gl.purchases_journal',
+  /** RAS withheld payable — empty until human (D275). */
+  RAS: 'accounting.gl.ras',
+  /** VAT deductible on AP bills — empty until human (D276). */
+  VAT_INPUT: 'accounting.gl.vat_input',
 } as const;
 
 export const ACCOUNTING_SETTING_DEFAULTS: Record<
@@ -73,6 +87,8 @@ export const ACCOUNTING_SETTING_DEFAULTS: Record<
   [ACCOUNTING_SETTING_KEYS.BANK_JOURNAL]: DEFAULT_GL_CODES.bankJournal,
   [ACCOUNTING_SETTING_KEYS.PURCHASES_JOURNAL]:
     DEFAULT_GL_CODES.purchasesJournal,
+  [ACCOUNTING_SETTING_KEYS.RAS]: DEFAULT_GL_CODES.ras,
+  [ACCOUNTING_SETTING_KEYS.VAT_INPUT]: DEFAULT_GL_CODES.vatInput,
 };
 
 export type GlMappingCodes = {
@@ -87,4 +103,8 @@ export type GlMappingCodes = {
   salesJournal: string;
   bankJournal: string;
   purchasesJournal: string;
+  /** Empty string until Prefs seat filled — never invent RAS CoA. */
+  ras: string;
+  /** Empty until Prefs — never invent input VAT CoA. */
+  vatInput: string;
 };

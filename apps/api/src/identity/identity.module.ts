@@ -5,6 +5,8 @@ import { AuditModule } from '../audit/audit.module';
 import { MailModule } from '../mail/mail.module';
 import { AuthService } from './auth.service';
 import { AvatarService } from './avatar.service';
+import { DeviceService } from './device.service';
+import { DevicesController } from './devices.controller';
 import { IdentityController } from './identity.controller';
 import { InvitesController } from './invites.controller';
 import { InviteService } from './invite.service';
@@ -15,12 +17,18 @@ import { SessionService } from './session.service';
 
 @Module({
   imports: [PermissionsModule, AuditModule, MailModule],
-  controllers: [IdentityController, InvitesController, PermissionsController],
+  controllers: [
+    IdentityController,
+    DevicesController,
+    InvitesController,
+    PermissionsController,
+  ],
   providers: [
     AuthService,
     AvatarService,
     PasswordService,
     SessionService,
+    DeviceService,
     SessionGuard,
     InviteSettingsResolver,
     InviteService,
@@ -29,6 +37,7 @@ import { SessionService } from './session.service';
     AuthService,
     PasswordService,
     SessionService,
+    DeviceService,
     SessionGuard,
     InviteService,
     InviteSettingsResolver,

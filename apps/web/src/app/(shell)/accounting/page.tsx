@@ -77,6 +77,8 @@ type GlMapForm = {
   salesJournal: string;
   bankJournal: string;
   purchasesJournal: string;
+  ras: string;
+  vatInput: string;
 };
 
 type LoadState =
@@ -193,6 +195,8 @@ function AccountingPageInner() {
             ...GL_MAPPING_DEFAULTS,
             ...mapRes.data.codes,
             bankFee: mapRes.data.codes.bankFee ?? "",
+            ras: mapRes.data.codes.ras ?? "",
+            vatInput: mapRes.data.codes.vatInput ?? "",
           }
         : { ...GL_MAPPING_DEFAULTS };
 
@@ -302,6 +306,8 @@ function AccountingPageInner() {
       [GL_MAPPING_KEYS.ap, mapDraft.ap],
       [GL_MAPPING_KEYS.expense, mapDraft.expense],
       [GL_MAPPING_KEYS.bankFee, mapDraft.bankFee],
+      [GL_MAPPING_KEYS.ras, mapDraft.ras],
+      [GL_MAPPING_KEYS.vatInput, mapDraft.vatInput],
       [GL_MAPPING_KEYS.salesJournal, mapDraft.salesJournal],
       [GL_MAPPING_KEYS.bankJournal, mapDraft.bankJournal],
       [GL_MAPPING_KEYS.purchasesJournal, mapDraft.purchasesJournal],
@@ -819,6 +825,8 @@ function AccountingPageInner() {
                       ["ap", "Fournisseurs (AP)", "account"],
                       ["expense", "Achats / charges (AP)", "account"],
                       ["bankFee", "Frais bancaires", "account"],
+                      ["ras", "RAS à payer (GL)", "account"],
+                      ["vatInput", "TVA déductible (AP)", "account"],
                       ["salesJournal", "Journal ventes", "journal"],
                       ["bankJournal", "Journal banque", "journal"],
                       ["purchasesJournal", "Journal achats", "journal"],
@@ -828,7 +836,7 @@ function AccountingPageInner() {
                       key={field}
                       className="block text-[length:var(--a-text-sm)] text-a-fg-muted"
                     >
-                      {label}
+                      {localizeUiString(label, locale) ?? label}
                       <select
                         className={cn(softSelect, "mt-1")}
                         value={mapDraft[field]}
@@ -838,7 +846,9 @@ function AccountingPageInner() {
                           )
                         }
                       >
-                        {field === "bankFee" ? (
+                        {field === "bankFee" ||
+                        field === "ras" ||
+                        field === "vatInput" ? (
                           <option value="">— non configuré</option>
                         ) : null}
                         {kind === "account"

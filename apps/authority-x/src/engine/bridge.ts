@@ -5,6 +5,7 @@
 
 import { suggest, suggestWithEntity } from "./index";
 import type { ResolvedEntity, SuggestResult, ScoredSuggestion } from "./types";
+import { deviceAuthHeaders } from "../device-auth";
 
 const API_BASE =
   (import.meta as { env?: { VITE_AUTHORITY_API?: string } }).env
@@ -158,6 +159,7 @@ export async function prepareIntent(input: {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
+        ...deviceAuthHeaders(),
       },
       body: JSON.stringify(body),
       signal: input.signal,

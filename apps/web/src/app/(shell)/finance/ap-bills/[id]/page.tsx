@@ -217,7 +217,7 @@ export default function FinanceApBillFichePage() {
         }
         kicker="Finance"
         title={bill ? bill.number : "Facture fournisseur"}
-        description="AP bill Soft Glass — décaissement · RAS auto si Prefs VALIDATED (D264) · GL Thunder (D273)."
+        description="AP bill Soft Glass — lignes TVA optionnelles (D276) · RAS auto si Prefs VALIDATED · GL Thunder."
         status={
           bill ? (
             <ABadge tone={apBillBadgeTone(bill.status)}>
@@ -324,7 +324,23 @@ export default function FinanceApBillFichePage() {
                   <dl className="grid gap-3 sm:grid-cols-2">
                     <div>
                       <dt className="text-[length:var(--a-text-xs)] text-a-muted">
-                        Total
+                        HT
+                      </dt>
+                      <dd className="font-mono text-[length:var(--a-text-lg)] tabular-nums">
+                        {bill.amountHt ?? "0.000"} {bill.currency}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                        TVA
+                      </dt>
+                      <dd className="font-mono text-[length:var(--a-text-lg)] tabular-nums">
+                        {bill.amountTax ?? "0.000"} {bill.currency}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                        Total TTC
                       </dt>
                       <dd className="font-mono text-[length:var(--a-text-lg)] tabular-nums">
                         {bill.amountTotal} {bill.currency}
@@ -348,6 +364,61 @@ export default function FinanceApBillFichePage() {
                       </dd>
                     </div>
                   </dl>
+                </APageSection>
+                <APageSection title="Lignes">
+                  {(bill.lines?.length ?? 0) === 0 ? (
+                    <p className="text-[length:var(--a-text-sm)] text-a-muted">
+                      Aucune ligne TVA — facture TTC as-recorded. GL TVA
+                      déductible seulement si Prefs{" "}
+                      <span className="a-mono">accounting.gl.vat_input</span>{" "}
+                      mappé (jamais inventé).
+                    </p>
+                  ) : (
+                    <div className={softTableWrap}>
+                      <table className="w-full text-left text-[length:var(--a-text-sm)]">
+                        <thead className={softThead}>
+                          <tr>
+                            <th className="px-3 py-2 font-medium">#</th>
+                            <th className="px-3 py-2 font-medium">
+                              Description
+                            </th>
+                            <th className="px-3 py-2 font-medium">TVA</th>
+                            <th className="px-3 py-2 font-medium text-right">
+                              HT
+                            </th>
+                            <th className="px-3 py-2 font-medium text-right">
+                              Taxe
+                            </th>
+                            <th className="px-3 py-2 font-medium text-right">
+                              TTC
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bill.lines?.map((l) => (
+                            <tr key={l.id} className={softTr}>
+                              <td className="px-3 py-2 font-mono tabular-nums">
+                                {l.lineNo}
+                              </td>
+                              <td className="px-3 py-2">{l.description}</td>
+                              <td className="px-3 py-2 font-mono text-a-muted">
+                                {l.taxCode ?? "—"}
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono tabular-nums">
+                                {l.amountHt}
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono tabular-nums">
+                                {l.amountTax}
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono tabular-nums">
+                                {l.amountTtc}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </APageSection>
                 <APageSection title="Décaissements liés">
                   {(bill.payments?.length ?? 0) === 0 ? (
@@ -416,8 +487,9 @@ export default function FinanceApBillFichePage() {
                   <li>Version : {bill.version}</li>
                   <li>
                     Lien optionnel vers `FinApPayment` · GL Thunder à la
-                    validation / décaissement (D273) · rapprochement banque
-                    sans écriture supplémentaire.
+                    validation (TVA déductible si mapping Prefs, D276) /
+                    décaissement (RAS D275) · rapprochement banque sans
+                    écriture supplémentaire.
                   </li>
                 </ul>
               </AContextPanel>
@@ -430,7 +502,7 @@ export default function FinanceApBillFichePage() {
         open={payOpen}
         onOpenChange={setPayOpen}
         title="Décaissement lié"
-        description="Crée un FinApPayment POSTED lié — GL Dr Fournisseurs / Cr Banque (D273)."
+        description="Crée un FinApPayment POSTED lié — GL Dr Fournisseurs / Cr Banque ; split RAS si mapping Prefs (D275)."
       >
         {payForm && bill ? (
           <div className="space-y-3">

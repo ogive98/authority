@@ -1,12 +1,18 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { FinApBillStatus, Prisma } from '@prisma/client';
+import {
+  FinApBillStatus,
+  Prisma,
+  TaxDecisionSource,
+  TaxKind,
+} from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { TaxService } from '../tax/tax.service';
 import {
   FINANCE_ERROR_CODES,
   FINANCE_EVENT_TYPES,
 } from './finance.constants';
-import type { CreateApBillDto } from './finance.dto';
+import type { CreateApBillDto, CreateApBillLineDto } from './finance.dto';
 import { FinanceException } from './finance.exception';
 
 export type ApBillPaymentSummary = {
@@ -19,6 +25,18 @@ export type ApBillPaymentSummary = {
   matched: boolean;
 };
 
+export type ApBillLineDto = {
+  id: string;
+  lineNo: number;
+  description: string;
+  amountHt: string;
+  amountTax: string;
+  amountTtc: string;
+  taxCodeId: string;
+  taxCode: string | null;
+  taxLineId: string | null;
+};
+
 export type ApBillDto = {
   id: string;
   companyId: string;
@@ -29,6 +47,8 @@ export type ApBillDto = {
   billDate: string;
   dueDate: string | null;
   amountTotal: string;
+  amountHt: string;
+  amountTax: string;
   currency: string;
   label: string | null;
   reference: string | null;
@@ -37,9 +57,19 @@ export type ApBillDto = {
   postedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  lines?: ApBillLineDto[];
   /** Present on get (D237). */
   payments?: ApBillPaymentSummary[];
   amountPaid?: string;
+};
+
+type BuiltLine = {
+  lineNo: number;
+  description: string;
+  amountHt: number;
+  amountTax: number;
+  amountTtc: number;
+  taxCodeId: string;
 };
 
 @Injectable()
@@ -47,6 +77,7 @@ export class ApBillService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
+    private readonly tax: TaxService,
   ) {}
 
   async list(
@@ -90,6 +121,10 @@ export class ApBillService {
           orderBy: [{ paymentDate: 'desc' }, { createdAt: 'desc' }],
           include: { bankMatches: { select: { id: true } } },
         },
+        lines: {
+          orderBy: { lineNo: 'asc' },
+          include: { taxCode: { select: { code: true } } },
+        },
       },
     });
     if (!row) {
@@ -103,8 +138,15 @@ export class ApBillService {
   }
 
   async create(companyId: string, dto: CreateApBillDto): Promise<ApBillDto> {
-    assertPositiveAmount(dto.amountTotal);
-    const amountTotal = round3(dto.amountTotal);
+    const builtLines = dto.lines?.length
+      ? await this.buildTaxLines(companyId, dto.lines)
+      : [];
+    const amountHt = builtLines.reduce((s, l) => s + l.amountHt, 0);
+    const amountTax = builtLines.reduce((s, l) => s + l.amountTax, 0);
+    const amountTotal = builtLines.length
+      ? round3Num(builtLines.reduce((s, l) => s + l.amountTtc, 0))
+      : round3Num(dto.amountTotal ?? 0);
+    assertPositiveAmount(amountTotal);
 
     let supplierId: string | null = dto.supplierId?.trim() || null;
     let vendorName = dto.vendorName?.trim() ?? '';
@@ -137,6 +179,7 @@ export class ApBillService {
     const dueDate = dto.dueDate
       ? new Date(`${dto.dueDate.slice(0, 10)}T00:00:00.000Z`)
       : null;
+    const currency = (dto.currency?.trim() || 'TND').toUpperCase();
 
     const row = await this.prisma.$transaction(async (tx) => {
       const bill = await tx.finApBill.create({
@@ -149,10 +192,31 @@ export class ApBillService {
           billDate,
           dueDate,
           amountTotal,
-          currency: (dto.currency?.trim() || 'TND').toUpperCase(),
+          amountHt,
+          amountTax,
+          currency,
           label: dto.label?.trim() || null,
           reference: dto.reference?.trim() || null,
           notes: dto.notes?.trim() || null,
+          lines: builtLines.length
+            ? {
+                create: builtLines.map((l) => ({
+                  companyId,
+                  lineNo: l.lineNo,
+                  description: l.description,
+                  amountHt: l.amountHt,
+                  amountTax: l.amountTax,
+                  amountTtc: l.amountTtc,
+                  taxCodeId: l.taxCodeId,
+                })),
+              }
+            : undefined,
+        },
+        include: {
+          lines: {
+            orderBy: { lineNo: 'asc' },
+            include: { taxCode: { select: { code: true } } },
+          },
         },
       });
       await this.outbox.enqueue(tx, {
@@ -166,6 +230,8 @@ export class ApBillService {
           vendorName: bill.vendorName,
           supplierId: bill.supplierId,
           amountTotal: bill.amountTotal.toString(),
+          amountHt: bill.amountHt.toString(),
+          amountTax: bill.amountTax.toString(),
         },
       });
       return bill;
@@ -177,6 +243,7 @@ export class ApBillService {
   async post(companyId: string, id: string): Promise<ApBillDto> {
     const existing = await this.prisma.finApBill.findFirst({
       where: { id, companyId, deletedAt: null },
+      include: { lines: { orderBy: { lineNo: 'asc' } } },
     });
     if (!existing) {
       throw new FinanceException(
@@ -194,12 +261,36 @@ export class ApBillService {
     }
 
     const row = await this.prisma.$transaction(async (tx) => {
+      if (existing.lines.length > 0) {
+        await this.tax.freezeDocumentLines(tx, companyId, {
+          sourceType: 'fin_ap_bill',
+          sourceId: existing.id,
+          currency: existing.currency,
+          lines: existing.lines.map((l) => ({
+            id: l.id,
+            lineNo: l.lineNo,
+            taxCodeId: l.taxCodeId,
+            productId: null,
+            qty: 1,
+            unitPriceHt: Number(l.amountHt),
+            amountHt: Number(l.amountHt),
+            description: l.description,
+            taxLineId: l.taxLineId,
+          })),
+        });
+      }
       const bill = await tx.finApBill.update({
         where: { id: existing.id },
         data: {
           status: FinApBillStatus.POSTED,
           postedAt: new Date(),
           version: { increment: 1 },
+        },
+        include: {
+          lines: {
+            orderBy: { lineNo: 'asc' },
+            include: { taxCode: { select: { code: true } } },
+          },
         },
       });
       await this.outbox.enqueue(tx, {
@@ -212,6 +303,8 @@ export class ApBillService {
           number: bill.number,
           vendorName: bill.vendorName,
           amountTotal: bill.amountTotal.toString(),
+          amountHt: bill.amountHt.toString(),
+          amountTax: bill.amountTax.toString(),
           billDate: bill.billDate.toISOString().slice(0, 10),
         },
       });
@@ -265,6 +358,76 @@ export class ApBillService {
     return serializeApBill(row);
   }
 
+  private async buildTaxLines(
+    companyId: string,
+    lines: CreateApBillLineDto[],
+  ): Promise<BuiltLine[]> {
+    const out: BuiltLine[] = [];
+    let lineNo = 0;
+    for (const line of lines) {
+      lineNo += 1;
+      const amountHt = round3Num(line.amountHt);
+      if (!(amountHt > 0)) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_AMOUNT,
+          'Line amountHt must be > 0.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      let taxCodeId = line.taxCodeId?.trim() || undefined;
+      if (!taxCodeId) {
+        taxCodeId = (await this.tax.resolveStubVat19(companyId)) ?? undefined;
+      }
+      if (!taxCodeId) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_AMOUNT,
+          'VAT code required (or stub TVA19).',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      const { decisions } = await this.tax.calculate(companyId, {
+        currency: 'TND',
+        operationType: 'AP_BILL',
+        lines: [
+          {
+            lineNo,
+            taxCodeId,
+            qty: 1,
+            unitPriceHt: amountHt,
+            amountHt,
+            description: line.description?.trim() || 'AP',
+          },
+        ],
+      });
+      const vat = decisions.find((d) => d.kind === TaxKind.VAT);
+      if (!vat) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_AMOUNT,
+          'VAT tax code is not applicable for this AP line.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      if (!vat.applicable && vat.source !== TaxDecisionSource.EXEMPTION) {
+        throw new FinanceException(
+          FINANCE_ERROR_CODES.INVALID_AMOUNT,
+          'VAT tax code is not applicable for this AP line.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      const amountTax = vat.applicable ? vat.calculatedAmount : 0;
+      const resolved = vat.ruleId ?? taxCodeId;
+      out.push({
+        lineNo,
+        description: line.description?.trim() || 'AP',
+        amountHt,
+        amountTax,
+        amountTtc: round3Num(amountHt + amountTax),
+        taxCodeId: resolved,
+      });
+    }
+    return out;
+  }
+
   private async nextNumber(companyId: string): Promise<string> {
     const year = new Date().getUTCFullYear();
     const prefix = `APB-${year}-`;
@@ -290,8 +453,8 @@ function assertPositiveAmount(amount: number) {
   }
 }
 
-function round3(n: number): Prisma.Decimal {
-  return new Prisma.Decimal(n.toFixed(3));
+function round3Num(n: number): number {
+  return Number(n.toFixed(3));
 }
 
 function serializeApBill(
@@ -305,6 +468,8 @@ function serializeApBill(
     billDate: Date;
     dueDate: Date | null;
     amountTotal: Prisma.Decimal;
+    amountHt?: Prisma.Decimal | number | null;
+    amountTax?: Prisma.Decimal | number | null;
     currency: string;
     label: string | null;
     reference: string | null;
@@ -313,6 +478,17 @@ function serializeApBill(
     postedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    lines?: Array<{
+      id: string;
+      lineNo: number;
+      description: string;
+      amountHt: Prisma.Decimal;
+      amountTax: Prisma.Decimal;
+      amountTtc: Prisma.Decimal;
+      taxCodeId: string;
+      taxLineId: string | null;
+      taxCode?: { code: string } | null;
+    }>;
     payments?: {
       id: string;
       number: string;
@@ -325,6 +501,8 @@ function serializeApBill(
   },
   withPayments = false,
 ): ApBillDto {
+  const ht = Number(row.amountHt ?? 0);
+  const tax = Number(row.amountTax ?? 0);
   const base: ApBillDto = {
     id: row.id,
     companyId: row.companyId,
@@ -335,6 +513,8 @@ function serializeApBill(
     billDate: row.billDate.toISOString().slice(0, 10),
     dueDate: row.dueDate ? row.dueDate.toISOString().slice(0, 10) : null,
     amountTotal: row.amountTotal.toFixed(3),
+    amountHt: ht.toFixed(3),
+    amountTax: tax.toFixed(3),
     currency: row.currency,
     label: row.label,
     reference: row.reference,
@@ -343,6 +523,17 @@ function serializeApBill(
     postedAt: row.postedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    lines: row.lines?.map((l) => ({
+      id: l.id,
+      lineNo: l.lineNo,
+      description: l.description,
+      amountHt: Number(l.amountHt).toFixed(3),
+      amountTax: Number(l.amountTax).toFixed(3),
+      amountTtc: Number(l.amountTtc).toFixed(3),
+      taxCodeId: l.taxCodeId,
+      taxCode: l.taxCode?.code ?? null,
+      taxLineId: l.taxLineId,
+    })),
   };
   if (!withPayments) return base;
   const payments = (row.payments ?? []).map((p) => ({

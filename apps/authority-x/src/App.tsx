@@ -13,6 +13,12 @@ import {
 } from "./engine";
 import { prepareIntent } from "./engine/bridge";
 import type { ResolvedEntity } from "./engine/types";
+import {
+  claimPairCode,
+  clearDeviceAuth,
+  getCachedDeviceAuth,
+  verifyDeviceAuth,
+} from "./device-auth";
 
 type Phase =
   | "idle"
@@ -52,6 +58,10 @@ export function App() {
     [],
   );
   const [ambiguous, setAmbiguous] = useState(false);
+  const [pairedName, setPairedName] = useState<string | null>(null);
+  const [pairCode, setPairCode] = useState("");
+  const [pairBusy, setPairBusy] = useState(false);
+  const [pairError, setPairError] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const [isPreview, setIsPreview] = useState(true);
   const [appeared, setAppeared] = useState(false);
@@ -80,11 +90,23 @@ export function App() {
     phase === "awaiting_validation" ||
     phase === "success";
   const stepsClickable = showLog;
+  const showPair =
+    open &&
+    !pairedName &&
+    !query.trim() &&
+    (phase === "input" || phase === "suggestions");
+  const showPairedStatus =
+    Boolean(pairedName) &&
+    open &&
+    !query.trim() &&
+    phase === "input";
   const hasDrop =
     showRecent ||
     showAmbiguous ||
     showSuggestions ||
     showLog ||
+    showPair ||
+    showPairedStatus ||
     Boolean(openError);
 
   useEffect(() => {
@@ -100,6 +122,8 @@ export function App() {
         return;
       }
       setIsPreview(false);
+      const ok = await verifyDeviceAuth();
+      setPairedName(ok ? getCachedDeviceAuth()?.displayName ?? "OK" : null);
       unsubs.push(
         window.authorityX.onOpened(() => {
           setAppeared(true);
@@ -167,6 +191,25 @@ export function App() {
   function spinOnce() {
     setSpinning(true);
     window.setTimeout(() => setSpinning(false), 420);
+  }
+
+  async function onClaimPair() {
+    setPairBusy(true);
+    setPairError(null);
+    try {
+      const auth = await claimPairCode(pairCode);
+      setPairedName(auth.displayName);
+      setPairCode("");
+    } catch (err) {
+      setPairError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPairBusy(false);
+    }
+  }
+
+  async function onUnpair() {
+    await clearDeviceAuth();
+    setPairedName(null);
   }
 
   function expandFromOrb() {
@@ -420,6 +463,58 @@ export function App() {
           <div className="ax-drop-inner">
             {openError ? (
               <div className="ax-open-error">{openError}</div>
+            ) : null}
+
+            {showPair ? (
+              <div className="ax-pair">
+                <div className="ax-hint">Appairage Soft Glass</div>
+                <p className="ax-pair-help">
+                  Préférences → Poste → Générer un code, puis coller ici.
+                </p>
+                <div className="ax-pair-row">
+                  <input
+                    className="ax-pair-input"
+                    value={pairCode}
+                    placeholder="XXXX-XXXX"
+                    spellCheck={false}
+                    autoCapitalize="characters"
+                    onChange={(e) => setPairCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void onClaimPair();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="ax-btn-primary"
+                    disabled={pairBusy || pairCode.trim().length < 8}
+                    onClick={() => void onClaimPair()}
+                  >
+                    Lier
+                  </button>
+                </div>
+                {pairError ? (
+                  <div className="ax-open-error">{pairError}</div>
+                ) : null}
+                <button
+                  type="button"
+                  className="ax-btn-quiet"
+                  onClick={() => void openAuthority("/settings#poste")}
+                >
+                  Ouvrir Préférences
+                </button>
+              </div>
+            ) : null}
+
+            {showPairedStatus ? (
+              <div className="ax-pair-status">
+                <span>API · {pairedName}</span>
+                <button type="button" className="ax-btn-quiet" onClick={() => void onUnpair()}>
+                  Délier
+                </button>
+              </div>
             ) : null}
 
             {showRecent ? (

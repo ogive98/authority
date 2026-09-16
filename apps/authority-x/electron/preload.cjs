@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld("authorityX", {
   hide: () => ipcRenderer.invoke("authority-x:hide"),
   show: () => ipcRenderer.invoke("authority-x:show"),
   connectionStub: () => ipcRenderer.invoke("authority-x:connection-stub"),
+  getDeviceAuth: () => ipcRenderer.invoke("authority-x:get-device-auth"),
+  setDeviceAuth: (auth) => ipcRenderer.invoke("authority-x:set-device-auth", auth),
+  clearDeviceAuth: () => ipcRenderer.invoke("authority-x:clear-device-auth"),
   openAuthority: (url) => ipcRenderer.invoke("authority-x:open-authority", url),
   onOpened: (cb) => {
     const handler = () => cb();

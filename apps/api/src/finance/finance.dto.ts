@@ -12,6 +12,7 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import {
@@ -537,6 +538,22 @@ export class CreateApPaymentDto {
 }
 
 /** D236 — AP vendor bill V0. D250 optional supplierId (vendorName still display SoT). */
+export class CreateApBillLineDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  description?: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.001)
+  amountHt!: number;
+
+  @IsOptional()
+  @IsUUID()
+  taxCodeId?: string;
+}
+
 export class CreateApBillDto {
   @IsOptional()
   @IsString()
@@ -548,10 +565,18 @@ export class CreateApBillDto {
   @IsUUID()
   supplierId?: string;
 
+  @ValidateIf((o: CreateApBillDto) => !o.lines?.length)
   @Type(() => Number)
   @IsNumber()
   @Min(0.001)
-  amountTotal!: number;
+  amountTotal?: number;
+
+  /** D276 — optional tax lines (engine). When set, amountTotal is derived TTC. */
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateApBillLineDto)
+  lines?: CreateApBillLineDto[];
 
   @IsDateString()
   billDate!: string;

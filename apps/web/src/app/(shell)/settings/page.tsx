@@ -17,6 +17,7 @@ import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { PrefsModesOpsPanel } from "@/components/settings/prefs-modes-ops-panel";
 import { PrefsToggleRow } from "@/components/settings/prefs-toggle-row";
 import { NotifPrefsPanel } from "@/components/settings/notif-prefs-panel";
+import { AuthorityXPairPanel } from "@/components/settings/authority-x-pair-panel";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import {
   fetchGlMapping,
@@ -72,9 +73,14 @@ type GlMapForm = {
   bank: string;
   revenue: string;
   vat: string;
+  ap: string;
+  expense: string;
   bankFee: string;
+  ras: string;
+  vatInput: string;
   salesJournal: string;
   bankJournal: string;
+  purchasesJournal: string;
 };
 
 type ExpertiseLoad =
@@ -542,6 +548,8 @@ export default function SettingsPage() {
       ...GL_MAPPING_DEFAULTS,
       ...res.data.codes,
       bankFee: res.data.codes.bankFee ?? "",
+      ras: res.data.codes.ras ?? "",
+      vatInput: res.data.codes.vatInput ?? "",
     });
   }, [canCompanyWrite]);
 
@@ -778,9 +786,14 @@ export default function SettingsPage() {
       [GL_MAPPING_KEYS.bank, glDraft.bank],
       [GL_MAPPING_KEYS.revenue, glDraft.revenue],
       [GL_MAPPING_KEYS.vat, glDraft.vat],
+      [GL_MAPPING_KEYS.ap, glDraft.ap],
+      [GL_MAPPING_KEYS.expense, glDraft.expense],
       [GL_MAPPING_KEYS.bankFee, glDraft.bankFee],
+      [GL_MAPPING_KEYS.ras, glDraft.ras],
+      [GL_MAPPING_KEYS.vatInput, glDraft.vatInput],
       [GL_MAPPING_KEYS.salesJournal, glDraft.salesJournal],
       [GL_MAPPING_KEYS.bankJournal, glDraft.bankJournal],
+      [GL_MAPPING_KEYS.purchasesJournal, glDraft.purchasesJournal],
     ];
     for (const [key, value] of pairs) {
       const r = await putCompanySetting(key, value.trim());
@@ -1151,6 +1164,9 @@ export default function SettingsPage() {
                   ) : null}
                 </div>
                 <div className="space-y-3 border-t border-transparent pt-4">
+                  <AuthorityXPairPanel />
+                </div>
+                <div className="space-y-3 border-t border-transparent pt-4">
                   <NotifPrefsPanel />
                 </div>
               </section>
@@ -1235,7 +1251,7 @@ export default function SettingsPage() {
                 </h2>
                 <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Comptes et journaux pour le pont Finance → comptabilité.
-                  bank_fee vide jusqu’à saisie humaine.
+                  bank_fee, RAS GL et TVA déductible AP vides jusqu’à saisie humaine.
                 </p>
                 {glError ? (
                   <AErrorState
@@ -1251,7 +1267,11 @@ export default function SettingsPage() {
                       ["bank", "Banque", GL_MAPPING_KEYS.bank],
                       ["revenue", "Produits", GL_MAPPING_KEYS.revenue],
                       ["vat", "TVA", GL_MAPPING_KEYS.vat],
+                      ["ap", "Fournisseurs (AP)", GL_MAPPING_KEYS.ap],
+                      ["expense", "Achats / charges", GL_MAPPING_KEYS.expense],
                       ["bankFee", "Frais bancaires", GL_MAPPING_KEYS.bankFee],
+                      ["ras", "RAS à payer (GL)", GL_MAPPING_KEYS.ras],
+                      ["vatInput", "TVA déductible (AP)", GL_MAPPING_KEYS.vatInput],
                       [
                         "salesJournal",
                         "Journal ventes",
@@ -1261,6 +1281,11 @@ export default function SettingsPage() {
                         "bankJournal",
                         "Journal banque",
                         GL_MAPPING_KEYS.bankJournal,
+                      ],
+                      [
+                        "purchasesJournal",
+                        "Journal achats",
+                        GL_MAPPING_KEYS.purchasesJournal,
                       ],
                     ] as const
                   ).map(([field, label, key]) => (
@@ -1279,7 +1304,11 @@ export default function SettingsPage() {
                         }
                         className="a-mono"
                         placeholder={
-                          field === "bankFee" ? "Vide jusqu’à saisie" : undefined
+                          field === "bankFee" ||
+                          field === "ras" ||
+                          field === "vatInput"
+                            ? "Vide jusqu’à saisie"
+                            : undefined
                         }
                       />
                     </label>

@@ -234,9 +234,9 @@ export class TaxService {
     tx: Prisma.TransactionClient,
     companyId: string,
     input: {
-      sourceType: 'fin_invoice' | 'fin_credit_note';
+      sourceType: 'fin_invoice' | 'fin_credit_note' | 'fin_ap_bill';
       sourceId: string;
-      customerId: string;
+      customerId?: string;
       currency?: string;
       lines: Array<{
         id: string;
@@ -312,8 +312,13 @@ export class TaxService {
           where: { id: line.id },
           data: { taxLineId: row.id },
         });
-      } else {
+      } else if (input.sourceType === 'fin_credit_note') {
         await tx.finCreditNoteLine.update({
+          where: { id: line.id },
+          data: { taxLineId: row.id },
+        });
+      } else {
+        await tx.finApBillLine.update({
           where: { id: line.id },
           data: { taxLineId: row.id },
         });

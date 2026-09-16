@@ -32,6 +32,10 @@ const SETTING_META: Record<
     'Bank journal code for payment / bank fee / AP payment GL posting',
   [ACCOUNTING_SETTING_KEYS.PURCHASES_JOURNAL]:
     'Purchases journal code for AP bill GL posting',
+  [ACCOUNTING_SETTING_KEYS.RAS]:
+    'GL account code for RAS withheld on AP payment (empty until human — D275)',
+  [ACCOUNTING_SETTING_KEYS.VAT_INPUT]:
+    'GL account code for deductible VAT on AP bills (empty until human — D276)',
 };
 
 /**
@@ -102,6 +106,8 @@ export class AccountingGlMappingResolver {
       salesJournal: read(ACCOUNTING_SETTING_KEYS.SALES_JOURNAL),
       bankJournal: read(ACCOUNTING_SETTING_KEYS.BANK_JOURNAL),
       purchasesJournal: read(ACCOUNTING_SETTING_KEYS.PURCHASES_JOURNAL),
+      ras: read(ACCOUNTING_SETTING_KEYS.RAS),
+      vatInput: read(ACCOUNTING_SETTING_KEYS.VAT_INPUT),
     };
   }
 

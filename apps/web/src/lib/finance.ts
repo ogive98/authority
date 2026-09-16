@@ -313,6 +313,18 @@ export type FinApBillPayment = {
   matched: boolean;
 };
 
+export type FinApBillLine = {
+  id: string;
+  lineNo: number;
+  description: string;
+  amountHt: string;
+  amountTax: string;
+  amountTtc: string;
+  taxCodeId: string;
+  taxCode: string | null;
+  taxLineId: string | null;
+};
+
 export type FinApBill = {
   id: string;
   companyId: string;
@@ -323,6 +335,8 @@ export type FinApBill = {
   billDate: string;
   dueDate: string | null;
   amountTotal: string;
+  amountHt?: string;
+  amountTax?: string;
   currency: string;
   label: string | null;
   reference: string | null;
@@ -331,6 +345,7 @@ export type FinApBill = {
   postedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  lines?: FinApBillLine[];
   payments?: FinApBillPayment[];
   amountPaid?: string;
 };
@@ -1764,13 +1779,14 @@ export async function fetchApBill(
 export async function createApBill(body: {
   vendorName?: string;
   supplierId?: string;
-  amountTotal: number;
+  amountTotal?: number;
   billDate: string;
   dueDate?: string;
   label?: string;
   reference?: string;
   notes?: string;
   currency?: string;
+  lines?: Array<{ description?: string; amountHt: number; taxCodeId?: string }>;
 }): Promise<{ ok: true; data: FinApBill } | ApiFail> {
   try {
     const res = await fetch("/api/v1/finance/ap-bills", {
