@@ -25,7 +25,9 @@ import {
   downloadTejXml,
   fetchTaxWithholdings,
   fetchTejCenterOverview,
+  fetchTejExport,
   generateRasCertificate,
+  generateTejInvoicePack,
   generateTejPack,
   validateTaxWithholding,
   WH_STATUS_LABELS,
@@ -33,7 +35,7 @@ import {
   type TaxWithholding,
   type TejCenterOverview,
 } from "@/lib/tax";
-import { softPanel, softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import { softChipClass, softPanel, softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -60,6 +62,7 @@ export default function TejCenterPage() {
   const router = useRouter();
   const [state, setState] = useState<Load>({ kind: "loading" });
   const [periodLabel, setPeriodLabel] = useState("");
+  const [sideFilter, setSideFilter] = useState<"ALL" | "AP" | "AR">("ALL");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -76,7 +79,10 @@ export default function TejCenterPage() {
     const period = periodLabel.trim() || undefined;
     const [ov, list] = await Promise.all([
       fetchTejCenterOverview(period),
-      fetchTaxWithholdings({ periodLabel: period }),
+      fetchTaxWithholdings({
+        periodLabel: period,
+        side: sideFilter === "ALL" ? undefined : sideFilter,
+      }),
     ]);
     if (!ov.ok) {
       if (ov.status === 403) {
@@ -99,7 +105,7 @@ export default function TejCenterPage() {
       overview: ov.data,
       items: list.data.items,
     });
-  }, [periodLabel]);
+  }, [periodLabel, sideFilter]);
 
   useEffect(() => {
     void load();
@@ -165,6 +171,19 @@ export default function TejCenterPage() {
     await load();
   }
 
+  async function onPrepareInvoicePack(arInvoiceId: string) {
+    setActionError(null);
+    setBusy(true);
+    const res = await generateTejInvoicePack(arInvoiceId);
+    setBusy(false);
+    if (!res.ok) {
+      setActionError(res.message);
+      return;
+    }
+    downloadTejXml(res.data);
+    await load();
+  }
+
   async function onPreparePack() {
     setActionError(null);
     const period = periodLabel.trim();
@@ -173,7 +192,10 @@ export default function TejCenterPage() {
       return;
     }
     setBusy(true);
-    const res = await generateTejPack(period);
+    const res = await generateTejPack(
+      period,
+      sideFilter === "ALL" ? undefined : sideFilter,
+    );
     setBusy(false);
     if (!res.ok) {
       setActionError(res.message);
@@ -181,6 +203,18 @@ export default function TejCenterPage() {
     }
     downloadTejXml(res.data);
     await load();
+  }
+
+  async function onRedownloadExport(id: string) {
+    setActionError(null);
+    setBusy(true);
+    const res = await fetchTejExport(id);
+    setBusy(false);
+    if (!res.ok) {
+      setActionError(res.message);
+      return;
+    }
+    downloadTejXml(res.data);
   }
 
   const overview = state.kind === "ok" ? state.overview : null;
@@ -196,7 +230,7 @@ export default function TejCenterPage() {
         }
         kicker="Fiscalité"
         title="TEJ Center"
-        description="Hub Soft Glass RAS → TEJ — certificat · lot XML local (D285) · transmission DISABLED · pas d’XSD officiel."
+        description="Plateforme Soft Glass RAS → TEJ — retenues AP & AR · certificat · lot XML · par facture. Transmission DISABLED · brouillon local (pas d’XSD officiel)."
         primary={
           <AButton
             type="button"
@@ -225,9 +259,9 @@ export default function TejCenterPage() {
                 onSelect: () => router.push("/tax"),
               },
               {
-                id: "prefs",
-                label: "Préférences Expertise",
-                onSelect: () => router.push("/settings#expertise"),
+                id: "invoices",
+                label: "Factures clients",
+                onSelect: () => router.push("/finance/invoices"),
               },
               {
                 id: "ap",
@@ -235,15 +269,39 @@ export default function TejCenterPage() {
                 onSelect: () => router.push("/finance/ap-bills"),
               },
               {
+                id: "prefs",
+                label: "Préférences Expertise",
+                onSelect: () => router.push("/settings#expertise"),
+              },
+              {
                 id: "help",
                 label: "Aide",
-                onSelect: () => router.push("/help"),
+                onSelect: () => router.push("/help#tax"),
               },
             ]}
           />
         }
       />
       <APageBody>
+        <div className={`${softPanel} mb-4 flex flex-wrap items-center gap-4 p-4`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/tej-logo.png"
+            alt="تاج Tej — Plateforme de transfert et échange des données fiscales"
+            className="h-16 w-auto object-contain"
+          />
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+              تاج Tej — plateforme d’échange à des fins fiscales
+            </p>
+            <p className="text-[length:var(--a-text-xs)] text-a-muted">
+              AUTHORITY prépare un XML local pour import manuel dans Tej. Aucune
+              transmission API · schéma officiel XSD non revendiqué.
+            </p>
+          </div>
+          <ABadge tone="warning">Transmission DISABLED</ABadge>
+        </div>
+
         <ExpertiseHintsStrip keys={["tax.ras", "tax.tej"]} />
 
         <div className="mb-4 flex flex-wrap items-end gap-2">
@@ -258,10 +316,27 @@ export default function TejCenterPage() {
               className="w-36"
             />
           </label>
+          <div className="flex flex-wrap gap-1 pb-0.5">
+            {(
+              [
+                ["ALL", "Tous"],
+                ["AP", "Fournisseurs"],
+                ["AR", "Clients"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                className={softChipClass(sideFilter === id)}
+                onClick={() => setSideFilter(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <AButton type="button" size="sm" onClick={() => void load()}>
             Actualiser
           </AButton>
-          <ABadge tone="warning">Transmission DISABLED</ABadge>
         </div>
 
         {state.kind === "loading" ? (
@@ -288,6 +363,12 @@ export default function TejCenterPage() {
                 <p className="text-[length:var(--a-text-xs)] text-a-muted">
                   Période {overview.periodLabel}
                 </p>
+                {overview.withholdings.bySide ? (
+                  <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                    AP {overview.withholdings.bySide.AP} · AR{" "}
+                    {overview.withholdings.bySide.AR}
+                  </p>
+                ) : null}
               </div>
             </APageSection>
             <APageSection title="À valider">
@@ -333,6 +414,60 @@ export default function TejCenterPage() {
           </p>
         ) : null}
 
+        {overview?.tejExports.recent && overview.tejExports.recent.length > 0 ? (
+          <APageSection title="Lots XML récents" className="mb-4">
+            <div className={softTableWrap}>
+              <table className="w-full text-left text-[length:var(--a-text-sm)]">
+                <thead className={softThead}>
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Période</th>
+                    <th className="px-3 py-2 font-medium">Pack</th>
+                    <th className="px-3 py-2 font-medium text-right">Lignes</th>
+                    <th className="px-3 py-2 font-medium">SHA</th>
+                    <th className="px-3 py-2 font-medium text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overview.tejExports.recent.map((ex) => (
+                    <tr key={ex.id} className={softTr}>
+                      <td className="px-3 py-2 a-mono">{ex.periodLabel}</td>
+                      <td className="px-3 py-2">
+                        <ABadge
+                          tone={
+                            ex.packKind === "WITHHOLDING_PACK"
+                              ? "info"
+                              : "neutral"
+                          }
+                        >
+                          {ex.packKind === "WITHHOLDING_PACK"
+                            ? "Lot retenues"
+                            : "Meta"}
+                        </ABadge>
+                      </td>
+                      <td className="px-3 py-2 text-right a-mono tabular-nums">
+                        {ex.withholdingCount}
+                      </td>
+                      <td className="px-3 py-2 a-mono text-[length:var(--a-text-xs)] text-a-muted">
+                        {ex.contentSha256.slice(0, 12)}…
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <AButton
+                          type="button"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void onRedownloadExport(ex.id)}
+                        >
+                          Télécharger
+                        </AButton>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </APageSection>
+        ) : null}
+
         {state.kind === "ok" && items.length === 0 ? (
           <AEmptyState
             title="Aucune retenue"
@@ -347,7 +482,8 @@ export default function TejCenterPage() {
             <table className="w-full text-left text-[length:var(--a-text-sm)]">
               <thead className={softThead}>
                 <tr>
-                  <th className="px-3 py-2 font-medium">Fournisseur</th>
+                  <th className="px-3 py-2 font-medium">Tiers</th>
+                  <th className="px-3 py-2 font-medium">Côté</th>
                   <th className="px-3 py-2 font-medium">Statut</th>
                   <th className="px-3 py-2 font-medium text-right">Base</th>
                   <th className="px-3 py-2 font-medium text-right">RAS</th>
@@ -364,8 +500,24 @@ export default function TejCenterPage() {
                       <div className="text-[length:var(--a-text-xs)] text-a-muted">
                         {row.periodLabel ?? "—"}
                         {row.isStubRate ? " · stub" : ""}
-                        {row.apPaymentId ? " · AP" : ""}
+                        {row.apPaymentId ? " · AP pay" : ""}
+                        {row.arInvoiceId ? (
+                          <>
+                            {" · "}
+                            <Link
+                              href={`/finance/invoices/${row.arInvoiceId}`}
+                              className="text-a-accent hover:underline"
+                            >
+                              Facture
+                            </Link>
+                          </>
+                        ) : null}
                       </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <ABadge tone={row.side === "AR" ? "info" : "neutral"}>
+                        {row.side === "AR" ? "Client" : "Fournisseur"}
+                      </ABadge>
                     </td>
                     <td className="px-3 py-2">
                       <ABadge tone={statusTone(row.status)}>
@@ -408,13 +560,27 @@ export default function TejCenterPage() {
                           </AButton>
                         ) : null}
                         {row.status === "CERTIFICATE_READY" ? (
-                          <AButton
-                            type="button"
-                            size="sm"
-                            onClick={() => void onCertificate(row.id)}
-                          >
-                            Télécharger
-                          </AButton>
+                          <>
+                            <AButton
+                              type="button"
+                              size="sm"
+                              onClick={() => void onCertificate(row.id)}
+                            >
+                              Télécharger
+                            </AButton>
+                            {row.arInvoiceId ? (
+                              <AButton
+                                type="button"
+                                size="sm"
+                                disabled={busy}
+                                onClick={() =>
+                                  void onPrepareInvoicePack(row.arInvoiceId!)
+                                }
+                              >
+                                XML facture
+                              </AButton>
+                            ) : null}
+                          </>
                         ) : null}
                         {row.isStubRate && row.applicable === true ? (
                           <span className="text-[length:var(--a-text-xs)] text-a-warning">

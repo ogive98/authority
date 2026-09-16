@@ -1388,6 +1388,34 @@ export const HELP_MODULES: HelpModule[] = [
       },
       {
         name: {
+          fr: "RAS sur factures clients (AR)",
+          it: "RAS su fatture clienti (AR)",
+        },
+        when: {
+          fr: "Activer le flag client puis émettre une facture — retenue dans TEJ Center.",
+          it: "Attivare il flag cliente poi emettere una fattura — ritenuta in TEJ Center.",
+        },
+        steps: {
+          fr: [
+            "Fiche client → Fiscalité → « RAS sur factures clients (AR) » ON.",
+            "Prefs `tax.ras` VALIDATED (jamais inventer ; stub bloque validate/certificat).",
+            "Émettre la facture (`/finance/invoices/[id]` → Émettre).",
+            "Retenue CALCULATED créée (side AR, liée à la facture) — montants facture inchangés.",
+            "Bandeau Soft Glass facture → TEJ Center · XML facture (si Certificat prêt).",
+            "TEJ Center : filtre Clients · Préparer lot XML (période) ou XML facture (ligne).",
+          ],
+          it: [
+            "Scheda cliente → Fiscalità → « RAS su fatture clienti (AR) » ON.",
+            "Prefs `tax.ras` VALIDATED (mai inventare; stub blocca validate/certificato).",
+            "Emettere la fattura (`/finance/invoices/[id]` → Emetti).",
+            "Ritenuta CALCULATED creata (side AR, collegata alla fattura) — importi fattura invariati.",
+            "Fascia Soft Glass fattura → TEJ Center · XML fattura (se Certificato pronto).",
+            "TEJ Center: filtro Clienti · Prepara lotto XML (periodo) o XML fattura (riga).",
+          ],
+        },
+      },
+      {
+        name: {
           fr: "Retenue auto depuis décaissement AP",
           it: "Ritenuta auto da pagamento AP",
         },
@@ -1455,7 +1483,9 @@ export const HELP_MODULES: HelpModule[] = [
           fr: [
             "Validez Prefs `tax.tej` (params déclarant locaux) — jamais inventer.",
             "Sur `/tax/tej-center` : période renseignée + au moins une retenue Certificat prêt.",
+            "Filtre Tous / Fournisseurs / Clients pour cibler le lot (AP, AR ou mixte).",
             "Bouton primaire « Préparer lot XML » → download XML WITHHOLDING_PACK + SHA-256.",
+            "Ou ligne AR « XML facture » / bandeau facture → pack par `arInvoiceId`.",
             "Les lignes passent en TEJ_PREPARED et sont liées au lot.",
             "Schéma = AUTHORITY_LOCAL_DRAFT — pas un XSD TEJ officiel ; ne pas uploader.",
             "Transmission DISABLED forever côté AUTHORITY jusqu’à unlock produit + XSD fourni.",
@@ -1463,7 +1493,9 @@ export const HELP_MODULES: HelpModule[] = [
           it: [
             "Validare Prefs `tax.tej` (parametri dichiarante locali) — mai inventare.",
             "Su `/tax/tej-center`: periodo impostato + almeno una ritenuta Certificato pronto.",
+            "Filtro Tutti / Fornitori / Clienti per mirare il lotto (AP, AR o misto).",
             "Pulsante primario « Prepara lotto XML » → download XML WITHHOLDING_PACK + SHA-256.",
+            "O riga AR « XML fattura » / fascia fattura → pack per `arInvoiceId`.",
             "Le righe passano a TEJ_PREPARED e sono collegate al lotto.",
             "Schema = AUTHORITY_LOCAL_DRAFT — non un XSD TEJ ufficiale; non caricare.",
             "Trasmissione DISABLED forever lato AUTHORITY fino a unlock prodotto + XSD fornito.",
@@ -1475,6 +1507,7 @@ export const HELP_MODULES: HelpModule[] = [
           fr: "TEJ brouillon meta (sans retenues)",
           it: "TEJ bozza meta (senza ritenute)",
         },
+
         when: {
           fr: "Générer un XML meta vide depuis `/tax` (historique hash).",
           it: "Generare un XML meta vuoto da `/tax` (storico hash).",
@@ -1504,8 +1537,9 @@ export const HELP_MODULES: HelpModule[] = [
         "Pipeline RAS Soft Glass : DETECTED/CALCULATED → VALIDATED → CERTIFICATE_READY → TEJ_PREPARED.",
         "Stub STUB_UNTIL_EXPERT bloque validate et certificat (D280).",
         "Décaissement AP RAS → TaxWithholding 1:1 idempotent (D283).",
+        "Facture client ISSUED + flag RAS AR → TaxWithholding AR (D286) — totaux facture inchangés.",
         "Certificat = attestation interne AUTHORITY_LOCAL_CERTIFICATE — pas formulaire MF.",
-        "Lot XML = AUTHORITY_LOCAL_DRAFT WITHHOLDING_PACK — pas XSD officiel · pas transmission.",
+        "Lot XML = AUTHORITY_LOCAL_DRAFT WITHHOLDING_PACK (période ou par facture) — pas XSD officiel · pas transmission.",
         "TEJ transmission pretend interdite jusqu’à unlock + XSD MF fourni.",
         "Règle fiscale ACTIVE seulement après validation expert (D259).",
       ],

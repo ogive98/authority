@@ -80,6 +80,7 @@ export const taxManifest: ModuleManifest = {
     'tax.withholding.created.v1',
     'tax.withholding.validated.v1',
     'tax.withholding.from_ap.v1',
+    'tax.withholding.from_ar.v1',
     'tax.withholding.certificate.v1',
   ],
   navigationEntries: [

@@ -26,8 +26,12 @@ import {
   issueInvoice,
   type FinInvoice,
 } from "@/lib/finance";
+import {
+  downloadTejXml,
+  generateTejInvoicePack,
+} from "@/lib/tax";
 import { FULFILLMENT_DOC_LABELS } from "@/lib/customers";
-import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import { softPanel, softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -80,9 +84,23 @@ export default function FinanceInvoiceFichePage() {
       return;
     }
     setState({ kind: "ok", data: res.data });
+    if (res.data.taxWithholdingId) {
+      setActionError(null);
+    }
   }
 
-  async function onCancel() {
+  async function onTejInvoicePack() {
+    if (!id) return;
+    setBusy(true);
+    setActionError(null);
+    const res = await generateTejInvoicePack(id);
+    setBusy(false);
+    if (!res.ok) {
+      setActionError(res.message);
+      return;
+    }
+    downloadTejXml(res.data);
+  }
     if (!id) return;
     if (
       !window.confirm(
@@ -116,6 +134,19 @@ export default function FinanceInvoiceFichePage() {
             `/finance/credit-notes?invoiceId=${encodeURIComponent(inv.id)}`,
           ),
       });
+      items.push({
+        id: "tej",
+        label: "TEJ Center",
+        onSelect: () => router.push("/tax/tej-center"),
+      });
+      if (inv.taxWithholdingId) {
+        items.push({
+          id: "tej-pack",
+          label: "XML TEJ facture",
+          disabled: busy,
+          onSelect: () => void onTejInvoicePack(),
+        });
+      }
     }
     if (inv.status === "DRAFT" || inv.status === "ISSUED") {
       items.push({
@@ -172,6 +203,41 @@ export default function FinanceInvoiceFichePage() {
 
       <APageBody>
         <ExpertiseHintsStrip keys={["tax.fodec", "tax.timbre", "tax.ras", "tax.tej"]} />
+
+        {inv?.taxWithholdingId ? (
+          <div className={`${softPanel} mb-4 flex flex-wrap items-center gap-3 p-4`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/tej-logo.png"
+              alt="Tej"
+              className="h-10 w-auto object-contain"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-[length:var(--a-text-sm)] font-medium">
+                RAS client liée — TEJ Center
+              </p>
+              <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                Retenue créée à l’émission (Prefs tax.ras). Valider / certificat /
+                XML dans TEJ Center. Transmission DISABLED.
+              </p>
+            </div>
+            <AButton
+              type="button"
+              size="sm"
+              onClick={() => router.push("/tax/tej-center")}
+            >
+              Ouvrir TEJ Center
+            </AButton>
+            <AButton
+              type="button"
+              size="sm"
+              disabled={busy}
+              onClick={() => void onTejInvoicePack()}
+            >
+              XML facture
+            </AButton>
+          </div>
+        ) : null}
 
         {actionError ? (
           <p className="text-[length:var(--a-text-sm)] text-a-danger">

@@ -162,6 +162,45 @@ describe('TejLocalService (D265/D285)', () => {
     );
   });
 
+  it('generatePackForInvoice packs CERTIFICATE_READY by arInvoiceId (D286)', async () => {
+    const { service, outbox, prisma } = build({
+      withholdings: [
+        {
+          id: 'wh-ar',
+          vendorName: 'Client Nord',
+          baseAmount: { toString: () => '1000.000' },
+          rateBps: 150,
+          withholdingAmount: { toString: () => '15.000' },
+          netPayable: { toString: () => '985.000' },
+          currency: 'TND',
+          lawRef: 'LF',
+          certificateSha256: 'abc123',
+          apPaymentId: null,
+          arInvoiceId: 'inv-1',
+          periodLabel: '2026-09',
+        },
+      ],
+    });
+    const result = await service.generatePackForInvoice(companyId, {
+      arInvoiceId: 'inv-1',
+    });
+    expect(result.packKind).toBe('WITHHOLDING_PACK');
+    expect(result.withholdingCount).toBe(1);
+    expect(result.xmlContent).toContain('inv-1');
+    expect(result.xmlContent).toContain('Client Nord');
+    expect(prisma.taxWithholding.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ arInvoiceId: 'inv-1' }),
+      }),
+    );
+    expect(outbox.enqueue).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventType: TAX_EVENT_TYPES.TEJ_PACK_PREPARED,
+      }),
+    );
+  });
+
   it('generatePack rejects when no CERTIFICATE_READY rows', async () => {
     const { service } = build({ withholdings: [] });
     await expect(

@@ -1119,10 +1119,15 @@ export default function Customer360Page() {
                         </Field>
                       </div>
                       <ToggleRow
-                        label="Flag RAS AR (inactif)"
+                        label="RAS sur factures clients (AR)"
                         checked={withholdingArEnabled}
                         onChange={setWithholdingArEnabled}
                       />
+                      <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                        Si activé + Prefs tax.ras VALIDATED : à l’émission
+                        facture, une retenue CALCULATED est créée dans TEJ
+                        Center (montants facture inchangés).
+                      </p>
                       <Field label="Notes">
                         <AInput
                           value={fiscalNotes}

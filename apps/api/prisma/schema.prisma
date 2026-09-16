@@ -1052,7 +1052,7 @@ model CusFiscalProfile {
   vatLiable             Boolean?  @map("vat_liable")
   fiscalStatus          String?   @map("fiscal_status")
   fiscalCategory        String?   @map("fiscal_category")
-  /** Architecture for AR RAS later — default off; AP RAS is supplier-side (D246/D259). */
+  /** D286 — AR RAS when ON + Prefs tax.ras VALIDATED on invoice ISSUED. */
   withholdingArEnabled  Boolean   @default(false) @map("withholding_ar_enabled")
   notes                 String?
   version               Int       @default(0)
@@ -2630,6 +2630,10 @@ model TaxWithholding {
   supplierId         String?               @map("supplier_id") @db.Uuid
   apBillId           String?               @map("ap_bill_id") @db.Uuid
   apPaymentId        String?               @map("ap_payment_id") @db.Uuid
+  /** D286 — AR invoice link (client RAS when withholdingArEnabled). */
+  arInvoiceId        String?               @map("ar_invoice_id") @db.Uuid
+  /** AP = supplier disbursement; AR = client invoice. */
+  side               String                @default("AP")
   vendorName         String                @map("vendor_name")
   baseAmount         Decimal               @map("base_amount") @db.Decimal(18, 3)
   rateBps            Int?                  @map("rate_bps")
@@ -2656,7 +2660,10 @@ model TaxWithholding {
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, apPaymentId])
   @@index([companyId, supplierId])
+  @@index([companyId, arInvoiceId])
+  @@index([companyId, side])
   @@unique([companyId, apPaymentId])
+  @@unique([companyId, arInvoiceId])
   @@map("tax_withholding")
 }
 

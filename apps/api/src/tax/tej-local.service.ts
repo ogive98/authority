@@ -107,7 +107,11 @@ export class TejLocalService {
    */
   async generatePack(
     companyId: string,
-    input: { periodLabel: string; createdByUserId?: string | null },
+    input: {
+      periodLabel: string;
+      createdByUserId?: string | null;
+      side?: 'AP' | 'AR';
+    },
   ): Promise<TejExportDto & { transmission: 'DISABLED' }> {
     const periodLabel = assertPeriod(input.periodLabel);
     const tej = await this.requireTejPrefs(companyId);
@@ -119,6 +123,7 @@ export class TejLocalService {
         periodLabel,
         status: TaxWithholdingStatus.CERTIFICATE_READY,
         isStubRate: false,
+        ...(input.side ? { side: input.side } : {}),
       },
       orderBy: { createdAt: 'asc' },
       take: 500,
@@ -131,6 +136,79 @@ export class TejLocalService {
       );
     }
 
+    return this.buildPackFromRows(companyId, {
+      periodLabel,
+      tej,
+      rows,
+      createdByUserId: input.createdByUserId ?? null,
+    });
+  }
+
+  /**
+   * D286 — pack a single AR/AP-linked withholding by invoice id (CERTIFICATE_READY).
+   */
+  async generatePackForInvoice(
+    companyId: string,
+    input: { arInvoiceId: string; createdByUserId?: string | null },
+  ): Promise<TejExportDto & { transmission: 'DISABLED' }> {
+    const arInvoiceId = input.arInvoiceId?.trim();
+    if (!arInvoiceId) {
+      throw new TaxException(
+        TAX_ERROR_CODES.INVALID_INPUT,
+        'arInvoiceId is required.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const tej = await this.requireTejPrefs(companyId);
+    const rows = await this.prisma.taxWithholding.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        arInvoiceId,
+        status: TaxWithholdingStatus.CERTIFICATE_READY,
+        isStubRate: false,
+      },
+      take: 10,
+    });
+    if (rows.length === 0) {
+      throw new TaxException(
+        TAX_ERROR_CODES.INVALID_STATUS,
+        'Aucune retenue CERTIFICATE_READY pour cette facture — valider + certificat d’abord.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    const periodLabel =
+      rows[0]!.periodLabel?.trim() ||
+      `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, '0')}`;
+    return this.buildPackFromRows(companyId, {
+      periodLabel,
+      tej,
+      rows,
+      createdByUserId: input.createdByUserId ?? null,
+    });
+  }
+
+  private async buildPackFromRows(
+    companyId: string,
+    input: {
+      periodLabel: string;
+      tej: { valueLabel: string; lawRef: string | null };
+      rows: Array<{
+        id: string;
+        vendorName: string;
+        baseAmount: { toString(): string };
+        rateBps: number | null;
+        withholdingAmount: { toString(): string };
+        netPayable: { toString(): string } | null;
+        currency: string;
+        lawRef: string | null;
+        certificateSha256: string | null;
+        apPaymentId: string | null;
+        arInvoiceId?: string | null;
+      }>;
+      createdByUserId: string | null;
+    },
+  ) {
     const company = await this.prisma.orgCompany.findFirst({
       where: { id: companyId, deletedAt: null },
       select: { legalName: true },
@@ -138,12 +216,12 @@ export class TejLocalService {
     const generatedAt = new Date().toISOString();
     const xmlContent = buildLocalTejXml({
       companyId,
-      periodLabel,
-      valueLabel: tej.valueLabel,
-      lawRef: tej.lawRef,
+      periodLabel: input.periodLabel,
+      valueLabel: input.tej.valueLabel,
+      lawRef: input.tej.lawRef,
       generatedAt,
       withholderName: company?.legalName?.trim() || null,
-      withholdings: rows.map((r) => ({
+      withholdings: input.rows.map((r) => ({
         id: r.id,
         vendorName: r.vendorName,
         baseAmount: r.baseAmount.toString(),
@@ -154,18 +232,19 @@ export class TejLocalService {
         lawRef: r.lawRef,
         certificateSha256: r.certificateSha256,
         apPaymentId: r.apPaymentId,
+        arInvoiceId: r.arInvoiceId ?? null,
       })),
     });
 
     return this.persistExport(companyId, {
-      periodLabel,
+      periodLabel: input.periodLabel,
       xmlContent,
-      valueLabel: tej.valueLabel,
-      lawRef: tej.lawRef,
+      valueLabel: input.tej.valueLabel,
+      lawRef: input.tej.lawRef,
       packKind: 'WITHHOLDING_PACK',
-      withholdingCount: rows.length,
-      createdByUserId: input.createdByUserId ?? null,
-      withholdingIds: rows.map((r) => r.id),
+      withholdingCount: input.rows.length,
+      createdByUserId: input.createdByUserId,
+      withholdingIds: input.rows.map((r) => r.id),
       eventType: TAX_EVENT_TYPES.TEJ_PACK_PREPARED,
     });
   }
@@ -286,6 +365,7 @@ function buildLocalTejXml(input: {
     lawRef: string | null;
     certificateSha256: string | null;
     apPaymentId: string | null;
+    arInvoiceId?: string | null;
   }>;
 }): string {
   const esc = (s: string) =>
@@ -329,6 +409,11 @@ function buildLocalTejXml(input: {
       if (w.apPaymentId) {
         lines.push(
           `      <apPaymentId>${esc(w.apPaymentId)}</apPaymentId>`,
+        );
+      }
+      if (w.arInvoiceId) {
+        lines.push(
+          `      <arInvoiceId>${esc(w.arInvoiceId)}</arInvoiceId>`,
         );
       }
       lines.push(`    </withholding>`);

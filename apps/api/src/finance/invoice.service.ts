@@ -12,6 +12,7 @@ import { TaxDecisionSource, TaxKind } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExpertiseResolverService } from '../settings/expertise-resolver.service';
+import { RasEngineService } from '../tax/ras-engine.service';
 import { TaxService, round3, taxFromHt } from '../tax/tax.service';
 import {
   FINANCE_ERROR_CODES,
@@ -63,6 +64,8 @@ export type InvoiceDto = {
     fodec: boolean;
     timbre: boolean;
   };
+  /** D286 — TaxWithholding when client RAS flag + Prefs VALIDATED on ISSUED. */
+  taxWithholdingId: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -93,6 +96,7 @@ export class InvoiceService {
     private readonly outbox: OutboxService,
     private readonly tax: TaxService,
     private readonly expertise: ExpertiseResolverService,
+    private readonly ras: RasEngineService,
   ) {}
 
   async list(
@@ -231,6 +235,11 @@ export class InvoiceService {
           lines: createdLines,
         });
         await this.createOrLinkOpenItem(tx, companyId, invoice);
+        const withholdingAr = await this.maybeCreateArWithholding(
+          tx,
+          companyId,
+          invoice,
+        );
         await this.outbox.enqueue(tx, {
           companyId,
           aggregateType: 'fin_invoice',
@@ -243,6 +252,7 @@ export class InvoiceService {
             amountHt: invoice.amountHt.toString(),
             amountTax: invoice.amountTax.toString(),
             amountTotal: invoice.amountTotal.toString(),
+            withholdingAr,
           },
         });
       }
@@ -305,6 +315,13 @@ export class InvoiceService {
 
       const issued = await tx.finInvoice.findFirstOrThrow({ where: { id } });
       await this.createOrLinkOpenItem(tx, companyId, issued);
+
+      const withholdingAr = await this.maybeCreateArWithholding(
+        tx,
+        companyId,
+        issued,
+      );
+
       await this.outbox.enqueue(tx, {
         companyId,
         aggregateType: 'fin_invoice',
@@ -317,6 +334,7 @@ export class InvoiceService {
           amountHt: issued.amountHt.toString(),
           amountTax: issued.amountTax.toString(),
           amountTotal: issued.amountTotal.toString(),
+          withholdingAr,
         },
       });
 
@@ -943,6 +961,41 @@ export class InvoiceService {
     return `${prefix}${String(count + 1).padStart(4, '0')}`;
   }
 
+  /**
+   * D286 — if client fiscal RAS AR flag ON + Prefs tax.ras apply → TaxWithholding AR.
+   * Invoice totals unchanged. Returns whether a RAS attempt ran (flag ON).
+   */
+  private async maybeCreateArWithholding(
+    tx: Prisma.TransactionClient,
+    companyId: string,
+    invoice: FinInvoice,
+  ): Promise<boolean> {
+    const fiscal = await tx.cusFiscalProfile.findFirst({
+      where: { companyId, customerId: invoice.customerId },
+      select: { withholdingArEnabled: true },
+    });
+    if (fiscal?.withholdingArEnabled !== true) return false;
+    const customer = await tx.cusCustomer.findFirst({
+      where: { id: invoice.customerId, companyId, deletedAt: null },
+      include: { party: { select: { legalName: true } } },
+    });
+    await this.ras.createFromArInvoice(
+      companyId,
+      {
+        arInvoiceId: invoice.id,
+        invoiceNumber: invoice.number,
+        customerId: invoice.customerId,
+        customerName:
+          customer?.party.legalName?.trim() || customer?.code || 'Client',
+        baseAmount: Number(invoice.amountHt),
+        currency: invoice.currency,
+        issuedAt: invoice.issuedAt ?? new Date(),
+      },
+      tx,
+    );
+    return true;
+  }
+
   private async enrichMany(
     companyId: string,
     rows: InvoiceWithExtras[],
@@ -969,7 +1022,15 @@ export class InvoiceService {
     row: InvoiceWithExtras,
   ): Promise<InvoiceDto> {
     const [dto] = await this.enrichMany(companyId, [row]);
-    return dto!;
+    const wh = await this.prisma.taxWithholding.findFirst({
+      where: {
+        companyId,
+        arInvoiceId: row.id,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    return { ...dto!, taxWithholdingId: wh?.id ?? null };
   }
 }
 
@@ -1032,6 +1093,7 @@ function serializeInvoice(
       fodec: amountFodec > 0,
       timbre: amountTimbre > 0,
     },
+    taxWithholdingId: null,
     version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

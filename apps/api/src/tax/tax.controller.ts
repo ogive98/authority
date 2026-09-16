@@ -25,6 +25,7 @@ import {
   CalculateTaxDto,
   CreateTaxRateDto,
   DetectRasDto,
+  GenerateTejInvoicePackDto,
   GenerateTejLocalDto,
   PatchTaxRateDto,
 } from './tax.dto';
@@ -148,6 +149,22 @@ export class TaxController {
     return this.tejLocal.generatePack(tenancy.companyId, {
       periodLabel: dto.periodLabel,
       createdByUserId: user.id,
+      side: dto.side === 'AR' || dto.side === 'AP' ? dto.side : undefined,
+    });
+  }
+
+  /** D286 — pack XML for one AR invoice withholding. */
+  @Post('tej/packs/invoice')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.taxRateManage)
+  generateTejInvoicePack(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Body() dto: GenerateTejInvoicePackDto,
+  ) {
+    return this.tejLocal.generatePackForInvoice(tenancy.companyId, {
+      arInvoiceId: dto.arInvoiceId,
+      createdByUserId: user.id,
     });
   }
 
@@ -168,6 +185,8 @@ export class TaxController {
     @Query('status') status?: string,
     @Query('periodLabel') periodLabel?: string,
     @Query('apPaymentId') apPaymentId?: string,
+    @Query('arInvoiceId') arInvoiceId?: string,
+    @Query('side') side?: string,
   ) {
     const st =
       status &&
@@ -176,10 +195,14 @@ export class TaxController {
       )
         ? (status as TaxWithholdingStatus)
         : undefined;
+    const sideFilter =
+      side === 'AP' || side === 'AR' ? (side as 'AP' | 'AR') : undefined;
     return this.ras.list(tenancy.companyId, {
       status: st,
       periodLabel,
       apPaymentId: apPaymentId?.trim() || undefined,
+      arInvoiceId: arInvoiceId?.trim() || undefined,
+      side: sideFilter,
     });
   }
 

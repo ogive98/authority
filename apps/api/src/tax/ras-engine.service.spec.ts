@@ -235,6 +235,81 @@ describe('RasEngineService (D282)', () => {
     expect(taxWithholding.create).toHaveBeenCalledTimes(1);
   });
 
+  it('createFromArInvoice is idempotent on arInvoiceId (D286)', async () => {
+    const expertise = {
+      getSlot: jest.fn().mockResolvedValue({
+        status: 'VALIDATED',
+        lawRef: 'LF',
+        notes: null,
+        rateBps: 150,
+      }),
+      previewRas: jest.fn().mockResolvedValue({
+        applied: true,
+        amount: 15,
+        rateBps: 150,
+      }),
+    };
+    const created = {
+      id: 'wh-ar',
+      companyId,
+      status: 'CALCULATED',
+      applicable: true,
+      decisionCode: RAS_DECISION_CODES.FROM_AR_INVOICE,
+      decisionReason: 'ok',
+      side: 'AR',
+      supplierId: null,
+      apBillId: null,
+      apPaymentId: null,
+      arInvoiceId: 'inv-1',
+      vendorName: 'Client Nord',
+      baseAmount: { toString: () => '1000.000' },
+      rateBps: 150,
+      withholdingAmount: { toString: () => '15.000' },
+      netPayable: { toString: () => '985.000' },
+      currency: 'TND',
+      lawRef: 'LF',
+      periodLabel: '2026-09',
+      prefsSnapshotJson: {},
+      isStubRate: false,
+      version: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const taxWithholding = {
+      findFirst: jest
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(created),
+      create: jest.fn().mockResolvedValue(created),
+    };
+    const prisma = {
+      taxWithholding,
+      $transaction: jest.fn(async (fn: (tx: unknown) => unknown) =>
+        fn({ taxWithholding }),
+      ),
+    };
+    const outbox = { enqueue: jest.fn().mockResolvedValue({ id: 'o1' }) };
+    const svc = build(expertise, prisma, outbox);
+    const input = {
+      arInvoiceId: 'inv-1',
+      invoiceNumber: 'FAC-1',
+      customerId: 'cus-1',
+      customerName: 'Client Nord',
+      baseAmount: 1000,
+      currency: 'TND',
+      issuedAt: new Date('2026-09-15T12:00:00Z'),
+    };
+    const first = await svc.createFromArInvoice(companyId, input);
+    expect(first?.id).toBe('wh-ar');
+    expect(first?.side).toBe('AR');
+    expect(first?.decisionCode).toBe(RAS_DECISION_CODES.FROM_AR_INVOICE);
+    expect(taxWithholding.create).toHaveBeenCalledTimes(1);
+
+    const second = await svc.createFromArInvoice(companyId, input);
+    expect(second?.id).toBe('wh-ar');
+    expect(taxWithholding.create).toHaveBeenCalledTimes(1);
+  });
+
   it('generateCertificate moves VALIDATED → CERTIFICATE_READY (D284)', async () => {
     const expertise = {
       getSlot: jest.fn(),

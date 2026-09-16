@@ -140,6 +140,7 @@ export async function generateTejExport(
 /** D285 — pack CERTIFICATE_READY → local XML (no transmission). */
 export async function generateTejPack(
   periodLabel: string,
+  side?: "AP" | "AR",
 ): Promise<{ ok: true; data: TejExport } | ApiFail> {
   try {
     const res = await fetch("/api/v1/tax/tej/packs", {
@@ -149,7 +150,28 @@ export async function generateTejPack(
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ periodLabel }),
+      body: JSON.stringify({ periodLabel, ...(side ? { side } : {}) }),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as TejExport };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+/** D286 — pack XML for one AR invoice. */
+export async function generateTejInvoicePack(
+  arInvoiceId: string,
+): Promise<{ ok: true; data: TejExport } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/tax/tej/packs/invoice", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ arInvoiceId }),
     });
     if (!res.ok) return parseFail(res);
     return { ok: true, data: (await res.json()) as TejExport };
@@ -211,9 +233,11 @@ export type TaxWithholding = {
   applicable: boolean | null;
   decisionCode: string;
   decisionReason: string;
+  side?: "AP" | "AR";
   supplierId: string | null;
   apBillId: string | null;
   apPaymentId: string | null;
+  arInvoiceId?: string | null;
   vendorName: string;
   baseAmount: string;
   rateBps: number | null;
@@ -226,6 +250,7 @@ export type TaxWithholding = {
   prefsSnapshot: Record<string, unknown>;
   certificateSha256?: string | null;
   certificateAt?: string | null;
+  tejExportId?: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -256,6 +281,7 @@ export type TejCenterOverview = {
   withholdings: {
     total: number;
     byStatus: Record<string, number>;
+    bySide?: { AP: number; AR: number };
     needingValidation: number;
     validated: number;
     certificateReady: number;
@@ -267,6 +293,14 @@ export type TejCenterOverview = {
     localDrafts: number;
     packs: number;
     transmission: "DISABLED";
+    recent?: Array<{
+      id: string;
+      periodLabel: string;
+      packKind: string;
+      withholdingCount: number;
+      contentSha256: string;
+      createdAt: string;
+    }>;
   };
 };
 
@@ -293,11 +327,15 @@ export async function fetchTejCenterOverview(
 export async function fetchTaxWithholdings(opts?: {
   status?: string;
   periodLabel?: string;
+  side?: "AP" | "AR";
+  arInvoiceId?: string;
 }): Promise<{ ok: true; data: { items: TaxWithholding[] } } | ApiFail> {
   try {
     const params = new URLSearchParams();
     if (opts?.status) params.set("status", opts.status);
     if (opts?.periodLabel) params.set("periodLabel", opts.periodLabel);
+    if (opts?.side) params.set("side", opts.side);
+    if (opts?.arInvoiceId) params.set("arInvoiceId", opts.arInvoiceId);
     const q = params.toString() ? `?${params}` : "";
     const res = await fetch(`/api/v1/tax/withholdings${q}`, {
       credentials: "include",

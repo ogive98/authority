@@ -101,6 +101,8 @@ export type FinInvoice = {
   notes: string | null;
   openItemId: string | null;
   expertiseApplied?: { fodec: boolean; timbre: boolean };
+  /** D286 — TaxWithholding when client RAS on ISSUED. */
+  taxWithholdingId?: string | null;
   lines: {
     id: string;
     lineNo: number;

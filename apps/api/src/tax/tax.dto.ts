@@ -128,6 +128,16 @@ export class GenerateTejLocalDto {
   @IsString()
   @MaxLength(64)
   periodLabel!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  side?: 'AP' | 'AR';
+}
+
+export class GenerateTejInvoicePackDto {
+  @IsUUID()
+  arInvoiceId!: string;
 }
 
 export class DetectRasDto {

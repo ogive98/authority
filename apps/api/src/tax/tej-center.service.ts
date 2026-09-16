@@ -16,6 +16,7 @@ export type TejCenterOverviewDto = {
   withholdings: {
     total: number;
     byStatus: Record<string, number>;
+    bySide: { AP: number; AR: number };
     needingValidation: number;
     validated: number;
     certificateReady: number;
@@ -27,6 +28,14 @@ export type TejCenterOverviewDto = {
     localDrafts: number;
     packs: number;
     transmission: 'DISABLED';
+    recent: Array<{
+      id: string;
+      periodLabel: string;
+      packKind: string;
+      withholdingCount: number;
+      contentSha256: string;
+      createdAt: string;
+    }>;
   };
 };
 
@@ -61,10 +70,12 @@ export class TejCenterService {
         isStubRate: true,
         withholdingAmount: true,
         applicable: true,
+        side: true,
       },
     });
 
     const byStatus: Record<string, number> = {};
+    const bySide = { AP: 0, AR: 0 };
     let needingValidation = 0;
     let validated = 0;
     let certificateReady = 0;
@@ -74,6 +85,8 @@ export class TejCenterService {
 
     for (const r of rows) {
       byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
+      if (r.side === 'AR') bySide.AR += 1;
+      else bySide.AP += 1;
       if (
         r.status === TaxWithholdingStatus.CALCULATED ||
         r.status === TaxWithholdingStatus.DETECTED
@@ -111,6 +124,7 @@ export class TejCenterService {
       withholdings: {
         total: rows.length,
         byStatus,
+        bySide,
         needingValidation,
         validated,
         certificateReady,
@@ -122,6 +136,14 @@ export class TejCenterService {
         localDrafts: exports.items.length,
         packs,
         transmission: 'DISABLED',
+        recent: exports.items.slice(0, 8).map((i) => ({
+          id: i.id,
+          periodLabel: i.periodLabel,
+          packKind: i.packKind,
+          withholdingCount: i.withholdingCount,
+          contentSha256: i.contentSha256,
+          createdAt: i.createdAt,
+        })),
       },
     };
   }
