@@ -1314,12 +1314,12 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/tax",
     title: { fr: "Fiscalité", it: "Fiscalità" },
     summary: {
-      fr: "TVA (Tax Engine) + calcul général FODEC/timbre/RAS/TEJ (Prefs VALIDATED).",
-      it: "IVA (Tax Engine) + calcolo generale FODEC/bollo/RAS/TEJ (Prefs VALIDATED).",
+      fr: "TVA (Tax Engine) + RAS Engine + TEJ Center Soft Glass — Prefs VALIDATED only.",
+      it: "IVA (Tax Engine) + RAS Engine + TEJ Center Soft Glass — solo Prefs VALIDATED.",
     },
     when: {
-      fr: "Consulter catalogue TVA et readiness Expertise fiscale.",
-      it: "Consultare catalogo IVA e readiness Expertise fiscale.",
+      fr: "Consulter catalogue TVA, retenues RAS et hub TEJ Center.",
+      it: "Consultare catalogo IVA, ritenute RAS e hub TEJ Center.",
     },
     features: [
       {
@@ -1349,6 +1349,34 @@ export const HELP_MODULES: HelpModule[] = [
             "Mai inventare aliquote · TEJ senza trasmissione API.",
             "Motore fiscale API `POST /tax/calculate` — regole PENDING_EXPERT = importo 0.",
             "Emissione fattura/nota: snapshot `tax_line` congelato (D263) — preview calculate non persiste.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "TEJ Center — RAS détection / validation (D282)",
+          it: "TEJ Center — RAS rilevazione / validazione (D282)",
+        },
+        when: {
+          fr: "Gérer les retenues à la source avant préparation XML TEJ.",
+          it: "Gestire le ritenute alla fonte prima della preparazione XML TEJ.",
+        },
+        steps: {
+          fr: [
+            "Validez `tax.ras` dans Préférences › Expertise (jamais inventer ; stub ≠ Validé expert).",
+            "Ouvrez `/tax/tej-center` (ou TEJ Center depuis `/tax`).",
+            "Nouvelle retenue → Détecter (preview Prefs) → Enregistrer.",
+            "Valider une ligne CALCULATED non-stub — stub bloqué jusqu’à remplacement Prefs (D280).",
+            "Transmission toujours DISABLED — pas d’upload AUTHORITY→TEJ.",
+            "XML officiel reporté jusqu’à XSD MF ; brouillon local reste sur `/tax`.",
+          ],
+          it: [
+            "Validare `tax.ras` in Preferenze › Expertise (mai inventare; stub ≠ Validato expert).",
+            "Aprire `/tax/tej-center` (o TEJ Center da `/tax`).",
+            "Nuova ritenuta → Rilevare (preview Prefs) → Registra.",
+            "Validare una riga CALCULATED non-stub — stub bloccato fino a sostituzione Prefs (D280).",
+            "Trasmissione sempre DISABLED — nessun upload AUTHORITY→TEJ.",
+            "XML ufficiale rimandato fino a XSD MF; bozza locale resta su `/tax`.",
           ],
         },
       },
@@ -1386,6 +1414,7 @@ export const HELP_MODULES: HelpModule[] = [
         "FODEC / timbre / RAS / TEJ : Prefs VALIDATED only.",
         "tax_line frozen on ISSUED only (D263) — never recalculate after rate change.",
         "TEJ local draft only (D265) — transmission DISABLED forever until official unlock.",
+        "RAS Engine Phase A (D282) : DETECTED/CALCULATED/VALIDATED — stub bloque validate.",
         "Pas de TEJ transmission pretend / pas d’XSD officiel inventé.",
         "Règle fiscale ACTIVE seulement après validation expert (D259).",
       ],
@@ -1393,6 +1422,7 @@ export const HELP_MODULES: HelpModule[] = [
         "FODEC / bollo / RAS / TEJ: solo Prefs VALIDATED.",
         "tax_line congelato solo su ISSUED (D263) — mai ricalcolare dopo cambio aliquota.",
         "TEJ bozza locale only (D265) — transmission DISABLED finché unlock ufficiale.",
+        "RAS Engine Phase A (D282): DETECTED/CALCULATED/VALIDATED — stub blocca validate.",
         "Niente TEJ transmission pretend / niente XSD ufficiale inventato.",
         "Regola fiscale ACTIVE solo dopo validazione esperto (D259).",
       ],

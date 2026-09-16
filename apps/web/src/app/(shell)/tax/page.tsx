@@ -186,9 +186,23 @@ export default function TaxCatalogPage() {
         kicker="Fiscalité"
         title="Fiscalité Tunisie"
         description="TVA (Tax Engine) + FODEC / timbre / RAS / TEJ via Préférences Expertise — consumers seulement si VALIDATED. Jamais de taux inventé."
+        primary={
+          <AButton
+            type="button"
+            size="sm"
+            onClick={() => router.push("/tax/tej-center")}
+          >
+            TEJ Center
+          </AButton>
+        }
         more={
           <AOverflowMenu
             items={[
+              {
+                id: "tej",
+                label: "TEJ Center",
+                onSelect: () => router.push("/tax/tej-center"),
+              },
               {
                 id: "prefs",
                 label: "Préférences Expertise",

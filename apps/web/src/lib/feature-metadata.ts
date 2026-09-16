@@ -212,6 +212,31 @@ export const FEATURE_METADATA_ENRICHMENTS: Record<
     },
     ai: { discoverable: true, executable: true },
   },
+  "nav-tax": {
+    module: "tax",
+    entity: "tax_code",
+    tags: ["tax", "vat", "tva"],
+    icon: "tax.nav",
+    aliases: ["fiscalité", "tva", "fodec", "timbre"],
+    description: {
+      fr: "Catalogue TVA + pile fiscale Prefs",
+      it: "Catalogo IVA + pila fiscale Prefs",
+    },
+    ai: { discoverable: true, executable: false },
+  },
+  "nav-tej-center": {
+    module: "tax",
+    entity: "tax_withholding",
+    tags: ["tax", "tej", "ras", "withholding"],
+    icon: "tax.tej",
+    aliases: ["tej", "ras", "retenue", "withholding", "ritenuta"],
+    relatedEntities: ["tax_withholding", "tej_export"],
+    description: {
+      fr: "TEJ Center — RAS détection / validation · transmission DISABLED",
+      it: "TEJ Center — RAS rilevazione / validazione · transmission DISABLED",
+    },
+    ai: { discoverable: true, executable: false },
+  },
   "nav-settings": {
     tags: ["settings", "prefs"],
     icon: "settings.nav",

@@ -60,6 +60,7 @@ export const FEATURE_LABELS_IT: Record<string, string> = {
   promises: "Promesse di pagamento",
   "payment-declarations": "Dichiarazioni portale",
   "tax-catalog": "Fiscalità / IVA",
+  "tax-tej-center": "TEJ Center",
   "tax-expertise": "Expertise fiscale (Prefs)",
   "hr-employees": "Dipendenti",
   "hr-job-titles": "Mansioni",

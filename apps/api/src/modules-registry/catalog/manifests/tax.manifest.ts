@@ -13,7 +13,7 @@ export const taxManifest: ModuleManifest = {
   version: '1.1.0',
   apiVersion: '1',
   description:
-    'Tax Engine — TVA Tunisie + POST /tax/calculate; FODEC/timbre/RAS/TEJ Prefs VALIDATED only; local TEJ XML draft+hash (D265); no invented rates; no TEJ transmission',
+    'Tax Engine — TVA + RAS Engine Phase A (D282) + TEJ Center Soft Glass; FODEC/timbre/RAS/TEJ Prefs VALIDATED only; local TEJ XML draft; no invented rates; no TEJ transmission/API',
   capabilities: [
     {
       key: 'tax.read',
@@ -56,17 +56,33 @@ export const taxManifest: ModuleManifest = {
     'tax.calculate',
     'tax.compute',
     'tax.tej.export.generate',
+    'tax.withholding.detect',
+    'tax.withholding.create',
+    'tax.withholding.validate',
   ],
-  queries: ['tax.codes.list', 'tax.rates.list', 'tax.tej.exports.list'],
+  queries: [
+    'tax.codes.list',
+    'tax.rates.list',
+    'tax.tej.exports.list',
+    'tax.tej.center.overview',
+    'tax.withholdings.list',
+  ],
   permissions: ['tax.read', 'tax.rate.manage'],
   dependencies: ['platform', 'organization', 'master_data', 'settings'],
   publishedEvents: [
     'tax.rate.published.v1',
     'tax.rate.changed.v1',
     'tax.tej.local_generated.v1',
+    'tax.withholding.created.v1',
+    'tax.withholding.validated.v1',
   ],
   navigationEntries: [
     { id: 'tax-catalog', label: 'Fiscalité / TVA', href: '/tax' },
+    {
+      id: 'tax-tej-center',
+      label: 'TEJ Center',
+      href: '/tax/tej-center',
+    },
     {
       id: 'tax-expertise',
       label: 'Expertise fiscale (Prefs)',

@@ -130,6 +130,39 @@ export class GenerateTejLocalDto {
   periodLabel!: string;
 }
 
+export class DetectRasDto {
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  baseAmount!: number;
+
+  @IsString()
+  @MaxLength(200)
+  vendorName!: string;
+
+  @IsOptional()
+  @IsUUID()
+  supplierId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  apBillId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  apPaymentId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  periodLabel?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  currency?: string;
+}
+
 export type FiscalDecision = {
   applicable: boolean;
   /** Tax code id (same as ruleId for SYSTEM_RULE). */

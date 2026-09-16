@@ -2599,6 +2599,57 @@ model TaxTejExport {
   @@map("tax_tej_export")
 }
 
+/**
+ * D282 — RAS withholding object (retenue à la source).
+ * TEJ Center consumes VALIDATED rows for XML prep later.
+ * Never invents rates — Prefs tax.ras VALIDATED required to CALCULATED.
+ */
+enum TaxWithholdingStatus {
+  DETECTED
+  CALCULATED
+  VALIDATED
+  CERTIFICATE_READY
+  TEJ_PREPARED
+  TRANSMITTED
+  ACCEPTED
+  REJECTED
+  ARCHIVED
+}
+
+model TaxWithholding {
+  id                 String                @id @default(uuid()) @db.Uuid
+  companyId          String                @map("company_id") @db.Uuid
+  status             TaxWithholdingStatus  @default(DETECTED)
+  /** null = unknown (Prefs pending); true/false after detection. */
+  applicable         Boolean?
+  decisionReason     String                @map("decision_reason") @db.Text
+  decisionCode       String                @map("decision_code")
+  supplierId         String?               @map("supplier_id") @db.Uuid
+  apBillId           String?               @map("ap_bill_id") @db.Uuid
+  apPaymentId        String?               @map("ap_payment_id") @db.Uuid
+  vendorName         String                @map("vendor_name")
+  baseAmount         Decimal               @map("base_amount") @db.Decimal(18, 3)
+  rateBps            Int?                  @map("rate_bps")
+  withholdingAmount  Decimal               @default(0) @map("withholding_amount") @db.Decimal(18, 3)
+  netPayable         Decimal?              @map("net_payable") @db.Decimal(18, 3)
+  currency           String                @default("TND")
+  lawRef             String?               @map("law_ref")
+  periodLabel        String?               @map("period_label")
+  prefsSnapshotJson  Json                  @default("{}") @map("prefs_snapshot_json")
+  isStubRate         Boolean               @default(false) @map("is_stub_rate")
+  version            Int                   @default(0)
+  createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime?             @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([companyId, status])
+  @@index([companyId, periodLabel])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, apPaymentId])
+  @@index([companyId, supplierId])
+  @@map("tax_withholding")
+}
+
 // --- acc_* Accounting GL V0 (D072) — no invented tax rates ---
 
 enum AccAccountType {

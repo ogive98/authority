@@ -17,6 +17,9 @@ export const TAX_EVENT_TYPES = {
   RATE_CHANGED: 'tax.rate.changed.v1',
   /** D265 — local TEJ draft generated (hash history; never transmitted). */
   TEJ_LOCAL_GENERATED: 'tax.tej.local_generated.v1',
+  /** D282 — RAS withholding created / validated. */
+  WITHHOLDING_CREATED: 'tax.withholding.created.v1',
+  WITHHOLDING_VALIDATED: 'tax.withholding.validated.v1',
 } as const;
 
 export const TAX_LAW_REF_TN =

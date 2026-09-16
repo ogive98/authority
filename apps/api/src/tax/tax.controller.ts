@@ -24,11 +24,15 @@ import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
   CalculateTaxDto,
   CreateTaxRateDto,
+  DetectRasDto,
   GenerateTejLocalDto,
   PatchTaxRateDto,
 } from './tax.dto';
 import { TaxService } from './tax.service';
 import { TejLocalService } from './tej-local.service';
+import { RasEngineService } from './ras-engine.service';
+import { TejCenterService } from './tej-center.service';
+import { TaxWithholdingStatus } from '@prisma/client';
 
 @Controller('api/v1/tax')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
@@ -37,6 +41,8 @@ export class TaxController {
   constructor(
     private readonly taxService: TaxService,
     private readonly tejLocal: TejLocalService,
+    private readonly ras: RasEngineService,
+    private readonly tejCenter: TejCenterService,
   ) {}
 
   @Get('codes')
@@ -128,5 +134,71 @@ export class TaxController {
       periodLabel: dto.periodLabel,
       createdByUserId: user.id,
     });
+  }
+
+  /** D282 — TEJ Center Soft Glass hub (counters; transmission DISABLED). */
+  @Get('tej-center/overview')
+  @RequirePermission(PERMISSION_KEYS.taxRead)
+  tejCenterOverview(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('periodLabel') periodLabel?: string,
+  ) {
+    return this.tejCenter.overview(tenancy.companyId, periodLabel);
+  }
+
+  @Get('withholdings')
+  @RequirePermission(PERMISSION_KEYS.taxRead)
+  listWithholdings(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('status') status?: string,
+    @Query('periodLabel') periodLabel?: string,
+  ) {
+    const st =
+      status &&
+      Object.values(TaxWithholdingStatus).includes(
+        status as TaxWithholdingStatus,
+      )
+        ? (status as TaxWithholdingStatus)
+        : undefined;
+    return this.ras.list(tenancy.companyId, { status: st, periodLabel });
+  }
+
+  @Get('withholdings/:id')
+  @RequirePermission(PERMISSION_KEYS.taxRead)
+  getWithholding(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.ras.get(tenancy.companyId, id);
+  }
+
+  @Post('withholdings/detect')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.taxRead)
+  detectRas(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: DetectRasDto,
+  ) {
+    return this.ras.detect(tenancy.companyId, dto);
+  }
+
+  @Post('withholdings')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.taxRateManage)
+  createWithholding(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: DetectRasDto,
+  ) {
+    return this.ras.createFromDetect(tenancy.companyId, dto);
+  }
+
+  @Post('withholdings/:id/validate')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.taxRateManage)
+  validateWithholding(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.ras.validate(tenancy.companyId, id);
   }
 }
