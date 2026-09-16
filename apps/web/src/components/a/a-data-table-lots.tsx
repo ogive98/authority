@@ -5,6 +5,7 @@ import { ABadge } from "@/components/a/a-badge";
 import { AButton } from "@/components/a/a-button";
 import { AEmptyState } from "@/components/a/a-empty-state";
 import { AInput } from "@/components/a/a-input";
+import { APagination } from "@/components/a/a-pagination";
 import { cn } from "@/lib/utils";
 import {
   LOT_COLUMNS,
@@ -315,32 +316,18 @@ export function ADataTableLots({ rows, onRowClick }: ADataTableLotsProps) {
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <AButton
-          type="button"
-          size="sm"
-          variant="secondary"
-          disabled={cursorStack.length <= 1}
-          onClick={() =>
-            setCursorStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
+      <APagination
+        previousDisabled={cursorStack.length <= 1}
+        nextDisabled={!page.nextCursor}
+        onPrevious={() =>
+          setCursorStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
+        }
+        onNext={() => {
+          if (page.nextCursor) {
+            setCursorStack((s) => [...s, page.nextCursor]);
           }
-        >
-          Précédent
-        </AButton>
-        <AButton
-          type="button"
-          size="sm"
-          variant="secondary"
-          disabled={!page.nextCursor}
-          onClick={() => {
-            if (page.nextCursor) {
-              setCursorStack((s) => [...s, page.nextCursor]);
-            }
-          }}
-        >
-          Suivant
-        </AButton>
-      </div>
+        }}
+      />
     </div>
   );
 }

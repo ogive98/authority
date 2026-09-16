@@ -33,7 +33,10 @@ export { APageBody } from "./a-page-body";
 export { AOverflowMenu, type AOverflowItem } from "./a-overflow-menu";
 export { APageSection } from "./a-page-section";
 export { AFilterBar } from "./a-filter-bar";
-export { ASoftTable, ASoftThead, ASoftTr } from "./a-soft-table";
+export { ASoftTable, ASoftThead, ASoftTr, ASoftTh, ASoftTd } from "./a-soft-table";
+export { ADialog } from "./a-dialog";
+export { ATabs, type ATabItem, type ATabsVariant } from "./a-tabs";
+export { APagination } from "./a-pagination";
 export { ADetailGrid } from "./a-detail-grid";
 export { AContextPanel } from "./a-context-panel";
 export {

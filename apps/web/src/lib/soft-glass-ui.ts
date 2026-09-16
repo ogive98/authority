@@ -20,7 +20,7 @@ export function softUnderlineTabClass(active: boolean): string {
   );
 }
 
-/** Table host — underlay only, zero frame. */
+/** Table host — underlay only, zero frame. Prefer `ASoftTable` on new screens. */
 export const softTableWrap =
   "a-underlay overflow-x-auto rounded-[var(--a-radius-md)]";
 

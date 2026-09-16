@@ -101,6 +101,8 @@ export default function FinanceInvoiceFichePage() {
     }
     downloadTejXml(res.data);
   }
+
+  async function onCancel() {
     if (!id) return;
     if (
       !window.confirm(

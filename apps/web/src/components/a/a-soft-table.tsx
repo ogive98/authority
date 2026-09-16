@@ -1,6 +1,11 @@
 "use client";
 
-import type { ReactNode, TableHTMLAttributes } from "react";
+import type {
+  ReactNode,
+  TableHTMLAttributes,
+  TdHTMLAttributes,
+  ThHTMLAttributes,
+} from "react";
 import { cn } from "@/lib/utils";
 import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
 
@@ -9,7 +14,11 @@ export type ASoftTableProps = TableHTMLAttributes<HTMLTableElement> & {
   wrapClassName?: string;
 };
 
-/** Full-width Soft Glass table host — no frame (D225). */
+/**
+ * Full-width Soft Glass table host — no frame (D225).
+ * Prefer `ASoftTable` + `ASoftThead` / `ASoftTr` / `ASoftTh` / `ASoftTd`
+ * over raw `softTableWrap` + `<table>` on new screens (Stage 2).
+ */
 export function ASoftTable({
   children,
   className,
@@ -57,5 +66,47 @@ export function ASoftTr({
     >
       {children}
     </tr>
+  );
+}
+
+export function ASoftTh({
+  children,
+  className,
+  numeric,
+  ...props
+}: ThHTMLAttributes<HTMLTableCellElement> & {
+  children?: ReactNode;
+  numeric?: boolean;
+}) {
+  return (
+    <th
+      className={cn(
+        "a-table-cell font-medium text-a-fg-muted",
+        numeric && "text-right",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </th>
+  );
+}
+
+export function ASoftTd({
+  children,
+  className,
+  numeric,
+  ...props
+}: TdHTMLAttributes<HTMLTableCellElement> & {
+  children?: ReactNode;
+  numeric?: boolean;
+}) {
+  return (
+    <td
+      className={cn("a-table-cell", numeric && "text-right", className)}
+      {...props}
+    >
+      {children}
+    </td>
   );
 }
