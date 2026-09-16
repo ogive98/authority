@@ -22,6 +22,7 @@ describe('ThunderAutomationRegistrar (D289)', () => {
           THUNDER_AUTOMATION_EVENT_TYPES.financeOpenItemCreated,
           THUNDER_AUTOMATION_EVENT_TYPES.salesWaInboxDraftCreated,
           THUNDER_AUTOMATION_EVENT_TYPES.taxTejPackPrepared,
+          THUNDER_AUTOMATION_EVENT_TYPES.salesOrderConfirmed,
         ],
       },
     );

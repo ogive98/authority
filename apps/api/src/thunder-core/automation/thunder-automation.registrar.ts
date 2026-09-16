@@ -32,6 +32,7 @@ export class ThunderAutomationRegistrar implements OnModuleInit {
           THUNDER_AUTOMATION_EVENT_TYPES.financeOpenItemCreated,
           THUNDER_AUTOMATION_EVENT_TYPES.salesWaInboxDraftCreated,
           THUNDER_AUTOMATION_EVENT_TYPES.taxTejPackPrepared,
+          THUNDER_AUTOMATION_EVENT_TYPES.salesOrderConfirmed,
         ],
       },
     );

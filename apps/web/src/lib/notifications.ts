@@ -39,6 +39,7 @@ export function resolveNotificationHref(item: NotificationItem): string {
   if (item.source === "ATM_REVIEW") return "/automation";
   if (item.source === "RAS_PENDING") return "/settings#expertise";
   if (item.source === "WA_INBOX") return "/sales/wa-inbox";
+  if (item.source === "PROD_NEED") return "/production";
   const hay = `${item.title} ${item.body}`.toLowerCase();
   if (/whatsapp|wa inbox|wamid/.test(hay)) return "/sales/wa-inbox";
   if (/lot|quarant|stock|invent|ccp|emmental|brie/.test(hay)) return "/inventory";

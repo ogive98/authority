@@ -95,6 +95,10 @@ export class AutomationService {
           id: AtmTriggerKind.TAX_TEJ_PACK_PREPARED,
           label: 'Lot TEJ XML préparé',
         },
+        {
+          id: AtmTriggerKind.SALES_ORDER_CONFIRMED,
+          label: 'Commande confirmée',
+        },
       ],
       actions: [
         { id: AtmActionKind.NOTIFY, label: 'Notifier (suggestion)' },
@@ -109,6 +113,10 @@ export class AutomationService {
         {
           id: AtmActionKind.TEJ_IMPORT_HINT,
           label: 'Hint import Tej (pas d’upload)',
+        },
+        {
+          id: AtmActionKind.PRODUCTION_NEED_HINT,
+          label: 'Hint besoin production (pas d’OF auto)',
         },
       ],
     };
@@ -690,6 +698,35 @@ export class AutomationService {
       };
     }
 
+    if (profile.triggerKind === AtmTriggerKind.SALES_ORDER_CONFIRMED) {
+      const orderId =
+        (typeof ctx?.payload.orderId === 'string'
+          ? ctx.payload.orderId
+          : null) ||
+        ctx?.aggregateId ||
+        null;
+      const orderNumber =
+        typeof ctx?.payload.orderNumber === 'string'
+          ? ctx.payload.orderNumber
+          : null;
+      return {
+        summary: orderNumber
+          ? `Besoin production — commande ${orderNumber}`
+          : 'Besoin production — commande confirmée',
+        hint:
+          profile.actionKind === AtmActionKind.PRODUCTION_NEED_HINT
+            ? 'Créer un OF manuellement dans Production si besoin — pas d’OF auto (D290).'
+            : 'Revue ADV — suggestion uniquement.',
+        payload: {
+          orderId,
+          orderNumber,
+          eventType: ctx?.eventType ?? null,
+          href: orderId ? `/sales/${orderId}` : '/production',
+          productionHref: '/production',
+        },
+      };
+    }
+
     if (profile.triggerKind === AtmTriggerKind.FINANCE_OVERDUE_OPEN_ITEMS) {
       const today = new Date();
       const start = new Date(
@@ -839,6 +876,28 @@ export class AutomationService {
     action: AtmActionKind,
   ): void {
     if (
+      action === AtmActionKind.PRODUCTION_NEED_HINT &&
+      trigger !== AtmTriggerKind.SALES_ORDER_CONFIRMED
+    ) {
+      throw new AutomationException(
+        AUTOMATION_ERROR_CODES.VALIDATION,
+        'PRODUCTION_NEED_HINT requires SALES_ORDER_CONFIRMED trigger.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (
+      trigger === AtmTriggerKind.SALES_ORDER_CONFIRMED &&
+      (action === AtmActionKind.PREPARE_DUNNING_HINT ||
+        action === AtmActionKind.TEJ_IMPORT_HINT ||
+        action === AtmActionKind.ORDER_REVIEW_HINT)
+    ) {
+      throw new AutomationException(
+        AUTOMATION_ERROR_CODES.VALIDATION,
+        'SALES_ORDER_CONFIRMED pairs with PRODUCTION_NEED_HINT or NOTIFY only.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (
       action === AtmActionKind.TEJ_IMPORT_HINT &&
       trigger !== AtmTriggerKind.TAX_TEJ_PACK_PREPARED
     ) {
@@ -948,6 +1007,8 @@ function mapEventToTrigger(eventType: string): AtmTriggerKind | null {
       return AtmTriggerKind.SALES_DRAFT_ORDER_STALE;
     case 'tax.tej.pack_prepared.v1':
       return AtmTriggerKind.TAX_TEJ_PACK_PREPARED;
+    case 'sales.order.confirmed.v1':
+      return AtmTriggerKind.SALES_ORDER_CONFIRMED;
     default:
       return null;
   }

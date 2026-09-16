@@ -210,4 +210,76 @@ describe('AutomationService', () => {
     });
     expect(res).toEqual({ created: 0, skipped: 0, runs: [] });
   });
+
+  it('catalog includes SALES_ORDER_CONFIRMED + PRODUCTION_NEED_HINT (D290)', () => {
+    const { service } = build();
+    const cat = service.catalog();
+    expect(
+      cat.triggers.some((t) => t.id === AtmTriggerKind.SALES_ORDER_CONFIRMED),
+    ).toBe(true);
+    expect(
+      cat.actions.some((a) => a.id === AtmActionKind.PRODUCTION_NEED_HINT),
+    ).toBe(true);
+  });
+
+  it('suggestFromEvent creates production need hint (D290)', async () => {
+    const prodProfile = profile({
+      id: 'prod-profile',
+      code: 'PROD_NEED',
+      triggerKind: AtmTriggerKind.SALES_ORDER_CONFIRMED,
+      actionKind: AtmActionKind.PRODUCTION_NEED_HINT,
+    });
+    const run = {
+      id: 'run-prod',
+      companyId,
+      profileId: 'prod-profile',
+      number: 'ATM-2026-0003',
+      status: AtmRunStatus.SUGGESTED,
+      triggerRef: 'evt:ord-evt-1',
+      summary: 'Besoin production — commande SO-1',
+      payloadJson: { orderId: 'ord-1', orderNumber: 'SO-1' },
+      resultJson: { noMutation: true, source: 'event' },
+      version: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      reviewedAt: null,
+      reviewNote: null,
+      createdByUserId: null,
+      profile: { code: 'PROD_NEED', name: 'Prod need' },
+    };
+    const prisma = {
+      atmProfile: {
+        findMany: jest.fn().mockResolvedValue([prodProfile]),
+        findFirst: jest.fn().mockResolvedValue(prodProfile),
+      },
+      atmRunLog: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({ id: 'run-prod' }),
+        create: jest.fn().mockResolvedValue(run),
+        findMany: jest.fn(),
+      },
+      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+        fn({
+          atmRunLog: {
+            create: jest.fn().mockResolvedValue(run),
+          },
+        }),
+      ),
+    };
+    const outbox = { enqueue: jest.fn().mockResolvedValue(undefined) };
+    const service = new AutomationService(prisma as never, outbox as never);
+
+    const first = await service.suggestFromEvent(companyId, {
+      eventType: 'sales.order.confirmed.v1',
+      eventId: 'ord-evt-1',
+      aggregateId: 'ord-1',
+      payload: { orderId: 'ord-1', orderNumber: 'SO-1' },
+    });
+    expect(first.created).toBe(1);
+    expect(first.runs[0]?.summary).toContain('SO-1');
+    expect(first.runs[0]?.resultJson.noMutation).toBe(true);
+  });
 });

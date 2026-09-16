@@ -27,6 +27,9 @@ describe('ThunderIntelRegistrar', () => {
       creditLimit: null,
     }),
   };
+  const modules = {
+    isEnabled: jest.fn().mockResolvedValue(false),
+  };
 
   let registrar: ThunderIntelRegistrar;
 
@@ -44,6 +47,7 @@ describe('ThunderIntelRegistrar', () => {
       } as never,
       collectionSchedule as never,
       creditPressure as never,
+      modules as never,
     );
   });
 
@@ -85,6 +89,7 @@ describe('ThunderIntelRegistrar', () => {
       prisma as never,
       collectionSchedule as never,
       creditPressure as never,
+      modules as never,
     );
     signals.create.mockResolvedValue({ id: 'sig-1' });
     recommendations.create.mockResolvedValue({ id: 'rec-1' });
@@ -139,6 +144,7 @@ describe('ThunderIntelRegistrar', () => {
       prisma as never,
       collectionSchedule as never,
       creditPressure as never,
+      modules as never,
     );
 
     await registrar.handle({
@@ -191,5 +197,77 @@ describe('ThunderIntelRegistrar', () => {
         }),
       }),
     );
+  });
+
+  it('suggests ProductionNeed when production module ON (D290)', async () => {
+    modules.isEnabled.mockResolvedValue(true);
+    signals.create
+      .mockResolvedValueOnce({ id: 'sig-sales' })
+      .mockResolvedValueOnce({ id: 'sig-prod' });
+    recommendations.create.mockResolvedValue({ id: 'rec-prod' });
+
+    await registrar.handle({
+      eventId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+      eventType: THUNDER_INTEL_EVENT_TYPES.salesConfirmed,
+      eventVersion: 1,
+      occurredAt: new Date().toISOString(),
+      source: 'sales',
+      companyId: '11111111-1111-1111-1111-111111111111',
+      siteId: null,
+      correlationId: null,
+      aggregateType: 'sales_order',
+      aggregateId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+      payload: { orderId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', orderNumber: 'SO-9' },
+    });
+
+    expect(modules.isEnabled).toHaveBeenCalledWith(
+      '11111111-1111-1111-1111-111111111111',
+      'production',
+    );
+    expect(signals.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: THUNDER_SIGNAL_TYPES.ProductionNeedSuggested,
+        evidence: expect.objectContaining({
+          orderNumber: 'SO-9',
+        }),
+      }),
+    );
+    expect(recommendations.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        problem: expect.stringContaining('SO-9'),
+        autonomyLevel: 2,
+      }),
+    );
+  });
+
+  it('skips ProductionNeed when production module OFF (D290)', async () => {
+    modules.isEnabled.mockResolvedValue(false);
+    signals.create.mockResolvedValue({ id: 'sig-sales' });
+
+    await registrar.handle({
+      eventId: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
+      eventType: THUNDER_INTEL_EVENT_TYPES.salesConfirmed,
+      eventVersion: 1,
+      occurredAt: new Date().toISOString(),
+      source: 'sales',
+      companyId: '11111111-1111-1111-1111-111111111111',
+      siteId: null,
+      correlationId: null,
+      aggregateType: 'sales_order',
+      aggregateId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      payload: { orderNumber: 'SO-OFF' },
+    });
+
+    expect(signals.create).toHaveBeenCalledTimes(1);
+    expect(signals.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: THUNDER_SIGNAL_TYPES.SalesOrderConfirmed,
+      }),
+    );
+    expect(
+      signals.create.mock.calls.some(
+        (c) => c[0]?.type === THUNDER_SIGNAL_TYPES.ProductionNeedSuggested,
+      ),
+    ).toBe(false);
   });
 });

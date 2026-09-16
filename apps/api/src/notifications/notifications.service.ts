@@ -245,13 +245,19 @@ export class NotificationsService {
         this.prisma.thuSignal.findMany({
           where: {
             companyId,
-            type: THUNDER_SIGNAL_TYPES.FinanceCreditPressure,
+            type: {
+              in: [
+                THUNDER_SIGNAL_TYPES.FinanceCreditPressure,
+                THUNDER_SIGNAL_TYPES.ProductionNeedSuggested,
+              ],
+            },
             status: ThuSignalStatus.OPEN,
           },
           orderBy: { createdAt: 'desc' },
-          take: 20,
+          take: 40,
           select: {
             id: true,
+            type: true,
             evidenceJson: true,
             severity: true,
             createdAt: true,
@@ -370,6 +376,24 @@ export class NotificationsService {
     }
 
     for (const s of signals) {
+      if (s.type === THUNDER_SIGNAL_TYPES.ProductionNeedSuggested) {
+        const evidence = (s.evidenceJson ?? {}) as {
+          orderId?: string;
+          orderNumber?: string;
+        };
+        const label = evidence.orderNumber ?? evidence.orderId?.slice(0, 8) ?? 'commande';
+        out.push({
+          source: 'PROD_NEED',
+          sourceRefId: s.id,
+          dedupeKey: `prod_need:${evidence.orderId ?? s.id}`,
+          type: 'task',
+          priority: 'p2',
+          title: `Besoin production — ${label}`,
+          body: 'Commande confirmée. Créer un OF manuellement si nécessaire — pas d’OF auto (D290).',
+          href: evidence.orderId ? `/sales/${evidence.orderId}` : '/production',
+        });
+        continue;
+      }
       const evidence = (s.evidenceJson ?? {}) as {
         customerId?: string;
         level?: string;

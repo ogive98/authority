@@ -9,12 +9,14 @@ import { InfrastructureModule } from '../infrastructure/infrastructure.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { LicenseModule } from '../license/license.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AdapterRegistryService } from './adapters/adapter.registry';
 import { ThunderAdaptersRegistrar } from './adapters/thunder-adapters.registrar';
 import { ThunderAutomationRegistrar } from './automation/thunder-automation.registrar';
+import { ThunderNotificationsRegistrar } from './notifications/thunder-notifications.registrar';
 import { AdmissionOrchestratorService } from './admission/admission-orchestrator.service';
 import { ThunderDomainRegistrar } from './domain/thunder-domain.registrar';
 import { ConsumerRegistryService } from './events/consumer-registry.service';
@@ -66,6 +68,7 @@ import { IntentPrepareService } from './intent/intent-prepare.service';
     FinanceModule,
     AccountingModule,
     AutomationModule,
+    NotificationsModule,
   ],
   controllers: [ThunderController],
   providers: [
@@ -104,6 +107,7 @@ import { IntentPrepareService } from './intent/intent-prepare.service';
     ThunderIntelRegistrar,
     ThunderDomainRegistrar,
     ThunderAutomationRegistrar,
+    ThunderNotificationsRegistrar,
     ThunderModuleHooksRegistrar,
     ModuleHookBootstrap,
   ],

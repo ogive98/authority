@@ -9,6 +9,7 @@ export const NOTIF_SOURCE_KEYS = [
   "TEJ_PENDING",
   "ATM_REVIEW",
   "WA_INBOX",
+  "PROD_NEED",
 ] as const;
 
 export type NotifSourceKey = (typeof NOTIF_SOURCE_KEYS)[number];
@@ -69,6 +70,12 @@ export const NOTIF_SOURCE_META: Record<
     hintFr: "Messages OPEN/MATCHED → brouillon Soft Glass (humain).",
     hintIt: "Messaggi OPEN/MATCHED → bozza Soft Glass (umano).",
   },
+  PROD_NEED: {
+    fr: "Besoin production",
+    it: "Fabbisogno produzione",
+    hintFr: "Commande confirmée → hint OF manuel (pas d’OF auto).",
+    hintIt: "Ordine confermato → hint OF manuale (niente OF auto).",
+  },
 };
 
 export function defaultMutedMap(): NotifMutedMap {
@@ -81,6 +88,7 @@ export function defaultMutedMap(): NotifMutedMap {
     TEJ_PENDING: false,
     ATM_REVIEW: false,
     WA_INBOX: false,
+    PROD_NEED: false,
   };
 }
 

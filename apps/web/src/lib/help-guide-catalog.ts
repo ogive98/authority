@@ -165,25 +165,27 @@ export const HELP_MODULES: HelpModule[] = [
           it: "Centro notifiche",
         },
         when: {
-          fr: "Alertes métier : crédit breach, promesse échue, déclaration portail, relance DRAFT, RAS Prefs PENDING.",
-          it: "Avvisi operativi: credito breach, promessa scaduta, dichiarazione portale, sollecito DRAFT, RAS Prefs PENDING.",
+          fr: "Alertes métier : crédit breach, promesse échue, déclaration portail, relance DRAFT, RAS Prefs PENDING, besoin production.",
+          it: "Avvisi operativi: credito breach, promessa scaduta, dichiarazione portale, sollecito DRAFT, RAS Prefs PENDING, fabbisogno produzione.",
         },
         steps: {
           fr: [
             "Cliquez la cloche topbar — sync API (+ Actualiser).",
+            "Thunder `notifications.materialize` resync l’inbox après events métier (D290).",
+            "Source « Besoin production » : commande confirmée + module Production ON — hint OF manuel uniquement.",
             "Paramètres (drawer ou `/settings#poste`) : mute par source, audio AUTHORITY, animations.",
             "Variantes audio Soft / Pulse / Carillon + volume + Tester le ton.",
             "Clic droit sur un chip source = mute / unmute rapide.",
-            "Nouvelle alerte → animation minimale Soft Glass + ton (si non muté).",
-            "Pas de messagerie CRM · pas de WA inbox→order.",
+            "Pas de messagerie CRM · pas de WA inbox→order · pas d’OF auto.",
           ],
           it: [
             "Clicca la campana topbar — sync API (+ Aggiorna).",
+            "Thunder `notifications.materialize` risincronizza l’inbox dopo eventi business (D290).",
+            "Fonte « Fabbisogno produzione »: ordine confermato + modulo Production ON — solo hint OF manuale.",
             "Parametri (drawer o `/settings#poste`): mute per sorgente, audio AUTHORITY, animazioni.",
             "Varianti audio Soft / Pulse / Chime + volume + Prova tono.",
             "Clic destro su un chip sorgente = mute / unmute rapido.",
-            "Nuovo avviso → animazione Soft Glass + tono (se non mutato).",
-            "Niente messaggistica CRM · niente WA inbox→order.",
+            "Niente messaggistica CRM · niente WA inbox→order · niente OF auto.",
           ],
         },
       },
@@ -192,12 +194,12 @@ export const HELP_MODULES: HelpModule[] = [
       fr: [
         "Les features ne sont jamais listées dans la sidebar.",
         "Pas de KPI inventés — montants TND uniquement si données API.",
-        "Notifications = inbox Soft Glass (D247–D249) — prefs poste local · pas un CRM.",
+        "Notifications = inbox Soft Glass (D247–D249/D290) — prefs poste local · pas un CRM · pas d’OF auto.",
       ],
       it: [
         "Le feature non sono mai elencate nella sidebar.",
         "Nessun KPI inventato — importi TND solo se dati API.",
-        "Notifiche = inbox Soft Glass (D247–D249) — prefs postazione local · non un CRM.",
+        "Notifiche = inbox Soft Glass (D247–D249/D290) — prefs postazione local · non un CRM · niente OF auto.",
       ],
     },
   },
@@ -1728,8 +1730,8 @@ export const HELP_MODULES: HelpModule[] = [
       it: "Profili ASSISTED / Approvazione — suggerimenti human-gated (manuale o eventi Thunder), niente FULL_AUTO critico.",
     },
     when: {
-      fr: "Piloter des suggestions (créances échues, déclarations portail, brouillons, lot TEJ).",
-      it: "Guidare suggerimenti (crediti scaduti, dichiarazioni portale, bozze, lotto TEJ).",
+      fr: "Piloter des suggestions (créances échues, déclarations portail, brouillons, lot TEJ, commande confirmée).",
+      it: "Guidare suggerimenti (crediti scaduti, dichiarazioni portale, bozze, lotto TEJ, ordine confermato).",
     },
     features: [
       {
@@ -1770,31 +1772,55 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Activez un profil pour le déclencheur concerné (ex. Lot TEJ XML préparé + Hint import Tej).",
-            "Events : déclaration portail · créance AR créée (si déjà échue) · draft WA · lot TEJ préparé.",
+            "Events : déclaration portail · créance AR créée (si déjà échue) · draft WA · lot TEJ préparé · commande confirmée.",
             "Thunder consumer `automation.suggestFromEvent` → run badge Event.",
             "Toujours zéro mutation — Approuver ≠ exécuter le métier.",
-            "Pas d’upload TEJ · pas de confirm commande · pas de FinPayment auto.",
+            "Pas d’upload TEJ · pas de confirm commande auto · pas de FinPayment · pas d’OF auto.",
           ],
           it: [
             "Attivare un profilo per il trigger (es. Lotto TEJ XML preparato + Hint import Tej).",
-            "Eventi: dichiarazione portale · credito AR creato (se già scaduto) · draft WA · lotto TEJ.",
+            "Eventi: dichiarazione portale · credito AR creato (se già scaduto) · draft WA · lotto TEJ · ordine confermato.",
             "Consumer Thunder `automation.suggestFromEvent` → run badge Event.",
             "Sempre zero mutazioni — Approvare ≠ eseguire il business.",
-            "Niente upload TEJ · niente confirm ordine · niente FinPayment auto.",
+            "Niente upload TEJ · niente confirm ordine auto · niente FinPayment · niente OF auto.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Hint besoin production (D290)",
+          it: "Hint fabbisogno produzione (D290)",
+        },
+        when: {
+          fr: "Après confirmation commande — suggérer un OF manuel si Production est actif.",
+          it: "Dopo conferma ordine — suggerire un OF manuale se Production è attivo.",
+        },
+        steps: {
+          fr: [
+            "Profil : déclencheur « Commande confirmée » + action « Hint besoin production ».",
+            "Event `sales.order.confirmed.v1` → run ASSISTED (badge Event) + signal Thunder + cloche PROD_NEED.",
+            "Ouvrir `/production` et créer l’OF manuellement si besoin.",
+            "Thunder ne crée jamais d’OF automatiquement.",
+          ],
+          it: [
+            "Profilo: trigger « Ordine confermato » + azione « Hint fabbisogno produzione ».",
+            "Evento `sales.order.confirmed.v1` → run ASSISTED (badge Event) + segnale Thunder + campana PROD_NEED.",
+            "Aprire `/production` e creare l’OF manualmente se serve.",
+            "Thunder non crea mai OF automaticamente.",
           ],
         },
       },
     ],
     locks: {
       fr: [
-        "FULL_AUTO interdit V0 (D245/D289).",
-        "Pas de confirm commande / FinPayment / draft dunning auto / upload TEJ.",
+        "FULL_AUTO interdit V0 (D245/D289/D290).",
+        "Pas de confirm commande / FinPayment / draft dunning auto / upload TEJ / OF auto.",
         "Approuver ≠ exécuter la mutation métier.",
         "Thunder orchestre seulement des suggestions (HOW).",
       ],
       it: [
-        "FULL_AUTO vietato V0 (D245/D289).",
-        "Niente confirm ordine / FinPayment / draft sollecito auto / upload TEJ.",
+        "FULL_AUTO vietato V0 (D245/D289/D290).",
+        "Niente confirm ordine / FinPayment / draft sollecito auto / upload TEJ / OF auto.",
         "Approvare ≠ eseguire la mutazione business.",
         "Thunder orchestra solo suggerimenti (HOW).",
       ],

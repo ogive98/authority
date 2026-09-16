@@ -19,6 +19,7 @@ import {
   matchedMilestones,
 } from '../../finance/collection-schedule.resolver';
 import { CreditPressureResolver } from '../../finance/credit-pressure.resolver';
+import { ModuleRegistryService } from '../../modules-registry/module-registry.service';
 
 @Injectable()
 export class ThunderIntelRegistrar implements OnModuleInit {
@@ -31,6 +32,7 @@ export class ThunderIntelRegistrar implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly collectionSchedule: CollectionScheduleResolver,
     private readonly creditPressure: CreditPressureResolver,
+    private readonly modules: ModuleRegistryService,
   ) {}
 
   onModuleInit(): void {
@@ -147,6 +149,75 @@ export class ThunderIntelRegistrar implements OnModuleInit {
       },
       occurredAt: new Date(envelope.occurredAt),
     });
+    await this.maybeSuggestProductionNeed(envelope);
+  }
+
+  /**
+   * D290 — advisory only: production module ON → suggest manual WO (never auto-create).
+   */
+  private async maybeSuggestProductionNeed(
+    envelope: AuthorityEventEnvelope,
+  ): Promise<void> {
+    const companyId = envelope.companyId!;
+    if (!(await this.modules.isEnabled(companyId, 'production'))) {
+      return;
+    }
+    const orderId =
+      (typeof envelope.payload.orderId === 'string'
+        ? envelope.payload.orderId
+        : null) || envelope.aggregateId;
+    const orderNumber =
+      typeof envelope.payload.orderNumber === 'string'
+        ? envelope.payload.orderNumber
+        : null;
+
+    const signal = await this.signals.create({
+      companyId,
+      siteId: envelope.siteId,
+      type: THUNDER_SIGNAL_TYPES.ProductionNeedSuggested,
+      severity: 'INFO',
+      source: THUNDER_INTEL_CONSUMER_ID,
+      sourceEventId: `${envelope.eventId}:prod-need`,
+      sourceEventType: envelope.eventType,
+      correlationId: envelope.correlationId,
+      evidence: {
+        orderId,
+        orderNumber,
+        aggregateType: envelope.aggregateType,
+        aggregateId: envelope.aggregateId,
+        note: 'Create WO manually if needed — no auto OF (D290)',
+      },
+      occurredAt: new Date(envelope.occurredAt),
+    });
+
+    await this.recommendations.create({
+      companyId,
+      signalId: signal.id,
+      problem: orderNumber
+        ? `Besoin production — ${orderNumber}`
+        : 'Besoin production — commande confirmée',
+      evidence: {
+        orderId,
+        orderNumber,
+        note: 'Create WO manually if needed — no auto OF (D290)',
+      },
+      options: [
+        { id: 'open_production', label: 'Ouvrir Production' },
+        { id: 'open_order', label: 'Ouvrir la commande' },
+        { id: 'ack', label: 'Acknowledge without action' },
+      ],
+      proposedAction: {
+        type: 'record_only',
+        href: '/production',
+        orderId,
+      },
+      autonomyLevel: 2,
+      correlationId: envelope.correlationId ?? envelope.eventId,
+    });
+
+    this.logger.log(
+      `signal ProductionNeedSuggested event=${envelope.eventId} company=${companyId}`,
+    );
   }
 
   private async onFinanceAllocation(

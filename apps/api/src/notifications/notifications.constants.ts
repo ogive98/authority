@@ -7,6 +7,7 @@ export const NOTIFICATION_SOURCES = [
   'TEJ_PENDING',
   'ATM_REVIEW',
   'WA_INBOX',
+  'PROD_NEED',
 ] as const;
 
 export type NotificationSource = (typeof NOTIFICATION_SOURCES)[number];

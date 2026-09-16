@@ -7,4 +7,5 @@ export const THUNDER_AUTOMATION_EVENT_TYPES = {
   financeOpenItemCreated: 'finance.open_item.created.v1',
   salesWaInboxDraftCreated: 'sales.wa_inbox.draft_created.v1',
   taxTejPackPrepared: 'tax.tej.pack_prepared.v1',
+  salesOrderConfirmed: 'sales.order.confirmed.v1',
 } as const;

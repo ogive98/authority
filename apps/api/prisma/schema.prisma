@@ -3580,6 +3580,8 @@ enum AtmTriggerKind {
   SALES_DRAFT_ORDER_STALE
   /** D289 — TEJ local pack prepared (human import hint). */
   TAX_TEJ_PACK_PREPARED
+  /** D290 — sales order confirmed → production need hint (no auto WO). */
+  SALES_ORDER_CONFIRMED
 }
 
 enum AtmActionKind {
@@ -3591,6 +3593,8 @@ enum AtmActionKind {
   ORDER_REVIEW_HINT
   /** D289 — hint to ack Tej import locally — no upload. */
   TEJ_IMPORT_HINT
+  /** D290 — hint to create production WO manually — no auto WO. */
+  PRODUCTION_NEED_HINT
 }
 
 enum AtmRunStatus {

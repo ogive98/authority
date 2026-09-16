@@ -10,6 +10,8 @@ export const THUNDER_SIGNAL_TYPES = {
   /** D185 — AR outstanding vs creditLimit (warn / breach). */
   FinanceCreditPressure: 'FinanceCreditPressure',
   FinanceBrokenPromises: 'FinanceBrokenPromises',
+  /** D290 — order confirmed; create WO manually if production module ON. */
+  ProductionNeedSuggested: 'ProductionNeedSuggested',
 } as const;
 
 export const THUNDER_INTEL_EVENT_TYPES = {
