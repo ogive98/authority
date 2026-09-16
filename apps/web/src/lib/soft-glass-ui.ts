@@ -20,31 +20,31 @@ export function softUnderlineTabClass(active: boolean): string {
   );
 }
 
-/** Table host — underlay only, zero frame. Prefer `ASoftTable` on new screens. */
+/** Table host — ZIP panel underlay. Prefer `ASoftTable` on new screens. */
 export const softTableWrap =
-  "a-underlay overflow-x-auto rounded-[var(--a-radius-md)]";
+  "a-underlay overflow-x-auto rounded-[var(--a-radius-lg)]";
 
 export const softThead =
-  "bg-a-surface-3/55 text-a-fg-muted";
+  "bg-a-surface-3/80 text-a-fg-muted";
 
 export const softTr =
-  "transition-colors hover:bg-a-surface-3/45";
+  "border-b border-[color:var(--a-border-subtle)] transition-colors hover:bg-a-surface-3/55 last:border-b-0";
 
-/** Stacked list host (D186) — underlay, no card border. */
+/** Stacked list host — ZIP panel. */
 export const softList =
-  "a-underlay space-y-0.5 rounded-[var(--a-radius-md)] p-1.5";
+  "a-underlay space-y-0.5 rounded-[var(--a-radius-lg)] p-1.5";
 
 /** Soft Glass list row — hover underlay only. */
 export const softListRow =
-  "flex flex-wrap items-center gap-3 rounded-[var(--a-radius-sm)] px-3 py-3 transition-colors hover:bg-a-surface-3/55";
+  "flex flex-wrap items-center gap-3 rounded-[var(--a-radius-md)] px-3 py-3 transition-colors hover:bg-a-surface-3/55";
 
-/** Form / panel block without framed card. */
+/** Form / panel block — ZIP card. */
 export const softPanel =
-  "a-underlay space-y-4 rounded-[var(--a-radius-md)] p-4 md:p-5";
+  "a-card space-y-4 p-4 md:p-5";
 
-/** KPI / nav tile — Soft Glass underlay (portal + shell). */
+/** KPI / nav tile — ZIP card. */
 export const softTile =
-  "a-underlay rounded-[var(--a-radius-md)] px-4 py-3 transition-colors hover:bg-a-surface-3/55";
+  "a-card px-4 py-3 transition-colors hover:bg-a-surface-3/55";
 
 /** Secondary text button — quiet underline (D228). */
 export const softGhostBtn =

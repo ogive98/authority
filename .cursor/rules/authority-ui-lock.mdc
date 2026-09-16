@@ -1,68 +1,61 @@
 ---
-description: AUTHORITY visual identity — Soft Glass Enterprise OS (D161) + Layout Constitution (D225)
+description: AUTHORITY visual identity — Progressive Intelligence OS (ZIP pack v1) supersedes Soft Glass D161
 alwaysApply: true
 ---
 
-# Visual identity lock (Soft Glass Enterprise OS) — D161
+# Visual identity lock — Progressive Intelligence OS (ZIP pack v1)
 
-This lock applies to **every** future screen, module, gate, widget, and PR.
-No parallel design system.
+**Decision 2026-09-16 (product):** the Cursor pack
+`AUTHORITY_UIUX_PROGRESSIVE_REFACTOR_CURSOR_PACK_v1` + `12_SCREENSHOTS/` is the
+**visual source of truth**. Soft Glass Enterprise OS **D161 is superseded** for
+colors, chrome, cards, and action grammar.
 
-**Supersedes** Contiental Apple D095 · Utility Cube · Wick.
+**Still locked (non-visual):** registry-driven nav · no fake KPI/CA inventés ·
+Prefs VALIDATED rates · features never in sidebar · Smart Action Dock = right rail ·
+backend/API/business rules unchanged.
 
-**Spatial composition** (placement, patterns, button grammar): documentation
-`04_UI_UX/LAYOUT_CONSTITUTION.md` (**D225**). Soft Glass materials/chrome win on conflict.
+**Supersedes:** Soft Glass D161 · Contiental Apple · Utility Cube · Wick.
+
+Reference pixels: `04_UI_UX/PROGRESSIVE_REFACTOR_PACK_v1/12_SCREENSHOTS/`.
 
 ## Before any UI work
 
-1. Read `apps/web/src/app/globals.css` (`--a-*` tokens only).
-2. Reuse `AppShell` + `MissionControl` / `ModuleFeatureList` + `SmartActionDock` + `A*`.
-3. Match reference: `/` (Mission Control) · dock · `/settings` · `/dev/layout-gate`.
-4. Identify page pattern (List / Detail / Form / Workflow / ModuleDashboard / Settings) + one primary action.
-5. Compose with `APageBody` · `AFilterBar` · `AOverflowMenu` · `APageSection` · `ADetailGrid` · `AContextPanel` (D226).
-6. If a screen diverges → **fix that screen**, never invent a second look.
-7. **Registry-driven** — never hardcode sidebar, dashboard widgets, or actions.
+1. Read `apps/web/src/app/globals.css` (`--a-*` only — ZIP-tuned).
+2. Reuse `AppShell` + Mission Control + Smart Action Dock + `A*`.
+3. Match references: `/` · `/dev/primitives` · list/detail anatomy from pack.
+4. Registry-driven — never hardcode sidebar modules/actions/KPI inventions.
 
-## Locked identity (D161 — 2026-09-10)
+## Locked identity (ZIP)
 
 | Token | Value |
 |-------|--------|
-| Fonts | **Outfit** + JetBrains Mono (tabular) |
-| Accent | Teal `#2dd4bf` (dark) / `#0d9488` (light) · sky secondary |
-| Accent special | Violet **only** for priority / AI surfaces |
-| Theme | Dark navy `#0a1628` default · light cool `#e8eef7` |
-| Surface | `data-surface=patch\|ghost\|solid\|minimal` |
-| Density | comfortable · compact · spacious |
-| Materials | Glassmorphism blur · **zero frames** on panels · radius **tight** (2–6px) |
-| Hierarchy | Soft underlays (`.a-underlay`) only |
-| Actions | **Primary** (Nouveau/Enregistrer/Créer) = encadrement accent teal · **reste** = soulignement `--a-orange` (couleur icônes) + hover anim (D228) |
-| Motion | Stagger rows · glow pulse · nav underline · quiet action underline |
+| Fonts | Outfit + JetBrains Mono (tabular) |
+| Canvas | Near-black / charcoal `#0b0e14` (dark default) |
+| Surfaces | Raised panels `#12161f`–`#181e2a` with **subtle hairline** |
+| Accent primary | Electric blue / cyan `#4f8cff` · `#22d3ee` |
+| Accents (actions) | Blue · cyan · violet · emerald · orange (semantic diamonds) |
+| Radius | Soft panels ~8–12px (not Soft Glass 2px tight-only) |
+| Cards | Allowed as ZIP panels (subtle border + fill) — not Bootstrap boxes |
+| Primary CTA | Luminous accent text / light fill (e.g. « + New order ») — not heavy teal frame |
+| Density | ERP-first, scannable |
 
-## Chrome (mandatory)
+## Chrome (mandatory — ZIP anatomy)
 
-- **Full-width topbar** above everything — logo + Powered by AUTHORITY left; search pill center; monitor rings · notifs · SPECTRE/PATCH/GHOST animated enter-icons · theme toggle · FR/IT · user photo
-- Sidebar Finder + Smart Action Dock sit **under** the topbar (collapse does not move the bar)
-- Features **never** in sidebar → Mission Control + embedded feature list
-- Ops modes exit **only** via calculator unlock code (Admin-configurable)
-- Right rail chrome: **Smart Action Dock only** (color shortcuts · system · resources · surface) — never replace with page-context rail
-- Record/workflow context: optional **in-page** ContextPanel (underlay column or drawer), not the dock
-- Pages: no `border-a-*` boxes · soft underlays only · width = remaining main column (no hard 1600px page lock; tables full remaining width)
-- Status = pastel `ABadge` only
-- Montants TND / stock = solid tabular
-- AI panels: `DISABLED` / `UNAVAILABLE` — no crash if off
-- Page header: one primary action right · secondary in `•••` when >2 · canonical FR labels (see LAYOUT_CONSTITUTION)
+```text
+┌ topbar: AUTHORITY wordmark · ⌘K search · FR · Online · clock · (ops/user) ─┐
+├ sidebar modules (registry) ┬ main (Mission Control / list / detail) ┬ SMART ACTIONS ┤
+└────────────────────────────┴────────────────────────────────────────┴───────────────┘
+```
+
+- Features **never** in sidebar → Mission Control / module feature list
+- Right rail = Smart Action Dock only (cyan « SMART ACTIONS » title)
+- Ops modes exit only via calculator unlock
+- Live KPIs only (`/home-kpis`) — layout may match ZIP cards; **values never invented**
 
 ## Forbidden
 
-- Framed cards / tables / panels (`border` chrome)
+- Reverting to Soft Glass zero-frame / teal-only identity as SoT
+- Second parallel design system beside this ZIP OS
+- Hardcoded fake dashboard metrics (€ / CA)
 - Feature lists inside the sidebar
-- Hardcoded sidebar / home actions / fake KPI widgets
-- Contiental Apple soft empty Launchpad icons
-- Purple-on-white cliché theme
-- Second design system
-- Inventing layout per module (must reuse Soft Glass + D225 patterns)
-- Swapping Smart Action Dock for a module ContextRail
-
-## New modules
-
-Ship inside this shell. Ask before changing `--a-*` tokens.
+- Replacing Smart Action Dock with a module ContextRail

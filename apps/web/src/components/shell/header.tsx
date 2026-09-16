@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Bell,
@@ -88,15 +89,25 @@ function OpsModeIcon({
 }
 
 /**
- * Full-width topbar (D184) — brand · search · notifs · modes · theme · lang · user.
- * Online/sync live in Smart Action Dock (right rail).
+ * Full-width topbar — ZIP Progressive OS: AUTHORITY · ⌘K · FR · Online · clock.
  */
 export function ShellHeader() {
   const { t, unread: unreadLabel } = useShellT();
   const toggleLocale = useLocaleStore((s) => s.toggleLocale);
+  const locale = useLocaleStore((s) => s.locale);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [axBusy, setAxBusy] = useState(false);
   const [axHint, setAxHint] = useState<string | null>(null);
+  const [clock, setClock] = useState(() =>
+    new Date().toLocaleTimeString("fr-TN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }),
+  );
+  const [netOnline, setNetOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true,
+  );
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
   const setPaletteOpen = useShellStore((s) => s.setPaletteOpen);
   const spectreEnabled = useShellStore((s) => s.spectreEnabled);
@@ -127,6 +138,34 @@ export function ShellHeader() {
     window.addEventListener("authority:notif-bell-pulse", onPulse);
     return () =>
       window.removeEventListener("authority:notif-bell-pulse", onPulse);
+  }, []);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setClock(
+        new Date().toLocaleTimeString("fr-TN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }),
+      );
+    }, 15_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    function onOnline() {
+      setNetOnline(true);
+    }
+    function onOffline() {
+      setNetOnline(false);
+    }
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -179,7 +218,7 @@ export function ShellHeader() {
   const anyOps = spectreEnabled || patchEnabled || ghostEnabled;
 
   return (
-    <header className="a-glass relative z-[var(--a-z-sticky)] flex h-[3.75rem] w-full shrink-0 items-center gap-3 px-3 md:px-5">
+    <header className="relative z-[var(--a-z-sticky)] flex h-14 w-full shrink-0 items-center gap-3 border-b border-[color:var(--a-border-subtle)] bg-a-surface-1/95 px-3 backdrop-blur-md md:px-5">
       <button
         type="button"
         className="a-action-quiet inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted md:hidden"
@@ -190,14 +229,20 @@ export function ShellHeader() {
         <Menu className="h-4 w-4" strokeWidth={1.5} />
       </button>
 
-      <CompanyBrandPlate className="min-w-0 shrink-0" />
+      <Link
+        href="/"
+        className="shrink-0 text-[15px] font-bold tracking-[0.06em] text-a-fg md:text-[16px]"
+      >
+        AUTHORITY
+      </Link>
+      <CompanyBrandPlate className="hidden min-w-0 shrink-0 xl:flex" />
 
       <div className="flex min-w-0 flex-1 justify-center px-1 md:px-4">
         <button
           type="button"
           onClick={() => setPaletteOpen(true)}
           className={cn(
-            "a-underlay flex h-10 w-full max-w-2xl items-center gap-2.5 rounded-[var(--a-radius-md)] px-4",
+            "a-underlay flex h-9 w-full max-w-xl items-center gap-2.5 rounded-full px-4",
             "text-left text-[length:var(--a-text-sm)] text-a-fg-muted transition-colors",
             "hover:bg-a-surface-3 hover:text-a-fg",
           )}
@@ -212,6 +257,30 @@ export function ShellHeader() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+        <span className="mr-1 hidden items-center gap-2.5 text-[11px] font-medium text-a-fg-muted md:inline-flex">
+          <button
+            type="button"
+            onClick={toggleLocale}
+            className="uppercase tracking-wide text-a-fg hover:text-a-accent"
+            aria-label={t("langToggle")}
+          >
+            {locale === "it" ? "IT" : "FR"}
+          </button>
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className={cn(
+                "inline-block size-1.5 rounded-full",
+                netOnline ? "bg-a-success" : "bg-a-danger",
+              )}
+              aria-hidden
+            />
+            <span className={netOnline ? "text-a-fg" : "text-a-danger"}>
+              {netOnline ? t("online") : t("wifiOffline")}
+            </span>
+          </span>
+          <span className="a-mono text-a-fg-subtle">{clock}</span>
+        </span>
+
         <button
           type="button"
           title={t("authorityXOpen")}
@@ -300,7 +369,7 @@ export function ShellHeader() {
           onClick={toggleLocale}
           title={t("langToggle")}
           aria-label={t("langToggle")}
-          className="a-action-quiet inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted"
+          className="a-action-quiet inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted md:hidden"
         >
           <Languages className="h-4 w-4" strokeWidth={1.5} aria-hidden />
         </button>

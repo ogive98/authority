@@ -1,13 +1,10 @@
 @import "tailwindcss";
 
 /*
-  AUTHORITY design tokens — Soft Glass ERP (D160/D161 — 2026-09-10)
-  Borderless · glassmorphism · teal/navy · aggressive readable type.
-  Supersedes Contiental Apple D095 product chrome.
-  Source of truth: --a-* variables.
-
-  Stage 1 (Progressive Refactor): token map FROZEN — do not rewrite values
-  without an explicit product decision. Document: 04_UI_UX/SOFT_GLASS_TOKEN_MAP.md
+  AUTHORITY design tokens — Progressive Intelligence OS
+  Source: AUTHORITY_UIUX_PROGRESSIVE_REFACTOR_CURSOR_PACK_v1 / 12_SCREENSHOTS
+  Supersedes Soft Glass D161 materials (2026-09-16 product decision).
+  SoT: --a-* variables. No raw hex in components/a + shell.
 */
 
 :root,
@@ -24,35 +21,35 @@
   --a-fg-muted: #475569;
   --a-fg-subtle: #64748b;
 
-  --a-border-subtle: transparent;
-  --a-border-strong: transparent;
+  --a-border-subtle: rgb(15 23 42 / 0.08);
+  --a-border-strong: rgb(15 23 42 / 0.14);
 
-  --a-accent: #0d9488;
-  --a-accent-hover: #0f766e;
-  --a-accent-muted: rgb(13 148 136 / 0.14);
+  --a-accent: #2563eb;
+  --a-accent-hover: #1d4ed8;
+  --a-accent-muted: rgb(37 99 235 / 0.12);
   --a-accent-fg: #ffffff;
-  --a-accent-2: #38bdf8;
+  --a-accent-2: #0891b2;
 
-  --a-violet: #6366f1;
-  --a-violet-soft: rgb(99 102 241 / 0.14);
-  --a-sky: #38bdf8;
-  --a-sky-soft: rgb(56 189 248 / 0.16);
-  --a-orange: #f59e0b;
-  --a-orange-soft: rgb(245 158 11 / 0.16);
-  --a-orange-fg: #b45309;
+  --a-violet: #7c3aed;
+  --a-violet-soft: rgb(124 58 237 / 0.12);
+  --a-sky: #0891b2;
+  --a-sky-soft: rgb(8 145 178 / 0.12);
+  --a-orange: #ea580c;
+  --a-orange-soft: rgb(234 88 12 / 0.12);
+  --a-orange-fg: #c2410c;
 
-  --a-success: #10b981;
+  --a-success: #059669;
   --a-success-fg: #047857;
-  --a-success-soft: rgb(16 185 129 / 0.14);
-  --a-warning: #f59e0b;
+  --a-success-soft: rgb(5 150 105 / 0.12);
+  --a-warning: #d97706;
   --a-warning-fg: #b45309;
-  --a-warning-soft: rgb(245 158 11 / 0.16);
-  --a-danger: #f43f5e;
+  --a-warning-soft: rgb(217 119 6 / 0.12);
+  --a-danger: #e11d48;
   --a-danger-fg: #be123c;
-  --a-danger-soft: rgb(244 63 94 / 0.14);
-  --a-info: #0ea5e9;
-  --a-info-fg: #0369a1;
-  --a-info-soft: rgb(14 165 233 / 0.14);
+  --a-danger-soft: rgb(225 29 72 / 0.12);
+  --a-info: #2563eb;
+  --a-info-fg: #1d4ed8;
+  --a-info-soft: rgb(37 99 235 / 0.12);
 
   --a-spectre: #64748b;
   --a-spectre-fg: #0b1220;
@@ -82,7 +79,7 @@
     rgb(16 185 129 / 0.75) 100%
   );
 
-  --a-focus-ring: #0d9488;
+  --a-focus-ring: #2563eb;
   --a-focus-ring-offset: #e8eef7;
 
   --a-space-1: 0.25rem;
@@ -94,16 +91,16 @@
   --a-space-7: 2rem;
   --a-space-8: 3rem;
 
-  --a-radius-sm: 0.125rem;
-  --a-radius-md: 0.25rem;
-  --a-radius-lg: 0.375rem;
-  --a-radius-pill: 0.25rem;
-  --a-radius-app: 0.375rem;
+  --a-radius-sm: 0.375rem;
+  --a-radius-md: 0.625rem;
+  --a-radius-lg: 0.75rem;
+  --a-radius-pill: 0.625rem;
+  --a-radius-app: 0.75rem;
 
-  --a-shadow-card: none;
+  --a-shadow-card: 0 1px 0 rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.06);
   --a-shadow-panel: 0 18px 50px rgb(15 23 42 / 0.12);
   --a-shadow-glass: 0 8px 32px rgb(15 23 42 / 0.08);
-  --a-hairline: none;
+  --a-hairline: 1px solid rgb(15 23 42 / 0.08);
 
   --a-z-base: 0;
   --a-z-sticky: 100;
@@ -146,32 +143,34 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --a-surface-1: #0a1628;
-  --a-surface-2: rgb(255 255 255 / 0.06);
-  --a-surface-3: rgb(255 255 255 / 0.08);
-  --a-surface-4: rgb(255 255 255 / 0.12);
-  --a-surface-5: rgb(255 255 255 / 0.16);
+  /* ZIP charcoal canvas */
+  --a-surface-1: #0b0e14;
+  --a-surface-2: #12161f;
+  --a-surface-3: #181e2a;
+  --a-surface-4: #1e2533;
+  --a-surface-5: #252d3d;
 
-  --a-fg: #f1f5f9;
-  --a-fg-muted: #94a3b8;
-  --a-fg-subtle: #64748b;
+  --a-fg: #f4f7fb;
+  --a-fg-muted: #9aa3b5;
+  --a-fg-subtle: #6b7385;
 
-  --a-border-subtle: transparent;
-  --a-border-strong: transparent;
+  --a-border-subtle: rgb(255 255 255 / 0.08);
+  --a-border-strong: rgb(255 255 255 / 0.14);
 
-  --a-accent: #2dd4bf;
-  --a-accent-hover: #5eead4;
-  --a-accent-muted: rgb(45 212 191 / 0.18);
-  --a-accent-fg: #042f2e;
-  --a-accent-2: #38bdf8;
+  /* Electric blue primary (ZIP) */
+  --a-accent: #4f8cff;
+  --a-accent-hover: #6ba0ff;
+  --a-accent-muted: rgb(79 140 255 / 0.16);
+  --a-accent-fg: #06101f;
+  --a-accent-2: #22d3ee;
 
-  --a-violet: #818cf8;
-  --a-violet-soft: rgb(129 140 248 / 0.18);
-  --a-sky: #38bdf8;
-  --a-sky-soft: rgb(56 189 248 / 0.18);
-  --a-orange: #fbbf24;
-  --a-orange-soft: rgb(251 191 36 / 0.18);
-  --a-orange-fg: #fde68a;
+  --a-violet: #a78bfa;
+  --a-violet-soft: rgb(167 139 250 / 0.18);
+  --a-sky: #22d3ee;
+  --a-sky-soft: rgb(34 211 238 / 0.16);
+  --a-orange: #fb923c;
+  --a-orange-soft: rgb(251 146 60 / 0.18);
+  --a-orange-fg: #ffedd5;
 
   --a-success: #34d399;
   --a-success-fg: #6ee7b7;
@@ -182,39 +181,39 @@
   --a-danger: #fb7185;
   --a-danger-fg: #fda4af;
   --a-danger-soft: rgb(251 113 133 / 0.18);
-  --a-info: #38bdf8;
-  --a-info-fg: #7dd3fc;
-  --a-info-soft: rgb(56 189 248 / 0.18);
+  --a-info: #60a5fa;
+  --a-info-fg: #93c5fd;
+  --a-info-soft: rgb(96 165 250 / 0.18);
 
   --a-spectre: #94a3b8;
   --a-spectre-fg: #f1f5f9;
   --a-spectre-muted: rgb(148 163 184 / 0.16);
   --a-spectre-overlay: color-mix(in srgb, #94a3b8 12%, transparent);
 
-  --a-glass-bg: rgb(15 30 55 / 0.55);
-  --a-glass-bg-strong: rgb(20 40 70 / 0.72);
-  --a-glass-border: transparent;
-  --a-glass-blur: 28px;
+  --a-glass-bg: rgb(18 22 31 / 0.92);
+  --a-glass-bg-strong: rgb(18 22 31 / 0.98);
+  --a-glass-border: var(--a-border-subtle);
+  --a-glass-blur: 20px;
   --a-lightning-bg: var(--a-glass-bg);
-  --a-lightning-border: transparent;
+  --a-lightning-border: var(--a-border-subtle);
   --a-lightning-blur: var(--a-glass-blur);
 
-  --a-gradient-canvas: #0a1628;
-  --a-gradient-accent: linear-gradient(180deg, #5eead4 0%, #2dd4bf 100%);
-  --a-gradient-pro: linear-gradient(135deg, #38bdf8 0%, #2dd4bf 50%, #34d399 100%);
+  --a-gradient-canvas: #0b0e14;
+  --a-gradient-accent: linear-gradient(180deg, #6ba0ff 0%, #4f8cff 100%);
+  --a-gradient-pro: linear-gradient(135deg, #4f8cff 0%, #22d3ee 50%, #34d399 100%);
   --a-gradient-pro-soft: linear-gradient(
     135deg,
-    rgb(56 189 248 / 0.45) 0%,
-    rgb(45 212 191 / 0.4) 50%,
+    rgb(79 140 255 / 0.45) 0%,
+    rgb(34 211 238 / 0.4) 50%,
     rgb(52 211 153 / 0.45) 100%
   );
 
-  --a-focus-ring: #2dd4bf;
+  --a-focus-ring: #4f8cff;
   --a-focus-ring-offset: var(--a-surface-1);
-  --a-shadow-card: none;
+  --a-shadow-card: 0 1px 0 rgb(255 255 255 / 0.04), 0 12px 40px rgb(0 0 0 / 0.35);
   --a-shadow-panel: 0 24px 64px rgb(0 0 0 / 0.45);
   --a-shadow-glass: 0 12px 40px rgb(0 0 0 / 0.35);
-  --a-hairline: none;
+  --a-hairline: 1px solid var(--a-border-subtle);
 }
 
 /* Surface modes after theme so they win (D161 Enterprise OS) */
@@ -589,19 +588,18 @@
       );
   }
 
-  /* Soft underlay — hierarchy without frames (D160). Tight radius (D228). */
+  /* Raised panel — ZIP card surface (subtle hairline). */
   .a-underlay {
     background: var(--a-surface-2);
-    border: 0;
-    border-radius: var(--a-radius-md);
-    box-shadow: var(--a-shadow-glass);
-    backdrop-filter: blur(16px) saturate(160%);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: var(--a-hairline);
+    border-radius: var(--a-radius-lg);
+    box-shadow: var(--a-shadow-card);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
   }
 
   /**
-   * Quiet actions — icon-color underline + hover grow (D228).
-   * Use for secondary / Filtrer / overflow / chips inactive — NOT primary CTAs.
+   * Quiet actions — accent underline (ZIP secondary).
    */
   .a-action-quiet {
     position: relative;
@@ -624,7 +622,7 @@
     bottom: 0;
     height: 1.5px;
     border-radius: 1px;
-    background: var(--a-orange);
+    background: var(--a-accent);
     transform: scaleX(0);
     transform-origin: center;
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -644,30 +642,30 @@
 
   .a-action-quiet:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-orange) 45%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-accent) 45%, transparent);
   }
 
   /**
-   * Primary CTA frame — teal/green encadrement only (Nouveau / Enregistrer / Créer).
+   * Primary CTA — luminous accent (ZIP « + New order »), not heavy framed button.
    */
   .a-action-primary {
-    border-radius: var(--a-radius-sm);
-    background: var(--a-accent);
-    color: var(--a-accent-fg);
-    box-shadow:
-      inset 0 0 0 1.5px color-mix(in srgb, var(--a-accent) 100%, #fff 12%),
-      0 0 0 1.5px var(--a-accent);
+    border-radius: var(--a-radius-md);
+    background: var(--a-accent-muted);
+    color: var(--a-accent);
+    border: 1px solid color-mix(in srgb, var(--a-accent) 35%, transparent);
+    box-shadow: none;
+    font-weight: 600;
     transition:
       background-color 160ms ease,
-      box-shadow 160ms ease,
-      opacity 160ms ease;
+      color 160ms ease,
+      border-color 160ms ease;
   }
 
   .a-action-primary:hover {
-    background: var(--a-accent-hover);
-    box-shadow:
-      inset 0 0 0 1.5px var(--a-accent-hover),
-      0 0 0 2px color-mix(in srgb, var(--a-accent) 70%, transparent);
+    background: color-mix(in srgb, var(--a-accent) 28%, transparent);
+    color: var(--a-accent-hover);
+    border-color: var(--a-accent);
+    box-shadow: none;
   }
 
   .a-nav-row {
@@ -899,15 +897,15 @@
     -webkit-backdrop-filter: saturate(180%) blur(calc(var(--a-glass-blur) + 8px));
   }
 
-  /* Soft Glass panel — same material as .a-underlay (D172); no framed cards. */
+  /* ZIP panel card — raised surface + hairline. */
   .a-card {
     background: var(--a-surface-2);
-    border: 0 !important;
+    border: var(--a-hairline) !important;
     outline: none;
-    border-radius: var(--a-radius-md);
-    box-shadow: var(--a-shadow-glass);
-    backdrop-filter: blur(16px) saturate(160%);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border-radius: var(--a-radius-lg);
+    box-shadow: var(--a-shadow-card);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
   }
 
   [data-theme="dark"] .a-card {

@@ -218,27 +218,41 @@ function ThunderCoreDialog({
   );
 }
 
+const DOCK_SPARK = [
+  "text-a-accent",
+  "text-a-sky",
+  "text-a-violet",
+  "text-a-success",
+  "text-a-orange",
+] as const;
+
 function ActionTile({
   action,
   collapsed,
+  sparkIndex = 0,
 }: {
   action: ActionDefinition;
   collapsed: boolean;
+  sparkIndex?: number;
 }) {
   if (!action.href) return null;
   const Icon = dockIconFor(action);
   const shortcut = action.shortcut
     ? action.shortcut.keys.join("+")
     : null;
+  const spark = DOCK_SPARK[sparkIndex % DOCK_SPARK.length];
 
   if (collapsed) {
     return (
       <Link
         href={action.href}
         title={action.label}
-        className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)] text-a-orange"
+        className={cn(
+          "a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)]",
+          spark,
+        )}
       >
-        <Icon className="h-5 w-5" strokeWidth={SIDEBAR_STROKE} aria-hidden />
+        <Sparkles className="h-4 w-4" strokeWidth={SIDEBAR_STROKE} aria-hidden />
       </Link>
     );
   }
@@ -248,8 +262,8 @@ function ActionTile({
       href={action.href}
       className="a-nav-row group flex w-full items-center gap-2.5 rounded-[var(--a-radius-sm)] px-1.5 py-1.5 text-left"
     >
-      <Icon
-        className="h-5 w-5 shrink-0 text-a-orange"
+      <Sparkles
+        className={cn("h-4 w-4 shrink-0", spark)}
         strokeWidth={SIDEBAR_STROKE}
         aria-hidden
       />
@@ -261,6 +275,7 @@ function ActionTile({
           <span className="a-mono text-[10px] text-a-fg-subtle">{shortcut}</span>
         ) : null}
       </span>
+      <Icon className="h-3.5 w-3.5 shrink-0 text-a-fg-subtle opacity-0 transition-opacity group-hover:opacity-100" strokeWidth={1.5} aria-hidden />
     </Link>
   );
 }
@@ -385,7 +400,7 @@ export function SmartActionDock() {
       </div>
 
       {!dockCollapsed ? (
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-a-fg-subtle">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-a-sky">
           {t("smartActions")}
         </p>
       ) : null}
@@ -401,8 +416,13 @@ export function SmartActionDock() {
             {t("kpiEmpty")}
           </p>
         ) : (
-          unique.map((a) => (
-            <ActionTile key={a.id} action={a} collapsed={dockCollapsed} />
+          unique.map((a, i) => (
+            <ActionTile
+              key={a.id}
+              action={a}
+              collapsed={dockCollapsed}
+              sparkIndex={i}
+            />
           ))
         )}
       </div>

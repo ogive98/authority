@@ -38,7 +38,7 @@ function greetingForHour(
   return t("greetEvening");
 }
 
-/** Hero — identity from /me only (no fake KPI). */
+/** Hero — identity from /me only (no fake KPI). ZIP denser greeting. */
 export function HeroContextWidget() {
   const { t } = useShellT();
   const [name, setName] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export function HeroContextWidget() {
     };
   }, []);
 
-  if (pending) return <ASkeleton lines={3} />;
+  if (pending) return <ASkeleton lines={2} />;
 
   const hour = new Date().getHours();
   const greet = greetingForHour(hour, t);
@@ -69,12 +69,9 @@ export function HeroContextWidget() {
   const initials = initialsFromName(display, "");
 
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="a-card flex flex-wrap items-end justify-between gap-4 p-4 md:p-5">
       <div className="min-w-0">
-        <p className="text-[length:var(--a-text-xs)] font-semibold uppercase tracking-[0.12em] text-a-fg-subtle">
-          {t("missionControl")}
-        </p>
-        <h2 className="mt-1 text-[clamp(1.5rem,3vw,2rem)] font-semibold tracking-[-0.03em] text-a-fg">
+        <h2 className="text-[clamp(1.15rem,2vw,1.35rem)] font-semibold tracking-[-0.02em] text-a-fg">
           {greet}, {display.split(" ")[0]}
         </h2>
         <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -82,13 +79,10 @@ export function HeroContextWidget() {
           <span className="text-a-fg-subtle"> · </span>
           <span className="a-mono text-a-fg-subtle">{initials}</span>
         </p>
-        <span className="mt-3 inline-flex items-center rounded-full bg-a-success-soft px-2.5 py-1 text-[11px] font-medium text-a-success-fg">
-          {t("allClear")}
-        </span>
       </div>
       <Link
         href="/account"
-        className="rounded-full bg-a-accent-muted px-3 py-1.5 text-[length:var(--a-text-xs)] font-medium text-a-accent transition-colors hover:bg-a-accent hover:text-white"
+        className="rounded-[var(--a-radius-md)] bg-a-accent-muted px-3 py-1.5 text-[length:var(--a-text-xs)] font-semibold text-a-accent transition-colors hover:bg-a-accent hover:text-a-accent-fg"
       >
         {t("controlCenter")}
       </Link>
@@ -458,9 +452,9 @@ export function HomeKpiStrip() {
           <Link
             key={card.id}
             href={card.href}
-            className="a-glass a-stagger-in flex min-h-[7.5rem] flex-col justify-between rounded-[var(--a-radius-lg)] p-4 transition-colors hover:bg-a-surface-3/40"
+            className="a-card a-stagger-in flex min-h-[7.5rem] flex-col justify-between p-4 transition-colors hover:bg-a-surface-3/50"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-a-orange">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-a-fg-muted">
               {label}
             </p>
             <div>

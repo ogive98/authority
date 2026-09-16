@@ -32,14 +32,14 @@ function WidgetChrome({
   return (
     <section
       className={cn(
-        "a-glass a-stagger-in rounded-[var(--a-radius-lg)] p-4 md:p-5",
+        "a-card a-stagger-in p-4 md:p-5",
         accent &&
           "ring-1 ring-[color-mix(in_oklab,var(--a-violet)_35%,transparent)]",
         className,
       )}
     >
       {title ? (
-        <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-a-orange">
+        <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-a-sky">
           {title}
         </h3>
       ) : null}
@@ -49,7 +49,7 @@ function WidgetChrome({
 }
 
 /**
- * Mission Control (D168/D197) — KPIs scoped to selected module + i18n chrome.
+ * Mission Control — ZIP Progressive OS layout (live KPIs only).
  */
 export function MissionControl({ className }: { className?: string }) {
   const { t } = useShellT();
@@ -69,19 +69,16 @@ export function MissionControl({ className }: { className?: string }) {
         className,
       )}
     >
-      <WidgetChrome title="" className="a-glass-strong relative overflow-hidden">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-40"
-          style={{
-            background:
-              "radial-gradient(ellipse at 20% 0%, color-mix(in srgb, var(--a-accent) 28%, transparent), transparent 55%), radial-gradient(ellipse at 90% 40%, color-mix(in srgb, var(--a-accent-2) 18%, transparent), transparent 50%)",
-          }}
-          aria-hidden
-        />
-        <div className="relative">
-          <HeroContextWidget />
-        </div>
-      </WidgetChrome>
+      <header className="min-w-0">
+        <h1 className="text-[clamp(1.5rem,2.5vw,1.875rem)] font-semibold tracking-[-0.03em] text-a-fg">
+          {t("missionControl")}
+        </h1>
+        <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
+          {t("operationalOverview")}
+        </p>
+      </header>
+
+      <HeroContextWidget />
 
       <HomeKpiStrip />
 
@@ -102,18 +99,17 @@ export function MissionControl({ className }: { className?: string }) {
             </WidgetChrome>
           </div>
 
+          <WidgetChrome title={t("widgetActivity")}>
+            <ActivityWidget />
+          </WidgetChrome>
+
           <WidgetChrome title={t("widgetShortcuts")}>
             <ModuleShortcutsWidget />
           </WidgetChrome>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <WidgetChrome title={t("widgetActivity")}>
-              <ActivityWidget />
-            </WidgetChrome>
-            <WidgetChrome title={t("widgetAi")} accent>
-              <AiPanelWidget />
-            </WidgetChrome>
-          </div>
+          <WidgetChrome title={t("widgetAi")} accent>
+            <AiPanelWidget />
+          </WidgetChrome>
 
           {tip ? (
             <p className="px-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -128,7 +124,7 @@ export function MissionControl({ className }: { className?: string }) {
 
         <div className="flex min-h-0 flex-col gap-3 lg:col-span-5">
           <div className="flex items-baseline justify-between gap-2 px-1">
-            <h3 className="text-[10px] font-semibold uppercase tracking-[0.1em] text-a-orange">
+            <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-a-sky">
               {t("featuresPrefix")} · {mod?.name ?? "Module"}
             </h3>
             <Link
@@ -138,7 +134,7 @@ export function MissionControl({ className }: { className?: string }) {
               {t("preferences")}
             </Link>
           </div>
-          <div className="a-glass min-h-[min(52vh,28rem)] flex-1 overflow-hidden rounded-[var(--a-radius-lg)]">
+          <div className="a-card min-h-[min(52vh,28rem)] flex-1 overflow-hidden">
             <ModuleFeatureList
               className="h-full min-h-0"
               variant="embedded"
