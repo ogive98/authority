@@ -135,6 +135,143 @@ export async function declareWorkOrder(
   return { ok: true, data: (await res.json()) as WorkOrder };
 }
 
+/** D292 — Digital worksheet Prep→Weigh→Control. */
+export type WorksheetLine = {
+  id: string;
+  lineNo: number;
+  productId: string;
+  productSku: string | null;
+  productName: string | null;
+  requestedQty: string;
+  preparedQty: string | null;
+  weighedQty: string | null;
+  unit: string;
+  lot: string | null;
+  notes: string | null;
+};
+
+export type Worksheet = {
+  id: string;
+  number: string;
+  status: string;
+  orderId: string | null;
+  workOrderId: string | null;
+  notes: string | null;
+  controlResult: string | null;
+  controlNote: string | null;
+  preparedAt: string | null;
+  weighedAt: string | null;
+  controlledAt: string | null;
+  version: number;
+  lines: WorksheetLine[];
+  createdAt: string;
+};
+
+export async function fetchWorksheets(
+  q?: string,
+  status?: string,
+): Promise<ApiOk<{ items: Worksheet[] }> | ApiFail> {
+  const params = new URLSearchParams();
+  if (q?.trim()) params.set("q", q.trim());
+  if (status) params.set("status", status);
+  const qs = params.toString();
+  const res = await fetch(
+    qs
+      ? `/api/v1/production/worksheets?${qs}`
+      : "/api/v1/production/worksheets",
+    { credentials: "include" },
+  );
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as { items: Worksheet[] } };
+}
+
+export async function createWorksheet(body: {
+  lines: Array<{
+    productId: string;
+    requestedQty: number;
+    unit?: string;
+    lot?: string;
+    notes?: string;
+  }>;
+  notes?: string;
+  orderId?: string;
+  workOrderId?: string;
+}): Promise<ApiOk<Worksheet> | ApiFail> {
+  const res = await fetch("/api/v1/production/worksheets", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as Worksheet };
+}
+
+export async function prepareWorksheet(
+  id: string,
+  lines: Array<{ id: string; qty: number; lot?: string }>,
+): Promise<ApiOk<Worksheet> | ApiFail> {
+  const res = await fetch(`/api/v1/production/worksheets/${id}/prepare`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lines }),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as Worksheet };
+}
+
+export async function weighWorksheet(
+  id: string,
+  lines: Array<{ id: string; qty: number; lot?: string }>,
+): Promise<ApiOk<Worksheet> | ApiFail> {
+  const res = await fetch(`/api/v1/production/worksheets/${id}/weigh`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lines }),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as Worksheet };
+}
+
+export async function controlWorksheet(
+  id: string,
+  body: { result: "PASS" | "FAIL"; note?: string },
+): Promise<ApiOk<Worksheet> | ApiFail> {
+  const res = await fetch(`/api/v1/production/worksheets/${id}/control`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as Worksheet };
+}
+
+export async function cancelWorksheet(
+  id: string,
+): Promise<ApiOk<Worksheet> | ApiFail> {
+  const res = await fetch(`/api/v1/production/worksheets/${id}/cancel`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, message: await parseError(res) };
+  }
+  return { ok: true, data: (await res.json()) as Worksheet };
+}
+
 export async function fetchActiveProducts(): Promise<
   ApiOk<{ items: ProductOption[] }> | ApiFail
 > {

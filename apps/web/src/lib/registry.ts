@@ -177,6 +177,11 @@ export const FALLBACK_REGISTRY: MeRegistry = {
           label: "Ordres de fabrication",
           href: "/production",
         },
+        {
+          id: "worksheet",
+          label: "Fiches digitales",
+          href: "/production/worksheets",
+        },
       ],
     },
     {

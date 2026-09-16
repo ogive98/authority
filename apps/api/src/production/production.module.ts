@@ -7,6 +7,7 @@ import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { ProductionController } from './production.controller';
 import { ProductionService } from './production.service';
+import { ProductionWorksheetService } from './production.worksheet.service';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { ProductionService } from './production.service';
     InventoryModule,
   ],
   controllers: [ProductionController],
-  providers: [ProductionService],
-  exports: [ProductionService],
+  providers: [ProductionService, ProductionWorksheetService],
+  exports: [ProductionService, ProductionWorksheetService],
 })
 export class ProductionModule {}

@@ -1719,7 +1719,45 @@ export const HELP_MODULES: HelpModule[] = [
           ],
         },
       },
+      {
+        name: {
+          fr: "Fiches digitales Prep→Pesage→Contrôle (D292)",
+          it: "Schede digitali Prep→Pesatura→Controllo (D292)",
+        },
+        when: {
+          fr: "Préparer, peser manuellement et contrôler une ligne avant suite livraison.",
+          it: "Preparare, pesare manualmente e controllare una riga prima della consegna.",
+        },
+        steps: {
+          fr: [
+            "`/production/worksheets` → Nouvelle fiche (produit + qté demandée).",
+            "Préparer → saisir qté préparée → Confirmer.",
+            "Peser → saisir qté pesée manuelle (pas de balance Devices) → Confirmer.",
+            "Contrôler → OK ou Rejeter (motif obligatoire).",
+            "Events outbox only — pas d’OF auto · pas de facturation · Print/TSC = V5.",
+          ],
+          it: [
+            "`/production/worksheets` → Nuova scheda (prodotto + qtà richiesta).",
+            "Preparare → qtà preparata → Conferma.",
+            "Pesare → qtà pesata manuale (niente bilancia Devices) → Conferma.",
+            "Controllare → OK o Rifiuta (motivo obbligatorio).",
+            "Solo eventi outbox — niente OF auto · niente fatturazione · Print/TSC = V5.",
+          ],
+        },
+      },
     ],
+    locks: {
+      fr: [
+        "Pesage manuel V4 — pas Devices / TSC.",
+        "Pas d’impact facture / stock sur transitions fiche.",
+        "Pas d’OF auto depuis commande (D290 hint only).",
+      ],
+      it: [
+        "Pesatura manuale V4 — niente Devices / TSC.",
+        "Nessun impatto fattura / scorte sulle transizioni scheda.",
+        "Niente OF auto da ordine (solo hint D290).",
+      ],
+    },
   },
   {
     id: "automation",

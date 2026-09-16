@@ -21,4 +21,11 @@ export const PRODUCTION_EVENT_TYPES = {
   OUTPUT_POSTED: 'production.output.posted.v1',
   YIELD_DEVIATION: 'production.yield.deviation.v1',
   SCRAP_POSTED: 'production.scrap.posted.v1',
+  /** D292 — Prep→Weigh→Control Soft Glass (outbox only; no mutatif Thunder yet). */
+  WORKSHEET_CREATED: 'production.worksheet.created.v1',
+  WORKSHEET_PREPARED: 'production.worksheet.prepared.v1',
+  WORKSHEET_WEIGHED: 'production.worksheet.weighed.v1',
+  WORKSHEET_CONTROLLED: 'production.worksheet.controlled.v1',
+  WORKSHEET_REJECTED: 'production.worksheet.rejected.v1',
+  WORKSHEET_CANCELLED: 'production.worksheet.cancelled.v1',
 } as const;

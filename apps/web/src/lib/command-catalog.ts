@@ -106,6 +106,15 @@ export const COMMAND_CATALOG: CommandItem[] = [
     permissionKey: "production.read",
   },
   {
+    id: "nav-production-worksheets",
+    label: "Fiches digitales",
+    group: "navigation",
+    href: "/production/worksheets",
+    keywords: ["fiche", "prep", "pesage", "contrôle", "worksheet", "weigh"],
+    requiresModule: "production",
+    permissionKey: "production.read",
+  },
+  {
     id: "nav-hr",
     label: "Employés",
     group: "navigation",

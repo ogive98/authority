@@ -21,14 +21,22 @@ import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
   CreateWorkOrderDto,
   DeclareWorkOrderDto,
+  ControlWorksheetDto,
+  CreateWorksheetDto,
+  PrepareWorksheetDto,
+  WeighWorksheetDto,
 } from './production.dto';
 import { ProductionService } from './production.service';
+import { ProductionWorksheetService } from './production.worksheet.service';
 
 @Controller('api/v1/production')
 @UseGuards(SessionGuard, ModuleGuard, TenancyGuard, PermissionGuard)
 @RequireModule('production')
 export class ProductionController {
-  constructor(private readonly production: ProductionService) {}
+  constructor(
+    private readonly production: ProductionService,
+    private readonly worksheets: ProductionWorksheetService,
+  ) {}
 
   @Get('work-orders')
   @RequirePermission(PERMISSION_KEYS.productionRead)
@@ -86,5 +94,83 @@ export class ProductionController {
     @Body() dto: DeclareWorkOrderDto,
   ) {
     return this.production.declare(tenancy.companyId, id, dto);
+  }
+
+  @Get('worksheets')
+  @RequirePermission(PERMISSION_KEYS.productionRead)
+  listWorksheets(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Query('q') q?: string,
+    @Query('status') status?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = limitRaw ? Number(limitRaw) : undefined;
+    return this.worksheets.list(tenancy.companyId, {
+      q,
+      status,
+      limit: Number.isFinite(limit) ? limit : undefined,
+    });
+  }
+
+  @Get('worksheets/:id')
+  @RequirePermission(PERMISSION_KEYS.productionRead)
+  getWorksheet(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.worksheets.get(tenancy.companyId, id);
+  }
+
+  @Post('worksheets')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.productionWoWrite)
+  createWorksheet(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: CreateWorksheetDto,
+  ) {
+    return this.worksheets.create(tenancy.companyId, dto);
+  }
+
+  @Post('worksheets/:id/prepare')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.productionWoWrite)
+  prepareWorksheet(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: PrepareWorksheetDto,
+  ) {
+    return this.worksheets.prepare(tenancy.companyId, id, dto);
+  }
+
+  @Post('worksheets/:id/weigh')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.productionWoWrite)
+  weighWorksheet(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: WeighWorksheetDto,
+  ) {
+    return this.worksheets.weigh(tenancy.companyId, id, dto);
+  }
+
+  @Post('worksheets/:id/control')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.productionWoWrite)
+  controlWorksheet(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ControlWorksheetDto,
+  ) {
+    return this.worksheets.control(tenancy.companyId, id, dto);
+  }
+
+  @Post('worksheets/:id/cancel')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.productionWoWrite)
+  cancelWorksheet(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.worksheets.cancel(tenancy.companyId, id);
   }
 }

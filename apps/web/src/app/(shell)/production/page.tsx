@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   ABadge,
@@ -213,6 +214,14 @@ export default function ProductionPage() {
           <AButton type="button" size="sm" onClick={openCreate}>
             Nouvel OF
           </AButton>
+        }
+        more={
+          <Link
+            href="/production/worksheets"
+            className="text-[length:var(--a-text-sm)] text-a-accent underline-offset-2 hover:underline"
+          >
+            Fiches digitales
+          </Link>
         }
       />
 

@@ -76,6 +76,7 @@ export const FEATURE_LABELS_IT: Record<string, string> = {
   preferences: "Preferenze",
   expertise: "Expertise legale",
   of: "Ordini di produzione",
+  worksheet: "Schede digitali",
   banking: "Banca",
   "ap-bills": "Fatture fornitori",
   "credit-notes": "Note di credito",

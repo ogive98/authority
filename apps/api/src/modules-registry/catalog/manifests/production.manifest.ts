@@ -3,15 +3,16 @@ import type { ModuleManifest } from '../manifest.types';
 export const productionManifest: ModuleManifest = {
   id: 'production',
   name: 'Production',
-  version: '1.0.0',
+  version: '1.1.0',
   apiVersion: '1',
-  description: 'Production light — work orders, declare, scrap',
+  description:
+    'Production light — work orders, declare, scrap · digital worksheet Prep→Weigh→Control (D292)',
   capabilities: [
     {
       key: 'production.read',
       moduleId: 'production',
       version: '1',
-      description: 'List and view work orders',
+      description: 'List and view work orders and worksheets',
       permissionKey: 'production.read',
       riskLevel: 'low',
     },
@@ -19,7 +20,7 @@ export const productionManifest: ModuleManifest = {
       key: 'production.wo.write',
       moduleId: 'production',
       version: '1',
-      description: 'Create and release work orders',
+      description: 'Create/release work orders and worksheet Prep/Weigh/Control',
       permissionKey: 'production.wo.write',
       riskLevel: 'medium',
       requiresAudit: true,
@@ -49,8 +50,17 @@ export const productionManifest: ModuleManifest = {
     'production.work_order.create',
     'production.work_order.release',
     'production.work_order.declare',
+    'production.worksheet.create',
+    'production.worksheet.prepare',
+    'production.worksheet.weigh',
+    'production.worksheet.control',
   ],
-  queries: ['production.work_orders.list', 'production.work_order.get'],
+  queries: [
+    'production.work_orders.list',
+    'production.work_order.get',
+    'production.worksheets.list',
+    'production.worksheet.get',
+  ],
   permissions: [
     'production.read',
     'production.wo.write',
@@ -65,9 +75,20 @@ export const productionManifest: ModuleManifest = {
     'production.output.posted.v1',
     'production.yield.deviation.v1',
     'production.scrap.posted.v1',
+    'production.worksheet.created.v1',
+    'production.worksheet.prepared.v1',
+    'production.worksheet.weighed.v1',
+    'production.worksheet.controlled.v1',
+    'production.worksheet.rejected.v1',
+    'production.worksheet.cancelled.v1',
   ],
   consumedEvents: [],
   navigationEntries: [
     { id: 'of', label: 'Ordres de fabrication', href: '/production' },
+    {
+      id: 'worksheet',
+      label: 'Fiches digitales',
+      href: '/production/worksheets',
+    },
   ],
 };

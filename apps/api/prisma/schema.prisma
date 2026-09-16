@@ -3104,6 +3104,72 @@ model ProdScrap {
   @@map("prd_scrap")
 }
 
+// --- prd_worksheet* Digital Worksheet Prep→Weigh→Control (D292 · V4) ---
+// Manual weigh only · no Print/TSC · no devices · no invoice impact · no auto-WO
+
+enum ProdWorksheetStatus {
+  DRAFT
+  PREPARED
+  WEIGHED
+  CONTROLLED
+  REJECTED
+  CANCELLED
+}
+
+enum ProdWorksheetControlResult {
+  PASS
+  FAIL
+}
+
+model ProdWorksheet {
+  id              String                   @id @default(uuid()) @db.Uuid
+  companyId       String                   @map("company_id") @db.Uuid
+  number          String
+  status          ProdWorksheetStatus      @default(DRAFT)
+  /// Soft ref — sales order (no cross-module FK).
+  orderId         String?                  @map("order_id") @db.Uuid
+  /// Optional link to ProdWorkOrder.
+  workOrderId     String?                  @map("work_order_id") @db.Uuid
+  siteId          String?                  @map("site_id") @db.Uuid
+  notes           String?
+  controlResult   ProdWorksheetControlResult? @map("control_result")
+  controlNote     String?                  @map("control_note")
+  preparedAt      DateTime?                @map("prepared_at") @db.Timestamptz(6)
+  weighedAt       DateTime?                @map("weighed_at") @db.Timestamptz(6)
+  controlledAt    DateTime?                @map("controlled_at") @db.Timestamptz(6)
+  version         Int                      @default(0)
+  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?                @map("deleted_at") @db.Timestamptz(6)
+
+  lines ProdWorksheetLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@map("prd_worksheet")
+}
+
+model ProdWorksheetLine {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  worksheetId  String   @map("worksheet_id") @db.Uuid
+  lineNo       Int      @map("line_no")
+  productId    String   @map("product_id") @db.Uuid
+  requestedQty Decimal  @map("requested_qty") @db.Decimal(18, 3)
+  preparedQty  Decimal? @map("prepared_qty") @db.Decimal(18, 3)
+  weighedQty   Decimal? @map("weighed_qty") @db.Decimal(18, 3)
+  unit         String   @default("KG") @db.VarChar(16)
+  lot          String?  @db.VarChar(64)
+  notes        String?
+
+  worksheet ProdWorksheet @relation(fields: [worksheetId], references: [id], onDelete: Cascade)
+
+  @@unique([worksheetId, lineNo])
+  @@index([companyId, worksheetId])
+  @@map("prd_worksheet_line")
+}
+
 // --- hr_* HR light V0 (D089) — employees/contracts; no CNSS/IRPP rates (Payroll later) ---
 
 enum HrEmployeeStatus {
