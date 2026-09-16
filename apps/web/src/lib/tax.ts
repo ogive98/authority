@@ -88,6 +88,8 @@ export type TejExport = {
   lawRef: string | null;
   schemaNote: string;
   transmission: "DISABLED";
+  packKind?: "META_DRAFT" | "WITHHOLDING_PACK";
+  withholdingCount?: number;
   xmlContent?: string;
   createdAt: string;
 };
@@ -120,6 +122,27 @@ export async function generateTejExport(
 ): Promise<{ ok: true; data: TejExport } | ApiFail> {
   try {
     const res = await fetch("/api/v1/tax/tej/exports", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ periodLabel }),
+    });
+    if (!res.ok) return parseFail(res);
+    return { ok: true, data: (await res.json()) as TejExport };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+/** D285 — pack CERTIFICATE_READY → local XML (no transmission). */
+export async function generateTejPack(
+  periodLabel: string,
+): Promise<{ ok: true; data: TejExport } | ApiFail> {
+  try {
+    const res = await fetch("/api/v1/tax/tej/packs", {
       method: "POST",
       credentials: "include",
       headers: {
@@ -235,11 +258,14 @@ export type TejCenterOverview = {
     byStatus: Record<string, number>;
     needingValidation: number;
     validated: number;
+    certificateReady: number;
+    tejPrepared: number;
     stubBlocked: number;
     amountWithheldValidated: string;
   };
   tejExports: {
     localDrafts: number;
+    packs: number;
     transmission: "DISABLED";
   };
 };

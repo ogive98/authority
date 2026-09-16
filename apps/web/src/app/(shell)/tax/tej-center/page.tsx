@@ -22,9 +22,11 @@ import {
   createTaxWithholding,
   detectRas,
   downloadRasCertificate,
+  downloadTejXml,
   fetchTaxWithholdings,
   fetchTejCenterOverview,
   generateRasCertificate,
+  generateTejPack,
   validateTaxWithholding,
   WH_STATUS_LABELS,
   type RasDetectResult,
@@ -45,8 +47,9 @@ type Load =
 
 function statusTone(
   status: TaxWithholding["status"],
-): "success" | "warning" | "neutral" | "danger" | "accent" {
+): "success" | "warning" | "neutral" | "danger" | "accent" | "info" {
   if (status === "CERTIFICATE_READY") return "accent";
+  if (status === "TEJ_PREPARED") return "info";
   if (status === "VALIDATED" || status === "ACCEPTED") return "success";
   if (status === "REJECTED") return "danger";
   if (status === "CALCULATED" || status === "DETECTED") return "warning";
@@ -162,6 +165,24 @@ export default function TejCenterPage() {
     await load();
   }
 
+  async function onPreparePack() {
+    setActionError(null);
+    const period = periodLabel.trim();
+    if (!period) {
+      setActionError("Saisissez une période (ex. 2026-09) avant de préparer le lot.");
+      return;
+    }
+    setBusy(true);
+    const res = await generateTejPack(period);
+    setBusy(false);
+    if (!res.ok) {
+      setActionError(res.message);
+      return;
+    }
+    downloadTejXml(res.data);
+    await load();
+  }
+
   const overview = state.kind === "ok" ? state.overview : null;
   const items = state.kind === "ok" ? state.items : [];
 
@@ -175,23 +196,29 @@ export default function TejCenterPage() {
         }
         kicker="Fiscalité"
         title="TEJ Center"
-        description="Hub Soft Glass RAS → TEJ — validation · certificat local (D284) · transmission DISABLED."
+        description="Hub Soft Glass RAS → TEJ — certificat · lot XML local (D285) · transmission DISABLED · pas d’XSD officiel."
         primary={
           <AButton
             type="button"
             size="sm"
-            onClick={() => {
-              setFormError(null);
-              setDetectPreview(null);
-              setDrawerOpen(true);
-            }}
+            disabled={busy}
+            onClick={() => void onPreparePack()}
           >
-            Nouvelle retenue
+            Préparer lot XML
           </AButton>
         }
         more={
           <AOverflowMenu
             items={[
+              {
+                id: "new",
+                label: "Nouvelle retenue",
+                onSelect: () => {
+                  setFormError(null);
+                  setDetectPreview(null);
+                  setDrawerOpen(true);
+                },
+              },
               {
                 id: "tax",
                 label: "Catalogue TVA",
@@ -279,24 +306,22 @@ export default function TejCenterPage() {
                   {overview.withholdings.validated}
                 </p>
                 <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums text-a-muted">
-                  {overview.withholdings.amountWithheldValidated} TND
+                  Cert. prêts : {overview.withholdings.certificateReady}
                 </p>
               </div>
             </APageSection>
-            <APageSection title="Brouillons TEJ">
+            <APageSection title="Lots TEJ">
               <div className={`${softPanel} space-y-2 p-4`}>
                 <p className="a-mono text-[length:var(--a-text-2xl)] tabular-nums">
-                  {overview.tejExports.localDrafts}
+                  {overview.tejExports.packs}
                 </p>
                 <p className="text-[length:var(--a-text-xs)] text-a-muted">
-                  Stub bloqués : {overview.withholdings.stubBlocked}
+                  TEJ_PREPARED : {overview.withholdings.tejPrepared} · drafts{" "}
+                  {overview.tejExports.localDrafts}
                 </p>
-                <Link
-                  href="/tax"
-                  className="text-[length:var(--a-text-sm)] text-a-accent hover:underline"
-                >
-                  Générer XML local →
-                </Link>
+                <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums text-a-muted">
+                  {overview.withholdings.amountWithheldValidated} TND
+                </p>
               </div>
             </APageSection>
           </div>

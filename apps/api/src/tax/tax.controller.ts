@@ -136,6 +136,21 @@ export class TaxController {
     });
   }
 
+  /** D285 — pack CERTIFICATE_READY → local XML · mark TEJ_PREPARED (no transmission). */
+  @Post('tej/packs')
+  @HttpCode(201)
+  @RequirePermission(PERMISSION_KEYS.taxRateManage)
+  generateTejPack(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Body() dto: GenerateTejLocalDto,
+  ) {
+    return this.tejLocal.generatePack(tenancy.companyId, {
+      periodLabel: dto.periodLabel,
+      createdByUserId: user.id,
+    });
+  }
+
   /** D282 — TEJ Center Soft Glass hub (counters; transmission DISABLED). */
   @Get('tej-center/overview')
   @RequirePermission(PERMISSION_KEYS.taxRead)

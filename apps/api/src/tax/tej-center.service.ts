@@ -18,11 +18,14 @@ export type TejCenterOverviewDto = {
     byStatus: Record<string, number>;
     needingValidation: number;
     validated: number;
+    certificateReady: number;
+    tejPrepared: number;
     stubBlocked: number;
     amountWithheldValidated: string;
   };
   tejExports: {
     localDrafts: number;
+    packs: number;
     transmission: 'DISABLED';
   };
 };
@@ -64,6 +67,8 @@ export class TejCenterService {
     const byStatus: Record<string, number> = {};
     let needingValidation = 0;
     let validated = 0;
+    let certificateReady = 0;
+    let tejPrepared = 0;
     let stubBlocked = 0;
     let amountValidated = 0;
 
@@ -75,14 +80,24 @@ export class TejCenterService {
       ) {
         needingValidation += 1;
       }
-      if (r.status === TaxWithholdingStatus.VALIDATED) {
-        validated += 1;
+      if (
+        r.status === TaxWithholdingStatus.VALIDATED ||
+        r.status === TaxWithholdingStatus.CERTIFICATE_READY ||
+        r.status === TaxWithholdingStatus.TEJ_PREPARED
+      ) {
         amountValidated += Number(r.withholdingAmount);
       }
+      if (r.status === TaxWithholdingStatus.VALIDATED) validated += 1;
+      if (r.status === TaxWithholdingStatus.CERTIFICATE_READY)
+        certificateReady += 1;
+      if (r.status === TaxWithholdingStatus.TEJ_PREPARED) tejPrepared += 1;
       if (r.isStubRate && r.applicable === true) stubBlocked += 1;
     }
 
     const exports = await this.tejLocal.list(companyId, { limit: 50 });
+    const packs = exports.items.filter(
+      (i) => i.packKind === 'WITHHOLDING_PACK',
+    ).length;
 
     return {
       periodLabel: period,
@@ -98,11 +113,14 @@ export class TejCenterService {
         byStatus,
         needingValidation,
         validated,
+        certificateReady,
+        tejPrepared,
         stubBlocked,
         amountWithheldValidated: amountValidated.toFixed(3),
       },
       tejExports: {
         localDrafts: exports.items.length,
+        packs,
         transmission: 'DISABLED',
       },
     };

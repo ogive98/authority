@@ -71,6 +71,7 @@ export type TaxWithholdingDto = {
   prefsSnapshot: Record<string, unknown>;
   certificateSha256: string | null;
   certificateAt: string | null;
+  tejExportId: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -623,6 +624,7 @@ function serializeWithholding(row: {
   certificateSha256?: string | null;
   certificateAt?: Date | null;
   certificateBody?: string | null;
+  tejExportId?: string | null;
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -649,6 +651,7 @@ function serializeWithholding(row: {
     prefsSnapshot: (row.prefsSnapshotJson ?? {}) as Record<string, unknown>,
     certificateSha256: row.certificateSha256 ?? null,
     certificateAt: row.certificateAt?.toISOString() ?? null,
+    tejExportId: row.tejExportId ?? null,
     version: row.version,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

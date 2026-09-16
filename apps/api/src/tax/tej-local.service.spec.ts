@@ -4,11 +4,12 @@ import { TAX_ERROR_CODES, TAX_EVENT_TYPES } from './tax.constants';
 import { TaxException } from './tax.exception';
 import { TEJ_LOCAL_SCHEMA_NOTE, TejLocalService } from './tej-local.service';
 
-describe('TejLocalService (D265)', () => {
+describe('TejLocalService (D265/D285)', () => {
   const companyId = 'c1';
 
   function build(opts?: {
     tej?: { valueLabel: string; lawRef: string | null } | null;
+    withholdings?: Array<Record<string, unknown>>;
   }) {
     const tej =
       opts && 'tej' in opts
@@ -17,11 +18,19 @@ describe('TejLocalService (D265)', () => {
             valueLabel: 'params locaux expert',
             lawRef: 'LF art.X',
           };
+    const withholdings = opts?.withholdings ?? [];
     const prisma = {
       taxTejExport: {
         findMany: jest.fn().mockResolvedValue([]),
         findFirst: jest.fn(),
         create: jest.fn(),
+      },
+      taxWithholding: {
+        findMany: jest.fn().mockResolvedValue(withholdings),
+        updateMany: jest.fn().mockResolvedValue({ count: withholdings.length }),
+      },
+      orgCompany: {
+        findFirst: jest.fn().mockResolvedValue({ legalName: 'Demo SARL' }),
       },
       $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = {
@@ -33,6 +42,11 @@ describe('TejLocalService (D265)', () => {
               createdAt: new Date('2026-09-15T12:00:00.000Z'),
               updatedAt: new Date('2026-09-15T12:00:00.000Z'),
             })),
+          },
+          taxWithholding: {
+            updateMany: jest
+              .fn()
+              .mockResolvedValue({ count: withholdings.length }),
           },
         };
         return fn(tx);
@@ -86,6 +100,8 @@ describe('TejLocalService (D265)', () => {
 
     expect(result.transmission).toBe('DISABLED');
     expect(result.schemaNote).toBe(TEJ_LOCAL_SCHEMA_NOTE);
+    expect(result.packKind).toBe('META_DRAFT');
+    expect(result.withholdingCount).toBe(0);
     expect(result.periodLabel).toBe('2026-Q3');
     expect(result.xmlContent).toContain('AuthorityTejLocalDraft');
     expect(result.xmlContent).toContain('transmission="DISABLED"');
@@ -107,6 +123,52 @@ describe('TejLocalService (D265)', () => {
     );
   });
 
+  it('generatePack packs CERTIFICATE_READY and marks TEJ_PREPARED (D285)', async () => {
+    const { service, outbox, prisma } = build({
+      withholdings: [
+        {
+          id: 'wh-1',
+          vendorName: 'Nord',
+          baseAmount: { toString: () => '1000.000' },
+          rateBps: 150,
+          withholdingAmount: { toString: () => '15.000' },
+          netPayable: { toString: () => '985.000' },
+          currency: 'TND',
+          lawRef: 'LF',
+          certificateSha256: 'abc123',
+          apPaymentId: 'pay-1',
+        },
+      ],
+    });
+    const result = await service.generatePack(companyId, {
+      periodLabel: '2026-09',
+    });
+    expect(result.packKind).toBe('WITHHOLDING_PACK');
+    expect(result.withholdingCount).toBe(1);
+    expect(result.xmlContent).toContain('<withholdings>');
+    expect(result.xmlContent).toContain('Nord');
+    expect(result.xmlContent).toContain('packKind="WITHHOLDING_PACK"');
+    expect(result.transmission).toBe('DISABLED');
+    expect(prisma.taxWithholding.findMany).toHaveBeenCalled();
+    expect(outbox.enqueue).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventType: TAX_EVENT_TYPES.TEJ_PACK_PREPARED,
+        payloadJson: expect.objectContaining({
+          packKind: 'WITHHOLDING_PACK',
+          withholdingCount: 1,
+        }),
+      }),
+    );
+  });
+
+  it('generatePack rejects when no CERTIFICATE_READY rows', async () => {
+    const { service } = build({ withholdings: [] });
+    await expect(
+      service.generatePack(companyId, { periodLabel: '2026-09' }),
+    ).rejects.toMatchObject({ code: TAX_ERROR_CODES.INVALID_STATUS });
+  });
+
   it('list returns transmission DISABLED without xml bodies', async () => {
     const { service, prisma } = build();
     prisma.taxTejExport.findMany.mockResolvedValue([
@@ -119,6 +181,8 @@ describe('TejLocalService (D265)', () => {
         prefsValueLabel: 'x',
         lawRef: null,
         schemaNote: TEJ_LOCAL_SCHEMA_NOTE,
+        packKind: 'META_DRAFT',
+        withholdingCount: 0,
         createdAt: new Date('2026-09-15T12:00:00.000Z'),
       },
     ]);
@@ -127,5 +191,6 @@ describe('TejLocalService (D265)', () => {
     expect(res.items).toHaveLength(1);
     expect(res.items[0].xmlContent).toBeUndefined();
     expect(res.items[0].contentSha256).toBe('abc');
+    expect(res.items[0].packKind).toBe('META_DRAFT');
   });
 });

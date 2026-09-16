@@ -2588,6 +2588,9 @@ model TaxTejExport {
   lawRef          String?   @map("law_ref")
   schemaNote      String    @map("schema_note")
   transmission    String    @default("DISABLED")
+  /** D285 — META_DRAFT (empty) | WITHHOLDING_PACK (from CERTIFICATE_READY). */
+  packKind        String    @default("META_DRAFT") @map("pack_kind")
+  withholdingCount Int      @default(0) @map("withholding_count")
   createdByUserId String?   @map("created_by_user_id") @db.Uuid
   version         Int       @default(0)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -2641,6 +2644,8 @@ model TaxWithholding {
   certificateBody    String?               @map("certificate_body") @db.Text
   certificateSha256  String?               @map("certificate_sha256")
   certificateAt      DateTime?             @map("certificate_at") @db.Timestamptz(6)
+  /** D285 — TEJ local XML pack that consumed this row. */
+  tejExportId        String?               @map("tej_export_id") @db.Uuid
   version            Int                   @default(0)
   createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
