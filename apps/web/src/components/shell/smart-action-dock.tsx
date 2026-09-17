@@ -485,7 +485,7 @@ export function SmartActionDock() {
         id={panelId}
         aria-label={t("smartActions")}
         className={cn(
-          "a-glass relative hidden h-full shrink-0 flex-col md:flex",
+          "relative hidden h-full shrink-0 flex-col border-l border-[color:var(--a-border-subtle)] bg-a-surface-2 md:flex",
           "transition-[width] duration-200 ease-out",
           dockCollapsed ? "w-[3.5rem]" : "w-[16.5rem]",
         )}
@@ -497,7 +497,7 @@ export function SmartActionDock() {
 
       <button
         type="button"
-        className="a-glass fixed right-4 bottom-20 z-[var(--a-z-sticky)] inline-flex h-12 w-12 items-center justify-center rounded-md text-a-accent shadow-lg md:hidden"
+        className="fixed right-4 bottom-20 z-[var(--a-z-sticky)] inline-flex h-12 w-12 items-center justify-center rounded-[var(--a-radius-sm)] border border-[color:var(--a-border-subtle)] bg-a-surface-2 text-a-accent shadow-[var(--a-shadow-card)] md:hidden"
         aria-label={t("smartActions")}
         aria-expanded={dockMobileOpen}
         onClick={() => setDockMobileOpen(!dockMobileOpen)}
@@ -513,7 +513,7 @@ export function SmartActionDock() {
             aria-label={t("close")}
             onClick={() => setDockMobileOpen(false)}
           />
-          <div className="a-glass-strong absolute inset-x-0 bottom-0 max-h-[75dvh] overflow-hidden rounded-t-xl">
+          <div className="a-card absolute inset-x-0 bottom-0 max-h-[75dvh] overflow-hidden rounded-t-[var(--a-radius-lg)] border-t border-[color:var(--a-border-subtle)] shadow-[var(--a-shadow-panel)]">
             <MobileDockBody onClose={() => setDockMobileOpen(false)} />
           </div>
         </div>

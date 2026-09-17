@@ -200,7 +200,7 @@ export default function AnalyticsPage() {
 
 function ModuleOff({ label }: { label: string }) {
   return (
-    <div className="a-underlay flex items-center gap-2 rounded-[var(--a-radius-sm)] px-3 py-2">
+    <div className="a-card flex items-center gap-2 rounded-[var(--a-radius-md)] px-3 py-2">
       <ABadge tone="neutral">{label}</ABadge>
       <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
         Module désactivé — agrégat masqué
@@ -223,14 +223,16 @@ function Stat({
   return (
     <Link
       href={href}
-      className="a-underlay min-w-[140px] rounded-[var(--a-radius-sm)] px-3 py-3 transition-colors hover:bg-a-surface-2"
+      className="a-card min-w-[140px] rounded-[var(--a-radius-md)] px-3 py-3 transition-colors hover:bg-a-surface-3/50"
     >
-      <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">{label}</p>
+      <p className="text-[length:var(--a-text-xs)] font-medium text-a-fg-muted">
+        {label}
+      </p>
       <p
         className={
           mono
             ? "a-mono a-tabular mt-1 text-[length:var(--a-text-lg)] font-medium"
-            : "mt-1 text-[length:var(--a-text-lg)] font-medium tabular-nums"
+            : "a-mono a-tabular mt-1 text-[length:var(--a-text-lg)] font-medium"
         }
       >
         {value}

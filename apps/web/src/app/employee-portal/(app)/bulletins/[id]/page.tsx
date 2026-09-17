@@ -107,7 +107,7 @@ export default function EmployeePortalBulletinDetailPage() {
           }
           kicker="Portail employé"
           title={bulletin ? bulletin.number : "Bulletin"}
-          description="Consultation Soft Glass + reçu PDF (layout légal minimal)."
+          description="Consultation + reçu PDF (layout légal minimal)."
           primary={
             bulletin ? (
               <AButton type="button" size="sm" onClick={() => window.print()}>

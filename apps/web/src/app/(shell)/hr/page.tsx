@@ -1234,7 +1234,7 @@ function HrWorkspace() {
 
       {provisionReveal ? (
         <div
-          className="fixed inset-0 z-[var(--a-z-modal)] flex items-center justify-center bg-black/40 px-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[var(--a-z-modal)] flex items-center justify-center bg-black/40 px-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="provision-title"

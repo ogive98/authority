@@ -61,7 +61,7 @@ export function ADrawer({
           </div>
           <div className="a-scroll-momentum min-h-0 flex-1 p-5">{children}</div>
           {footer ? (
-            <div className="a-glass shrink-0 px-5 py-4">
+            <div className="a-card shrink-0 border-t border-[color:var(--a-border-subtle)] px-5 py-4">
               {footer}
             </div>
           ) : null}

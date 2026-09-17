@@ -29,7 +29,7 @@ const SIZE_CLASS: Record<ADialogSize, string> = {
 };
 
 /**
- * Soft Glass general modal — underlay glass, zero frame chrome.
+ * D294 general modal — opaque surface, zero frame chrome.
  * Risk/idempotent confirms → use `AConfirmDialog` instead.
  */
 export function ADialog({

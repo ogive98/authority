@@ -17,7 +17,7 @@ type Props = {
 };
 
 /**
- * Soft Glass notification prefs (D249) — mute per source + AUTHORITY audio.
+ * Notification prefs (D249/D294) — mute per source + AUTHORITY audio.
  */
 export function NotifPrefsPanel({ compact }: Props) {
   const locale = useLocaleStore((s) => s.locale);
@@ -44,13 +44,13 @@ export function NotifPrefsPanel({ compact }: Props) {
     <div className="space-y-4">
       {!compact ? (
         <div>
-          <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+          <h2 className="text-[length:var(--a-text-md)] font-medium text-a-fg">
             {it ? "Centro notifiche" : "Centre de notifications"}
           </h2>
           <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
             {it
-              ? "Mute per sorgente, audio Soft Glass AUTHORITY, animazioni. Preferenze postazione (local)."
-              : "Mute par source, audio Soft Glass AUTHORITY, animations. Préférences poste (local)."}
+              ? "Mute per sorgente, audio AUTHORITY, animazioni. Preferenze postazione (local)."
+              : "Mute par source, audio AUTHORITY, animations. Préférences poste (local)."}
           </p>
         </div>
       ) : null}
@@ -59,8 +59,8 @@ export function NotifPrefsPanel({ compact }: Props) {
         title={it ? "Audio AUTHORITY" : "Audio AUTHORITY"}
         description={
           it
-            ? "Tono procedurale Soft Glass (nessun asset binario)."
-            : "Tonalité procédurale Soft Glass (aucun fichier binaire)."
+            ? "Tono procedurale AUTHORITY (nessun asset binario)."
+            : "Tonalité procédurale AUTHORITY (aucun fichier binaire)."
         }
         checked={notifSoundEnabled}
         onCheckedChange={setNotifSoundEnabled}
@@ -126,8 +126,8 @@ export function NotifPrefsPanel({ compact }: Props) {
         title={it ? "Animazioni alert" : "Animations alertes"}
         description={
           it
-            ? "Entrata minimale Soft Glass (rispetta reduced-motion)."
-            : "Entrée minimale Soft Glass (respecte reduced-motion)."
+            ? "Entrata minimale (rispetta reduced-motion)."
+            : "Entrée minimale (respecte reduced-motion)."
         }
         checked={notifAnimEnabled}
         onCheckedChange={setNotifAnimEnabled}

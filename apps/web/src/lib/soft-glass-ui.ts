@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Soft Glass / Progressive OS filter chips — quiet underline, not framed pills.
+ * D294 shared UI class helpers — quiet chips, tables, panels (opaque surfaces).
  */
 export function softChipClass(active: boolean): string {
   return cn(

@@ -1,4 +1,4 @@
-/** Soft Glass notification prefs — poste (D249). Mute per source + audio. */
+/** Notification prefs — poste (D249). Mute per source + audio. */
 
 export const NOTIF_SOURCE_KEYS = [
   "CREDIT_BREACH",
@@ -67,8 +67,8 @@ export const NOTIF_SOURCE_META: Record<
   WA_INBOX: {
     fr: "Inbox WhatsApp",
     it: "Inbox WhatsApp",
-    hintFr: "Messages OPEN/MATCHED → brouillon Soft Glass (humain).",
-    hintIt: "Messaggi OPEN/MATCHED → bozza Soft Glass (umano).",
+    hintFr: "Messages OPEN/MATCHED → brouillon AUTHORITY (humain).",
+    hintIt: "Messaggi OPEN/MATCHED → bozza AUTHORITY (umano).",
   },
   PROD_NEED: {
     fr: "Besoin production",

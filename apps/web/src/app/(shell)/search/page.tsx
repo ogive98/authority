@@ -1,22 +1,29 @@
-import { APageBody, AScreenHeader } from "@/components/a";
+"use client";
 
+import { AEmptyState, APageBody, AScreenHeader } from "@/components/a";
+
+/**
+ * Global search stub — visible only when `platform.search` is ON in `/me/registry`.
+ */
 export default function SearchPage() {
   return (
     <>
       <AScreenHeader
+        kicker="Plateforme"
         title="Recherche"
         description={
           <>
-            Stub — visible seulement si flag{" "}
-            <span className="a-mono">platform.search</span> est ON dans le
-            registry.
+            Surface registry — flag{" "}
+            <span className="a-mono">platform.search</span> requis. Index de
+            contenu à brancher (pas de KPI inventés).
           </>
         }
       />
       <APageBody>
-        <p className="text-[13px] text-a-fg-muted">
-          Recherche globale — à brancher sur le registry et l’index de contenu.
-        </p>
+        <AEmptyState
+          title="Recherche globale"
+          description="Stub D294 — brancher l’index contenu + registry. En attendant, utilisez ⌘K pour naviguer les modules actifs."
+        />
       </APageBody>
     </>
   );
