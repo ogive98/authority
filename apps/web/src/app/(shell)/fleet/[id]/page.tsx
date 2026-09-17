@@ -32,7 +32,7 @@ import {
   ASwitch,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
-import { softFieldLabel, softSelect } from "@/lib/soft-glass-ui";
+import { softFieldLabel, softSelect } from "@/lib/d294-ui";
 import {
   FLEET_LOG_KIND_LABELS,
   FLEET_VEHICLE_STATUS_LABELS,

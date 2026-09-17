@@ -27,7 +27,7 @@ import {
   PORTAL_FINANCE_PATH,
   PORTAL_FINANCE_PAYMENT_DECLARATIONS_PATH,
 } from "@/lib/customer-portal";
-import { softTile } from "@/lib/soft-glass-ui";
+import { softTile } from "@/lib/d294-ui";
 
 export default async function PortalFinancePage() {
   const [

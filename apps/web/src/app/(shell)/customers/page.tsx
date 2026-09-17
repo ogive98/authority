@@ -48,7 +48,7 @@ import {
   fetchCustomerFinancialOverview,
   type CustomerFinancialOverview,
 } from "@/lib/finance";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 
 type LoadState =
   | { kind: "loading" }

@@ -16,7 +16,7 @@ import {
   PORTAL_DELIVERIES_PATH,
   PORTAL_ORDERS_PATH,
 } from "@/lib/customer-portal";
-import { softGhostBtn } from "@/lib/soft-glass-ui";
+import { softGhostBtn } from "@/lib/d294-ui";
 
 export default async function PortalDeliveriesPage() {
   const { status, data } = await fetchDeliveries({ limit: 50 });

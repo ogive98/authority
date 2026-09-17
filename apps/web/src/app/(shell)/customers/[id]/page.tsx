@@ -70,7 +70,7 @@ import {
   type PortalMembership,
   type PortalMembershipRole,
 } from "@/lib/customers";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 
 type Load =
   | { kind: "loading" }

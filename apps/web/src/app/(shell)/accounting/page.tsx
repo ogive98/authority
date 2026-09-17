@@ -53,7 +53,7 @@ import { localizeUiString } from "@/lib/i18n/route-labels";
 import { useStatusLabel } from "@/hooks/use-status-label";
 import { useLocaleStore } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 

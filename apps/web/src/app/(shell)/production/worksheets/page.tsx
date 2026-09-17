@@ -36,7 +36,7 @@ import {
   type Worksheet,
 } from "@/lib/production";
 import { cn } from "@/lib/utils";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 
 type LoadState =
   | { kind: "loading" }

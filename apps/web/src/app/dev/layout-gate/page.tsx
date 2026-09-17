@@ -18,7 +18,7 @@ import {
   AWorkflowActionBar,
   AWorkflowStepper,
 } from "@/components/a";
-import { softChipClass } from "@/lib/soft-glass-ui";
+import { softChipClass } from "@/lib/d294-ui";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 
 export default function DevLayoutPage() {
@@ -28,7 +28,7 @@ export default function DevLayoutPage() {
     <ADevPage
       kicker="L0 · Layout D225"
       title="Layout primitives"
-      description="Gate Soft Glass — List / Detail / Form / Workflow (pas de 2e design system)."
+      description="Gate D294 — List / Detail / Form / Workflow (pas de 2e design system)."
     >
       <APageBody className="!p-0">
         <AScreenHeader
@@ -118,7 +118,7 @@ export default function DevLayoutPage() {
             primary={
               <APageSection title="Identité">
                 <p className="text-[13px] text-a-fg-muted">
-                  Sections Soft Glass underlay — une question métier.
+                  Sections D294 opaques — une question métier.
                 </p>
               </APageSection>
             }

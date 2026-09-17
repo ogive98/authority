@@ -31,7 +31,7 @@ import {
   softTableWrap,
   softThead,
   softTr,
-} from "@/lib/soft-glass-ui";
+} from "@/lib/d294-ui";
 
 type LoadState =
   | { kind: "loading" }

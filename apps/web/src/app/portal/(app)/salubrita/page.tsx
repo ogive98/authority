@@ -7,7 +7,7 @@ import {
   fetchPortalSalubritaHistory,
   PORTAL_SALUBRITA_PATH,
 } from "@/lib/customer-portal";
-import { softList, softListRow } from "@/lib/soft-glass-ui";
+import { softList, softListRow } from "@/lib/d294-ui";
 
 function fmtFr(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());

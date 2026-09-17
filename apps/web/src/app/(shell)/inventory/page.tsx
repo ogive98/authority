@@ -33,7 +33,7 @@ import {
   type InventoryWarehouse,
   type ProductOption,
 } from "@/lib/inventory";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 
 type LoadState =
   | { kind: "loading" }

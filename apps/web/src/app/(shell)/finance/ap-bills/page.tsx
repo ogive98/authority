@@ -37,7 +37,7 @@ import {
   type ApBillStatus,
   type FinApBill,
 } from "@/lib/finance";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import { fetchSuppliers, type Supplier } from "@/lib/suppliers";
 import { fetchTaxCodes, type TaxCode } from "@/lib/tax";

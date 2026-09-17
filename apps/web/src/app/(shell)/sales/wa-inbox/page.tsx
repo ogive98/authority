@@ -26,7 +26,7 @@ import {
 } from "@/lib/inventory";
 import { searchCustomers, searchProducts } from "@/lib/sales";
 import { suggestCustomerPrice } from "@/lib/customers";
-import { softChipClass, softSelect } from "@/lib/soft-glass-ui";
+import { softChipClass, softSelect } from "@/lib/d294-ui";
 import {
   WA_INBOX_STATUS_LABELS,
   createWaInboxDraft,

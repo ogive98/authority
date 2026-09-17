@@ -14,7 +14,7 @@ import {
   type TransferBankAccountOption,
   type TransferOrder,
 } from "@/lib/hr";
-import { softPanel } from "@/lib/soft-glass-ui";
+import { softPanel } from "@/lib/d294-ui";
 
 function statusTone(
   status: TransferOrder["status"],

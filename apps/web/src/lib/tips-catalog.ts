@@ -1,5 +1,5 @@
 ﻿/**
- * Documented usage tips — AUTHORITY Soft Glass Enterprise OS.
+ * Documented usage tips — AUTHORITY D294.
  * Each tip links to Help / User Guide / a métier screen.
  */
 
@@ -46,7 +46,7 @@ export const USAGE_TIPS: UsageTip[] = [
     routes: ["/"],
     modules: ["home"],
     title: "Un clic module = liste métier",
-    body: "La sidebar liste seulement les modules (icône outline + nom). Un clic sélectionne le module et affiche ses fonctionnalités en liste Soft Glass sur Mission Control. Pas de sous-menus dans la sidebar.",
+    body: "La sidebar liste seulement les modules (icône outline + nom). Un clic sélectionne le module et affiche ses fonctionnalités en liste dense sur Mission Control. Pas de sous-menus dans la sidebar.",
     category: "navigation",
     action: { kind: "link", href: "/help#modules", label: "Guide modules" },
   },
@@ -407,7 +407,7 @@ export const USAGE_TIPS: UsageTip[] = [
     routes: ["/preview"],
     modules: ["home"],
     title: "Écrans aperçu",
-    body: "Laboratoire UI (lots, commandes) — même chrome Soft Glass.",
+    body: "Laboratoire UI (lots, commandes) — même chrome AUTHORITY D294.",
     category: "navigation",
     action: { kind: "link", href: "/preview", label: "Aperçu" },
   },
@@ -743,7 +743,7 @@ export const USAGE_TIPS: UsageTip[] = [
     routes: ['/'],
     modules: ['home'],
     title: 'Un clic module = liste métier',
-    body: 'La sidebar liste seulement les modules (icône outline + nom). Un clic sélectionne le module et affiche ses fonctionnalités en liste dense sur l’accueil. Navigation Finder + liste Soft Glass (D161).',
+    body: 'La sidebar liste seulement les modules (icône outline + nom). Un clic sélectionne le module et affiche ses fonctionnalités en liste dense sur l’accueil. Navigation Finder + liste D294.',
     category: 'navigation',
     action: { kind: 'link', href: '/help#tip-story-sidebar-click', label: 'Lire dans l’aide' },
   },

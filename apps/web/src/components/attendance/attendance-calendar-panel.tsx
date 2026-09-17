@@ -19,7 +19,7 @@ import {
   type AttCalendarKind,
 } from "@/lib/attendance";
 import { EMPLOYEE_PORTAL_API } from "@/lib/employee-portal";
-import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import { softTableWrap, softThead, softTr } from "@/lib/d294-ui";
 
 type LoadState =
   | { kind: "loading" }

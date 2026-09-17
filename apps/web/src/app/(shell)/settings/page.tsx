@@ -47,7 +47,7 @@ import {
   fetchIrppBrackets,
   replaceIrppBrackets,
 } from "@/lib/hr";
-import { softPanel, softSelect } from "@/lib/soft-glass-ui";
+import { softPanel, softSelect } from "@/lib/d294-ui";
 import { fetchMailStatus, type MailStatus } from "@/lib/users";
 import { usePrefsStore, type Density, type SurfaceMode } from "@/stores/prefs-store";
 

@@ -23,7 +23,7 @@ import {
   ASoftTr,
   erpListDescription,
 } from "@/components/a";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 import { ATabs } from "@/components/a/a-tabs";
 
 type DocRow = {

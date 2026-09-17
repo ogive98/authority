@@ -42,7 +42,7 @@ import {
   type AtmRun,
   type AtmTriggerKind,
 } from "@/lib/automation";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 
 type Load =
   | { kind: "loading" }

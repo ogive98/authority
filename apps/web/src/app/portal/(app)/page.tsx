@@ -17,7 +17,7 @@ import {
   portalInsightSeverityLabel,
   type PortalInsight,
 } from "@/lib/customer-portal";
-import { softGhostBtn, softTile } from "@/lib/soft-glass-ui";
+import { softGhostBtn, softTile } from "@/lib/d294-ui";
 
 function KpiTile({
   href,

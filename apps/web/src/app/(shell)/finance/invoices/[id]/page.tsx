@@ -36,7 +36,7 @@ import {
   generateTejInvoicePack,
 } from "@/lib/tax";
 import { FULFILLMENT_DOC_LABELS } from "@/lib/customers";
-import { softPanel } from "@/lib/soft-glass-ui";
+import { softPanel } from "@/lib/d294-ui";
 
 type Load =
   | { kind: "loading" }

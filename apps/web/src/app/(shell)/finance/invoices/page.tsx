@@ -52,7 +52,7 @@ import {
   type Product,
 } from "@/lib/products";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 import { ATabs } from "@/components/a/a-tabs";
 
 const STATUS_FILTERS: { id: "" | InvoiceStatus; label: string }[] = [

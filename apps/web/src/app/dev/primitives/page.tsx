@@ -121,7 +121,7 @@ export default function DevPrimitivesPage() {
         <ADialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
-          title="Dialogue Soft Glass"
+          title="Dialogue AUTHORITY"
           description="Modal général — les confirms à risque restent sur AConfirmDialog."
           footer={
             <AButton type="button" size="sm" onClick={() => setDialogOpen(false)}>

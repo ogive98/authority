@@ -474,7 +474,7 @@ export const HELP_MODULES: HelpModule[] = [
     ],
     locks: {
       fr: [
-        "Pas de module CRM parallèle — AUTHORITY only (D161/D241/D244).",
+        "Pas de module CRM parallèle — AUTHORITY only (D294/D241/D244).",
         "Communication = dunning + déclarations — pas de messagerie SoT (D244).",
         "WA→commande, TEJ/RAS et automations FULL_AUTO reportés (Prefs VALIDATED pour tax).",
         "Module Portails ENABLED requis pour lier / révoquer (D242).",
@@ -482,7 +482,7 @@ export const HELP_MODULES: HelpModule[] = [
         "Document = titre (bon de livraison par défaut / facture) ; surchargeable à l’émission — même `fin_invoice`, AR/GL/modes inchangés (D262).",
       ],
       it: [
-        "Nessun modulo CRM parallelo — AUTHORITY only (D161/D241/D244).",
+        "Nessun modulo CRM parallelo — AUTHORITY only (D294/D241/D244).",
         "Comunicazione = solleciti + dichiarazioni — niente messaging SoT (D244).",
         "WA→ordine, TEJ/RAS e automazioni FULL_AUTO differiti (Prefs VALIDATED per tax).",
         "Modulo Portali ENABLED richiesto per collegare / revocare (D242).",
@@ -1242,14 +1242,14 @@ export const HELP_MODULES: HelpModule[] = [
     },
     locks: {
       fr: [
-        "AUTHORITY D161 + Layout D225 — underlays, pas de cadres.",
+        "AUTHORITY D294 + Layout D225 — surfaces opaques, pas de cadres.",
         "Prefs GL mapping : jamais inventer / seed de codes métier.",
         "Finance ≠ Accounting (D072) — pont Thunder, pas de double saisie.",
         "RAS GL (D275) : compte vide jusqu’à humain — jamais seed 432x.",
         "TVA déductible AP (D276) : `accounting.gl.vat_input` vide jusqu’à humain — jamais seed 4366.",
       ],
       it: [
-        "AUTHORITY D161 + Layout D225 — underlay, niente cornici.",
+        "AUTHORITY D294 + Layout D225 — superfici opache, niente cornici.",
         "Prefs mapping GL: non inventare / seed codici.",
         "Finance ≠ Accounting (D072) — ponte Thunder, niente doppia imputazione.",
         "RAS GL (D275): conto vuoto fino a umano — mai seed 432x.",
@@ -2269,14 +2269,14 @@ export const HELP_MODULES: HelpModule[] = [
         "Pas de pointage ni virement depuis le portail (lots ultérieurs).",
         "Déclaration paiement : pas d’auto FinPayment / allocation (D243).",
         "RIB : checksum structurel seulement (pas d’existence compte inventée).",
-        "Customer Portal : AUTHORITY D161 + Layout D225 — pas de second look.",
+        "Customer Portal : AUTHORITY D294 + Layout D225 — pas de second look.",
       ],
       it: [
         "Nessun saldo / quota inventato.",
         "Niente timbratura né bonifico dal portale (lotti successivi).",
         "Dichiarazione pagamento: niente auto FinPayment / allocazione (D243).",
         "RIB: solo checksum strutturale (nessuna esistenza conto inventata).",
-        "Customer Portal: AUTHORITY D161 + Layout D225 — niente secondo look.",
+        "Customer Portal: AUTHORITY D294 + Layout D225 — niente secondo look.",
       ],
     },
   },

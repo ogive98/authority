@@ -36,7 +36,7 @@ import {
   type AllocationPolicy,
   type FinPayment,
 } from "@/lib/finance";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 
 type Load =
   | { kind: "loading" }

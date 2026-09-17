@@ -44,7 +44,7 @@ import {
   type FinOpenItem,
   type OpenItemStatus,
 } from "@/lib/finance";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
 
 type LoadState =

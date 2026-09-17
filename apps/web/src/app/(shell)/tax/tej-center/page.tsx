@@ -47,7 +47,7 @@ import {
   type TaxWithholding,
   type TejCenterOverview,
 } from "@/lib/tax";
-import { softPanel } from "@/lib/soft-glass-ui";
+import { softPanel } from "@/lib/d294-ui";
 
 type Load =
   | { kind: "loading" }

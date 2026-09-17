@@ -73,7 +73,7 @@ import {
   type IrppPreview,
   type LevyPreview,
 } from "@/lib/hr";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 
 type Load =
   | { kind: "loading" }

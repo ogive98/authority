@@ -27,7 +27,7 @@ import {
   erpListDescription,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
-import { softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/d294-ui";
 import {
   SUPPLIER_CATEGORY_LABELS,
   SUPPLIER_STATUS_LABELS,
