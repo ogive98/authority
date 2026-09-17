@@ -135,10 +135,12 @@ export function resolveDockActions(
   selectedModuleId: string,
   limit = 8,
   locale: ShellLocale = "fr",
+  grants?: Set<string> | null,
 ): { primary: ActionDefinition | null; shortcuts: ActionDefinition[] } {
   const moduleCtx = `module:${selectedModuleId}` as ActionContext;
   const forModule = resolveActions({
     registry,
+    grants,
     context: [moduleCtx, "dock", "home"],
     limit: limit + 2,
     locale,

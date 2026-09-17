@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { resolveDockActions, type ActionDefinition } from "@/lib/action-registry";
+import { useMeGrants } from "@/hooks/use-me-grants";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
 import {
@@ -282,6 +283,7 @@ export function SmartActionDock() {
   const dockMobileOpen = useShellStore((s) => s.dockMobileOpen);
   const setDockMobileOpen = useShellStore((s) => s.setDockMobileOpen);
   const { data: registry } = useMeRegistry();
+  const { grants } = useMeGrants();
   const locale = useLocaleStore((s) => s.locale);
   const monitor = useMonitorSnapshot();
   const panelId = useId();
@@ -310,6 +312,7 @@ export function SmartActionDock() {
     selectedModuleId,
     5,
     locale,
+    grants,
   );
   const tiles = [primary, ...shortcuts].filter(Boolean) as ActionDefinition[];
   const unique = tiles.filter(
@@ -523,12 +526,14 @@ function MobileDockBody({ onClose }: { onClose: () => void }) {
   const { t } = useShellT();
   const selectedModuleId = useShellStore((s) => s.selectedModuleId);
   const { data: registry } = useMeRegistry();
+  const { grants } = useMeGrants();
   const locale = useLocaleStore((s) => s.locale);
   const { primary, shortcuts } = resolveDockActions(
     registry,
     selectedModuleId,
     8,
     locale,
+    grants,
   );
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);

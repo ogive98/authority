@@ -83,6 +83,75 @@ export class PermissionService {
     return matching.some((grant) => grant.effect === IamGrantEffect.ALLOW);
   }
 
+  /**
+   * Effective ALLOW keys for the session (role + user grants, DENY wins).
+   * Used by shell ⌘K / dock — client UX only; server guards remain authoritative.
+   */
+  async listEffectiveAllowKeys(
+    userId: string,
+    scope: PermissionScope = {},
+  ): Promise<string[]> {
+    const assignmentWhere = {
+      userId,
+      deletedAt: null as null,
+      ...(scope.companyId ? { companyId: scope.companyId } : {}),
+    };
+
+    const assignments = await this.prisma.orgUserAssignment.findMany({
+      where: assignmentWhere,
+    });
+
+    const roleCodes = [
+      ...new Set(
+        assignments
+          .map((assignment) => assignment.roleCode)
+          .filter((code): code is string => Boolean(code)),
+      ),
+    ];
+
+    const grants = await this.prisma.iamGrant.findMany({
+      where: {
+        status: IamLifecycleStatus.ACTIVE,
+        OR: [
+          {
+            subjectType: IamGrantSubject.USER,
+            subjectId: userId,
+          },
+          ...(roleCodes.length > 0
+            ? [
+                {
+                  subjectType: IamGrantSubject.ROLE,
+                  subjectId: { in: roleCodes },
+                },
+              ]
+            : []),
+        ],
+      },
+    });
+
+    const matching = grants.filter(
+      (grant) =>
+        this.scopeMatches(grant, scope) &&
+        isCataloguedPermission(grant.permissionKey) &&
+        !isWildcardPermission(grant.permissionKey),
+    );
+
+    const denied = new Set(
+      matching
+        .filter((g) => g.effect === IamGrantEffect.DENY)
+        .map((g) => g.permissionKey),
+    );
+
+    const allowed = new Set<string>();
+    for (const grant of matching) {
+      if (grant.effect !== IamGrantEffect.ALLOW) continue;
+      if (denied.has(grant.permissionKey)) continue;
+      allowed.add(grant.permissionKey);
+    }
+
+    return [...allowed].sort();
+  }
+
   private scopeMatches(grant: IamGrant, scope: PermissionScope): boolean {
     if (grant.companyId && grant.companyId !== scope.companyId) {
       return false;

@@ -204,4 +204,44 @@ describe('PermissionService matrix', () => {
     ).resolves.toBe(false);
     expect(prisma.iamGrant.findMany).toHaveBeenCalled();
   });
+
+  it('lists effective ALLOW keys and applies DENY over role ALLOW', async () => {
+    prisma.orgUserAssignment.findMany.mockResolvedValue([
+      { roleCode: 'operator', companyId: companyDemo },
+    ]);
+    prisma.iamGrant.findMany.mockResolvedValue([
+      grant({
+        permissionKey: PERMISSION_KEYS.salesRead,
+        subjectType: IamGrantSubject.ROLE,
+        subjectId: 'operator',
+        companyId: companyDemo,
+      }),
+      grant({
+        permissionKey: PERMISSION_KEYS.financeArWrite,
+        subjectType: IamGrantSubject.ROLE,
+        subjectId: 'operator',
+        companyId: companyDemo,
+      }),
+      grant({
+        permissionKey: PERMISSION_KEYS.financeArWrite,
+        effect: IamGrantEffect.DENY,
+        subjectType: IamGrantSubject.USER,
+        subjectId: userId,
+        companyId: companyDemo,
+      }),
+      grant({
+        permissionKey: PERMISSION_KEYS.customersRead,
+        subjectType: IamGrantSubject.USER,
+        subjectId: userId,
+        companyId: companyDemo,
+      }),
+    ]);
+
+    await expect(
+      service.listEffectiveAllowKeys(userId, { companyId: companyDemo }),
+    ).resolves.toEqual([
+      PERMISSION_KEYS.customersRead,
+      PERMISSION_KEYS.salesRead,
+    ]);
+  });
 });

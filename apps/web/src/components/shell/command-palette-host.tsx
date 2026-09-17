@@ -5,6 +5,7 @@ import { useEffect, useMemo } from "react";
 import { ACommandPalette } from "@/components/a/a-command-palette";
 import { matchShortcut } from "@/lib/command-catalog";
 import { resolveActions } from "@/lib/action-registry";
+import { useMeGrants } from "@/hooks/use-me-grants";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useShellStore } from "@/stores/shell-store";
 import { useLocaleStore } from "@/stores/locale-store";
@@ -15,17 +16,18 @@ export function CommandPaletteHost() {
   const setPaletteOpen = useShellStore((s) => s.setPaletteOpen);
   const router = useRouter();
   const { data: registry } = useMeRegistry();
+  const { grants } = useMeGrants();
   const locale = useLocaleStore((s) => s.locale);
 
   const allowed = useMemo(
     () =>
       resolveActions({
         registry,
-        // Registry-trusted — no DEMO_PERMISSION_GRANTS overclaim (D294 Track F).
+        grants,
         context: "palette",
         locale,
       }),
-    [registry, locale],
+    [registry, grants, locale],
   );
 
   const enabledModules = useMemo(
@@ -80,6 +82,7 @@ export function CommandPaletteHost() {
     <ACommandPalette
       open={open}
       onOpenChange={setPaletteOpen}
+      grants={grants}
       enabledModules={enabledModules}
     />
   );

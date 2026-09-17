@@ -57,8 +57,8 @@ export const HELP_INTRO = {
 
 export const HELP_SHORTCUTS: { fr: string; it: string }[] = [
   {
-    fr: "⌘K / Ctrl+K — palette de commandes (modules, actions, recherche).",
-    it: "⌘K / Ctrl+K — palette comandi (moduli, azioni, ricerca).",
+    fr: "⌘K / Ctrl+K — palette de commandes (modules actifs + permissions session).",
+    it: "⌘K / Ctrl+K — palette comandi (moduli attivi + permessi sessione).",
   },
   {
     fr: "Clic module (sidebar) — ouvre les fonctionnalités sur Mission Control.",

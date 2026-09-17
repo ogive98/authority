@@ -32,6 +32,7 @@ import type { SessionWithUser } from './session.service';
 import { PermissionGuard } from '../permissions/permission.guard';
 import { RequirePermission } from '../permissions/permission.decorators';
 import { PERMISSION_KEYS } from '../permissions/permission.constants';
+import { PermissionService } from '../permissions/permission.service';
 import { UpdateMeDto } from './update-me.dto';
 import {
   TENANCY_COOKIES,
@@ -44,6 +45,7 @@ export class IdentityController {
     private readonly authService: AuthService,
     private readonly sessionService: SessionService,
     private readonly avatarService: AvatarService,
+    private readonly permissionService: PermissionService,
   ) {}
 
   @Post('auth/login')
@@ -126,6 +128,26 @@ export class IdentityController {
       (typeof companyHeader === 'string' ? companyHeader : undefined) ??
       cookies[TENANCY_COOKIES.companyId];
     return this.authService.buildMeResponse(user, companyId);
+  }
+
+  /**
+   * Effective permission keys for the current session (company-scoped).
+   * Shell UX only — API guards remain authoritative (D294 Track F+).
+   */
+  @Get('me/grants')
+  @UseGuards(SessionGuard, PermissionGuard)
+  @RequirePermission(PERMISSION_KEYS.identitySelfRead)
+  async meGrants(@CurrentUser() user: IamUser, @Req() req: Request) {
+    const cookies = (req.cookies ?? {}) as Record<string, string | undefined>;
+    const companyHeader = req.headers[TENANCY_HEADERS.companyId];
+    const companyId =
+      (typeof companyHeader === 'string' ? companyHeader : undefined) ??
+      cookies[TENANCY_COOKIES.companyId];
+    const grants = await this.permissionService.listEffectiveAllowKeys(
+      user.id,
+      companyId ? { companyId } : {},
+    );
+    return { companyId: companyId ?? null, grants };
   }
 
   /** D157 — stream own profile photo (session cookie). */

@@ -111,7 +111,7 @@ export function ShellSidebar() {
     setMobileNavOpen(false);
     const mod = registry.modules.find((m) => m.key === key);
     const primaryHref = mod?.features[0]?.href;
-    // Deep-link to the module's first registry feature (Soft Glass entry).
+    // Deep-link to the module's first registry feature.
     // Accueil / modules without nav stay on Mission Control `/`.
     if (primaryHref && primaryHref !== "/" && primaryHref !== "/#") {
       router.push(primaryHref);
