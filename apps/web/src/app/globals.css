@@ -1001,7 +1001,7 @@
     opacity: 0;
     transform: translate3d(0, 0, 0) scale(0.35);
     transition:
-      opacity var(--a-dur-med) var(--a-ease-out),
+      opacity var(--a-dur-base) var(--a-ease-out),
       transform var(--a-dur-slow) var(--a-ease-out);
     transition-delay: 0ms;
     pointer-events: none;
@@ -1342,10 +1342,10 @@
     background: var(--a-accent);
     box-shadow: var(--a-shadow-card);
     transition:
-      width var(--a-dur-med) var(--a-ease-out),
-      height var(--a-dur-med) var(--a-ease-out),
-      transform var(--a-dur-med) var(--a-ease-out),
-      box-shadow var(--a-dur-med) ease;
+      width var(--a-dur-base) var(--a-ease-out),
+      height var(--a-dur-base) var(--a-ease-out),
+      transform var(--a-dur-base) var(--a-ease-out),
+      box-shadow var(--a-dur-base) ease;
     animation: none;
   }
 
