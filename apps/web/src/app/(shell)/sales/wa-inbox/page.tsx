@@ -303,7 +303,7 @@ export default function SalesWaInboxPage() {
       <AScreenHeader
         kicker="Ventes"
         title="Inbox WhatsApp"
-        description="Messages entrants Meta → brouillon Soft Glass. Suggestions produit assistées (chips) — pas d’auto-confirm (D251/D252)."
+        description="Messages entrants Meta → brouillon . Suggestions produit assistées (chips) — pas d’auto-confirm (D251/D252)."
         primary={
           <AButton
             type="button"

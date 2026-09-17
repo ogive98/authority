@@ -1138,7 +1138,7 @@ function HrWorkspace() {
                 />
                 <span className="text-[length:var(--a-text-sm)] text-a-fg">
                   Créer login Identity (rôle salarié) + mot de passe provisoire
-                  affiché une fois · e-mail Soft Glass si SMTP configuré
+                  affiché une fois · e-mail  si SMTP configuré
                 </span>
               </label>
               <AButton
@@ -1267,7 +1267,7 @@ function HrWorkspace() {
             </div>
             <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
               {provisionReveal.emailSent
-                ? "E-mail Soft Glass envoyé (SMTP)."
+                ? "E-mail  envoyé (SMTP)."
                 : provisionReveal.smtpConfigured
                   ? "SMTP OK mais envoi auto désactivé — remettez le MDP à la main."
                   : "SMTP non configuré — remettez le MDP à la main (Préférences → Envois)."}

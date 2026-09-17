@@ -123,7 +123,7 @@ export default function FinanceCreditNoteFichePage() {
         }
         kicker="Finance"
         title={cn ? cn.number : "Avoir"}
-        description="Fiche Soft Glass — lignes, AR appliqué / non appliqué (D239)."
+        description="Fiche — lignes, AR appliqué / non appliqué (D239)."
         status={
           cn ? (
             <ABadge tone={creditNoteBadgeTone(cn.status)}>

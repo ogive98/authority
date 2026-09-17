@@ -188,13 +188,14 @@ export const UI_STRINGS_IT: Record<string, string> = {
   "Total TTC": "Totale TTC",
   "Fournisseurs (AP)": "Fornitori (AP)",
   "Achats / charges (AP)": "Acquisti / oneri (AP)",
-  "Factures AP Soft Glass — HT+TVA optionnel (stub TVA19) · TTC sinon · RAS si Prefs VALIDATED · GL Thunder (D276).":
-    "Fatture AP Soft Glass — imponibile+IVA opzionale (stub TVA19) · TTC altrimenti · RAS se Prefs VALIDATED · GL Thunder (D276).",
-  "AP bill Soft Glass — lignes TVA optionnelles (D276) · RAS auto si Prefs VALIDATED · GL Thunder.":
-    "AP bill Soft Glass — righe IVA opzionali (D276) · RAS auto se Prefs VALIDATED · GL Thunder.",
+  "Factures AP — HT+TVA optionnel (stub TVA19) · TTC sinon · RAS si Prefs VALIDATED · GL Thunder (D276).":
+    "Fatture AP — imponibile+IVA opzionale (stub TVA19) · TTC altrimenti · RAS se Prefs VALIDATED · GL Thunder (D276).",
+  "AP bill — lignes TVA optionnelles (D276) · RAS auto si Prefs VALIDATED · GL Thunder.":
+    "AP bill — righe IVA opzionali (D276) · RAS auto se Prefs VALIDATED · GL Thunder.",
   "Journal ventes": "Giornale vendite",
   "Journal banque": "Giornale banca",
   "Journal achats": "Giornale acquisti",
+  "Surface": "Superficie",
   "Nouvelle extension": "Nuova estensione",
   "Nouvelle demande": "Nuova richiesta",
   Extensions: "Estensioni",
@@ -718,7 +719,8 @@ export const UI_STRINGS_IT: Record<string, string> = {
   "Smart Action Dock": "Smart Action Dock",
   Densité: "Densità",
   Surface: "Superficie",
-  "Surface Soft Glass": "Superficie Soft Glass",
+  "Surface": "Superficie",
+  "Surface Soft Glass": "Superficie",
   "Activer SPECTRE MODE": "Attiva SPECTRE MODE",
   "Activer PATCH MODE": "Attiva PATCH MODE",
   "Activer GHOST MODE": "Attiva GHOST MODE",

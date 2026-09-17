@@ -145,7 +145,7 @@ export default function ForgeMetadataPage() {
         title="Métadonnées"
         description={erpListDescription(
           state.kind === "ok" ? state.items.length : null,
-          "FrgMetadataDefinition — complète le catalog Soft Glass · schemaJson.commandId pour le pont ⌘K",
+          "FrgMetadataDefinition — complète le catalog  · schemaJson.commandId pour le pont ⌘K",
         )}
         primary={
           <AButton
@@ -345,7 +345,7 @@ export default function ForgeMetadataPage() {
           </label>
           <label className="block space-y-1">
             <span className="text-[length:var(--a-text-xs)] text-a-muted">
-              commandId (pont Soft Glass)
+              commandId (pont )
             </span>
             <AInput
               value={commandId}

@@ -181,7 +181,7 @@ export default function FinanceInvoiceFichePage() {
             : "Finance"
         }
         title={inv ? inv.number : "Document"}
-        description="Fiche Soft Glass — HT/TVA/FODEC/timbre/TTC as-recorded (D224)."
+        description="Fiche — HT/TVA/FODEC/timbre/TTC as-recorded (D224)."
         status={
           inv ? (
             <ABadge tone={invoiceBadgeTone(inv.status)}>

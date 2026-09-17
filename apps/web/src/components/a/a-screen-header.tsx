@@ -21,7 +21,7 @@ export type AScreenHeaderProps = {
   sticky?: boolean;
 };
 
-/** Soft Glass page title — D225 anatomy. Localizes known FR strings to IT. */
+/** D294 page title — list/detail anatomy. Localizes known FR strings to IT. */
 export function AScreenHeader({
   breadcrumb,
   kicker,

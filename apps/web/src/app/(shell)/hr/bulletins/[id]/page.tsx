@@ -80,7 +80,7 @@ export default function HrBulletinPrintPage() {
           }
           kicker="Ressources humaines"
           title={bulletin ? bulletin.number : "Bulletin"}
-          description="Impression Soft Glass + PDF serveur (layout légal minimal)."
+          description="Impression + PDF serveur (layout légal minimal)."
           primary={
             bulletin ? (
               <AButton type="button" size="sm" onClick={() => window.print()}>

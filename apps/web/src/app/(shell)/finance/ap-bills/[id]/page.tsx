@@ -230,7 +230,7 @@ export default function FinanceApBillFichePage() {
         }
         kicker="Finance"
         title={bill ? bill.number : "Facture fournisseur"}
-        description="AP bill Soft Glass — lignes TVA optionnelles (D276) · RAS auto si Prefs VALIDATED · GL Thunder."
+        description="AP bill — lignes TVA optionnelles (D276) · RAS auto si Prefs VALIDATED · GL Thunder."
         status={
           bill ? (
             <ABadge tone={apBillBadgeTone(bill.status)}>

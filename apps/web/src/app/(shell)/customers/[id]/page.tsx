@@ -774,7 +774,7 @@ export default function Customer360Page() {
         description={
           customer
             ? `${customer.legalName}${customer.taxId ? ` · MF ${customer.taxId}` : ""}`
-            : "Fiche Soft Glass — synthèse, documents, communication (D244)."
+            : "Fiche — synthèse, documents, communication (D244)."
         }
         status={
           customer ? (

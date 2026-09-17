@@ -243,7 +243,7 @@ export default function MaintenanceAssetPage() {
             ? `${state.data.code} · ${state.data.label}`
             : "Équipement"
         }
-        description="Fiche Soft Glass · Down/Up · préventif ADV · historique OT · lien flotte (D258)."
+        description="Fiche · Down/Up · préventif ADV · historique OT · lien flotte (D258)."
         primary={
           state.kind === "ok" ? (
             <AButton type="button" size="sm" onClick={openEdit}>

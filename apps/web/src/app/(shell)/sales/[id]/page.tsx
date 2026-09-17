@@ -279,7 +279,7 @@ export default function SalesOrderFichePage() {
         }
         kicker="Ventes"
         title={order ? order.number : "Commande"}
-        description="Fiche Soft Glass — lecture · édition brouillon · confirm/annuler (D223)."
+        description="Fiche — lecture · édition brouillon · confirm/annuler (D223)."
         status={
           order ? (
             <ABadge tone={orderBadgeTone(order.status)}>

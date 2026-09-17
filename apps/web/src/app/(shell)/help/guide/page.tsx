@@ -37,8 +37,8 @@ export default function UserGuidePage() {
         title="User Guide"
         description={
           locale === "it"
-            ? "Percorso AUTHORITY — caseificio B2B Tunisia — Soft Glass."
-            : "Parcours AUTHORITY — fromagerie B2B Tunisie — Soft Glass."
+            ? "Percorso AUTHORITY — caseificio B2B Tunisia — ."
+            : "Parcours AUTHORITY — fromagerie B2B Tunisie — ."
         }
         primary={
           <Link

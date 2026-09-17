@@ -53,7 +53,7 @@ export default function ForgeOverviewPage() {
       <AScreenHeader
         kicker="FORGE"
         title="Vue d’ensemble"
-        description="Fondation d’extensions tenant — Soft Glass D161 · pont métadonnées · IA / sandbox UNAVAILABLE."
+        description="Fondation d’extensions tenant —  D161 · pont métadonnées · IA / sandbox UNAVAILABLE."
         primary={
           <AButton
             type="button"

@@ -157,7 +157,7 @@ export default function FinancePaymentFichePage() {
         }
         kicker="Finance"
         title={pay ? pay.number : "Encaissement"}
-        description="Fiche Soft Glass — montants, instruments, affectations (D238)."
+        description="Fiche — montants, instruments, affectations (D238)."
         status={
           pay ? (
             <ABadge tone={paymentBadgeTone(pay.status)}>

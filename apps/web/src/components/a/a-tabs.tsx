@@ -19,8 +19,8 @@ export type ATabsProps = {
   /** Accessible name for the tablist. */
   ariaLabel: string;
   /**
-   * `chip` — Soft Glass filter/section chips (default, matches ERP lists).
-   * `underline` — quiet underline (D228) for denser section rows.
+   * `chip` — filter/section chips (default, matches ERP lists).
+   * `underline` — quiet underline for denser section rows.
    */
   variant?: ATabsVariant;
   className?: string;

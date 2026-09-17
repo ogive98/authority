@@ -161,7 +161,7 @@ export default function AccountingEntryFichePage() {
       <AScreenHeader
         kicker="Comptabilité"
         title={entry ? `Écriture ${entry.number}` : "Écriture"}
-        description="Fiche Soft Glass — lignes débit/crédit, poster ou décomptabiliser selon statut."
+        description="Fiche — lignes débit/crédit, poster ou décomptabiliser selon statut."
         status={
           entry ? (
             <ABadge tone={entryBadgeTone(entry.status)}>

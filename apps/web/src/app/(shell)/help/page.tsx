@@ -135,7 +135,7 @@ export default function HelpPage() {
         ))}
 
         <p className="pb-8 text-center text-[12px] text-a-fg-subtle">
-          Soft Glass · {LAYOUT_ACTIONS.save} ·{" "}
+           · {LAYOUT_ACTIONS.save} ·{" "}
           {locale === "it"
             ? "Mai inventare aliquote tunisine"
             : "Jamais inventer de taux tunisiens"}

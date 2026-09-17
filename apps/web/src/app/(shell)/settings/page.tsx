@@ -970,8 +970,8 @@ export default function SettingsPage() {
         title="Préférences"
         description={
           canCompanyWrite
-            ? "Rail compartiments Soft Glass (D203) — poste, société, modes ops, expertise, envois, finance, compta, ventes, rôles. Une préférence n’outrepasse jamais une permission."
-            : "Rail compartiments Soft Glass (D203) — réglages de votre poste. Les compartiments société sont réservés à l’administrateur."
+            ? "Rail compartiments (D203) — poste, société, modes ops, expertise, envois, finance, compta, ventes, rôles. Une préférence n’outrepasse jamais une permission."
+            : "Rail compartiments (D203) — réglages de votre poste. Les compartiments société sont réservés à l’administrateur."
         }
         status={
           compartment === "envois" && canCompanyWrite && mailStatus ? (
@@ -1123,11 +1123,11 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium text-a-orange">
-                    Surface Soft Glass
+                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                    Surface
                   </p>
                   <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Matériau glass (lock 10B) — aussi dans le Smart Action Dock.
+                    Densité visuelle du chrome (aussi dans le Smart Action Dock).
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {(
