@@ -300,7 +300,7 @@ export default function DocumentsPage() {
             <tbody>
               {state.items.map((row) => (
                 <ASoftTr key={row.id}>
-                  <ASoftTd className="a-mono font-semibold">{row.number}</ASoftTd>
+                  <ASoftTd className="a-mono font-medium">{row.number}</ASoftTd>
                   <ASoftTd>{row.title}</ASoftTd>
                   <ASoftTd>
                     <ABadge tone={visibilityTone(row.visibility)}>

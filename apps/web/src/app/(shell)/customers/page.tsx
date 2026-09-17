@@ -688,13 +688,13 @@ export default function CustomersPage() {
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                         <div>
                           <p className="text-[10px] text-a-fg-muted">Encours</p>
-                          <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                          <p className="a-mono text-[length:var(--a-text-sm)] a-tabular">
                             {financeHub.data.credit.outstandingBalance}
                           </p>
                         </div>
                         <div>
                           <p className="text-[10px] text-a-fg-muted">Échu</p>
-                          <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                          <p className="a-mono text-[length:var(--a-text-sm)] a-tabular">
                             {financeHub.data.aging.overdueTotal}
                           </p>
                         </div>
@@ -702,13 +702,13 @@ export default function CustomersPage() {
                           <p className="text-[10px] text-a-fg-muted">
                             Disponible
                           </p>
-                          <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                          <p className="a-mono text-[length:var(--a-text-sm)] a-tabular">
                             {financeHub.data.availableCredit ?? "—"}
                           </p>
                         </div>
                         <div>
                           <p className="text-[10px] text-a-fg-muted">Ouverts</p>
-                          <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                          <p className="a-mono text-[length:var(--a-text-sm)] a-tabular">
                             {financeHub.data.openCount}
                             {financeHub.data.overdueCount > 0
                               ? ` · ${financeHub.data.overdueCount} éch.`
@@ -725,7 +725,7 @@ export default function CustomersPage() {
                             <p className="text-[10px] text-a-fg-muted">
                               {b.label}
                             </p>
-                            <p className="a-mono text-[11px] tabular-nums text-a-fg">
+                            <p className="a-mono text-[11px] a-tabular text-a-fg">
                               {b.amountOpen}
                             </p>
                             <p className="text-[10px] text-a-fg-subtle">
@@ -762,7 +762,7 @@ export default function CustomersPage() {
                           <span className="min-w-0 truncate">
                             {p.productSku ?? "SKU"} · {p.productName ?? "—"}
                           </span>
-                          <span className="a-mono shrink-0 tabular-nums">
+                          <span className="a-mono shrink-0 a-tabular">
                             {p.unitPriceHt} {p.currency}
                           </span>
                           <AButton

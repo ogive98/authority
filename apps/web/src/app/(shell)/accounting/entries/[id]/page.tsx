@@ -281,10 +281,10 @@ export default function AccountingEntryFichePage() {
                               </span>{" "}
                               {line.accountName ?? ""}
                             </ASoftTd>
-                            <ASoftTd numeric className="a-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {line.debit}
                             </ASoftTd>
-                            <ASoftTd numeric className="a-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {line.credit}
                             </ASoftTd>
                             <ASoftTd className="text-a-fg-muted">
@@ -300,13 +300,13 @@ export default function AccountingEntryFichePage() {
                           </ASoftTd>
                           <ASoftTd
                             numeric
-                            className="a-mono tabular-nums font-medium"
+                            className="a-mono a-tabular font-medium"
                           >
                             {totals.debit.toFixed(3)}
                           </ASoftTd>
                           <ASoftTd
                             numeric
-                            className="a-mono tabular-nums font-medium"
+                            className="a-mono a-tabular font-medium"
                           >
                             {totals.credit.toFixed(3)}
                           </ASoftTd>
@@ -339,13 +339,13 @@ export default function AccountingEntryFichePage() {
                   </div>
                   <div>
                     <dt className="text-a-fg-muted">Débit</dt>
-                    <dd className="a-mono tabular-nums">
+                    <dd className="a-mono a-tabular">
                       {totals.debit.toFixed(3)}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-a-fg-muted">Crédit</dt>
-                    <dd className="a-mono tabular-nums">
+                    <dd className="a-mono a-tabular">
                       {totals.credit.toFixed(3)}
                     </dd>
                   </div>

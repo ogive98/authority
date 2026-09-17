@@ -400,7 +400,7 @@ export default function MaintenanceAssetPage() {
                             {MNT_WO_STATUS_LABELS[w.status]}
                           </ABadge>
                         </td>
-                        <td className="tabular-nums">
+                        <td className="a-tabular">
                           {new Date(w.openedAt).toLocaleString("fr-TN")}
                         </td>
                         <td className="text-right">
@@ -599,7 +599,7 @@ function Item({
       <dd
         className={
           mono
-            ? "mt-0.5 font-mono tabular-nums text-[length:var(--a-text-sm)]"
+            ? "mt-0.5 a-mono a-tabular text-[length:var(--a-text-sm)]"
             : "mt-0.5 text-[length:var(--a-text-sm)]"
         }
       >

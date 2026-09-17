@@ -362,7 +362,7 @@ export default function AccountPage() {
                     />
                   ) : (
                     <span
-                      className="flex h-24 w-24 items-center justify-center rounded-full bg-a-accent-muted text-[length:var(--a-text-lg)] font-semibold tracking-tight text-a-accent"
+                      className="flex h-24 w-24 items-center justify-center rounded-full bg-a-accent-muted text-[length:var(--a-text-lg)] font-medium tracking-tight text-a-accent"
                       aria-hidden
                     >
                       {initials}

@@ -493,7 +493,7 @@ function FinanceInvoicesPageInner() {
                   <ASoftTd>
                     <Link
                       href={`/finance/invoices/${inv.id}`}
-                      className="a-mono font-semibold text-a-accent hover:underline"
+                      className="a-mono font-medium text-a-accent hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {inv.number}

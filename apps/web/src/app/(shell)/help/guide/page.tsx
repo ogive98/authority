@@ -68,7 +68,7 @@ export default function UserGuidePage() {
               <li key={mod.id} className="text-[13px] leading-relaxed">
                 <Link
                   href={`/help#${mod.id}`}
-                  className="font-semibold text-a-accent hover:underline"
+                  className="font-medium text-a-accent hover:underline"
                 >
                   {i + 1}. {helpText(locale, mod.title)}
                 </Link>

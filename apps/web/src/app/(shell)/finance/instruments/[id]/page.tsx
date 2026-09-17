@@ -255,7 +255,7 @@ export default function FinanceInstrumentFichePage() {
                 <dl className="space-y-3 text-[length:var(--a-text-sm)]">
                   <div className="flex justify-between gap-4">
                     <dt className="text-a-fg-muted">Montant</dt>
-                    <dd className="a-mono tabular-nums font-medium">
+                    <dd className="a-mono a-tabular font-medium">
                       {inst.amount}
                     </dd>
                   </div>

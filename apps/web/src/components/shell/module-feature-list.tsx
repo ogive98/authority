@@ -123,7 +123,7 @@ export function ModuleFeatureList({
                     <Icon className="h-4.5 w-4.5" strokeWidth={1.75} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[length:var(--a-text-md)] font-semibold tracking-[-0.02em] text-a-fg">
+                    <span className="block text-[length:var(--a-text-md)] font-medium tracking-[-0.02em] text-a-fg">
                       {f.label}
                     </span>
                     <span className="a-mono mt-0.5 block truncate text-[11px] text-a-fg-subtle">
@@ -173,7 +173,7 @@ export function ModuleFeatureList({
       <div className="mx-auto grid h-full min-h-0 w-full max-w-6xl flex-1 grid-cols-1 gap-5 px-5 pb-5 pt-4 md:grid-cols-[minmax(0,1fr)_16rem] md:px-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="flex min-h-0 flex-col">
           <header className="mb-4 shrink-0 a-stagger-in">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-a-fg-subtle">
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-a-fg-subtle">
               Module
             </p>
             <div className="mt-1 flex flex-wrap items-end justify-between gap-2">
@@ -208,7 +208,7 @@ export function ModuleFeatureList({
             {tip ? (
               <aside className="a-underlay rounded-[var(--a-radius-md)] px-4 py-3">
                 <p className="text-[length:var(--a-text-sm)] leading-relaxed text-a-fg-muted">
-                  <span className="font-semibold text-a-fg">{tip.title}</span>
+                  <span className="font-medium text-a-fg">{tip.title}</span>
                   {" — "}
                   {tip.body.length > 140
                     ? `${tip.body.slice(0, 137)}…`
@@ -222,7 +222,7 @@ export function ModuleFeatureList({
         <aside className="hidden min-h-0 flex-col gap-3 md:flex">
           <div className="a-underlay a-stagger-in flex flex-col items-center gap-2 rounded-[var(--a-radius-lg)] px-4 py-5">
             <AccentRing value={Math.min(100, Math.max(12, features.length * 12))} />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-a-fg-subtle">
+            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-a-fg-subtle">
               Features registry
             </p>
             <p className="a-mono text-[length:var(--a-text-lg)] font-bold text-a-fg">
@@ -234,7 +234,7 @@ export function ModuleFeatureList({
             className="a-underlay a-stagger-in rounded-[var(--a-radius-lg)] px-4 py-4"
             style={{ animationDelay: "80ms" }}
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-a-fg-subtle">
+            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-a-fg-subtle">
               Shell
             </p>
             <p className="mt-2 a-mono text-[length:var(--a-text-xl)] font-bold tracking-tight text-a-fg">

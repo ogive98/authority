@@ -291,7 +291,7 @@ export default function InventoryLotsPage() {
                 <ASoftTr key={lot.id}>
                   <ASoftTd>
                     <div className="space-y-0.5">
-                      <span className="a-mono font-semibold">{lot.lotCode}</span>
+                      <span className="a-mono font-medium">{lot.lotCode}</span>
                       {(lot.packDate || lot.dlc) && (
                         <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                           {lot.packDate ? `emb. ${lot.packDate}` : ""}

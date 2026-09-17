@@ -563,7 +563,7 @@ export default function DeliveryPage() {
                       {rows.map((row) => (
                         <ASoftTr key={row.id}>
                           <ASoftTd>
-                            <span className="a-mono font-semibold">
+                            <span className="a-mono font-medium">
                               {row.number}
                             </span>
                             {row.status === "FAILED" && row.failReason ? (

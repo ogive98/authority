@@ -1382,7 +1382,7 @@ function Kpi({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">{label}</p>
-      <p className="a-mono text-[length:var(--a-text-lg)] tabular-nums text-a-fg">
+      <p className="a-mono text-[length:var(--a-text-lg)] a-tabular text-a-fg">
         {value}
       </p>
     </div>

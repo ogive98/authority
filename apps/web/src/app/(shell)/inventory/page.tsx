@@ -228,26 +228,26 @@ export default function InventoryPage() {
             <tbody>
               {state.items.map((row) => (
                 <ASoftTr key={row.id}>
-                  <ASoftTd className="a-mono font-semibold">
+                  <ASoftTd className="a-mono font-medium">
                     {row.productSku ?? "—"}
                   </ASoftTd>
                   <ASoftTd>{row.productName ?? "—"}</ASoftTd>
                   <ASoftTd className="text-a-fg-muted">
                     {row.warehouseCode}
                   </ASoftTd>
-                  <ASoftTd numeric className="a-mono tabular-nums">
+                  <ASoftTd numeric className="a-mono a-tabular">
                     {row.onHand}
                     {row.productUom ? ` ${row.productUom}` : ""}
                   </ASoftTd>
                   <ASoftTd
                     numeric
-                    className="a-mono tabular-nums text-a-fg-muted"
+                    className="a-mono a-tabular text-a-fg-muted"
                   >
                     {row.reserved}
                   </ASoftTd>
                   <ASoftTd
                     numeric
-                    className="a-mono tabular-nums font-medium"
+                    className="a-mono a-tabular font-medium"
                   >
                     {row.available}
                   </ASoftTd>

@@ -129,7 +129,7 @@ export function ShellSidebar() {
   }) {
     if (!expanded) return null;
     return (
-      <p className="px-2 pb-0.5 pt-1.5 text-[8px] font-semibold uppercase tracking-[0.16em] text-a-fg-subtle">
+      <p className="px-2 pb-0.5 pt-1.5 text-[8px] font-medium uppercase tracking-[0.16em] text-a-fg-subtle">
         {children}
       </p>
     );
@@ -170,7 +170,7 @@ export function ShellSidebar() {
               className={cn(
                 "min-w-0 flex-1 truncate text-[12.5px] tracking-[-0.015em]",
                 on
-                  ? "font-semibold text-a-fg"
+                  ? "font-medium text-a-fg"
                   : "font-medium text-a-fg-muted",
               )}
             >

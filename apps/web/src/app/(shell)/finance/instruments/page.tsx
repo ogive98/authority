@@ -212,7 +212,7 @@ function FinanceInstrumentsPageInner() {
                   }
                 >
                   <ASoftTd>{TYPE_LABELS[row.type]}</ASoftTd>
-                  <ASoftTd className="a-mono font-semibold">{row.number}</ASoftTd>
+                  <ASoftTd className="a-mono font-medium">{row.number}</ASoftTd>
                   <ASoftTd numeric>{row.amount}</ASoftTd>
                   <ASoftTd className="a-mono text-a-fg-muted">
                     {row.dueDate ?? "—"}

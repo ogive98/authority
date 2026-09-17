@@ -45,7 +45,7 @@ export function PageTips({ className }: { className?: string }) {
         <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-a-fg-subtle">
           À retenir
         </p>
-        <h2 className="mt-1 text-[17px] font-semibold tracking-[-0.02em] text-a-fg">
+        <h2 className="mt-1 text-[17px] font-medium tracking-[-0.02em] text-a-fg">
           Astuces & fonctionnalités
         </h2>
       </header>
@@ -53,7 +53,7 @@ export function PageTips({ className }: { className?: string }) {
       <ul className="space-y-8">
         {tips.map((tip) => (
           <li key={tip.id} className="text-center sm:text-left">
-            <h3 className="text-[15px] font-semibold tracking-[-0.015em] text-a-fg">
+            <h3 className="text-[15px] font-medium tracking-[-0.015em] text-a-fg">
               {tip.title}
               {tip.shortcut ? (
                 <kbd className="a-mono ml-2 align-middle text-[11px] font-medium text-a-fg-subtle">

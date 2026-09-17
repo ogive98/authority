@@ -349,7 +349,7 @@ export function TreasuryWidget() {
             <dt className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
               {c.label}
             </dt>
-            <dd className="a-mono mt-0.5 text-[length:var(--a-text-lg)] tabular-nums text-a-fg">
+            <dd className="a-mono mt-0.5 text-[length:var(--a-text-lg)] a-tabular text-a-fg">
               {c.value}
             </dd>
           </div>
@@ -361,7 +361,7 @@ export function TreasuryWidget() {
           {data.glBankCode ? (
             <span className="a-mono text-a-fg-muted"> · {data.glBankCode}</span>
           ) : null}
-          <span className="a-mono ml-2 tabular-nums font-medium">
+          <span className="a-mono ml-2 a-tabular font-medium">
             {data.glBankBalance} {data.currency}
           </span>
         </p>

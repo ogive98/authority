@@ -464,12 +464,12 @@ export default function FleetPage() {
                           {v.code}
                         </Link>
                       </td>
-                      <td className="tabular-nums">{v.plate}</td>
+                      <td className="a-tabular">{v.plate}</td>
                       <td>{v.cold ? "Oui" : "Non"}</td>
-                      <td className="tabular-nums">
+                      <td className="a-tabular">
                         {v.capacityKg ?? "—"}
                       </td>
-                      <td className="tabular-nums">
+                      <td className="a-tabular">
                         {v.odometerKm ?? "—"}
                       </td>
                       <td>
@@ -530,7 +530,7 @@ export default function FleetPage() {
                     const a = assignmentByRound.get(r.id);
                     return (
                       <ASoftTr key={r.id}>
-                        <td className="tabular-nums">{r.date}</td>
+                        <td className="a-tabular">{r.date}</td>
                         <td>
                           <ABadge tone="neutral">{r.status}</ABadge>
                         </td>

@@ -218,7 +218,7 @@ export default function AutomationPage() {
                         <ASoftTd>
                           <button
                             type="button"
-                            className="a-mono font-semibold text-a-accent hover:underline"
+                            className="a-mono font-medium text-a-accent hover:underline"
                             onClick={(e) => {
                               e.stopPropagation();
                               router.push(`/automation/${p.id}`);

@@ -223,7 +223,7 @@ function FinancePromisesPageInner() {
                   key={row.id}
                   onClick={() => router.push(`/finance/promises/${row.id}`)}
                 >
-                  <ASoftTd className="a-mono font-semibold">{row.number}</ASoftTd>
+                  <ASoftTd className="a-mono font-medium">{row.number}</ASoftTd>
                   <ASoftTd>
                     {row.customerName ?? row.customerCode ?? "—"}
                   </ASoftTd>

@@ -448,7 +448,7 @@ function FinancePaymentsPageInner() {
                   <ASoftTd>
                     <Link
                       href={`/finance/payments/${p.id}`}
-                      className="a-mono font-semibold text-a-accent hover:underline"
+                      className="a-mono font-medium text-a-accent hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {p.number}
@@ -696,7 +696,7 @@ function FinancePaymentsPageInner() {
             <div className="space-y-2 text-[length:var(--a-text-sm)]">
               <p className="text-a-fg-muted">
                 Reste non affecté prévu :{" "}
-                <span className="a-mono tabular-nums text-a-fg">
+                <span className="a-mono a-tabular text-a-fg">
                   {plan.remainder.toFixed(3)}
                 </span>
               </p>
@@ -707,7 +707,7 @@ function FinancePaymentsPageInner() {
                     className="flex justify-between a-underlay rounded-md px-2 py-1.5"
                   >
                     <span className="a-mono">{l.openItemNumber}</span>
-                    <span className="a-mono tabular-nums">
+                    <span className="a-mono a-tabular">
                       {l.amount.toFixed(3)}
                     </span>
                   </li>

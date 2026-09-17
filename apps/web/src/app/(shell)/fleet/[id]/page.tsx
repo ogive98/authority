@@ -424,7 +424,7 @@ export default function FleetVehiclePage() {
                   <tbody>
                     {state.logs.map((row) => (
                       <ASoftTr key={row.id}>
-                        <td className="tabular-nums">
+                        <td className="a-tabular">
                           {row.occurredAt.slice(0, 10)}
                         </td>
                         <td>
@@ -433,11 +433,11 @@ export default function FleetVehiclePage() {
                             {FLEET_LOG_KIND_LABELS[row.kind]}
                           </span>
                         </td>
-                        <td className="tabular-nums">
+                        <td className="a-tabular">
                           {row.odometerKm ?? "—"}
                         </td>
-                        <td className="tabular-nums">{row.liters ?? "—"}</td>
-                        <td className="tabular-nums">
+                        <td className="a-tabular">{row.liters ?? "—"}</td>
+                        <td className="a-tabular">
                           {row.amountTnd ?? "—"}
                         </td>
                         <td>{row.notes?.trim() || "—"}</td>
@@ -468,7 +468,7 @@ export default function FleetVehiclePage() {
                   <tbody>
                     {state.history.map((a) => (
                       <ASoftTr key={a.id}>
-                        <td className="tabular-nums">
+                        <td className="a-tabular">
                           {a.assignedAt.slice(0, 10)}
                         </td>
                         <td>
@@ -477,7 +477,7 @@ export default function FleetVehiclePage() {
                             : a.roundId.slice(0, 8)}
                         </td>
                         <td>{a.driverLabel}</td>
-                        <td className="tabular-nums">
+                        <td className="a-tabular">
                           {a.payloadKg ?? "—"}
                         </td>
                         <td>

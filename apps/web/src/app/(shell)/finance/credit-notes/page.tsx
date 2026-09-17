@@ -421,7 +421,7 @@ function FinanceCreditNotesPageInner() {
                     router.push(`/finance/credit-notes/${cn.id}`)
                   }
                 >
-                  <ASoftTd className="a-mono font-semibold">{cn.number}</ASoftTd>
+                  <ASoftTd className="a-mono font-medium">{cn.number}</ASoftTd>
                   <ASoftTd className="a-mono">
                     {cn.invoiceNumber ?? "—"}
                   </ASoftTd>

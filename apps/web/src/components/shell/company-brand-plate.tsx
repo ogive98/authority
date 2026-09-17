@@ -42,7 +42,7 @@ export function CompanyBrandPlate({
           <span className="text-[10px] font-medium tracking-[0.06em] text-a-fg-subtle">
             Powered by
           </span>
-          <span className="text-[15px] font-semibold tracking-[-0.02em] text-a-fg">
+          <span className="text-[15px] font-medium tracking-[-0.02em] text-a-fg">
             AUTHORITY
           </span>
           <span className="mt-1 text-[10px] font-normal tracking-[0.02em] text-a-fg-subtle">
@@ -56,7 +56,7 @@ export function CompanyBrandPlate({
             <span className="text-[9px] font-medium tracking-[0.04em] text-a-fg-subtle">
               Powered by
             </span>
-            <span className="text-[13px] font-semibold tracking-[-0.02em] text-a-fg">
+            <span className="text-[13px] font-medium tracking-[-0.02em] text-a-fg">
               AUTHORITY
             </span>
             <span className="mt-0.5 text-[9px] font-normal tracking-[0.02em] text-a-fg-subtle">

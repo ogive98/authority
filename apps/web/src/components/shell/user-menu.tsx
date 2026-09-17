@@ -45,7 +45,7 @@ function Avatar({ user, size }: { user: ShellUser; size: "md" | "lg" }) {
     <span
       className={cn(
         dim,
-        "flex shrink-0 items-center justify-center rounded-full bg-a-accent-muted font-semibold tracking-tight text-a-accent",
+        "flex shrink-0 items-center justify-center rounded-full bg-a-accent-muted font-medium tracking-tight text-a-accent",
       )}
       aria-hidden
     >

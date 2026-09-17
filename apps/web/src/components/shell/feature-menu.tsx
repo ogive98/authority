@@ -89,7 +89,7 @@ export function FeatureMenu() {
       )}
     >
       <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-3">
-        <p className="truncate text-[length:var(--a-text-sm)] font-semibold tracking-[var(--a-tracking-nav)]">
+        <p className="truncate text-[length:var(--a-text-sm)] font-medium tracking-[var(--a-tracking-nav)]">
           {mod.name}
         </p>
         <button

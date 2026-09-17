@@ -383,7 +383,7 @@ function FinanceApBillsPageInner() {
                   <ASoftTd>
                     <Link
                       href={`/finance/ap-bills/${bill.id}`}
-                      className="a-mono font-semibold text-a-accent hover:underline"
+                      className="a-mono font-medium text-a-accent hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {bill.number}

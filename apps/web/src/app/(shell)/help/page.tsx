@@ -64,7 +64,7 @@ export default function HelpPage() {
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-a-fg">
+                <h2 className="text-[16px] font-medium tracking-[-0.015em] text-a-fg">
                   {helpText(locale, mod.title)}
                 </h2>
                 <p className="mt-1 text-[13px] leading-relaxed text-a-fg-muted">
@@ -82,7 +82,7 @@ export default function HelpPage() {
             </div>
 
             <div>
-              <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-a-orange">
+              <h3 className="text-[12px] font-medium uppercase tracking-[0.06em] text-a-orange">
                 {intro.whenLabel}
               </h3>
               <p className="mt-1 text-[13px] text-a-fg-muted">
@@ -91,12 +91,12 @@ export default function HelpPage() {
             </div>
 
             <div className="space-y-5">
-              <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-a-orange">
+              <h3 className="text-[12px] font-medium uppercase tracking-[0.06em] text-a-orange">
                 {intro.featuresLabel}
               </h3>
               {mod.features.map((feat) => (
                 <div key={feat.name.fr} className="space-y-2">
-                  <h4 className="text-[14px] font-semibold text-a-fg">
+                  <h4 className="text-[14px] font-medium text-a-fg">
                     {helpText(locale, feat.name)}
                   </h4>
                   <p className="text-[12px] text-a-fg-muted">
@@ -121,7 +121,7 @@ export default function HelpPage() {
 
             {mod.locks ? (
               <div>
-                <h3 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-a-orange">
+                <h3 className="text-[12px] font-medium uppercase tracking-[0.06em] text-a-orange">
                   {intro.locksLabel}
                 </h3>
                 <ul className="mt-1 list-disc space-y-1 pl-5 text-[13px] text-a-fg-muted">
