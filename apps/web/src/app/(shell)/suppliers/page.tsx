@@ -13,13 +13,18 @@ import {
   AForbiddenState,
   AFormSection,
   AInput,
+  AListUtilities,
   APageBody,
   AScreenHeader,
   ASkeleton,
   ASoftTable,
+  ASoftTd,
+  ASoftTh,
   ASoftThead,
   ASoftTr,
   ASwitch,
+  ATabs,
+  erpListDescription,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { softSelect } from "@/lib/soft-glass-ui";
@@ -164,7 +169,10 @@ export default function SuppliersPage() {
       <AScreenHeader
         kicker="Fournisseurs"
         title="Master fournisseurs"
-        description="Master Soft Glass · hub AP 360 · pas de commandes ni prix."
+        description={erpListDescription(
+          state.kind === "ok" ? state.items.length : null,
+          "hub AP 360 · master only",
+        )}
         primary={
           <AButton type="button" size="sm" onClick={openCreate}>
             {LAYOUT_ACTIONS.newSupplier}
@@ -185,36 +193,22 @@ export default function SuppliersPage() {
             />
           }
           filters={
-            <div className="flex flex-wrap gap-2">
-              {(
-                [
-                  ["", "Tous"],
-                  ["ACTIVE", "Actifs"],
-                  ["ON_HOLD", "Hold"],
-                  ["BLOCKED", "Bloqués"],
-                ] as const
-              ).map(([value, label]) => (
-                <AButton
-                  key={label}
-                  type="button"
-                  size="sm"
-                  variant={statusFilter === value ? "primary" : "ghost"}
-                  onClick={() => setStatusFilter(value)}
-                >
-                  {label}
-                </AButton>
-              ))}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter}
+              onValueChange={(id) =>
+                setStatusFilter(id as SupplierStatus | "")
+              }
+              items={[
+                { id: "", label: "Tous" },
+                { id: "ACTIVE", label: "Actifs" },
+                { id: "ON_HOLD", label: "Hold" },
+                { id: "BLOCKED", label: "Bloqués" },
+              ]}
+            />
           }
           utilities={
-            <AButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void load(q, statusFilter)}
-            >
-              Filtrer
-            </AButton>
+            <AListUtilities onFilter={() => void load(q, statusFilter)} />
           }
         />
 
@@ -234,28 +228,28 @@ export default function SuppliersPage() {
         {state.kind === "ok" && state.items.length > 0 && (
           <ASoftTable>
             <ASoftThead>
-              <tr>
-                <th>Code</th>
-                <th>Raison sociale</th>
-                <th>Catégorie</th>
-                <th>Délai</th>
-                <th>MOQ</th>
-                <th>Statut</th>
-                <th />
-              </tr>
+              <ASoftTr>
+                <ASoftTh>Code</ASoftTh>
+                <ASoftTh>Raison sociale</ASoftTh>
+                <ASoftTh>Catégorie</ASoftTh>
+                <ASoftTh numeric>Délai</ASoftTh>
+                <ASoftTh numeric>MOQ</ASoftTh>
+                <ASoftTh>Statut</ASoftTh>
+                <ASoftTh />
+              </ASoftTr>
             </ASoftThead>
             <tbody>
               {state.items.map((row) => (
                 <ASoftTr key={row.id}>
-                  <td className="font-medium tabular-nums">
+                  <ASoftTd className="font-medium">
                     <Link
                       href={`/suppliers/${row.id}`}
                       className="text-a-accent underline-offset-2 hover:underline"
                     >
                       {row.code}
                     </Link>
-                  </td>
-                  <td>
+                  </ASoftTd>
+                  <ASoftTd>
                     {row.legalName}
                     {row.preferred ? (
                       <span className="ml-2 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -267,27 +261,27 @@ export default function SuppliersPage() {
                         Hold qualité
                       </ABadge>
                     ) : null}
-                  </td>
-                  <td>{SUPPLIER_CATEGORY_LABELS[row.category]}</td>
-                  <td className="tabular-nums">
+                  </ASoftTd>
+                  <ASoftTd>{SUPPLIER_CATEGORY_LABELS[row.category]}</ASoftTd>
+                  <ASoftTd numeric>
                     {row.leadTimeDays != null
                       ? `${row.leadTimeDays} j`
                       : "—"}
-                  </td>
-                  <td className="tabular-nums">{row.moqDefault ?? "—"}</td>
-                  <td>
+                  </ASoftTd>
+                  <ASoftTd numeric>{row.moqDefault ?? "—"}</ASoftTd>
+                  <ASoftTd>
                     <ABadge tone={statusTone(row.status)}>
                       {SUPPLIER_STATUS_LABELS[row.status]}
                     </ABadge>
-                  </td>
-                  <td className="text-right">
+                  </ASoftTd>
+                  <ASoftTd className="text-right">
                     <Link
                       href={`/suppliers/${row.id}`}
                       className="text-[length:var(--a-text-sm)] text-a-fg-muted underline-offset-2 hover:underline"
                     >
                       Fiche
                     </Link>
-                  </td>
+                  </ASoftTd>
                 </ASoftTr>
               ))}
             </tbody>

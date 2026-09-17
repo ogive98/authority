@@ -27,8 +27,7 @@ export type ATabsProps = {
 };
 
 /**
- * Soft Glass tabs — registry-friendly controlled tabs.
- * Prefer this over ad-hoc role=tablist markup on new screens.
+ * D294 tabs — chip filters (default) or underline section tabs.
  */
 export function ATabs({
   items,
