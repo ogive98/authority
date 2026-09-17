@@ -719,7 +719,6 @@ export const UI_STRINGS_IT: Record<string, string> = {
   "Smart Action Dock": "Smart Action Dock",
   Densité: "Densità",
   Surface: "Superficie",
-  "Surface": "Superficie",
   "Surface Soft Glass": "Superficie",
   "Activer SPECTRE MODE": "Attiva SPECTRE MODE",
   "Activer PATCH MODE": "Attiva PATCH MODE",

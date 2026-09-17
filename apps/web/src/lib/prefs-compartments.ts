@@ -1,5 +1,5 @@
 /**
- * Préférences Soft Glass — rail compartiments (D203 lock 1C).
+ * Préférences D294 — rail compartiments (D203 lock 1C).
  * Sous-titres only · zero frames.
  */
 
@@ -26,7 +26,7 @@ export const PREFS_COMPARTMENTS: readonly PrefsCompartmentDef[] = [
   {
     id: "poste",
     label: "Poste",
-    subtitle: "Densité, Soft Glass, AUTHORITY X, sidebar, notifications",
+    subtitle: "Densité, D294, AUTHORITY X, sidebar, notifications",
   },
   {
     id: "societe",

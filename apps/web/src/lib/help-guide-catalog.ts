@@ -1,5 +1,5 @@
 /**
- * Exhaustive Soft Glass Help / User Guide — FR source + IT overlay (D229).
+ * Exhaustive AUTHORITY Help / User Guide — FR source + IT overlay (D229).
  * Structure: module → when → features → steps.
  *
  * **D230 — mandatory:** every new user-facing feature must extend this catalog
@@ -29,7 +29,7 @@ export const HELP_INTRO = {
     kicker: "Aide",
     title: "Centre d’aide AUTHORITY",
     description:
-      "Guide opérationnel Soft Glass — tous les modules, fonctionnalités, quand et comment les utiliser, étape par étape.",
+      "Guide opérationnel AUTHORITY — tous les modules, fonctionnalités, quand et comment les utiliser, étape par étape.",
     toc: "Sommaire",
     whenLabel: "Quand l’utiliser",
     featuresLabel: "Fonctionnalités",
@@ -43,7 +43,7 @@ export const HELP_INTRO = {
     kicker: "Aiuto",
     title: "Centro assistenza AUTHORITY",
     description:
-      "Guida operativa Soft Glass — tutti i moduli, le funzioni, quando e come usarle, passo dopo passo.",
+      "Guida operativa AUTHORITY — tutti i moduli, le funzioni, quando e come usarle, passo dopo passo.",
     toc: "Indice",
     whenLabel: "Quando usarlo",
     featuresLabel: "Funzionalità",
@@ -69,8 +69,8 @@ export const HELP_SHORTCUTS: { fr: string; it: string }[] = [
     it: "Modalità SPECTRE / PATCH / GHOST — ingresso da icone topbar; uscita solo con codice calcolatrice (Preferenze).",
   },
   {
-    fr: "Langue — icône globe (FR ↔ IT) sur toute l’UI Soft Glass.",
-    it: "Lingua — icona globo (FR ↔ IT) su tutta l’UI Soft Glass.",
+    fr: "Langue — icône globe (FR ↔ IT) sur toute l’UI AUTHORITY.",
+    it: "Lingua — icona globo (FR ↔ IT) su tutta l’UI AUTHORITY.",
   },
 ];
 
@@ -79,8 +79,8 @@ export const HELP_MODULES: HelpModule[] = [
     id: "shell",
     href: "/",
     title: {
-      fr: "Mission Control & chrome Soft Glass",
-      it: "Mission Control e chrome Soft Glass",
+      fr: "Mission Control & chrome AUTHORITY",
+      it: "Mission Control e chrome AUTHORITY",
     },
     summary: {
       fr: "Accueil registry-driven : KPIs live, widgets, liste de fonctionnalités du module sélectionné. Topbar, sidebar modules, Smart Action Dock.",
@@ -103,12 +103,12 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Cliquez l’icône du module dans la sidebar Finder.",
-            "Sur `/`, la liste Soft Glass des features du module apparaît.",
+            "Sur `/`, la liste AUTHORITY des features du module apparaît.",
             "Cliquez une feature pour ouvrir la route métier.",
           ],
           it: [
             "Clicca l’icona del modulo nella sidebar Finder.",
-            "Su `/` compare l’elenco Soft Glass delle feature del modulo.",
+            "Su `/` compare l’elenco AUTHORITY delle feature del modulo.",
             "Clicca una feature per aprire la route operativa.",
           ],
         },
@@ -119,20 +119,20 @@ export const HELP_MODULES: HelpModule[] = [
           it: "AUTHORITY X (topbar)",
         },
         when: {
-          fr: "Commande flottante rapide sans quitter Soft Glass.",
-          it: "Comando fluttuante rapido senza lasciare Soft Glass.",
+          fr: "Commande flottante rapide sans quitter AUTHORITY.",
+          it: "Comando fluttuante rapido senza lasciare AUTHORITY.",
         },
         steps: {
           fr: [
             "Cliquez l’orbe « X » teal dans la topbar (à gauche des notifications).",
-            "Le companion AUTHORITY X passe au premier plan — Soft Glass reste ouvert derrière.",
+            "Le companion AUTHORITY X passe au premier plan — AUTHORITY reste ouvert derrière.",
             "Sinon : raccourci CTRL+X si le tray Electron tourne.",
             "Appairage : Préférences → Poste → Générer un code, coller dans X (jeton keyring, D274).",
             "Si hors ligne : lancez `npm run dev -w authority-x` (tray).",
           ],
           it: [
             "Clicca l’orbe « X » teal nella topbar (a sinistra delle notifiche).",
-            "Il companion AUTHORITY X passa in primo piano — Soft Glass resta aperto sotto.",
+            "Il companion AUTHORITY X passa in primo piano — AUTHORITY resta aperto sotto.",
             "Altrimenti: scorciatoia CTRL+X se il tray Electron è attivo.",
             "Associazione: Preferenze → Postazione → Genera un codice, incolla in X (token keyring, D274).",
             "Se offline: avvia `npm run dev -w authority-x` (tray).",
@@ -194,12 +194,12 @@ export const HELP_MODULES: HelpModule[] = [
       fr: [
         "Les features ne sont jamais listées dans la sidebar.",
         "Pas de KPI inventés — montants TND uniquement si données API.",
-        "Notifications = inbox Soft Glass (D247–D249/D290) — prefs poste local · pas un CRM · pas d’OF auto.",
+        "Notifications = inbox AUTHORITY (D247–D249/D290) — prefs poste local · pas un CRM · pas d’OF auto.",
       ],
       it: [
         "Le feature non sono mai elencate nella sidebar.",
         "Nessun KPI inventato — importi TND solo se dati API.",
-        "Notifiche = inbox Soft Glass (D247–D249/D290) — prefs postazione local · non un CRM · niente OF auto.",
+        "Notifiche = inbox AUTHORITY (D247–D249/D290) — prefs postazione local · non un CRM · niente OF auto.",
       ],
     },
   },
@@ -296,8 +296,8 @@ export const HELP_MODULES: HelpModule[] = [
           it: "Inbox WhatsApp → bozza",
         },
         when: {
-          fr: "Un client écrit sur WhatsApp Business ; ADV crée un brouillon Soft Glass.",
-          it: "Un cliente scrive su WhatsApp Business; ADV crea una bozza Soft Glass.",
+          fr: "Un client écrit sur WhatsApp Business ; ADV crée un brouillon AUTHORITY.",
+          it: "Un cliente scrive su WhatsApp Business; ADV crea una bozza AUTHORITY.",
         },
         steps: {
           fr: [
@@ -335,8 +335,8 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/customers",
     title: { fr: "Clients", it: "Clienti" },
     summary: {
-      fr: "Fiche 360 Soft Glass, tarifs négociés, hub financier (créances / aging), profil fiscal.",
-      it: "Scheda 360 Soft Glass, prezzi negoziati, hub finanziario (crediti / aging), profilo fiscale.",
+      fr: "Fiche 360 AUTHORITY, tarifs négociés, hub financier (créances / aging), profil fiscal.",
+      it: "Scheda 360 AUTHORITY, prezzi negoziati, hub finanziario (crediti / aging), profilo fiscale.",
     },
     when: {
       fr: "Avant la première commande, ou pour piloter le risque crédit / relances.",
@@ -474,7 +474,7 @@ export const HELP_MODULES: HelpModule[] = [
     ],
     locks: {
       fr: [
-        "Pas de module CRM parallèle — Soft Glass only (D161/D241/D244).",
+        "Pas de module CRM parallèle — AUTHORITY only (D161/D241/D244).",
         "Communication = dunning + déclarations — pas de messagerie SoT (D244).",
         "WA→commande, TEJ/RAS et automations FULL_AUTO reportés (Prefs VALIDATED pour tax).",
         "Module Portails ENABLED requis pour lier / révoquer (D242).",
@@ -482,7 +482,7 @@ export const HELP_MODULES: HelpModule[] = [
         "Document = titre (bon de livraison par défaut / facture) ; surchargeable à l’émission — même `fin_invoice`, AR/GL/modes inchangés (D262).",
       ],
       it: [
-        "Nessun modulo CRM parallelo — Soft Glass only (D161/D241/D244).",
+        "Nessun modulo CRM parallelo — AUTHORITY only (D161/D241/D244).",
         "Comunicazione = solleciti + dichiarazioni — niente messaging SoT (D244).",
         "WA→ordine, TEJ/RAS e automazioni FULL_AUTO differiti (Prefs VALIDATED per tax).",
         "Modulo Portali ENABLED richiesto per collegare / revocare (D242).",
@@ -496,8 +496,8 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/suppliers",
     title: { fr: "Fournisseurs", it: "Fornitori" },
     summary: {
-      fr: "Master Soft Glass : catégorie (lait / emballage / fourniture / import), contacts, délai, MOQ, hold qualité. Lien optionnel sur factures AP.",
-      it: "Anagrafica Soft Glass: categoria (latte / imballo / fornitura / import), contatti, lead time, MOQ, hold qualità. Link opzionale sulle fatture AP.",
+      fr: "Master AUTHORITY : catégorie (lait / emballage / fourniture / import), contacts, délai, MOQ, hold qualité. Lien optionnel sur factures AP.",
+      it: "Anagrafica AUTHORITY: categoria (latte / imballo / fornitura / import), contatti, lead time, MOQ, hold qualità. Link opzionale sulle fatture AP.",
     },
     when: {
       fr: "Avant la première facture fournisseur, ou pour standardiser les vendors AP.",
@@ -595,8 +595,8 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/fleet",
     title: { fr: "Flotte", it: "Flotta" },
     summary: {
-      fr: "Véhicules Soft Glass (froid, capacité, odomètre), chauffeur habitué, carnet (vidange/pneus/carburant/km), affectation tournée. Pas de GPS.",
-      it: "Veicoli Soft Glass (freddo, capacità, km), autista abituale, libretto (olio/gomme/carburante/km), assegnazione giro. Niente GPS.",
+      fr: "Véhicules AUTHORITY (froid, capacité, odomètre), chauffeur habitué, carnet (vidange/pneus/carburant/km), affectation tournée. Pas de GPS.",
+      it: "Veicoli AUTHORITY (freddo, capacità, km), autista abituale, libretto (olio/gomme/carburante/km), assegnazione giro. Niente GPS.",
     },
     when: {
       fr: "Quand vous planifiez une tournée ou suivez l’entretien d’un camion.",
@@ -618,14 +618,14 @@ export const HELP_MODULES: HelpModule[] = [
             "Chips statut (Tous / Actif / En atelier / Hors service / Archivé).",
             "« + Nouveau véhicule » (chauffeur habitué optionnel) ou fiche `/fleet/[id]`.",
             "Sur la fiche : Éditer · carnet · historique d’affectations.",
-            "Si un équipement Maintenance est lié (`vehicleId`) → lien Soft Glass « Équipement maintenance ».",
+            "Si un équipement Maintenance est lié (`vehicleId`) → lien AUTHORITY « Équipement maintenance ».",
           ],
           it: [
             "Apri `/fleet` (modulo Flotta ENABLED + `fleet.manage`).",
             "Chip stato (Tutti / Attivo / In officina / Fuori servizio / Archiviato).",
             "« + Nouveau véhicule » (autista abituale opzionale) o scheda `/fleet/[id]`.",
             "In scheda: Éditer · libretto · storico assegnazioni.",
-            "Se un asset Manutenzione è collegato (`vehicleId`) → link Soft Glass « Équipement maintenance ».",
+            "Se un asset Manutenzione è collegato (`vehicleId`) → link AUTHORITY « Équipement maintenance ».",
           ],
         },
       },
@@ -704,8 +704,8 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/maintenance",
     title: { fr: "Maintenance", it: "Manutenzione" },
     summary: {
-      fr: "Fiche équipement Soft Glass, OT panne/préventif ADV, chips Ouverts/Terminés, lien flotte ↔ maintenance. Pas de job Thunder ni pièces Inventory.",
-      it: "Scheda attrezzatura Soft Glass, OT guasto/preventivo ADV, chip Aperti/Completati, link flotta ↔ manutenzione. Niente job Thunder né pezzi Inventory.",
+      fr: "Fiche équipement AUTHORITY, OT panne/préventif ADV, chips Ouverts/Terminés, lien flotte ↔ maintenance. Pas de job Thunder ni pièces Inventory.",
+      it: "Scheda attrezzatura AUTHORITY, OT guasto/preventivo ADV, chip Aperti/Completati, link flotta ↔ manutenzione. Niente job Thunder né pezzi Inventory.",
     },
     when: {
       fr: "Quand une cuve, presse, chambre froide ou camion est en panne ou dû en préventif.",
@@ -1010,15 +1010,15 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "AUTHORITY X (CTRL+X) : saisir la commande → choisir l’entité si ambiguë.",
-            "Assisted : valider → Soft Glass ouvre `/finance/ap-bills` avec tiroir prérempli.",
-            "Hotlink : ouverture directe Soft Glass après le live log.",
+            "Assisted : valider → AUTHORITY ouvre `/finance/ap-bills` avec tiroir prérempli.",
+            "Hotlink : ouverture directe AUTHORITY après le live log.",
             "Vérifier fournisseur / montant → Enregistrer (jamais d’écriture silencieuse).",
             "Pas de virement Treasury inventé — Transfer pending si workflow absent.",
           ],
           it: [
             "AUTHORITY X (CTRL+X): digita il comando → scegli l’entità se ambigua.",
-            "Assisted: conferma → Soft Glass apre `/finance/ap-bills` con drawer precompilato.",
-            "Hotlink: apertura diretta Soft Glass dopo il live log.",
+            "Assisted: conferma → AUTHORITY apre `/finance/ap-bills` con drawer precompilato.",
+            "Hotlink: apertura diretta AUTHORITY dopo il live log.",
             "Verifica fornitore / importo → Salva (mai scrittura silenziosa).",
             "Niente bonifico Treasury inventato — Transfer pending se workflow assente.",
           ],
@@ -1036,12 +1036,12 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "AUTHORITY X : commande avec client → « Encaissement client ».",
-            "Soft Glass ouvre `/finance/payments?create=1&…` (tiroir prérempli).",
+            "AUTHORITY ouvre `/finance/payments?create=1&…` (tiroir prérempli).",
             "Vérifier client / montant → Enregistrer (jamais silencieux).",
           ],
           it: [
             "AUTHORITY X: comando con cliente → « Incasso cliente ».",
-            "Soft Glass apre `/finance/payments?create=1&…` (drawer precompilato).",
+            "AUTHORITY apre `/finance/payments?create=1&…` (drawer precompilato).",
             "Verifica cliente / importo → Salva (mai silenzioso).",
           ],
         },
@@ -1089,14 +1089,14 @@ export const HELP_MODULES: HelpModule[] = [
           fr: [
             "Ouvrez `/finance/payments` → « Nouveau paiement ».",
             "Chips Tout / Brouillon / Posté / Contrepassé — URL `?status=` partageable.",
-            "Ligne → fiche Soft Glass : montants, instruments, affectations.",
+            "Ligne → fiche AUTHORITY : montants, instruments, affectations.",
             "Sur la fiche : Affecter (politiques A–G) ; Contrepasser via overflow.",
             "GL via Thunder — ne jamais inventer de taux.",
           ],
           it: [
             "Apri `/finance/payments` → « Nuovo pagamento ».",
             "Chip Tutti / Bozza / Registrato / Stornato — URL `?status=` condividibile.",
-            "Riga → scheda Soft Glass: importi, strumenti, allocazioni.",
+            "Riga → scheda AUTHORITY: importi, strumenti, allocazioni.",
             "In scheda: Allocare (politiche A–G); Storna via overflow.",
             "GL via Thunder — non inventare tassi.",
           ],
@@ -1141,14 +1141,14 @@ export const HELP_MODULES: HelpModule[] = [
           fr: [
             "Ouvrez `/finance/credit-notes` → « + Nouvel avoir ».",
             "Chips Tout / Brouillon / Émis / Annulé — URL `?status=` partageable.",
-            "Ligne → fiche Soft Glass : lignes, HT/TVA/TTC, AR appliqué / non appliqué.",
+            "Ligne → fiche AUTHORITY : lignes, HT/TVA/TTC, AR appliqué / non appliqué.",
             "Sur la fiche : Émettre (DRAFT) ; Annuler via overflow.",
             "FODEC/timbre seulement si Prefs VALIDATED — jamais inventer.",
           ],
           it: [
             "Apri `/finance/credit-notes` → « + Nuova nota ».",
             "Chip Tutti / Bozza / Emessa / Annullata — URL `?status=` condividibile.",
-            "Riga → scheda Soft Glass: righe, HT/IVA/TTC, AR applicato / non applicato.",
+            "Riga → scheda AUTHORITY: righe, HT/IVA/TTC, AR applicato / non applicato.",
             "In scheda: Emetti (DRAFT); Annulla via overflow.",
             "FODEC/bollo solo se Prefs VALIDATED — non inventare.",
           ],
@@ -1166,13 +1166,13 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "`/finance/promises` — chips statut `?status=` · ligne → fiche · Annuler si OPEN.",
-            "`/finance/instruments` — chips statut · ligne → fiche Soft Glass (`GET /instruments/:id`).",
+            "`/finance/instruments` — chips statut · ligne → fiche AUTHORITY (`GET /instruments/:id`).",
             "Sur la fiche instrument : transitions (déposé / présenté / encaissé / rejeté).",
             "Rejet = restauration AR — pas de blocage ventes sur promesse rompue.",
           ],
           it: [
             "`/finance/promises` — chip stato `?status=` · riga → scheda · Annulla se OPEN.",
-            "`/finance/instruments` — chip stato · riga → scheda Soft Glass (`GET /instruments/:id`).",
+            "`/finance/instruments` — chip stato · riga → scheda AUTHORITY (`GET /instruments/:id`).",
             "In scheda strumento: transizioni (depositato / presentato / incassato / rifiutato).",
             "Rifiuto = ripristino AR — niente blocco vendite su promessa rotta.",
           ],
@@ -1190,7 +1190,7 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "`/finance` — créances ouvertes / échues.",
-            "`/finance/payments` — liste + fiche Soft Glass (`?status=`) · Affecter / Contrepasser.",
+            "`/finance/payments` — liste + fiche AUTHORITY (`?status=`) · Affecter / Contrepasser.",
             "`/finance/banking` — comptes, relevés CSV/OFX, rapprocher / ignorer.",
             "Décaissement AP : nom libre **ou** facture AP postée (lien D237).",
             "Si RAS déduite : retenue créée dans TEJ Center (`/tax/tej-center`) — valider / certificat / lot XML.",
@@ -1198,7 +1198,7 @@ export const HELP_MODULES: HelpModule[] = [
           ],
           it: [
             "`/finance` — crediti aperti / scaduti.",
-            "`/finance/payments` — lista + scheda Soft Glass (`?status=`) · Allocare / Storna.",
+            "`/finance/payments` — lista + scheda AUTHORITY (`?status=`) · Allocare / Storna.",
             "`/finance/banking` — conti, estratti CSV/OFX, riconcilia / ignora.",
             "Pagamento AP: nome libero **o** fattura AP registrata (link D237).",
             "Se RAS detratta: ritenuta creata in TEJ Center (`/tax/tej-center`) — validare / certificato / lotto XML.",
@@ -1242,14 +1242,14 @@ export const HELP_MODULES: HelpModule[] = [
     },
     locks: {
       fr: [
-        "Soft Glass D161 + Layout D225 — underlays, pas de cadres.",
+        "AUTHORITY D161 + Layout D225 — underlays, pas de cadres.",
         "Prefs GL mapping : jamais inventer / seed de codes métier.",
         "Finance ≠ Accounting (D072) — pont Thunder, pas de double saisie.",
         "RAS GL (D275) : compte vide jusqu’à humain — jamais seed 432x.",
         "TVA déductible AP (D276) : `accounting.gl.vat_input` vide jusqu’à humain — jamais seed 4366.",
       ],
       it: [
-        "Soft Glass D161 + Layout D225 — underlay, niente cornici.",
+        "AUTHORITY D161 + Layout D225 — underlay, niente cornici.",
         "Prefs mapping GL: non inventare / seed codici.",
         "Finance ≠ Accounting (D072) — ponte Thunder, niente doppia imputazione.",
         "RAS GL (D275): conto vuoto fino a umano — mai seed 432x.",
@@ -1289,8 +1289,8 @@ export const HELP_MODULES: HelpModule[] = [
       },
       {
         name: {
-          fr: "Fiche écriture Soft Glass",
-          it: "Scheda registrazione Soft Glass",
+          fr: "Fiche écriture AUTHORITY",
+          it: "Scheda registrazione AUTHORITY",
         },
         when: {
           fr: "Contrôle détail lignes débit/crédit et actions post/reverse.",
@@ -1318,8 +1318,8 @@ export const HELP_MODULES: HelpModule[] = [
     href: "/tax/tej-center",
     title: { fr: "Fiscalité", it: "Fiscalità" },
     summary: {
-      fr: "TVA · RAS Engine · TEJ Center Soft Glass (retenues → certificat → lot XML local) — Prefs VALIDATED only · transmission DISABLED.",
-      it: "IVA · RAS Engine · TEJ Center Soft Glass (ritenute → certificato → lotto XML locale) — solo Prefs VALIDATED · transmission DISABLED.",
+      fr: "TVA · RAS Engine · TEJ Center AUTHORITY (retenues → certificat → lot XML local) — Prefs VALIDATED only · transmission DISABLED.",
+      it: "IVA · RAS Engine · TEJ Center AUTHORITY (ritenute → certificato → lotto XML locale) — solo Prefs VALIDATED · transmission DISABLED.",
     },
     when: {
       fr: "Catalogue TVA, hub retenues RAS, certificat local et lot XML TEJ (sans transmission).",
@@ -1371,7 +1371,7 @@ export const HELP_MODULES: HelpModule[] = [
           fr: [
             "Validez `tax.ras` dans Préférences › Expertise (jamais inventer ; stub démo ≠ Validé expert — D280).",
             "Ouvrez `/tax/tej-center` (⌘K « TEJ Center » ou bouton depuis `/tax`).",
-            "Saisissez la période (ex. 2026-09) puis Actualiser — compteurs Soft Glass.",
+            "Saisissez la période (ex. 2026-09) puis Actualiser — compteurs AUTHORITY.",
             "Nouvelle retenue → Fournisseur + Base TND → Détecter (preview) → Enregistrer.",
             "Statuts : DETECTED / CALCULATED — bouton Valider si non-stub et applicable.",
             "Stub STUB_UNTIL_EXPERT : calcul possible, validation bloquée jusqu’au remplacement Prefs.",
@@ -1380,7 +1380,7 @@ export const HELP_MODULES: HelpModule[] = [
           it: [
             "Validare `tax.ras` in Preferenze › Expertise (mai inventare; stub demo ≠ Validato expert — D280).",
             "Aprire `/tax/tej-center` (⌘K « TEJ Center » o pulsante da `/tax`).",
-            "Inserire il periodo (es. 2026-09) poi Aggiorna — contatori Soft Glass.",
+            "Inserire il periodo (es. 2026-09) poi Aggiorna — contatori AUTHORITY.",
             "Nuova ritenuta → Fornitore + Base TND → Rilevare (preview) → Registra.",
             "Stati: DETECTED / CALCULATED — pulsante Valida se non-stub e applicabile.",
             "Stub STUB_UNTIL_EXPERT: calcolo possibile, validazione bloccata fino a sostituzione Prefs.",
@@ -1403,7 +1403,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Prefs `tax.ras` VALIDATED (jamais inventer ; stub bloque validate/certificat).",
             "Émettre la facture (`/finance/invoices/[id]` → Émettre).",
             "Retenue CALCULATED créée (side AR, liée à la facture) — montants facture inchangés.",
-            "Bandeau Soft Glass facture → TEJ Center · XML facture (si Certificat prêt).",
+            "Bandeau AUTHORITY facture → TEJ Center · XML facture (si Certificat prêt).",
             "TEJ Center : filtre Clients · Préparer lot XML (période) ou XML facture (ligne).",
           ],
           it: [
@@ -1411,7 +1411,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Prefs `tax.ras` VALIDATED (mai inventare; stub blocca validate/certificato).",
             "Emettere la fattura (`/finance/invoices/[id]` → Emetti).",
             "Ritenuta CALCULATED creata (side AR, collegata alla fattura) — importi fattura invariati.",
-            "Fascia Soft Glass fattura → TEJ Center · XML fattura (se Certificato pronto).",
+            "Fascia AUTHORITY fattura → TEJ Center · XML fattura (se Certificato pronto).",
             "TEJ Center: filtro Clienti · Prepara lotto XML (periodo) o XML fattura (riga).",
           ],
         },
@@ -1430,7 +1430,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Sur une facture AP POSTED : Décaissement lié — montant base avant RAS.",
             "Si Prefs `tax.ras` VALIDATED : toggle « Déduire RAS automatiquement » (défaut on).",
             "À l’enregistrement : net versé + montant RAS figés ; retenue CALCULATED créée (même transaction).",
-            "Lien Soft Glass « Ouvrir TEJ Center » après succès pour valider / certificat.",
+            "Lien AUTHORITY « Ouvrir TEJ Center » après succès pour valider / certificat.",
             "Une seule retenue par décaissement (idempotent) — pas de doublon.",
             "Sans Prefs VALIDATED : pas de RAS inventée, pas de retenue créée.",
           ],
@@ -1438,7 +1438,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Su fattura AP POSTED: Pagamento collegato — importo base prima RAS.",
             "Se Prefs `tax.ras` VALIDATED: toggle « Detrai RAS automaticamente » (default on).",
             "Alla registrazione: netto versato + importo RAS fissati; ritenuta CALCULATED creata (stessa transazione).",
-            "Link Soft Glass « Apri TEJ Center » dopo successo per validare / certificato.",
+            "Link AUTHORITY « Apri TEJ Center » dopo successo per validare / certificato.",
             "Una sola ritenuta per pagamento (idempotente) — nessun duplicato.",
             "Senza Prefs VALIDATED: nessuna RAS inventata, nessuna ritenuta creata.",
           ],
@@ -1566,7 +1566,7 @@ export const HELP_MODULES: HelpModule[] = [
       fr: [
         "FODEC / timbre / RAS / TEJ : Prefs VALIDATED only.",
         "tax_line frozen on ISSUED only (D263) — never recalculate after rate change.",
-        "Pipeline RAS Soft Glass : DETECTED/CALCULATED → VALIDATED → CERTIFICATE_READY → TEJ_PREPARED.",
+        "Pipeline RAS AUTHORITY : DETECTED/CALCULATED → VALIDATED → CERTIFICATE_READY → TEJ_PREPARED.",
         "Stub STUB_UNTIL_EXPERT bloque validate et certificat (D280).",
         "Décaissement AP RAS → TaxWithholding 1:1 idempotent (D283).",
         "Facture client ISSUED + flag RAS AR → TaxWithholding AR (D286) — totaux facture inchangés.",
@@ -1579,7 +1579,7 @@ export const HELP_MODULES: HelpModule[] = [
       it: [
         "FODEC / bollo / RAS / TEJ: solo Prefs VALIDATED.",
         "tax_line congelato solo su ISSUED (D263) — mai ricalcolare dopo cambio aliquota.",
-        "Pipeline RAS Soft Glass: DETECTED/CALCULATED → VALIDATED → CERTIFICATE_READY → TEJ_PREPARED.",
+        "Pipeline RAS AUTHORITY: DETECTED/CALCULATED → VALIDATED → CERTIFICATE_READY → TEJ_PREPARED.",
         "Stub STUB_UNTIL_EXPERT blocca validate e certificato (D280).",
         "Pagamento AP RAS → TaxWithholding 1:1 idempotente (D283).",
         "Certificato = attestazione interna AUTHORITY_LOCAL_CERTIFICATE + n° RAS-CERT-YYYY-#### — non modulo MF.",
@@ -1934,8 +1934,8 @@ export const HELP_MODULES: HelpModule[] = [
           it: "Panoramica · Estensioni · Richieste · Metadati",
         },
         when: {
-          fr: "Piloter le lifecycle DRAFT → … → ACTIVE et le pont Soft Glass.",
-          it: "Governare il lifecycle DRAFT → … → ACTIVE e il ponte Soft Glass.",
+          fr: "Piloter le lifecycle DRAFT → … → ACTIVE et le pont AUTHORITY.",
+          it: "Governare il lifecycle DRAFT → … → ACTIVE e il ponte AUTHORITY.",
         },
         steps: {
           fr: [
@@ -1959,13 +1959,13 @@ export const HELP_MODULES: HelpModule[] = [
     ],
     locks: {
       fr: [
-        "Soft Glass D161 — pas de 2ᵉ design system.",
+        "AUTHORITY D161 — pas de 2ᵉ design system.",
         "Pas d’exécution de code / sandbox / agent IA.",
         "Extensions : DRAFT → ACTIVE interdit sans APPROVED.",
         "Métadonnées ACTIVE + schemaJson.commandId enrichissent ⌘K — pas de 2ᵉ ActionRegistry.",
       ],
       it: [
-        "Soft Glass D161 — niente secondo design system.",
+        "AUTHORITY D161 — niente secondo design system.",
         "Niente esecuzione codice / sandbox / agente IA.",
         "Estensioni: DRAFT → ACTIVE vietato senza APPROVED.",
         "Metadati ACTIVE + schemaJson.commandId arricchiscono ⌘K — niente secondo ActionRegistry.",
@@ -2068,7 +2068,7 @@ export const HELP_MODULES: HelpModule[] = [
         },
         steps: {
           fr: [
-            "Ouvrez `/settings` — compartiments Soft Glass.",
+            "Ouvrez `/settings` — compartiments AUTHORITY.",
             "Expertise : seed démo = badge « Stub démo · à remplacer » (STUB_UNTIL_EXPERT) — pas « Validé expert » ; RAS/IRPP/TFP restent vides (D272/D280).",
             "Remplacer un stub : réf. légale réelle sans STUB_UNTIL_EXPERT → Remplacer stub · audit stub_replaced.",
             "RAS reste vide jusqu’à saisie expert ; TEJ = brouillon XML local sur `/tax` (D265) — transmission toujours DISABLED.",
@@ -2077,7 +2077,7 @@ export const HELP_MODULES: HelpModule[] = [
             "Poste : AUTHORITY X — générer un code d’appairage (10 min) puis coller dans le companion.",
           ],
           it: [
-            "Apri `/settings` — compartimenti Soft Glass.",
+            "Apri `/settings` — compartimenti AUTHORITY.",
             "Expertise: seed demo = badge « Stub demo · da sostituire » (STUB_UNTIL_EXPERT) — non « Validato expert »; RAS/IRPP/TFP restano vuoti (D272/D280).",
             "Sostituire uno stub: rif. legale reale senza STUB_UNTIL_EXPERT → Sostituisci stub · audit stub_replaced.",
             "RAS resta vuoto fino a input esperto; TEJ = bozza XML locale su `/tax` (D265) — trasmissione sempre DISABLED.",
@@ -2099,13 +2099,13 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Ouvrez `/settings#poste`.",
-            "Cliquez « Générer un code » (session Soft Glass requise).",
+            "Cliquez « Générer un code » (session AUTHORITY requise).",
             "Dans AUTHORITY X, collez le code XXXX-XXXX (10 min).",
             "Le jeton `axd_` est stocké dans le keyring OS (safeStorage) — révoquez ici pour déconnecter.",
           ],
           it: [
             "Apri `/settings#poste`.",
-            "Clicca « Genera un codice » (sessione Soft Glass richiesta).",
+            "Clicca « Genera un codice » (sessione AUTHORITY richiesta).",
             "In AUTHORITY X, incolla il codice XXXX-XXXX (10 min).",
             "Il token `axd_` è nel keyring OS (safeStorage) — revoca qui per disconnettere.",
           ],
@@ -2117,14 +2117,14 @@ export const HELP_MODULES: HelpModule[] = [
         "Ne jamais inventer ni seed de taux tunisiens.",
         "Consumers métier seulement si VALIDATED.",
         "TEJ : brouillon local + hash (D265) — jamais transmission.",
-        "AUTHORITY X : appairage depuis session Soft Glass seulement — jeton hashé, jamais silent write.",
+        "AUTHORITY X : appairage depuis session AUTHORITY seulement — jeton hashé, jamais silent write.",
         "Mapping GL TVA déductible (D276) : `accounting.gl.vat_input` vide jusqu’à humain — jamais seed 4366.",
       ],
       it: [
         "Mai inventare né seed di aliquote tunisine.",
         "Consumer operativi solo se VALIDATED.",
         "TEJ: bozza locale + hash (D265) — mai trasmissione.",
-        "AUTHORITY X: associazione solo da sessione Soft Glass — token hashato, mai silent write.",
+        "AUTHORITY X: associazione solo da sessione AUTHORITY — token hashato, mai silent write.",
         "Mapping GL IVA detraibile (D276): `accounting.gl.vat_input` vuoto fino a umano — mai seed 4366.",
       ],
     },
@@ -2212,8 +2212,8 @@ export const HELP_MODULES: HelpModule[] = [
       },
       {
         name: {
-          fr: "Customer Portal Soft Glass",
-          it: "Customer Portal Soft Glass",
+          fr: "Customer Portal AUTHORITY",
+          it: "Customer Portal AUTHORITY",
         },
         when: {
           fr: "Self-service client B2B — commandes, livraisons, finance, docs.",
@@ -2222,7 +2222,7 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Connexion `/portal/login` (cookie realm distinct).",
-            "Accueil : KPI Soft Glass + alertes.",
+            "Accueil : KPI AUTHORITY + alertes.",
             "Commandes / Livraisons / Finance / Réclamations / Documents / Salubrité.",
             "Finance → « Déclarer un paiement » : signalement ADV (pas d’encaissement auto).",
             "Nouvelle commande = CTA primary ; listes = ASoftTable (zéro cadre).",
@@ -2230,7 +2230,7 @@ export const HELP_MODULES: HelpModule[] = [
           ],
           it: [
             "Login `/portal/login` (cookie realm distinto).",
-            "Home: KPI Soft Glass + avvisi.",
+            "Home: KPI AUTHORITY + avvisi.",
             "Ordini / Consegne / Finanza / Reclami / Documenti / Salubrità.",
             "Finanza → « Dichiarare un pagamento »: segnalazione ADV (niente incasso auto).",
             "Nuovo ordine = CTA primary; liste = ASoftTable (zero cornici).",
@@ -2269,14 +2269,14 @@ export const HELP_MODULES: HelpModule[] = [
         "Pas de pointage ni virement depuis le portail (lots ultérieurs).",
         "Déclaration paiement : pas d’auto FinPayment / allocation (D243).",
         "RIB : checksum structurel seulement (pas d’existence compte inventée).",
-        "Customer Portal : Soft Glass D161 + Layout D225 — pas de second look.",
+        "Customer Portal : AUTHORITY D161 + Layout D225 — pas de second look.",
       ],
       it: [
         "Nessun saldo / quota inventato.",
         "Niente timbratura né bonifico dal portale (lotti successivi).",
         "Dichiarazione pagamento: niente auto FinPayment / allocazione (D243).",
         "RIB: solo checksum strutturale (nessuna esistenza conto inventata).",
-        "Customer Portal: Soft Glass D161 + Layout D225 — niente secondo look.",
+        "Customer Portal: AUTHORITY D161 + Layout D225 — niente secondo look.",
       ],
     },
   },
