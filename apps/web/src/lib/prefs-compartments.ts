@@ -26,7 +26,7 @@ export const PREFS_COMPARTMENTS: readonly PrefsCompartmentDef[] = [
   {
     id: "poste",
     label: "Poste",
-    subtitle: "Densité, D294, AUTHORITY X, sidebar, notifications",
+    subtitle: "Densité, surface, AUTHORITY X, sidebar, notifications",
   },
   {
     id: "societe",
