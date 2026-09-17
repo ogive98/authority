@@ -3,6 +3,7 @@ import { featureHideKey, OPS_VISIBILITY_DEFAULTS } from "./ops-visibility";
 import {
   longestMatchingFeature,
   resolveOpsRouteBlock,
+  resolveRegistryRouteBlock,
 } from "./ops-route-block";
 import type { MeRegistry } from "./registry";
 
@@ -115,6 +116,35 @@ assert.equal(
     hash: "",
   })?.feature.id,
   "hr-employees",
+);
+
+assert.equal(
+  resolveRegistryRouteBlock(
+    { pathname: "/sales", search: "", hash: "" },
+    registry,
+  )?.reason,
+  "module-inactive",
+);
+assert.equal(
+  resolveRegistryRouteBlock(
+    { pathname: "/delivery", search: "", hash: "" },
+    registry,
+  ),
+  null,
+);
+assert.equal(
+  resolveRegistryRouteBlock(
+    { pathname: "/help", search: "", hash: "" },
+    registry,
+  ),
+  null,
+);
+assert.equal(
+  resolveRegistryRouteBlock(
+    { pathname: "/sales", search: "", hash: "" },
+    { ...registry, companyId: null },
+  ),
+  null,
 );
 
 console.log("ops-route-block OK");

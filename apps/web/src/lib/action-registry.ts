@@ -1,13 +1,13 @@
 /**
- * Action Registry (D161) — single source for ⌘K, Smart Action Dock, shortcuts.
+ * Action Registry (D161/D294) — single source for ⌘K, Smart Action Dock, shortcuts.
  * Catalog entries live in command-catalog; this module adds contexts + filtering
  * by active me-registry modules (never hardcode sidebar/dashboard actions).
  * Labels localized via locale overlay (D166).
+ * Entitlements: omit grants → registry-trusted (no DEMO overclaim).
  */
 
 import {
   COMMAND_CATALOG,
-  DEMO_PERMISSION_GRANTS,
   filterCommands,
   type CommandGroupId,
   type CommandItem,
@@ -77,9 +77,12 @@ export function enabledModulesFromRegistry(
 
 export type ResolveActionsOpts = {
   query?: string;
-  grants?: Set<string>;
+  /**
+   * Explicit ACL snapshot. Omit for registry-trusted filtering (D294 Track F).
+   * Pass a Set (e.g. DEMO_PERMISSION_GRANTS) only in demos/selftests.
+   */
+  grants?: Set<string> | null;
   registry: MeRegistry;
-  /** Prefer DEMO grants when caller has no ACL snapshot. */
   context?: ActionContext | ActionContext[];
   /** Cap results (dock shortcuts). */
   limit?: number;
@@ -87,20 +90,17 @@ export type ResolveActionsOpts = {
 };
 
 /**
- * Filter actions by active modules + grants + optional context + query.
+ * Filter actions by active modules + optional grants + context + query.
  */
 export function resolveActions(opts: ResolveActionsOpts): ActionDefinition[] {
-  const grants = opts.grants ?? DEMO_PERMISSION_GRANTS;
   const enabledModules = enabledModulesFromRegistry(opts.registry);
-  // Always allow core chrome modules even if API omits them briefly.
+  // Accueil always addressable for Mission Control chrome.
   enabledModules.add("home");
-  enabledModules.add("settings");
-  enabledModules.add("platform");
 
   const catalog = getActionRegistry(opts.locale ?? "fr");
   const filtered = filterCommands(catalog, {
     query: opts.query ?? "",
-    grants,
+    grants: opts.grants,
     enabledModules,
   }) as ActionDefinition[];
 

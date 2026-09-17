@@ -24,4 +24,19 @@ const q = filterCommands(COMMAND_CATALOG, {
 assert.equal(q.length, 1);
 assert.equal(q[0]?.id, "search-lot");
 
+/** Registry-trusted: module on → permissionKey UX ok; payroll module off → hidden. */
+const trusted = filterCommands(COMMAND_CATALOG, {
+  query: "",
+  enabledModules: DEMO_ENABLED_MODULES,
+});
+assert.ok(trusted.some((c) => c.id === "nav-sales"));
+assert.ok(!trusted.some((c) => c.id === "act-payroll-export"));
+
+const noModules = filterCommands(COMMAND_CATALOG, {
+  query: "",
+  enabledModules: new Set(["home"]),
+});
+assert.ok(noModules.some((c) => c.id === "nav-home"));
+assert.ok(!noModules.some((c) => c.id === "nav-sales"));
+
 console.log("command-catalog filter OK");

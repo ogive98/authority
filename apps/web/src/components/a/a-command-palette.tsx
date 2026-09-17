@@ -20,8 +20,6 @@ import {
 } from "@/lib/feature-metadata";
 import { fetchForgeMetadataBridge } from "@/lib/forge";
 import {
-  DEMO_ENABLED_MODULES,
-  DEMO_PERMISSION_GRANTS,
   filterCommands,
   formatShortcutKeys,
   groupCommands,
@@ -31,18 +29,20 @@ import {
 export type ACommandPaletteProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  grants?: Set<string>;
+  /** Explicit ACL. Omit for registry-trusted mode (D294 Track F). */
+  grants?: Set<string> | null;
+  /** Active modules from `/me/registry`. Default empty = no module commands. */
   enabledModules?: Set<string>;
 };
 
 /**
- * Spotlight-style command palette — Soft Glass / Enterprise OS (Action Registry).
+ * Spotlight-style command palette — Action Registry (D294).
  */
 export function ACommandPalette({
   open,
   onOpenChange,
-  grants = DEMO_PERMISSION_GRANTS,
-  enabledModules = DEMO_ENABLED_MODULES,
+  grants,
+  enabledModules = new Set<string>(),
 }: ACommandPaletteProps) {
   const router = useRouter();
   const { t } = useShellT();

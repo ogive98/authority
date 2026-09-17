@@ -3,10 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { ACommandPalette } from "@/components/a/a-command-palette";
-import {
-  DEMO_PERMISSION_GRANTS,
-  matchShortcut,
-} from "@/lib/command-catalog";
+import { matchShortcut } from "@/lib/command-catalog";
 import { resolveActions } from "@/lib/action-registry";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useShellStore } from "@/stores/shell-store";
@@ -24,7 +21,7 @@ export function CommandPaletteHost() {
     () =>
       resolveActions({
         registry,
-        grants: DEMO_PERMISSION_GRANTS,
+        // Registry-trusted — no DEMO_PERMISSION_GRANTS overclaim (D294 Track F).
         context: "palette",
         locale,
       }),
@@ -83,7 +80,6 @@ export function CommandPaletteHost() {
     <ACommandPalette
       open={open}
       onOpenChange={setPaletteOpen}
-      grants={DEMO_PERMISSION_GRANTS}
       enabledModules={enabledModules}
     />
   );

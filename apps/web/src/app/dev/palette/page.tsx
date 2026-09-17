@@ -46,7 +46,14 @@ export default function DevPalettePage() {
           Ouvrir (ou Ctrl+K)
         </AButton>
       }
-      overlay={<ACommandPalette open={open} onOpenChange={setPaletteOpen} />}
+      overlay={
+        <ACommandPalette
+          open={open}
+          onOpenChange={setPaletteOpen}
+          grants={DEMO_PERMISSION_GRANTS}
+          enabledModules={DEMO_ENABLED_MODULES}
+        />
+      }
       mainClassName="mx-auto max-w-2xl space-y-6 px-[var(--a-space-6)] py-[var(--a-space-7)]"
     >
         <section className="a-card space-y-2 p-4">

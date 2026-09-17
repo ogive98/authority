@@ -324,7 +324,7 @@ export const COMMAND_CATALOG: CommandItem[] = [
   },
 ];
 
-/** Demo grants — payroll.export intentionally absent (gate: hidden). */
+/** Demo grants — selftests /dev only. Production shell uses registry-trusted (omit grants). */
 export const DEMO_PERMISSION_GRANTS = new Set([
   "sales.read",
   "sales.write",
@@ -369,19 +369,34 @@ export const DEMO_ENABLED_MODULES = new Set([
   "forge",
 ]);
 
+/**
+ * Filter catalog by modules + optional grants.
+ * - `grants` set → strict permissionKey check (demos / selftests).
+ * - `grants` omitted/null → registry-trusted: permissionKey allowed only when
+ *   `requiresModule` is in enabledModules (activation already ACL-filtered).
+ *   permissionKey without requiresModule stays hidden until an explicit grant set.
+ */
 export function filterCommands(
   items: CommandItem[],
   opts: {
     query: string;
-    grants: Set<string>;
+    grants?: Set<string> | null;
     enabledModules: Set<string>;
   },
 ): CommandItem[] {
   const q = opts.query.trim().toLowerCase();
+  const grants = opts.grants;
 
   return items.filter((item) => {
-    if (item.permissionKey && !opts.grants.has(item.permissionKey)) {
-      return false;
+    if (item.permissionKey) {
+      if (grants != null) {
+        if (!grants.has(item.permissionKey)) return false;
+      } else if (
+        !item.requiresModule ||
+        !opts.enabledModules.has(item.requiresModule)
+      ) {
+        return false;
+      }
     }
     if (item.requiresModule && !opts.enabledModules.has(item.requiresModule)) {
       return false;
