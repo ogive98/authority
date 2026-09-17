@@ -116,6 +116,29 @@ function release() {
   }
 }
 
+/** Force-stop CC bus and drop snapshot (free RAM when leaving /thunder). */
+export function sleepThunderMonitorBus() {
+  pullGen += 1;
+  refCount = 0;
+  if (pollTimer) {
+    window.clearInterval(pollTimer);
+    pollTimer = null;
+  }
+  pollMs = DEFAULT_POLL_MS;
+  emit({
+    snap: undefined,
+    error: null,
+    phase: "boot",
+    fetching: false,
+    epsHistory: [],
+  });
+}
+
+export async function pullThunderMonitorOnce() {
+  await pullOnce();
+  return state;
+}
+
 function subscribe(listener: Listener) {
   listeners.add(listener);
   return () => {
@@ -125,6 +148,7 @@ function subscribe(listener: Listener) {
 
 /**
  * Shared Thunder monitor — one poll bus, generation-safe fetch, no SSE.
+ * Pass `live: false` while CC is asleep / booting (shell must not keep the bus awake).
  */
 export function useThunderMonitor(opts?: {
   live?: boolean;

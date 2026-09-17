@@ -8,7 +8,7 @@ import {
 import { resolveNotificationHref, unreadCount } from "@/lib/notifications";
 import { isNotifSourceKey } from "@/lib/notification-prefs";
 import { useMeRegistry } from "@/hooks/use-me-registry";
-import { useThunderMonitor } from "@/hooks/use-thunder-cc-snapshot";
+import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
 import { useNotificationsStore } from "@/stores/notifications-store";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
@@ -92,8 +92,8 @@ export function HeroContextWidget() {
 
 export function ShellStatusWidget() {
   const { t } = useShellT();
-  const q = useThunderMonitor({ live: true, intervalMs: 30_000 });
-  if (q.loading && !q.data) return <ASkeleton lines={4} />;
+  const q = useMonitorSnapshot();
+  if (q.isPending && !q.data) return <ASkeleton lines={4} />;
   if (!q.data) {
     return (
       <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">

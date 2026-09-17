@@ -793,6 +793,10 @@ export const UI_STRINGS_IT: Record<string, string> = {
   "Voir module Repair": "Vedi modulo Repair",
   "Journal + exécution live": "Journal + esecuzione live",
   "En cours…": "In corso…",
+  "Démarrage Thunder Core": "Avvio Thunder Core",
+  "Thunder Core": "Thunder Core",
+  "Démarrage Command Center…": "Avvio Command Center…",
+  "Command Center": "Command Center",
 };
 export function routeLabel(
   part: string,

@@ -172,7 +172,8 @@ export const HELP_MODULES: HelpModule[] = [
         },
         steps: {
           fr: [
-            "Cliquez Thunder Core (rail droit) → ouvre `/thunder` avec tous les widgets.",
+            "Cliquez Thunder Core (rail droit) → overlay de démarrage (jauge) puis `/thunder` opérationnel.",
+            "Command Center endormi hors `/thunder` — pas de poll CC ; jauges shell = poll léger séparé.",
             "Snapshot monitor partagé (poll unique, timeout 5 s) — jauges du dock + widgets CC.",
             "Layout : mode Confort si panneau < 960px (1–2 cols) · free x/y + grille + Densifier seulement si panneau ≥ 960px.",
             "Cloud : bouton Cloud sauve le layout USER sur le serveur (debounce 2,5 s) — localStorage reste le cache offline.",
@@ -186,7 +187,8 @@ export const HELP_MODULES: HelpModule[] = [
             "Seuils d’alertes : Préférences → Poste → Thunder Core — alertes.",
           ],
           it: [
-            "Clicca Thunder Core (rail destro) → apre `/thunder` con tutti i widget.",
+            "Clicca Thunder Core (rail destro) → overlay di avvio (barra) poi `/thunder` operativo.",
+            "Command Center in sleep fuori da `/thunder` — niente poll CC; gauge shell = poll leggero separato.",
             "Snapshot monitor condiviso (poll unico, timeout 5 s) — gauge dock + widget CC.",
             "Layout: modo Comfort se pannello < 960px (1–2 col) · free x/y + griglia + Densifier solo se pannello ≥ 960px.",
             "Cloud: pulsante Cloud salva il layout USER sul server (debounce 2,5 s) — localStorage resta cache offline.",

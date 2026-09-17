@@ -1,10 +1,10 @@
 "use client";
 
-import { useThunderMonitor } from "@/hooks/use-thunder-cc-snapshot";
+import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
 
-/** Footer resource strip — shared Thunder poll (no SSE). */
+/** Footer resource strip — light shell poll (CC bus stays asleep). */
 export function ResourceMonitor() {
-  const q = useThunderMonitor({ live: true, intervalMs: 30_000 });
+  const q = useMonitorSnapshot();
   const s = q.data;
   const metrics = [
     {

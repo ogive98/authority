@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useMemo, useState, type MouseEvent } from "react";
 import {
   Package,
   PanelRightClose,
@@ -21,10 +22,11 @@ import { getFeatureMetadata } from "@/lib/feature-metadata";
 import { resolvePinnedSmartActions } from "@/lib/smart-actions-pins";
 import { useMeGrants } from "@/hooks/use-me-grants";
 import { useMeRegistry } from "@/hooks/use-me-registry";
-import { useThunderMonitor } from "@/hooks/use-thunder-cc-snapshot";
+import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 import { useLocaleStore, useShellT } from "@/stores/locale-store";
+import { useThunderCcPowerStore } from "@/stores/thunder-cc-power-store";
 import { cn } from "@/lib/utils";
 import {
   personalityForFeature,
@@ -262,6 +264,8 @@ function ActionTile({
  */
 export function SmartActionDock() {
   const { t } = useShellT();
+  const router = useRouter();
+  const requestBoot = useThunderCcPowerStore((s) => s.requestBoot);
   const selectedModuleId = useShellStore((s) => s.selectedModuleId);
   const dockCollapsed = useShellStore((s) => s.dockCollapsed);
   const setDockCollapsed = useShellStore((s) => s.setDockCollapsed);
@@ -272,8 +276,14 @@ export function SmartActionDock() {
   const { grants } = useMeGrants();
   const locale = useLocaleStore((s) => s.locale);
   const panelId = useId();
-  const monitor = useThunderMonitor({ live: true, intervalMs: 30_000 });
+  const monitor = useMonitorSnapshot();
   const [netOnline, setNetOnline] = useState(true);
+
+  function openThunderCore(e: MouseEvent) {
+    e.preventDefault();
+    requestBoot();
+    router.push("/thunder");
+  }
 
   useEffect(() => {
     setNetOnline(navigator.onLine);
@@ -310,7 +320,7 @@ export function SmartActionDock() {
   const snap = monitor.data;
   const platformOk = !!(snap?.db.ok && netOnline);
   const syncing =
-    monitor.fetching ||
+    monitor.isFetching ||
     (snap != null && (snap.jobs.running > 0 || snap.pressure.shedP4));
   const jobsRatio =
     snap == null
@@ -433,8 +443,9 @@ export function SmartActionDock() {
         ) : null}
         <ul className={cn(dockCollapsed && "flex flex-col items-center")}>
           <li>
-            <Link
+            <a
               href="/thunder"
+              onClick={openThunderCore}
               className={cn(
                 "a-nav-row flex w-full items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
                 dockCollapsed && "justify-center px-0.5",
@@ -453,7 +464,7 @@ export function SmartActionDock() {
                   </span>
                 </span>
               ) : null}
-            </Link>
+            </a>
           </li>
         </ul>
       </div>
@@ -474,14 +485,15 @@ export function SmartActionDock() {
         {body}
       </aside>
 
-      <Link
+      <a
         href="/thunder"
+        onClick={openThunderCore}
         className="fixed right-4 bottom-20 z-[var(--a-z-sticky)] inline-flex h-12 w-12 items-center justify-center rounded-[var(--a-radius-sm)] border border-[color:var(--a-border-subtle)] bg-a-surface-2 text-a-accent shadow-[var(--a-shadow-card)] md:hidden"
         aria-label={t("thunderCoreOpen")}
         title={t("thunderCore")}
       >
         <ThunderBoltIcon />
-      </Link>
+      </a>
 
       {dockMobileOpen ? (
         <div className="fixed inset-0 z-[var(--a-z-modal)] md:hidden">

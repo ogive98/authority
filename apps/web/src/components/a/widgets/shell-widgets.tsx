@@ -2,11 +2,11 @@
 
 import { ASkeleton } from "@/components/a/a-skeleton";
 import { useMeRegistry } from "@/hooks/use-me-registry";
-import { useThunderMonitor } from "@/hooks/use-thunder-cc-snapshot";
+import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
 
 export function MonitorWidgetBody() {
-  const q = useThunderMonitor({ live: true, intervalMs: 30_000 });
-  if (q.loading && !q.data) return <ASkeleton lines={4} />;
+  const q = useMonitorSnapshot();
+  if (q.isPending && !q.data) return <ASkeleton lines={4} />;
   if (!q.data) {
     return (
       <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -80,8 +80,8 @@ export function ModulesWidgetBody() {
 }
 
 export function JobsWidgetBody() {
-  const q = useThunderMonitor({ live: true, intervalMs: 30_000 });
-  if (q.loading && !q.data) return <ASkeleton lines={3} />;
+  const q = useMonitorSnapshot();
+  if (q.isPending && !q.data) return <ASkeleton lines={3} />;
   if (!q.data) {
     return (
       <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">

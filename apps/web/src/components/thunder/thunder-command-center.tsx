@@ -23,6 +23,11 @@ import {
 } from "@/lib/thunder/health-derive";
 import { useThunderCcSnapshot } from "@/hooks/use-thunder-cc-snapshot";
 import { useThunderDashboardStore } from "@/stores/thunder-dashboard-store";
+import { useThunderCcPowerStore } from "@/stores/thunder-cc-power-store";
+import {
+  runThunderCcBootSequence,
+  sleepThunderCc,
+} from "@/lib/thunder/thunder-cc-boot";
 import { AButton, APageBody, AScreenHeader } from "@/components/a";
 import { cn } from "@/lib/utils";
 import type { WidgetLoadState } from "@/lib/dashboard-engine";
@@ -423,7 +428,10 @@ function WidgetRenderer({
 
 export function ThunderCommandCenter() {
   const liveMode = useThunderDashboardStore((s) => s.liveMode);
-  const monitor = useThunderCcSnapshot({ live: liveMode });
+  const power = useThunderCcPowerStore((s) => s.power);
+  const monitor = useThunderCcSnapshot({
+    live: power === "on" && liveMode,
+  });
   const widgets = useThunderDashboardStore((s) => s.widgets);
   const editMode = useThunderDashboardStore((s) => s.editMode);
   const setEditMode = useThunderDashboardStore((s) => s.setEditMode);
@@ -442,6 +450,13 @@ export function ThunderCommandCenter() {
 
   useEffect(() => {
     ensureThunderWidgetsRegistered();
+  }, []);
+
+  useEffect(() => {
+    void runThunderCcBootSequence();
+    return () => {
+      sleepThunderCc();
+    };
   }, []);
 
   useEffect(() => {
@@ -497,6 +512,14 @@ export function ThunderCommandCenter() {
     }
     return cells;
   }, [editMode, freeLayout, rowCount]);
+
+  if (power !== "on") {
+    return (
+      <APageBody>
+        <p className="sr-only">Démarrage Thunder Core Command Center…</p>
+      </APageBody>
+    );
+  }
 
   return (
     <APageBody>

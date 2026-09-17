@@ -14,6 +14,7 @@ import { FloatingToolbox } from "./floating-toolbox";
 import { SmartActionDock } from "./smart-action-dock";
 import { OpsRouteGate } from "./ops-route-gate";
 import { OpsModeBanner } from "./ops-mode-banner";
+import { ThunderCcBootOverlay } from "@/components/thunder/thunder-cc-boot-overlay";
 
 /**
  * Enterprise OS shell (D184) — topbar; sidebar + main + dock (online/sync/resources).
@@ -26,6 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <CommandPaletteHost />
       <NotificationsHost />
       <OpsModeOverlays />
+      <ThunderCcBootOverlay />
       <ASkipLink />
       <ShellHeader />
       <div className="flex min-h-0 flex-1 overflow-hidden pb-12 md:pb-0">
