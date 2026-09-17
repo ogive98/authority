@@ -64,7 +64,7 @@ export default async function PortalSalubritaPage() {
                   className={softListRow}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="a-mono text-[13px] font-semibold text-a-fg">
+                    <p className="a-mono text-[13px] font-medium text-a-fg">
                       {fmtFr(row.packDate)}
                     </p>
                     <p className="text-[12px] text-a-fg-muted">

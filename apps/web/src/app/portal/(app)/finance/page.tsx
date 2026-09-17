@@ -93,7 +93,7 @@ export default async function PortalFinancePage() {
               <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                 Solde ouvert
               </p>
-              <p className="a-mono mt-1 text-[length:var(--a-text-lg)] font-medium tabular-nums text-a-accent">
+              <p className="a-mono a-tabular mt-1 text-[length:var(--a-text-lg)] font-medium text-a-accent">
                 {outstanding}
               </p>
             </div>
@@ -101,7 +101,7 @@ export default async function PortalFinancePage() {
               <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                 Plafond crédit
               </p>
-              <p className="a-mono mt-1 text-[length:var(--a-text-lg)] font-medium tabular-nums">
+              <p className="a-mono a-tabular mt-1 text-[length:var(--a-text-lg)] font-medium">
                 {limit}
               </p>
             </div>
@@ -152,7 +152,7 @@ export default async function PortalFinancePage() {
                         {row.number}
                       </Link>
                     </td>
-                    <td className="a-mono a-table-cell tabular-nums">
+                    <td className="a-mono a-tabular a-table-cell">
                       {row.amount} {row.currency}
                     </td>
                     <td className="a-table-cell">
@@ -210,7 +210,7 @@ export default async function PortalFinancePage() {
                     <td className="a-table-cell text-a-fg-muted">
                       {row.label ?? "—"}
                     </td>
-                    <td className="a-mono a-table-cell tabular-nums">
+                    <td className="a-mono a-tabular a-table-cell">
                       {row.amountTotal} {row.currency}
                     </td>
                     <td className="a-table-cell">
@@ -264,10 +264,10 @@ export default async function PortalFinancePage() {
                     <td className="a-table-cell text-a-fg-muted">
                       {row.label ?? "—"}
                     </td>
-                    <td className="a-mono a-table-cell tabular-nums">
+                    <td className="a-mono a-tabular a-table-cell">
                       {row.amountTotal} {row.currency}
                     </td>
-                    <td className="a-mono a-table-cell tabular-nums font-medium">
+                    <td className="a-mono a-tabular a-table-cell font-medium">
                       {row.amountOpen} {row.currency}
                     </td>
                     <td className="a-table-cell">

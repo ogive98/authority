@@ -63,7 +63,7 @@ export default async function PortalFinanceDetailPage({
           <ABadge tone={portalOpenItemBadgeTone(data.status)}>
             {portalOpenItemStatusLabel(data.status)}
           </ABadge>
-          <span className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+          <span className="a-mono a-tabular text-[length:var(--a-text-sm)]">
             Ouvert {data.amountOpen} / {data.amountTotal} {data.currency}
           </span>
           {data.dueDate ? (
@@ -96,7 +96,7 @@ export default async function PortalFinanceDetailPage({
                     <td className="a-mono a-table-cell text-a-fg-muted">
                       {a.paidAt.slice(0, 10)}
                     </td>
-                    <td className="a-mono a-table-cell tabular-nums">
+                    <td className="a-mono a-tabular a-table-cell">
                       {a.amount} {data.currency}
                     </td>
                     <td className="a-table-cell text-a-fg-muted">

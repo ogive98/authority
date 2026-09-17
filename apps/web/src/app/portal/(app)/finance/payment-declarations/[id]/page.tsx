@@ -158,7 +158,7 @@ export default function PortalPaymentDeclarationDetailPage() {
             <dl className="grid gap-3 text-[length:var(--a-text-sm)] sm:grid-cols-2">
               <div>
                 <dt className="text-a-fg-muted">Montant</dt>
-                <dd className="a-mono tabular-nums font-medium">
+                <dd className="a-mono a-tabular font-medium">
                   {row.amount} {row.currency}
                 </dd>
               </div>

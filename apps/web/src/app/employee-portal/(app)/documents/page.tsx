@@ -114,7 +114,7 @@ export default function EmployeePortalDocumentsPage() {
                     <td className="a-table-cell text-a-fg-muted">
                       {row.kindName ?? row.kindCode ?? "—"}
                     </td>
-                    <td className="a-mono a-table-cell tabular-nums">
+                    <td className="a-mono a-tabular a-table-cell">
                       {row.createdAt.slice(0, 10)}
                     </td>
                     <td className="a-table-cell">

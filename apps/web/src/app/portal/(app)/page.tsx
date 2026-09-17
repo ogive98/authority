@@ -38,7 +38,7 @@ function KpiTile({
       <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wide text-a-fg-muted">
         {label}
       </p>
-      <p className="a-mono text-[length:var(--a-text-xl)] tabular-nums text-a-fg">
+      <p className="a-mono a-tabular text-[length:var(--a-text-xl)] text-a-fg">
         {value}
       </p>
       {hint ? (

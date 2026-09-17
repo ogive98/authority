@@ -114,7 +114,7 @@ export default function EmployeePortalBulletinsPage() {
                     <td className="a-mono px-4 py-3 text-a-fg-muted">
                       {b.number}
                     </td>
-                    <td className="a-mono px-4 py-3 text-right tabular-nums">
+                    <td className="a-mono a-tabular px-4 py-3 text-right">
                       {formatTnd(b.netPay)}{" "}
                       <span className="text-a-fg-muted">{b.currency}</span>
                     </td>

@@ -91,7 +91,7 @@ export default async function PortalPaymentDeclarationsPage() {
                       {row.number}
                     </Link>
                   </td>
-                  <td className="a-mono a-table-cell tabular-nums">
+                  <td className="a-mono a-tabular a-table-cell">
                     {row.amount} {row.currency}
                   </td>
                   <td className="a-table-cell">

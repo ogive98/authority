@@ -287,7 +287,7 @@ export default function EmployeePortalCongesPage() {
                     <td className="a-table-cell">
                       {portalAbsenceTypeLabel(row.type)}
                     </td>
-                    <td className="a-mono a-table-cell tabular-nums">
+                    <td className="a-mono a-tabular a-table-cell">
                       {row.startDate} → {row.endDate}
                     </td>
                     <td className="a-table-cell">

@@ -58,7 +58,7 @@ export default async function PortalInvoiceDetailPage({
           <ABadge tone={portalInvoiceBadgeTone(data.status)}>
             {portalInvoiceStatusLabel(data.status)}
           </ABadge>
-          <span className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+          <span className="a-mono a-tabular text-[length:var(--a-text-sm)]">
             {data.amountTotal} {data.currency}
           </span>
           {data.issuedAt ? (
