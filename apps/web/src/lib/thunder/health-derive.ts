@@ -51,7 +51,7 @@ export function deriveThunderHealth(
         : "HEALTHY";
 
   const workers: HealthState = !snap.workers.enabled
-    ? "OFFLINE"
+    ? "DEGRADED"
     : snap.jobs.failed > 20
       ? "WARNING"
       : "HEALTHY";
@@ -62,6 +62,13 @@ export function deriveThunderHealth(
       : snap.jobs.pending > 100
         ? "WARNING"
         : "HEALTHY";
+
+  const armed = snap.workers.queues.filter((q) => q.concurrency > 0).length;
+  const scheduler: HealthState = !snap.workers.enabled
+    ? "DEGRADED"
+    : armed === 0
+      ? "WARNING"
+      : "HEALTHY";
 
   return [
     {
@@ -111,7 +118,7 @@ export function deriveThunderHealth(
       state: workers,
       detail: snap.workers.enabled
         ? `${snap.workers.queues.length} queues`
-        : "disabled",
+        : "disabled (config)",
     },
     {
       id: "queues",
@@ -122,8 +129,10 @@ export function deriveThunderHealth(
     {
       id: "scheduler",
       label: "Scheduler",
-      state: "UNKNOWN",
-      detail: "métrique dédiée — prochain lot",
+      state: scheduler,
+      detail: snap.workers.enabled
+        ? `${armed} familles armées`
+        : `DISABLED · ${armed} configurées`,
     },
     {
       id: "outbox",
@@ -164,13 +173,14 @@ export function deriveThunderHealth(
 }
 
 export function overallHealth(items: HealthItem[]): HealthState {
+  // OFFLINE < CRITICAL for rollup: intentional worker-off should not mask DLQ/CRITICAL.
   const rank: Record<HealthState, number> = {
     HEALTHY: 0,
     UNKNOWN: 1,
     DEGRADED: 2,
     WARNING: 3,
-    CRITICAL: 4,
-    OFFLINE: 5,
+    OFFLINE: 4,
+    CRITICAL: 5,
   };
   const known = items.filter((i) => i.state !== "UNKNOWN");
   const pool = known.length > 0 ? known : items;

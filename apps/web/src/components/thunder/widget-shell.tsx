@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { MoreHorizontal, RefreshCw } from "lucide-react";
 import type { WidgetLoadState } from "@/lib/dashboard-engine";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ export function WidgetShell({
   actions,
   children,
   className,
+  onContextMenu,
 }: {
   title: string;
   subtitle?: string;
@@ -23,23 +24,25 @@ export function WidgetShell({
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  onContextMenu?: (e: MouseEvent<HTMLElement>) => void;
 }) {
   return (
     <section
       className={cn(
-        "a-card flex h-full min-h-[10rem] flex-col overflow-hidden",
+        "a-card flex h-full min-h-[11rem] flex-col overflow-hidden",
         className,
       )}
       aria-busy={state === "loading"}
       aria-label={title}
+      onContextMenu={onContextMenu}
     >
       <header className="flex shrink-0 items-start justify-between gap-2 border-b border-[color:var(--a-border-subtle)] px-3 py-2.5">
         <div className="min-w-0">
-          <h3 className="truncate text-[length:var(--a-text-sm)] font-medium tracking-[-0.02em] text-a-fg">
+          <h3 className="truncate text-[length:var(--a-text-md)] font-medium tracking-[-0.02em] text-a-fg">
             {title}
           </h3>
           {subtitle ? (
-            <p className="mt-0.5 truncate text-[11px] text-a-fg-subtle">
+            <p className="mt-0.5 truncate text-[length:var(--a-text-sm)] text-a-fg-subtle">
               {subtitle}
             </p>
           ) : null}
@@ -80,7 +83,7 @@ export function WidgetShell({
             <p className="text-[length:var(--a-text-sm)] font-medium text-a-danger-fg">
               SERVICE UNAVAILABLE
             </p>
-            <p className="text-[11px] text-a-fg-muted">
+            <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Snapshot Thunder indisponible — retry automatique.
             </p>
           </div>
@@ -97,7 +100,7 @@ export function WidgetShell({
         <footer className="shrink-0 border-t border-[color:var(--a-border-subtle)] px-3 py-1.5">
           <p
             className={cn(
-              "a-mono text-[10px] text-a-fg-subtle",
+              "a-mono a-tabular text-[length:var(--a-text-xs)] text-a-fg-subtle",
               state === "stale" && "text-a-warning-fg",
             )}
           >
@@ -120,12 +123,14 @@ export function MetricRow({
   hint?: string;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-2 py-0.5">
-      <span className="text-[11px] text-a-fg-muted">{label}</span>
-      <span className="a-mono text-[length:var(--a-text-sm)] font-medium text-a-fg">
+    <div className="flex items-baseline justify-between gap-2 py-1">
+      <span className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+        {label}
+      </span>
+      <span className="a-mono a-tabular text-[length:var(--a-text-md)] font-medium text-a-fg">
         {value}
         {hint ? (
-          <span className="ml-1 text-[10px] font-normal text-a-fg-subtle">
+          <span className="ml-1 text-[length:var(--a-text-xs)] font-normal text-a-fg-subtle">
             {hint}
           </span>
         ) : null}
@@ -143,44 +148,44 @@ export function MiniGauge({
 }) {
   const pct =
     ratio == null ? null : Math.max(0, Math.min(100, Math.round(ratio * 100)));
-  const r = 14;
+  const r = 18;
   const c = 2 * Math.PI * r;
   const dash = pct == null ? 0 : (pct / 100) * c;
   return (
-    <div className="flex flex-col items-center gap-1">
-      <svg viewBox="0 0 40 40" className="h-11 w-11" aria-hidden>
+    <div className="flex flex-col items-center gap-1.5">
+      <svg viewBox="0 0 48 48" className="h-14 w-14" aria-hidden>
         <circle
-          cx="20"
-          cy="20"
+          cx="24"
+          cy="24"
           r={r}
           fill="none"
           stroke="currentColor"
-          strokeWidth="3"
+          strokeWidth="3.5"
           className="text-a-surface-4"
         />
         <circle
-          cx="20"
-          cy="20"
+          cx="24"
+          cy="24"
           r={r}
           fill="none"
           stroke="currentColor"
-          strokeWidth="3"
+          strokeWidth="3.5"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${c - dash}`}
-          transform="rotate(-90 20 20)"
+          transform="rotate(-90 24 24)"
           className="text-a-accent"
         />
         <text
-          x="20"
-          y="22"
+          x="24"
+          y="27"
           textAnchor="middle"
           fill="var(--a-fg)"
-          style={{ fontSize: 8, fontWeight: 600 }}
+          style={{ fontSize: 13, fontWeight: 600 }}
         >
           {pct == null ? "—" : pct}
         </text>
       </svg>
-      <span className="text-[9px] font-medium uppercase tracking-wider text-a-fg-subtle">
+      <span className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
         {label}
       </span>
     </div>

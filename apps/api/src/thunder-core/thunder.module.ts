@@ -38,6 +38,7 @@ import { ModuleHookBootstrap } from './module-hooks/module-hook.bootstrap';
 import { ThunderModuleHooksRegistrar } from './module-hooks/thunder-module-hooks.registrar';
 import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
 import { ThunderMetricsService } from './observability/thunder-metrics.service';
+import { ThunderCcLayoutService } from './cc-layout/thunder-cc-layout.service';
 import { CircuitBreakerService } from './resilience/circuit-breaker.service';
 import { PlanAbcPolicyService } from './resilience/plan-abc/plan-abc-policy.service';
 import { PlanCRegistryService } from './resilience/plan-c-registry.service';
@@ -99,6 +100,7 @@ import { IntentPrepareService } from './intent/intent-prepare.service';
     AdmissionOrchestratorService,
     ThunderMetricsService,
     MonitorSnapshotService,
+    ThunderCcLayoutService,
     RuleDefService,
     RuleEngineService,
     ThunderRulesRegistrar,

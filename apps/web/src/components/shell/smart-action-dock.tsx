@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useId, useMemo, useState } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
 import {
   Package,
   PanelRightClose,
@@ -22,12 +21,8 @@ import { getFeatureMetadata } from "@/lib/feature-metadata";
 import { resolvePinnedSmartActions } from "@/lib/smart-actions-pins";
 import { useMeGrants } from "@/hooks/use-me-grants";
 import { useMeRegistry } from "@/hooks/use-me-registry";
-import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
-import {
-  usePrefsStore,
-  type Density,
-  type SurfaceMode,
-} from "@/stores/prefs-store";
+import { useThunderMonitor } from "@/hooks/use-thunder-cc-snapshot";
+import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 import { useLocaleStore, useShellT } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
@@ -35,19 +30,6 @@ import {
   personalityForFeature,
   resolveFeatureIcon,
 } from "./icon-personality";
-
-const SURFACES: { id: SurfaceMode; label: string }[] = [
-  { id: "patch", label: "Patch" },
-  { id: "ghost", label: "Ghost" },
-  { id: "solid", label: "Solid" },
-  { id: "minimal", label: "Min" },
-];
-
-const DENSITIES: { id: Density; label: string }[] = [
-  { id: "comfortable", label: "Comfort" },
-  { id: "compact", label: "Compact" },
-  { id: "spacious", label: "Spacious" },
-];
 
 const SIDEBAR_STROKE = 1.5;
 
@@ -136,52 +118,52 @@ function ResourceGauge({
   detail?: string;
 }) {
   const pct = ratio == null ? null : Math.max(0, Math.min(100, Math.round(ratio * 100)));
-  const r = 15;
+  const r = 18;
   const c = 2 * Math.PI * r;
   const dash = pct == null ? 0 : (pct / 100) * c;
   const hot = pct != null && pct >= 85;
 
   return (
     <div
-      className="flex flex-col items-center gap-1"
+      className="flex flex-col items-center gap-1.5"
       title={detail ?? (pct != null ? `${label} ${pct}%` : label)}
     >
-      <svg viewBox="0 0 40 40" className="h-9 w-9" aria-hidden>
+      <svg viewBox="0 0 48 48" className="h-12 w-12" aria-hidden>
         <circle
-          cx="20"
-          cy="20"
+          cx="24"
+          cy="24"
           r={r}
           fill="none"
           stroke="currentColor"
-          strokeWidth="3"
+          strokeWidth="3.5"
           className="text-a-surface-4"
         />
         <circle
-          cx="20"
-          cy="20"
+          cx="24"
+          cy="24"
           r={r}
           fill="none"
           stroke="currentColor"
-          strokeWidth="3"
+          strokeWidth="3.5"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${c - dash}`}
-          transform="rotate(-90 20 20)"
+          transform="rotate(-90 24 24)"
           className={cn(
             "transition-[stroke-dasharray] duration-500",
             hot ? "text-a-warning" : "text-a-accent",
           )}
         />
         <text
-          x="20"
-          y="21.5"
+          x="24"
+          y="27"
           textAnchor="middle"
           fill="var(--a-fg)"
-          style={{ fontSize: 8, fontWeight: 600 }}
+          style={{ fontSize: 13, fontWeight: 600 }}
         >
           {pct == null ? "—" : pct}
         </text>
       </svg>
-      <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
+      <span className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
         {label}
       </span>
     </div>
@@ -199,98 +181,6 @@ function ThunderBoltIcon({ className }: { className?: string }) {
       />
       <span className="a-thunder-bolt__flash" />
     </span>
-  );
-}
-
-function ThunderCoreDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-}) {
-  const { t } = useShellT();
-  const surfaceMode = usePrefsStore((s) => s.surfaceMode);
-  const setSurfaceMode = usePrefsStore((s) => s.setSurfaceMode);
-  const density = usePrefsStore((s) => s.density);
-  const setDensity = usePrefsStore((s) => s.setDensity);
-
-  return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[var(--a-z-modal)] bg-black/40" />
-        <Dialog.Content
-          className={cn(
-            "fixed top-1/2 left-1/2 z-[var(--a-z-modal)] w-[min(22.5rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 outline-none",
-            "rounded-[var(--a-radius-lg)] border border-[color:var(--a-border-subtle)] bg-a-surface-2 p-6",
-            "shadow-[var(--a-shadow-panel)]",
-          )}
-        >
-          <Dialog.Title className="flex items-center gap-2.5 text-[length:var(--a-text-lg)] font-medium tracking-[-0.02em] text-a-fg">
-            <ThunderBoltIcon />
-            {t("thunderCore")}
-          </Dialog.Title>
-          <Dialog.Description className="mt-2 text-[13px] leading-snug text-a-fg-muted">
-            {t("thunderCoreHint")}
-          </Dialog.Description>
-
-          <div className="mt-5 space-y-5">
-            <Link
-              href="/thunder"
-              onClick={() => onOpenChange(false)}
-              className="a-action-primary flex w-full items-center justify-center gap-2 rounded-[var(--a-radius-sm)] px-3.5 py-3 text-[14px] font-medium"
-            >
-              <Zap className="h-4 w-4" strokeWidth={1.75} />
-              Command Center
-            </Link>
-            <div>
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
-                {t("surface")}
-              </p>
-              <div className="grid grid-cols-4 gap-1.5 rounded-[var(--a-radius-md)] bg-a-surface-3/70 p-1.5">
-                {SURFACES.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSurfaceMode(s.id)}
-                    className={cn(
-                      "a-action-quiet rounded-[var(--a-radius-sm)] px-1 py-2.5 text-[11px] font-medium",
-                      surfaceMode === s.id && "is-active text-a-fg",
-                    )}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
-                {t("density")}
-              </p>
-              <div className="grid grid-cols-3 gap-1.5 rounded-[var(--a-radius-md)] bg-a-surface-3/70 p-1.5">
-                {DENSITIES.map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() => setDensity(d.id)}
-                    className={cn(
-                      "a-action-quiet rounded-[var(--a-radius-sm)] px-1 py-2.5 text-[11px] font-medium",
-                      density === d.id && "is-active text-a-fg",
-                    )}
-                  >
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <Dialog.Close className="a-action-primary mt-5 w-full px-3 py-3 text-[15px] font-medium">
-            {t("close")}
-          </Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
   );
 }
 
@@ -381,14 +271,12 @@ export function SmartActionDock() {
   const { data: registry } = useMeRegistry();
   const { grants } = useMeGrants();
   const locale = useLocaleStore((s) => s.locale);
-  const monitor = useMonitorSnapshot();
   const panelId = useId();
-  const [thunderOpen, setThunderOpen] = useState(false);
-  const [netOnline, setNetOnline] = useState(
-    typeof navigator !== "undefined" ? navigator.onLine : true,
-  );
+  const monitor = useThunderMonitor({ live: true, intervalMs: 30_000 });
+  const [netOnline, setNetOnline] = useState(true);
 
   useEffect(() => {
+    setNetOnline(navigator.onLine);
     function onOnline() {
       setNetOnline(true);
     }
@@ -420,9 +308,9 @@ export function SmartActionDock() {
   }, [registry, smartActionIds, selectedModuleId, locale, grants]);
 
   const snap = monitor.data;
-  const platformOk = !!(snap?.db.ok && snap?.redis.ok && netOnline);
+  const platformOk = !!(snap?.db.ok && netOnline);
   const syncing =
-    monitor.isFetching ||
+    monitor.fetching ||
     (snap != null && (snap.jobs.running > 0 || snap.pressure.shedP4));
   const jobsRatio =
     snap == null
@@ -545,22 +433,27 @@ export function SmartActionDock() {
         ) : null}
         <ul className={cn(dockCollapsed && "flex flex-col items-center")}>
           <li>
-            <button
-              type="button"
-              onClick={() => setThunderOpen(true)}
+            <Link
+              href="/thunder"
               className={cn(
                 "a-nav-row flex w-full items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
                 dockCollapsed && "justify-center px-0.5",
               )}
               aria-label={t("thunderCoreOpen")}
+              title={t("thunderCoreHint")}
             >
               <ThunderBoltIcon />
               {!dockCollapsed ? (
-                <span className="truncate text-[12.5px] font-medium">
-                  {t("thunderCore")}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12.5px] font-medium">
+                    {t("thunderCore")}
+                  </span>
+                  <span className="block truncate text-[10px] text-a-fg-subtle">
+                    Command Center
+                  </span>
                 </span>
               ) : null}
-            </button>
+            </Link>
           </li>
         </ul>
       </div>
@@ -581,17 +474,14 @@ export function SmartActionDock() {
         {body}
       </aside>
 
-      <ThunderCoreDialog open={thunderOpen} onOpenChange={setThunderOpen} />
-
-      <button
-        type="button"
+      <Link
+        href="/thunder"
         className="fixed right-4 bottom-20 z-[var(--a-z-sticky)] inline-flex h-12 w-12 items-center justify-center rounded-[var(--a-radius-sm)] border border-[color:var(--a-border-subtle)] bg-a-surface-2 text-a-accent shadow-[var(--a-shadow-card)] md:hidden"
-        aria-label={t("smartActions")}
-        aria-expanded={dockMobileOpen}
-        onClick={() => setDockMobileOpen(!dockMobileOpen)}
+        aria-label={t("thunderCoreOpen")}
+        title={t("thunderCore")}
       >
         <ThunderBoltIcon />
-      </button>
+      </Link>
 
       {dockMobileOpen ? (
         <div className="fixed inset-0 z-[var(--a-z-modal)] md:hidden">

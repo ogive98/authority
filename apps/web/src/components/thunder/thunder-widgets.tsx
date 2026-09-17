@@ -1,8 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import Link from "next/link";
-import { healthTone, type WidgetLoadState } from "@/lib/dashboard-engine";
+import { Wrench } from "lucide-react";
+import {
+  healthTone,
+  type HealthItem,
+  type WidgetLoadState,
+} from "@/lib/dashboard-engine";
 import {
   evaluateThunderAlerts,
   type ThunderAlertThresholds,
@@ -13,7 +18,12 @@ import {
 } from "@/lib/thunder/health-derive";
 import type { ThunderMonitorSnapshot } from "@/lib/thunder/monitor-types";
 import { cn } from "@/lib/utils";
+import {
+  ThunderHealthContextMenu,
+  type ThunderHealthMenuState,
+} from "./thunder-health-context-menu";
 import { MetricRow, MiniGauge, WidgetShell } from "./widget-shell";
+import { useRepairSessionStore } from "@/stores/repair-session-store";
 
 function pct(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return "—";
@@ -21,13 +31,23 @@ function pct(n: number | null | undefined): string {
 }
 
 function monitorState(
-  q: { isPending: boolean; isError: boolean; isFetching: boolean; dataUpdatedAt: number },
+  q: {
+    isPending: boolean;
+    isError: boolean;
+    isFetching: boolean;
+    dataUpdatedAt: number;
+    data?: unknown;
+  },
   liveMode: boolean,
 ): WidgetLoadState {
-  if (q.isPending) return "loading";
+  // Prefer showing last snapshot — never block UI on a hung fetch/SSE.
+  if (q.data) {
+    if (!liveMode && Date.now() - q.dataUpdatedAt > 60_000) return "stale";
+    return "loaded";
+  }
+  if (q.isPending || q.isFetching) return "loading";
   if (q.isError) return "unavailable";
-  if (!liveMode && Date.now() - q.dataUpdatedAt > 60_000) return "stale";
-  return "loaded";
+  return "loading";
 }
 
 export function ThunderHealthWidget({
@@ -51,44 +71,127 @@ export function ThunderHealthWidget({
   });
   const overall = overallHealth(items);
   const tone = healthTone(overall);
+  const [menu, setMenu] = useState<ThunderHealthMenuState | null>(null);
+  const lastAction = useRepairSessionStore((s) => s.lastAction);
+  const lines = useRepairSessionStore((s) => s.lines);
+  const recentLogs = lines.slice(0, 4);
+
+  const openMenu = useCallback(
+    (e: MouseEvent, focusItem: HealthItem | null) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setMenu({ x: e.clientX, y: e.clientY, focusItem });
+    },
+    [],
+  );
+
+  const statusLine =
+    lastAction?.status === "running"
+      ? `Repair · ${lastAction.intent}…`
+      : lastAction?.status === "error"
+        ? `Repair · ${lastAction.detail ?? "erreur"}`
+        : lastAction?.status === "ok"
+          ? `Repair · ${lastAction.detail ?? "ok"}`
+          : null;
 
   return (
-    <WidgetShell
-      title="Thunder Health"
-      subtitle={`${tone.label} · ${items.length} checks`}
-      state={loadState}
-      asOf={asOf}
-      onRefresh={onRefresh}
-    >
-      <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-        {items.map((item) => {
-          const t = healthTone(item.state);
-          return (
-            <li
-              key={item.id}
-              className="rounded-[var(--a-radius-sm)] bg-a-surface-3/60 px-2 py-1.5"
-              title={item.detail ?? item.state}
-            >
-              <div className="flex items-center gap-1.5">
-                <span
-                  className={cn("size-1.5 shrink-0 rounded-full", t.dotClass)}
-                  aria-hidden
-                />
-                <span className="truncate text-[11px] font-medium text-a-fg">
-                  {item.label}
-                </span>
-              </div>
-              <p className={cn("mt-0.5 text-[10px]", t.className)}>
-                {t.label}
-                {item.detail ? (
-                  <span className="text-a-fg-subtle"> · {item.detail}</span>
-                ) : null}
+    <>
+      <WidgetShell
+        title="Thunder Health"
+        subtitle={`${tone.label} · ${items.length} checks`}
+        state={loadState}
+        asOf={asOf}
+        onRefresh={onRefresh}
+        onContextMenu={(e) => openMenu(e, null)}
+        actions={
+          <button
+            type="button"
+            title="Actions Repair"
+            aria-label="Actions Repair Thunder Health"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setMenu({
+                x: rect.left,
+                y: rect.bottom + 4,
+                focusItem: null,
+              });
+            }}
+          >
+            <Wrench className="h-3.5 w-3.5" strokeWidth={1.75} />
+          </button>
+        }
+      >
+        <ul className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
+          {items.map((item) => {
+            const t = healthTone(item.state);
+            return (
+              <li
+                key={item.id}
+                className="cursor-context-menu"
+                title={`${item.detail ?? item.state} · clic droit → actions`}
+                onContextMenu={(e) => openMenu(e, item)}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={cn("size-1.5 shrink-0 rounded-full", t.dotClass)}
+                    aria-hidden
+                  />
+                  <span className="truncate text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                    {item.label}
+                  </span>
+                </div>
+                <p
+                  className={cn(
+                    "mt-0.5 pl-3 text-[length:var(--a-text-xs)]",
+                    t.className,
+                  )}
+                >
+                  {t.label}
+                  {item.detail ? (
+                    <span className="text-a-fg-subtle"> · {item.detail}</span>
+                  ) : null}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+
+        {statusLine || recentLogs.length > 0 ? (
+          <div className="mt-3 border-t border-[color:var(--a-border-subtle)] pt-2">
+            {statusLine ? (
+              <p
+                className={cn(
+                  "text-[length:var(--a-text-xs)]",
+                  lastAction?.status === "error"
+                    ? "text-a-danger-fg"
+                    : lastAction?.status === "running"
+                      ? "text-a-fg-muted"
+                      : "text-a-fg-subtle",
+                )}
+              >
+                {statusLine}
               </p>
-            </li>
-          );
-        })}
-      </ul>
-    </WidgetShell>
+            ) : null}
+            {recentLogs.length > 0 ? (
+              <ul className="a-mono mt-1 max-h-16 space-y-0.5 overflow-auto text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                {recentLogs.map((l) => (
+                  <li key={l.id}>
+                    {l.at} · {l.text}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+      </WidgetShell>
+      <ThunderHealthContextMenu
+        open={menu}
+        onClose={() => setMenu(null)}
+        items={items}
+        onRefresh={onRefresh}
+      />
+    </>
   );
 }
 
@@ -147,8 +250,11 @@ export function IncidentsWidget({
   asOf?: string;
   onRefresh?: () => void;
 }) {
-  const openBreakers =
-    snap?.breakers.filter((b) => b.state !== "CLOSED").length ?? 0;
+  const openBreakersList =
+    snap?.breakers.filter((b) => b.state !== "CLOSED") ?? [];
+  const closedBreakers =
+    snap?.breakers.filter((b) => b.state === "CLOSED").length ?? 0;
+  const openBreakers = openBreakersList.length;
   const critical =
     (snap?.jobs.dlq ?? 0) +
     (snap?.events.outboxDlq ?? 0) +
@@ -166,7 +272,7 @@ export function IncidentsWidget({
       actions={
         <Link
           href="/repair"
-          className="text-[10px] font-medium text-a-accent hover:underline"
+          className="text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
         >
           Repair
         </Link>
@@ -183,10 +289,10 @@ export function IncidentsWidget({
             key={String(label)}
             className="rounded-[var(--a-radius-sm)] bg-a-surface-3/60 px-2.5 py-2"
           >
-            <p className="text-[10px] uppercase tracking-wider text-a-fg-subtle">
+            <p className="text-[length:var(--a-text-xs)] uppercase tracking-wider text-a-fg-subtle">
               {label}
             </p>
-            <p className={cn("a-mono mt-1 text-xl font-semibold", cls)}>
+            <p className={cn("a-mono a-tabular mt-1 text-2xl font-medium", cls)}>
               {n}
             </p>
           </div>
@@ -198,17 +304,20 @@ export function IncidentsWidget({
           label="Outbox DLQ"
           value={String(snap?.events.outboxDlq ?? 0)}
         />
-        {(snap?.breakers.filter((b) => b.state !== "CLOSED") ?? []).map((b) => (
+        <MetricRow label="Breakers CLOSED" value={String(closedBreakers)} />
+        {openBreakersList.map((b) => (
           <p
             key={b.dependencyKey}
-            className="a-mono text-[10px] text-a-warning-fg"
+            className="a-mono text-[length:var(--a-text-xs)] text-a-warning-fg"
             title={b.openedAt ?? undefined}
           >
             {b.dependencyKey} · {b.state} · fail {b.failures}
           </p>
         ))}
         {openBreakers === 0 ? (
-          <p className="text-[10px] text-a-fg-subtle">Tous les breakers CLOSED</p>
+          <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+            Tous les breakers CLOSED
+          </p>
         ) : null}
       </div>
     </WidgetShell>
@@ -227,6 +336,8 @@ export function EventBusWidget({
   onRefresh?: () => void;
 }) {
   const e = snap?.events;
+  const hotDlq = (e?.outboxDlq ?? 0) > 0;
+  const hotLag = (e?.outboxLag ?? 0) > 50;
   return (
     <WidgetShell
       title="Event Bus"
@@ -234,9 +345,25 @@ export function EventBusWidget({
       state={loadState}
       asOf={asOf}
       onRefresh={onRefresh}
+      actions={
+        <Link
+          href="/repair"
+          className="text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
+        >
+          Repair
+        </Link>
+      }
     >
-      <MetricRow label="Outbox lag" value={String(e?.outboxLag ?? "—")} />
-      <MetricRow label="Outbox DLQ" value={String(e?.outboxDlq ?? "—")} />
+      <MetricRow
+        label="Outbox lag"
+        value={String(e?.outboxLag ?? "—")}
+        hint={hotLag ? "élevé" : undefined}
+      />
+      <MetricRow
+        label="Outbox DLQ"
+        value={String(e?.outboxDlq ?? "—")}
+        hint={hotDlq ? "action" : undefined}
+      />
       <MetricRow
         label="Published / min"
         value={String(e?.publishedLastMinute ?? "—")}
@@ -261,6 +388,11 @@ export function EventBusWidget({
             : "—"
         }
       />
+      {hotDlq || hotLag ? (
+        <p className="mt-2 text-[length:var(--a-text-xs)] text-a-warning-fg">
+          Lag / DLQ élevés — traiter via Repair (outbox).
+        </p>
+      ) : null}
     </WidgetShell>
   );
 }
@@ -280,27 +412,45 @@ export function WorkersWidget({
   return (
     <WidgetShell
       title="Workers"
-      subtitle={
-        snap?.workers.enabled ? "RUNNING" : "DISABLED"
-      }
+      subtitle={snap?.workers.enabled ? "RUNNING" : "DISABLED"}
       state={rows.length === 0 && loadState === "loaded" ? "empty" : loadState}
       asOf={asOf}
       onRefresh={onRefresh}
+      actions={
+        <Link
+          href="/repair"
+          className="text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
+        >
+          Repair
+        </Link>
+      }
     >
       <ul className="space-y-1">
-        {rows.map((w) => (
-          <li
-            key={w.family}
-            className="flex items-center justify-between gap-2 rounded-[var(--a-radius-sm)] px-1 py-1 text-[12px]"
-          >
-            <span className="truncate font-medium text-a-fg">{w.family}</span>
-            <span className="a-mono text-a-fg-muted">
-              c={w.concurrency}
-            </span>
-          </li>
-        ))}
+        {rows.map((w) => {
+          const idle = w.concurrency <= 0;
+          return (
+            <li
+              key={w.family}
+              className={cn(
+                "flex items-center justify-between gap-2 rounded-[var(--a-radius-sm)] px-1.5 py-1 text-[length:var(--a-text-sm)]",
+                idle && "bg-a-warning-soft/40",
+              )}
+            >
+              <span className="truncate font-medium text-a-fg">{w.family}</span>
+              <span
+                className={cn(
+                  "a-mono a-tabular",
+                  idle ? "text-a-warning-fg" : "text-a-fg-muted",
+                )}
+              >
+                c={w.concurrency}
+                {idle ? " · idle" : ""}
+              </span>
+            </li>
+          );
+        })}
       </ul>
-      <div className="mt-2 border-t border-[color:var(--a-border-subtle)] pt-2">
+      <div className="mt-2 space-y-0.5 border-t border-[color:var(--a-border-subtle)] pt-2">
         <MetricRow
           label="Jobs running"
           value={String(snap?.jobs.running ?? "—")}
@@ -310,7 +460,19 @@ export function WorkersWidget({
           value={String(snap?.jobs.completed ?? "—")}
         />
         <MetricRow label="Failed" value={String(snap?.jobs.failed ?? "—")} />
+        <MetricRow
+          label="Paused (module)"
+          value={String(snap?.jobs.pausedByModule ?? "—")}
+        />
       </div>
+      {!snap?.workers.enabled ? (
+        <p className="mt-2 text-[length:var(--a-text-xs)] text-a-fg-subtle">
+          Enable = config runtime (
+          <span className="a-mono">REDIS_URL</span> ·{" "}
+          <span className="a-mono">THUNDER_WORKERS_ENABLED</span>) — pas de
+          toggle UI. Diagnostic L0 via Repair.
+        </p>
+      ) : null}
     </WidgetShell>
   );
 }
@@ -327,16 +489,25 @@ export function QueuesWidget({
   onRefresh?: () => void;
 }) {
   const rows = snap?.queues ?? [];
+  const dlq = snap?.jobs.dlq ?? 0;
   return (
     <WidgetShell
       title="Queues"
-      subtitle={`${snap?.jobs.pending ?? 0} pending · DLQ ${snap?.jobs.dlq ?? 0}`}
+      subtitle={`${snap?.jobs.pending ?? 0} pending · DLQ ${dlq}`}
       state={rows.length === 0 && loadState === "loaded" ? "empty" : loadState}
       asOf={asOf}
       onRefresh={onRefresh}
+      actions={
+        <Link
+          href="/repair"
+          className="text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
+        >
+          Repair
+        </Link>
+      }
     >
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-[11px]">
+        <table className="w-full text-left text-[length:var(--a-text-sm)]">
           <thead className="text-a-fg-subtle">
             <tr>
               <th className="pb-1 font-medium">Queue</th>
@@ -346,14 +517,39 @@ export function QueuesWidget({
             </tr>
           </thead>
           <tbody>
-            {rows.map((q) => (
-              <tr key={q.family} className="border-t border-[color:var(--a-border-subtle)]">
-                <td className="py-1 font-medium text-a-fg">{q.family}</td>
-                <td className="a-mono py-1 text-a-fg-muted">{q.pending}</td>
-                <td className="a-mono py-1 text-a-fg-muted">{q.running}</td>
-                <td className="a-mono py-1 text-a-fg-muted">{q.failed}</td>
-              </tr>
-            ))}
+            {rows.map((q) => {
+              const hot = q.failed > 0 || q.pending > 50;
+              return (
+                <tr
+                  key={q.family}
+                  className={cn(
+                    "border-t border-[color:var(--a-border-subtle)]",
+                    hot && "bg-a-warning-soft/35",
+                  )}
+                >
+                  <td className="py-1 font-medium text-a-fg">{q.family}</td>
+                  <td
+                    className={cn(
+                      "a-mono a-tabular py-1",
+                      q.pending > 50 ? "text-a-warning-fg" : "text-a-fg-muted",
+                    )}
+                  >
+                    {q.pending}
+                  </td>
+                  <td className="a-mono a-tabular py-1 text-a-fg-muted">
+                    {q.running}
+                  </td>
+                  <td
+                    className={cn(
+                      "a-mono a-tabular py-1",
+                      q.failed > 0 ? "text-a-danger-fg" : "text-a-fg-muted",
+                    )}
+                  >
+                    {q.failed}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -412,7 +608,7 @@ export function AutomationFlowWidget({
           <li key={s.id} className="flex items-center gap-2">
             <span
               className={cn(
-                "rounded-[var(--a-radius-sm)] px-2.5 py-1.5 text-[11px] font-medium",
+                "rounded-[var(--a-radius-sm)] px-2.5 py-1.5 text-[length:var(--a-text-sm)] font-medium",
                 s.ok
                   ? "bg-a-success-soft text-a-success-fg"
                   : "bg-a-warning-soft text-a-warning-fg",
@@ -438,21 +634,36 @@ export function ThroughputWidget({
   loadState,
   asOf,
   onRefresh,
+  epsHistory = [],
 }: {
   snap?: ThunderMonitorSnapshot;
   loadState: WidgetLoadState;
   asOf?: string;
   onRefresh?: () => void;
+  /** Real poll samples (oldest → newest). */
+  epsHistory?: number[];
 }) {
   const eps = snap?.events.eventsPerSecondEstimate ?? 0;
-  const bars = Array.from({ length: 24 }, (_, i) => {
-    const wave = Math.abs(Math.sin(i / 3 + eps)) * 0.4 + 0.2;
-    return Math.min(1, wave + eps / 10);
-  });
+  const series =
+    epsHistory.length > 0
+      ? epsHistory
+      : eps > 0
+        ? [eps]
+        : [];
+  const max = Math.max(0.01, ...series, eps);
+  const bars =
+    series.length > 0
+      ? series
+      : Array.from({ length: 8 }, () => 0);
+
   return (
     <WidgetShell
       title="Event Throughput"
-      subtitle="Estimate live · historique complet = lot suivant"
+      subtitle={
+        series.length > 1
+          ? `${series.length} samples · poll live`
+          : "Estimate live · historique se remplit au poll"
+      }
       state={loadState}
       asOf={asOf}
       onRefresh={onRefresh}
@@ -462,15 +673,14 @@ export function ThroughputWidget({
           <span
             key={i}
             className="flex-1 rounded-sm bg-a-accent/70"
-            style={{ height: `${Math.max(8, h * 100)}%` }}
+            style={{
+              height: `${Math.max(8, (h / max) * 100)}%`,
+            }}
           />
         ))}
       </div>
       <div className="mt-3 space-y-0.5">
-        <MetricRow
-          label="Current / s"
-          value={eps.toFixed(2)}
-        />
+        <MetricRow label="Current / s" value={eps.toFixed(2)} />
         <MetricRow
           label="Published / min"
           value={String(snap?.events.publishedLastMinute ?? "—")}
@@ -550,7 +760,7 @@ export function PostgresWidget({
     >
       <MetricRow label="Status" value={snap?.db.ok ? "ok" : "down"} />
       <MetricRow label="Pool usage" value={pct(snap?.db.poolUsageRatio)} />
-      <p className="mt-2 text-[10px] text-a-fg-subtle">
+      <p className="mt-2 text-[length:var(--a-text-xs)] text-a-fg-subtle">
         Aucune donnée métier / secret exposé.
       </p>
     </WidgetShell>
@@ -613,12 +823,29 @@ export function OutboxWidget({
   onRefresh?: () => void;
 }) {
   const o = snap?.events;
+  const hotDlq = (o?.outboxDlq ?? 0) > 0;
+  const hotLag = (o?.outboxLag ?? 0) > 20;
   return (
     <WidgetShell
       title="Outbox"
+      subtitle={
+        hotDlq
+          ? `DLQ ${o?.outboxDlq}`
+          : hotLag
+            ? `lag ${o?.outboxLag}`
+            : undefined
+      }
       state={loadState}
       asOf={asOf}
       onRefresh={onRefresh}
+      actions={
+        <Link
+          href="/repair"
+          className="text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
+        >
+          Repair
+        </Link>
+      }
     >
       <MetricRow label="Pending (lag)" value={String(o?.outboxLag ?? "—")} />
       <MetricRow label="DLQ" value={String(o?.outboxDlq ?? "—")} />
@@ -644,33 +871,73 @@ export function OutboxWidget({
             : "—"
         }
       />
+      {hotDlq ? (
+        <p className="mt-2 text-[length:var(--a-text-xs)] text-a-danger-fg">
+          Outbox DLQ non vide — ouvrir Repair.
+        </p>
+      ) : null}
     </WidgetShell>
   );
 }
 
-export function SchedulerPlaceholderWidget({
+/** Derived from workers/jobs snapshot — no dedicated scheduler API yet. */
+export function SchedulerWidget({
+  snap,
   loadState,
   asOf,
   onRefresh,
 }: {
+  snap?: ThunderMonitorSnapshot;
   loadState: WidgetLoadState;
   asOf?: string;
   onRefresh?: () => void;
 }) {
+  const families = snap?.workers.queues ?? [];
+  const armed = families.filter((q) => q.concurrency > 0).length;
+  const idle = families.filter((q) => q.concurrency === 0).length;
+  const workersOn = snap?.workers.enabled === true;
+
   return (
     <WidgetShell
       title="Scheduler"
-      subtitle="Contract ready · provider API prochain lot"
-      state={loadState === "loaded" ? "empty" : loadState}
+      subtitle={
+        workersOn
+          ? `Workers RUNNING · ${armed} familles armées`
+          : `Workers DISABLED · ${armed} familles configurées`
+      }
+      state={loadState}
       asOf={asOf}
       onRefresh={onRefresh}
     >
-      <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-        Pas de métrique scheduler dédiée dans le snapshot actuel — widget
-        enregistré pour extension module.
+      <MetricRow
+        label="Workers"
+        value={workersOn ? "ENABLED" : "DISABLED"}
+      />
+      <MetricRow label="Families armed" value={String(armed)} />
+      <MetricRow label="Families idle (c=0)" value={String(idle)} />
+      <MetricRow
+        label="Jobs paused (module)"
+        value={String(snap?.jobs.pausedByModule ?? "—")}
+      />
+      <MetricRow
+        label="Pending / running"
+        value={`${snap?.jobs.pending ?? "—"} / ${snap?.jobs.running ?? "—"}`}
+      />
+      <p className="mt-2 text-[length:var(--a-text-xs)] text-a-fg-subtle">
+        Dérivé snapshot Thunder (workers + jobs) — pas de provider cron dédié.
       </p>
     </WidgetShell>
   );
+}
+
+/** @deprecated alias */
+export function SchedulerPlaceholderWidget(props: {
+  loadState: WidgetLoadState;
+  asOf?: string;
+  onRefresh?: () => void;
+  snap?: ThunderMonitorSnapshot;
+}) {
+  return <SchedulerWidget {...props} />;
 }
 
 export function ResourcesWidget({
@@ -760,10 +1027,12 @@ export function AlertsWidget({
             key={h.id}
             className="rounded-[var(--a-radius-sm)] bg-a-surface-3/60 px-2 py-1.5"
           >
-            <p className="text-[11px] font-medium text-a-fg">
+            <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
               {h.severity} · {h.code}
             </p>
-            <p className="text-[10px] text-a-fg-muted">{h.message}</p>
+            <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+              {h.message}
+            </p>
           </li>
         ))}
       </ul>
@@ -771,67 +1040,74 @@ export function AlertsWidget({
   );
 }
 
+/** Signals — one-shot + manual refresh, hard timeout (no interval storm). */
 export function ActivityFeedWidget({
-  loadState,
   asOf,
   onRefresh,
 }: {
-  loadState: WidgetLoadState;
+  loadState?: WidgetLoadState;
   asOf?: string;
   onRefresh?: () => void;
 }) {
-  const q = useQuery({
-    queryKey: ["thunder-signals"],
-    queryFn: async () => {
+  const [items, setItems] = useState<unknown[]>([]);
+  const [state, setState] = useState<WidgetLoadState>("loading");
+
+  const load = useCallback(async () => {
+    const ctrl = new AbortController();
+    const t = window.setTimeout(() => ctrl.abort(), 5_000);
+    try {
       const res = await fetch("/api/v1/thunder/signals", {
         credentials: "include",
         headers: { Accept: "application/json" },
+        signal: ctrl.signal,
       });
-      if (res.status === 403) return { forbidden: true as const, items: [] };
+      if (res.status === 403) {
+        setState("forbidden");
+        setItems([]);
+        return;
+      }
       if (!res.ok) throw new Error(`signals ${res.status}`);
       const data = (await res.json()) as unknown;
-      const items = Array.isArray(data)
+      const next = Array.isArray(data)
         ? data
         : Array.isArray((data as { items?: unknown }).items)
           ? (data as { items: unknown[] }).items
           : [];
-      return { forbidden: false as const, items };
-    },
-    retry: false,
-    refetchInterval: 15_000,
-  });
+      setItems(next);
+      setState(next.length === 0 ? "empty" : "loaded");
+    } catch {
+      setState("unavailable");
+    } finally {
+      window.clearTimeout(t);
+    }
+  }, []);
 
-  const state: WidgetLoadState = q.isPending
-    ? "loading"
-    : q.isError
-      ? "unavailable"
-      : q.data?.forbidden
-        ? "forbidden"
-        : (q.data?.items.length ?? 0) === 0
-          ? "empty"
-          : "loaded";
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   return (
     <WidgetShell
       title="Activity Feed"
       subtitle="Thunder signals"
-      state={state === "loading" ? loadState : state}
+      state={state}
       asOf={asOf}
       onRefresh={() => {
-        void q.refetch();
+        void load();
         onRefresh?.();
       }}
     >
       <ul className="space-y-1">
-        {(q.data?.items ?? []).slice(0, 12).map((raw, i) => {
+        {items.slice(0, 12).map((raw, i) => {
           const row = raw as Record<string, unknown>;
-          const label =
-            String(row.code ?? row.type ?? row.id ?? `signal-${i}`);
+          const label = String(
+            row.code ?? row.type ?? row.id ?? `signal-${i}`,
+          );
           const at = String(row.createdAt ?? row.at ?? "");
           return (
             <li
               key={String(row.id ?? i)}
-              className="a-mono text-[10px] text-a-fg-muted"
+              className="a-mono text-[length:var(--a-text-xs)] text-a-fg-muted"
             >
               {at ? `${at.slice(11, 19)} ` : ""}
               <span className="text-a-fg">{label}</span>
@@ -843,87 +1119,119 @@ export function ActivityFeedWidget({
   );
 }
 
+/** Adapters — one-shot + manual refresh, hard timeout. */
 export function IntegrationsWidget({
-  loadState,
   asOf,
   onRefresh,
 }: {
-  loadState: WidgetLoadState;
+  loadState?: WidgetLoadState;
   asOf?: string;
   onRefresh?: () => void;
 }) {
-  const q = useQuery({
-    queryKey: ["thunder-adapters-health"],
-    queryFn: async () => {
+  const [items, setItems] = useState<
+    { id: string; ok: boolean; message?: string }[]
+  >([]);
+  const [state, setState] = useState<WidgetLoadState>("loading");
+
+  const load = useCallback(async () => {
+    const ctrl = new AbortController();
+    const t = window.setTimeout(() => ctrl.abort(), 5_000);
+    try {
       const res = await fetch("/api/v1/thunder/adapters/health", {
         credentials: "include",
         headers: { Accept: "application/json" },
+        signal: ctrl.signal,
       });
-      if (res.status === 403) return { forbidden: true as const, items: [] };
+      if (res.status === 403) {
+        setState("forbidden");
+        setItems([]);
+        return;
+      }
       if (!res.ok) throw new Error(`adapters ${res.status}`);
       const data = (await res.json()) as unknown;
-      const items = Array.isArray(data)
+      const rawList: unknown[] = Array.isArray(data)
         ? data
         : Array.isArray((data as { items?: unknown }).items)
           ? (data as { items: unknown[] }).items
-          : typeof data === "object" && data
-            ? Object.entries(data as Record<string, unknown>).map(
-                ([k, v]) => ({ id: k, ...(v as object) }),
+          : typeof data === "object" && data && "adapters" in data
+            ? Object.entries(
+                (data as { adapters: Record<string, unknown> }).adapters,
+              ).map(([id, v]) =>
+                typeof v === "object" && v
+                  ? { adapterId: id, ...(v as object) }
+                  : { adapterId: id, ok: v },
               )
             : [];
-      return { forbidden: false as const, items };
-    },
-    retry: false,
-    refetchInterval: 20_000,
-  });
 
-  const state: WidgetLoadState = q.isPending
-    ? "loading"
-    : q.isError
-      ? "unavailable"
-      : q.data?.forbidden
-        ? "forbidden"
-        : (q.data?.items.length ?? 0) === 0
-          ? "empty"
-          : "loaded";
+      const next = rawList.map((raw, i) => {
+        const row = raw as Record<string, unknown>;
+        const health =
+          row.health && typeof row.health === "object"
+            ? (row.health as Record<string, unknown>)
+            : null;
+        const id = String(
+          row.adapterId ?? row.id ?? row.key ?? row.name ?? `adapter-${i}`,
+        );
+        const ok =
+          row.ok === true ||
+          health?.ok === true ||
+          row.status === "ok" ||
+          row.status === "CONNECTED" ||
+          row.healthy === true;
+        const message = String(
+          health?.message ?? row.message ?? row.detail ?? "",
+        );
+        return { id, ok, message: message || undefined };
+      });
+      setItems(next);
+      setState(next.length === 0 ? "empty" : "loaded");
+    } catch {
+      setState("unavailable");
+    } finally {
+      window.clearTimeout(t);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   return (
     <WidgetShell
       title="Integration Matrix"
       subtitle="Thunder adapters"
-      state={state === "loading" ? loadState : state}
+      state={state}
       asOf={asOf}
       onRefresh={() => {
-        void q.refetch();
+        void load();
         onRefresh?.();
       }}
     >
       <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-        {(q.data?.items ?? []).map((raw, i) => {
-          const row = raw as Record<string, unknown>;
-          const id = String(row.id ?? row.key ?? row.name ?? i);
-          const ok =
-            row.ok === true ||
-            row.status === "ok" ||
-            row.status === "CONNECTED" ||
-            row.healthy === true;
-          return (
-            <li
-              key={id}
-              className="rounded-[var(--a-radius-sm)] bg-a-surface-3/60 px-2 py-1.5"
+        {items.map((row) => (
+          <li
+            key={row.id}
+            className="rounded-[var(--a-radius-sm)] bg-a-surface-3/60 px-2 py-1.5"
+            title={row.message}
+          >
+            <p className="truncate text-[length:var(--a-text-sm)] font-medium text-a-fg">
+              {row.id}
+            </p>
+            <p
+              className={cn(
+                "text-[length:var(--a-text-xs)]",
+                row.ok ? "text-a-success-fg" : "text-a-warning-fg",
+              )}
             >
-              <p className="truncate text-[11px] font-medium text-a-fg">{id}</p>
-              <p
-                className={cn(
-                  "text-[10px]",
-                  ok ? "text-a-success-fg" : "text-a-warning-fg",
-                )}
-              >
-                {ok ? "CONNECTED" : "DEGRADED / UNKNOWN"}
+              {row.ok ? "CONNECTED" : "DEGRADED / UNKNOWN"}
+            </p>
+            {row.message ? (
+              <p className="mt-0.5 truncate text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                {row.message}
               </p>
-            </li>
-          );
-        })}
+            ) : null}
+          </li>
+        ))}
       </ul>
     </WidgetShell>
   );

@@ -2004,3 +2004,59 @@
     }
   }
 }
+
+/* Thunder CC — container queries on WRAPPER (not the grid itself) */
+.thunder-cc-shell {
+  container-type: inline-size;
+  container-name: thunder-cc;
+}
+
+.thunder-cc-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.thunder-cc-grid.is-compact {
+  gap: 0.5rem;
+}
+
+.thunder-cc-tile {
+  min-width: 0;
+}
+
+/* Comfort: 2 columns when the center pane is mid-width */
+@container thunder-cc (min-width: 560px) {
+  .thunder-cc-grid:not(.is-free) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Free 12-col x/y only when the pane itself is wide enough */
+@container thunder-cc (min-width: 960px) {
+  .thunder-cc-grid.is-free {
+    /* minmax(4rem,1fr) — plain 1fr can collapse empty tracks to 0 */
+    grid-template-columns: repeat(12, minmax(4rem, 1fr));
+    grid-auto-rows: 11rem;
+  }
+
+  .thunder-cc-grid.is-free.is-compact {
+    grid-auto-rows: 9rem;
+  }
+
+  .thunder-cc-grid.is-free .thunder-cc-tile {
+    grid-column: var(--tc-gc) !important;
+    grid-row: var(--tc-gr) !important;
+  }
+
+  .thunder-cc-grid.is-free .thunder-cc-drop-cell {
+    display: block;
+    pointer-events: auto;
+  }
+}
+
+/* Stacked / 2-col comfort: ignore stored x/y */
+.thunder-cc-grid:not(.is-free) .thunder-cc-tile {
+  grid-column: auto !important;
+  grid-row: auto !important;
+}

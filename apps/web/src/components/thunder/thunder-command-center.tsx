@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import {
-  colSpanClass,
   globalWidgetRegistry,
+  GRID,
   healthTone,
+  layoutRowCount,
+  THUNDER_FREE_LAYOUT_MIN_PX,
+  thunderGridItemStyle,
+  thunderLayoutSortKey,
   type WidgetInstance,
 } from "@/lib/dashboard-engine";
 import {
@@ -17,11 +21,12 @@ import {
   deriveThunderHealth,
   overallHealth,
 } from "@/lib/thunder/health-derive";
-import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
+import { useThunderCcSnapshot } from "@/hooks/use-thunder-cc-snapshot";
 import { useThunderDashboardStore } from "@/stores/thunder-dashboard-store";
-import { useMeGrants } from "@/hooks/use-me-grants";
 import { AButton, APageBody, AScreenHeader } from "@/components/a";
 import { cn } from "@/lib/utils";
+import type { WidgetLoadState } from "@/lib/dashboard-engine";
+import { ThunderCcLayoutSync } from "./thunder-cc-layout-sync";
 import {
   ActivityFeedWidget,
   AlertsWidget,
@@ -31,7 +36,6 @@ import {
   EventBusWidget,
   IncidentsWidget,
   IntegrationsWidget,
-  monitorState,
   OutboxWidget,
   PostgresWidget,
   QueuesWidget,
@@ -42,28 +46,41 @@ import {
   ThunderHealthWidget,
   WorkersWidget,
 } from "./thunder-widgets";
+import type { MonitorSnapshot } from "@/hooks/use-monitor-snapshot";
 
 ensureThunderWidgetsRegistered();
 
 function WidgetRenderer({
   instance,
+  snap,
+  loadState,
+  asOf,
+  onRefresh,
+  epsHistory,
+  compact,
+  freeLayout,
 }: {
   instance: WidgetInstance;
+  snap?: MonitorSnapshot;
+  loadState: WidgetLoadState;
+  asOf?: string | null;
+  onRefresh: () => void;
+  epsHistory: number[];
+  compact: boolean;
+  freeLayout: boolean;
 }) {
-  const monitor = useMonitorSnapshot();
-  const liveMode = useThunderDashboardStore((s) => s.liveMode);
   const thresholds = useThunderDashboardStore((s) => s.thresholds);
   const editMode = useThunderDashboardStore((s) => s.editMode);
   const hideWidget = useThunderDashboardStore((s) => s.hideWidget);
-  const updateWidget = useThunderDashboardStore((s) => s.updateWidget);
   const removeWidget = useThunderDashboardStore((s) => s.removeWidget);
-  const reorderWidgets = useThunderDashboardStore((s) => s.reorderWidgets);
+  const swapWidgetPositions = useThunderDashboardStore(
+    (s) => s.swapWidgetPositions,
+  );
+  const nudgeWidget = useThunderDashboardStore((s) => s.nudgeWidget);
+  const resizeWidget = useThunderDashboardStore((s) => s.resizeWidget);
   const duplicateWidget = useThunderDashboardStore((s) => s.duplicateWidget);
 
-  const snap = monitor.data;
-  const loadState = monitorState(monitor, liveMode);
-  const asOf = snap?.asOf ?? null;
-  const refresh = () => void monitor.refetch();
+  const refresh = onRefresh;
 
   const def = globalWidgetRegistry.find(instance.widgetDefinitionId);
   const title = def?.name ?? instance.widgetDefinitionId;
@@ -148,6 +165,7 @@ function WidgetRenderer({
           loadState={loadState}
           asOf={asOf ?? undefined}
           onRefresh={refresh}
+          epsHistory={epsHistory}
         />
       );
       break;
@@ -194,6 +212,7 @@ function WidgetRenderer({
     case "thunder.scheduler":
       body = (
         <SchedulerPlaceholderWidget
+          snap={snap}
           loadState={loadState}
           asOf={asOf ?? undefined}
           onRefresh={refresh}
@@ -250,44 +269,72 @@ function WidgetRenderer({
   return (
     <div
       className={cn(
-        colSpanClass(instance.position.w),
-        "min-h-0",
-        editMode && "ring-1 ring-a-accent/30",
-        editMode && "cursor-grab active:cursor-grabbing",
+        "thunder-cc-tile relative z-[1] flex h-full min-h-[11rem] flex-col",
+        editMode && freeLayout && "ring-1 ring-a-accent/30",
+        editMode && freeLayout && "cursor-grab active:cursor-grabbing",
       )}
-      draggable={editMode}
+      style={thunderGridItemStyle(instance.position, compact) as CSSProperties}
+      draggable={editMode && freeLayout}
       onDragStart={(e) => {
-        if (!editMode) return;
+        if (!editMode || !freeLayout) return;
         e.dataTransfer.setData("text/thunder-widget-id", instance.id);
         e.dataTransfer.effectAllowed = "move";
       }}
       onDragOver={(e) => {
-        if (!editMode) return;
+        if (!editMode || !freeLayout) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
       }}
       onDrop={(e) => {
-        if (!editMode) return;
+        if (!editMode || !freeLayout) return;
         e.preventDefault();
+        e.stopPropagation();
         const fromId = e.dataTransfer.getData("text/thunder-widget-id");
-        if (fromId) reorderWidgets(fromId, instance.id);
+        if (fromId) swapWidgetPositions(fromId, instance.id);
       }}
     >
-      {editMode ? (
+      {editMode && freeLayout ? (
         <div className="mb-1 flex flex-wrap gap-1">
           <span className="rounded bg-a-accent-muted px-1.5 py-0.5 text-[10px] font-medium text-a-accent">
-            Drag
+            x{instance.position.x} y{instance.position.y}
           </span>
           <button
             type="button"
             className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
+            onClick={() => nudgeWidget(instance.id, -1, 0)}
+            title="Nudge left"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
+            onClick={() => nudgeWidget(instance.id, 1, 0)}
+            title="Nudge right"
+          >
+            →
+          </button>
+          <button
+            type="button"
+            className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
+            onClick={() => nudgeWidget(instance.id, 0, -1)}
+            title="Nudge up"
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
+            onClick={() => nudgeWidget(instance.id, 0, 1)}
+            title="Nudge down"
+          >
+            ↓
+          </button>
+          <button
+            type="button"
+            className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
             onClick={() =>
-              updateWidget(instance.id, {
-                position: {
-                  ...instance.position,
-                  w: Math.min(12, instance.position.w + 1),
-                },
-              })
+              resizeWidget(instance.id, { w: instance.position.w + 1 })
             }
           >
             +w
@@ -296,16 +343,56 @@ function WidgetRenderer({
             type="button"
             className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
             onClick={() =>
-              updateWidget(instance.id, {
-                position: {
-                  ...instance.position,
-                  w: Math.max(3, instance.position.w - 1),
-                },
-              })
+              resizeWidget(instance.id, { w: instance.position.w - 1 })
             }
           >
             −w
           </button>
+          <button
+            type="button"
+            className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
+            onClick={() =>
+              resizeWidget(instance.id, { h: instance.position.h + 1 })
+            }
+          >
+            +h
+          </button>
+          <button
+            type="button"
+            className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
+            onClick={() =>
+              resizeWidget(instance.id, { h: instance.position.h - 1 })
+            }
+          >
+            −h
+          </button>
+          <button
+            type="button"
+            className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
+            onClick={() => duplicateWidget(instance.id)}
+          >
+            Dup
+          </button>
+          <button
+            type="button"
+            className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
+            onClick={() => hideWidget(instance.id)}
+          >
+            Hide
+          </button>
+          <button
+            type="button"
+            className="rounded bg-a-danger-soft px-1.5 py-0.5 text-[10px] text-a-danger-fg"
+            onClick={() => removeWidget(instance.id)}
+          >
+            Remove
+          </button>
+        </div>
+      ) : editMode ? (
+        <div className="mb-1 flex flex-wrap gap-1">
+          <span className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted">
+            Confort · élargir le panneau pour free x/y
+          </span>
           <button
             type="button"
             className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
@@ -335,68 +422,81 @@ function WidgetRenderer({
 }
 
 export function ThunderCommandCenter() {
-  const { grants } = useMeGrants();
-  const monitor = useMonitorSnapshot();
+  const liveMode = useThunderDashboardStore((s) => s.liveMode);
+  const monitor = useThunderCcSnapshot({ live: liveMode });
   const widgets = useThunderDashboardStore((s) => s.widgets);
   const editMode = useThunderDashboardStore((s) => s.editMode);
   const setEditMode = useThunderDashboardStore((s) => s.setEditMode);
-  const liveMode = useThunderDashboardStore((s) => s.liveMode);
   const setLiveMode = useThunderDashboardStore((s) => s.setLiveMode);
   const resetLayout = useThunderDashboardStore((s) => s.resetLayout);
   const compact = useThunderDashboardStore((s) => s.compact);
   const setCompact = useThunderDashboardStore((s) => s.setCompact);
   const addWidget = useThunderDashboardStore((s) => s.addWidget);
   const showWidget = useThunderDashboardStore((s) => s.showWidget);
+  const placeWidgetAt = useThunderDashboardStore((s) => s.placeWidgetAt);
+  const densifyLayout = useThunderDashboardStore((s) => s.densifyLayout);
   const [addOpen, setAddOpen] = useState(false);
+  const [dropHover, setDropHover] = useState<string | null>(null);
+  const [freeLayout, setFreeLayout] = useState(false);
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     ensureThunderWidgetsRegistered();
   }, []);
 
-  const canView =
-    grants == null || grants.has("system_monitoring.view");
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const apply = (w: number) => {
+      setFreeLayout(w >= THUNDER_FREE_LAYOUT_MIN_PX);
+    };
+    apply(el.getBoundingClientRect().width);
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      apply(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const hidden = useMemo(
     () => widgets.filter((w) => !w.visibility),
     [widgets],
   );
 
-  const addableDefs = useMemo(() => {
-    return THUNDER_WIDGET_DEFINITIONS.filter((d) => {
-      if (grants == null) return true;
-      return d.permissions.every((p) => grants.has(p));
-    });
-  }, [grants]);
+  const addableDefs = useMemo(() => THUNDER_WIDGET_DEFINITIONS, []);
 
+  /** Show all registered widgets; each tile handles forbidden/unavailable. */
   const visible = useMemo(() => {
     return [...widgets]
       .filter((w) => w.visibility)
-      .filter((w) => {
-        const def = globalWidgetRegistry.find(w.widgetDefinitionId);
-        if (!def) return false;
-        if (grants == null) return true;
-        return def.permissions.every((p) => grants.has(p));
-      })
-      .sort((a, b) => a.order - b.order);
-  }, [widgets, grants]);
+      .sort((a, b) => thunderLayoutSortKey(a) - thunderLayoutSortKey(b));
+  }, [widgets]);
 
   const healthItems = deriveThunderHealth(monitor.data);
   const overall = overallHealth(healthItems);
   const tone = healthTone(overall);
-
-  if (!canView) {
-    return (
-      <APageBody>
-        <AScreenHeader
-          title="Thunder Core"
-          description="Permission system_monitoring.view requise."
-        />
-        <p className="mt-4 text-[length:var(--a-text-sm)] text-a-fg-muted">
-          Accès refusé — contactez un administrateur.
-        </p>
-      </APageBody>
-    );
-  }
+  const snap = monitor.data;
+  const loadState = monitor.loadState;
+  const asOf = snap?.asOf ?? null;
+  const onRefresh = () => void monitor.refresh();
+  const epsHistory = monitor.epsHistory;
+  const rowCount = useMemo(
+    () => layoutRowCount(visible, editMode ? 3 : 1),
+    [visible, editMode],
+  );
+  const dropCells = useMemo(() => {
+    if (!editMode || !freeLayout) {
+      return [] as Array<{ x: number; y: number; key: string }>;
+    }
+    const cells: Array<{ x: number; y: number; key: string }> = [];
+    for (let y = 0; y < rowCount; y += 1) {
+      for (let x = 0; x < GRID.desktop; x += 1) {
+        cells.push({ x, y, key: `c-${x}-${y}` });
+      }
+    }
+    return cells;
+  }, [editMode, freeLayout, rowCount]);
 
   return (
     <APageBody>
@@ -434,14 +534,31 @@ export function ThunderCommandCenter() {
               Layout
             </AButton>
             {editMode ? (
-              <AButton
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => setAddOpen((v) => !v)}
-              >
-                + Widget
-              </AButton>
+              <>
+                <AButton
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setAddOpen((v) => !v)}
+                >
+                  + Widget
+                </AButton>
+                {freeLayout ? (
+                  <AButton
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => densifyLayout()}
+                    title="Pack sans trous (gauche → droite, haut → bas)"
+                  >
+                    Densifier
+                  </AButton>
+                ) : (
+                  <span className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                    {`Confort · pane < ${THUNDER_FREE_LAYOUT_MIN_PX}px`}
+                  </span>
+                )}
+              </>
             ) : null}
             <AButton
               type="button"
@@ -459,6 +576,7 @@ export function ThunderCommandCenter() {
             >
               Reset
             </AButton>
+            <ThunderCcLayoutSync className="flex flex-wrap items-center gap-1.5" />
             <Link
               href="/settings#poste"
               className="text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
@@ -527,15 +645,59 @@ export function ThunderCommandCenter() {
         </div>
       ) : null}
 
-      <div
-        className={cn(
-          "mt-4 grid grid-cols-4 gap-3 md:grid-cols-8 lg:grid-cols-12",
-          compact && "gap-2",
-        )}
-      >
-        {visible.map((w) => (
-          <WidgetRenderer key={w.id} instance={w} />
+      <div ref={gridRef} className="thunder-cc-shell mt-4">
+        <div
+          className={cn(
+            "thunder-cc-grid",
+            compact && "is-compact",
+            freeLayout && "is-free",
+          )}
+        >
+        {dropCells.map((cell) => (
+          <div
+            key={cell.key}
+            aria-hidden
+            className={cn(
+              "thunder-cc-drop-cell pointer-events-none relative z-0 hidden rounded-[var(--a-radius-sm)] border border-dashed border-[color:var(--a-border-subtle)]/70 bg-a-surface-3/20",
+              dropHover === cell.key &&
+                "border-a-accent bg-a-accent-muted/50",
+            )}
+            style={
+              {
+                gridColumn: `${cell.x + 1} / span 1`,
+                gridRow: `${cell.y + 1} / span 1`,
+              } as CSSProperties
+            }
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              setDropHover(cell.key);
+            }}
+            onDragLeave={() =>
+              setDropHover((cur) => (cur === cell.key ? null : cur))
+            }
+            onDrop={(e) => {
+              e.preventDefault();
+              setDropHover(null);
+              const fromId = e.dataTransfer.getData("text/thunder-widget-id");
+              if (fromId) placeWidgetAt(fromId, cell.x, cell.y);
+            }}
+          />
         ))}
+        {visible.map((w) => (
+          <WidgetRenderer
+            key={w.id}
+            instance={w}
+            snap={snap}
+            loadState={loadState}
+            asOf={asOf}
+            onRefresh={onRefresh}
+            epsHistory={epsHistory}
+            compact={compact}
+            freeLayout={freeLayout}
+          />
+        ))}
+        </div>
       </div>
     </APageBody>
   );

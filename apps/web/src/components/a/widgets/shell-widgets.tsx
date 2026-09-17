@@ -2,16 +2,15 @@
 
 import { ASkeleton } from "@/components/a/a-skeleton";
 import { useMeRegistry } from "@/hooks/use-me-registry";
-import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
+import { useThunderMonitor } from "@/hooks/use-thunder-cc-snapshot";
 
 export function MonitorWidgetBody() {
-  const q = useMonitorSnapshot();
-  if (q.isPending) return <ASkeleton lines={4} />;
-  if (q.isError || !q.data) {
+  const q = useThunderMonitor({ live: true, intervalMs: 30_000 });
+  if (q.loading && !q.data) return <ASkeleton lines={4} />;
+  if (!q.data) {
     return (
       <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-        Snapshot indisponible (session / permission). File critical reste
-        isolée côté API.
+        Snapshot indisponible — ouvrir `/thunder`.
       </p>
     );
   }
@@ -25,11 +24,11 @@ export function MonitorWidgetBody() {
     <dl className="grid grid-cols-2 gap-2 text-[length:var(--a-text-sm)]">
       <div>
         <dt className="text-a-fg-subtle">CPU</dt>
-        <dd className="a-mono">{cpu}</dd>
+        <dd className="a-mono a-tabular">{cpu}</dd>
       </div>
       <div>
         <dt className="text-a-fg-subtle">RAM</dt>
-        <dd className="a-mono">{ram}</dd>
+        <dd className="a-mono a-tabular">{ram}</dd>
       </div>
       <div>
         <dt className="text-a-fg-subtle">Shed P4</dt>
@@ -39,7 +38,7 @@ export function MonitorWidgetBody() {
       </div>
       <div>
         <dt className="text-a-fg-subtle">Jobs</dt>
-        <dd className="a-mono">
+        <dd className="a-mono a-tabular">
           {s.jobs.running} run / {s.jobs.pending} wait
         </dd>
       </div>
@@ -81,12 +80,12 @@ export function ModulesWidgetBody() {
 }
 
 export function JobsWidgetBody() {
-  const q = useMonitorSnapshot();
-  if (q.isPending) return <ASkeleton lines={3} />;
-  if (q.isError || !q.data) {
+  const q = useThunderMonitor({ live: true, intervalMs: 30_000 });
+  if (q.loading && !q.data) return <ASkeleton lines={3} />;
+  if (!q.data) {
     return (
       <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-        Files Thunder non lisibles depuis cette session.
+        Files Thunder non lisibles — `/thunder`.
       </p>
     );
   }
@@ -96,30 +95,9 @@ export function JobsWidgetBody() {
       {lanes.map((lane) => (
         <li key={lane.family} className="flex justify-between gap-2 a-mono">
           <span>{lane.family}</span>
-          <span className="text-a-fg-muted">
-            conc={lane.concurrency}
-            {lane.concurrency === 0 ? " · paused" : ""}
-          </span>
+          <span className="text-a-fg-muted">conc={lane.concurrency}</span>
         </li>
       ))}
-      <li className="flex justify-between gap-2 pt-1 text-a-fg-subtle">
-        <span>DLQ</span>
-        <span>{q.data.jobs.dlq}</span>
-      </li>
     </ul>
   );
-}
-
-export function AuditWidgetBody() {
-  return (
-    <ul className="space-y-2 text-[length:var(--a-text-sm)] text-a-fg-muted">
-      <li>Registry sync — GET /me/registry</li>
-      <li>SSE notifications — flux mock UI-09</li>
-      <li>Thunder snapshot — schemaVersion 1</li>
-    </ul>
-  );
-}
-
-export function BoomWidgetBody(): never {
-  throw new Error("UI-10 gate: widget isolation");
 }

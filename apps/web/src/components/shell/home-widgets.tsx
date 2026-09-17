@@ -8,7 +8,7 @@ import {
 import { resolveNotificationHref, unreadCount } from "@/lib/notifications";
 import { isNotifSourceKey } from "@/lib/notification-prefs";
 import { useMeRegistry } from "@/hooks/use-me-registry";
-import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
+import { useThunderMonitor } from "@/hooks/use-thunder-cc-snapshot";
 import { useNotificationsStore } from "@/stores/notifications-store";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
@@ -90,12 +90,11 @@ export function HeroContextWidget() {
   );
 }
 
-/** Shell status from Thunder monitor — no CPU/RAM resource chrome. */
 export function ShellStatusWidget() {
   const { t } = useShellT();
-  const q = useMonitorSnapshot();
-  if (q.isPending) return <ASkeleton lines={4} />;
-  if (q.isError || !q.data) {
+  const q = useThunderMonitor({ live: true, intervalMs: 30_000 });
+  if (q.loading && !q.data) return <ASkeleton lines={4} />;
+  if (!q.data) {
     return (
       <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
         {t("snapshotNone")}
@@ -115,7 +114,7 @@ export function ShellStatusWidget() {
           <dt className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
             {k}
           </dt>
-          <dd className="a-mono mt-0.5 text-[length:var(--a-text-sm)] text-a-fg">
+          <dd className="a-mono a-tabular mt-0.5 text-[length:var(--a-text-sm)] text-a-fg">
             {v}
           </dd>
         </div>

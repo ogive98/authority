@@ -1,44 +1,42 @@
 "use client";
 
-import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
+import { useThunderMonitor } from "@/hooks/use-thunder-cc-snapshot";
 
+/** Footer resource strip — shared Thunder poll (no SSE). */
 export function ResourceMonitor() {
-  const q = useMonitorSnapshot();
-  const cpu =
-    q.data?.cpu.usageRatio == null
-      ? "—"
-      : `${Math.round(q.data.cpu.usageRatio * 100)}%`;
-  const ram = q.data
-    ? `${Math.round(q.data.ram.usageRatio * 100)}%`
-    : "—";
-  const shed = q.data?.pressure.shedP4 ? "P4 shed" : "ok";
-  const jobs = q.data
-    ? `${q.data.jobs.running}/${q.data.jobs.pending}`
-    : "—";
-
+  const q = useThunderMonitor({ live: true, intervalMs: 30_000 });
+  const s = q.data;
   const metrics = [
-    { key: "CPU", value: cpu },
-    { key: "RAM", value: ram },
-    { key: "Shed", value: shed },
-    { key: "Jobs", value: jobs },
-    { key: "DB", value: q.data?.db.ok ? "ok" : q.isError ? "n/a" : "…" },
-    { key: "Redis", value: q.data?.redis.ok ? "ok" : q.isError ? "n/a" : "…" },
+    {
+      key: "CPU",
+      value:
+        s?.cpu.usageRatio == null
+          ? "—"
+          : `${Math.round(s.cpu.usageRatio * 100)}%`,
+    },
+    {
+      key: "RAM",
+      value: s ? `${Math.round(s.ram.usageRatio * 100)}%` : "—",
+    },
+    {
+      key: "Jobs",
+      value: s ? `${s.jobs.running}/${s.jobs.pending}` : "—",
+    },
+    { key: "DB", value: s ? (s.db.ok ? "ok" : "down") : "—" },
+    { key: "Redis", value: s ? (s.redis.ok ? "ok" : "down") : "—" },
   ] as const;
 
   return (
     <footer
-      className="a-glass flex h-8 shrink-0 items-center gap-3 overflow-x-auto px-3"
-      aria-label="Resource monitor"
+      className="flex h-8 shrink-0 items-center gap-3 overflow-x-auto border-t border-[color:var(--a-border-subtle)] bg-a-surface-2 px-3"
+      aria-label="Ressources système"
     >
-      <span className="a-mono shrink-0 text-[length:var(--a-text-xs)] text-a-fg-subtle">
-        monitor
-      </span>
       {metrics.map((m) => (
         <span
           key={m.key}
-          className="a-mono shrink-0 text-[length:var(--a-text-xs)] text-a-fg-muted"
+          className="a-mono a-tabular shrink-0 text-[length:var(--a-text-xs)] text-a-fg-subtle"
         >
-          <span className="text-a-fg-subtle">{m.key}</span> {m.value}
+          {m.key} {m.value}
         </span>
       ))}
     </footer>

@@ -18,7 +18,18 @@ export { healthTone } from "./types";
 export { WidgetRegistry, globalWidgetRegistry } from "./registry";
 export {
   GRID,
+  THUNDER_ROW_REM,
+  THUNDER_ROW_COMPACT_REM,
+  THUNDER_FREE_LAYOUT_MIN_PX,
   clampSize,
   clampPosition,
   colSpanClass,
+  thunderGridCssVars,
+  thunderGridItemStyle,
+  thunderLayoutSortKey,
+  nextFreeRow,
+  layoutRowCount,
+  rectsOverlap,
+  resolveWidgetOverlaps,
+  densifyWidgetLayout,
 } from "./layout";

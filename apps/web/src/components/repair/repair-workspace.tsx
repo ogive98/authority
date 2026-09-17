@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   CalendarClock,
@@ -54,6 +54,7 @@ import {
   type ScanDepth,
 } from "@/lib/repair-control";
 import { cn } from "@/lib/utils";
+import { useRepairSessionStore } from "@/stores/repair-session-store";
 
 type TabId =
   | "pipeline"
@@ -145,10 +146,12 @@ export function RepairWorkspace() {
     }>
   >([]);
   const [audit, setAudit] = useState<unknown[]>([]);
-  const [log, setLog] = useState<string[]>([]);
   const [scanOptionsOpen, setScanOptionsOpen] = useState(false);
   const [stepUpOpen, setStepUpOpen] = useState(false);
   const [stepUpError, setStepUpError] = useState<string | null>(null);
+  const deepLinkDone = useRef(false);
+  const logLines = useRepairSessionStore((s) => s.lines);
+  const pushSession = useRepairSessionStore((s) => s.push);
 
   const healthScore = useMemo(
     () =>
@@ -168,13 +171,8 @@ export function RepairWorkspace() {
   }, [findings, severityFilter]);
 
   const pushLog = useCallback((line: string) => {
-    setLog((prev) =>
-      [`${new Date().toISOString().slice(11, 19)} ${line}`, ...prev].slice(
-        0,
-        40,
-      ),
-    );
-  }, []);
+    pushSession(line, "repair");
+  }, [pushSession]);
 
   const refreshDashboard = useCallback(async () => {
     const res = await fetchRepairDashboard();
@@ -193,12 +191,6 @@ export function RepairWorkspace() {
   useEffect(() => {
     void refreshDashboard();
     void refreshDiagnostics();
-    if (
-      typeof window !== "undefined" &&
-      window.location.hash === "#diagnostics"
-    ) {
-      setTab("diagnostics");
-    }
   }, [refreshDashboard, refreshDiagnostics]);
 
   function toggleDomain(id: RepairDomain) {
@@ -211,15 +203,23 @@ export function RepairWorkspace() {
     });
   }
 
-  async function onRunScan() {
+  async function onRunScan(override?: {
+    depth?: ScanDepth;
+    domains?: RepairDomain[];
+  }) {
+    const scanDepth = override?.depth ?? depth;
+    const scanDomains = override?.domains ?? domains;
     setBusy(true);
     setError(null);
     setRunning(true);
     setReached(new Set(["scan"]));
     setActiveId("scan");
-    pushLog(`Scan ${depth} domains=${domains.join("+")}`);
+    pushLog(`Scan ${scanDepth} domains=${scanDomains.join("+")}`);
     try {
-      const res = await runRepairScan({ depth, domains });
+      const res = await runRepairScan({
+        depth: scanDepth,
+        domains: scanDomains,
+      });
       if (!res.data) {
         setError(res.message ?? "Scan failed");
         pushLog(`Scan error: ${res.message}`);
@@ -258,6 +258,44 @@ export function RepairWorkspace() {
       setBusy(false);
     }
   }
+
+  /** Optional URL bootstrap (hash / query) — actions Thunder restent inline. */
+  useEffect(() => {
+    if (typeof window === "undefined" || deepLinkDone.current) return;
+    deepLinkDone.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    const intent = params.get("intent");
+    const tabParam = params.get("tab");
+    const depthParam = params.get("depth");
+    const domainsParam = params.get("domains");
+
+    if (depthParam && SCAN_DEPTHS.some((d) => d.id === depthParam)) {
+      setDepth(depthParam as ScanDepth);
+    }
+
+    if (domainsParam) {
+      const parsed = domainsParam
+        .split(",")
+        .map((s) => s.trim())
+        .filter((d): d is RepairDomain =>
+          REPAIR_DOMAINS.some((x) => x.id === d),
+        );
+      if (parsed.length > 0) setDomains(parsed);
+    }
+
+    const validTab = TABS.some((t) => t.id === tabParam);
+    if (validTab) {
+      setTab(tabParam as TabId);
+    } else if (
+      hash === "#diagnostics" ||
+      intent === "diagnostics" ||
+      intent === "critical"
+    ) {
+      setTab("diagnostics");
+    }
+  }, []);
 
   async function onPlan(findingId: string) {
     setBusy(true);
@@ -1044,13 +1082,34 @@ export function RepairWorkspace() {
         </section>
       ) : null}
 
-      <section className="rounded-[var(--a-radius-lg)] a-underlay bg-a-surface-1 p-3">
+      <section className="a-underlay bg-a-surface-1 p-3">
         <div className="mb-2 flex items-center gap-2 text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
           <Square className="h-3 w-3" strokeWidth={1.75} />
           Journal session
+          <span className="font-normal normal-case tracking-normal text-a-fg-subtle">
+            · Thunder + Repair
+          </span>
         </div>
         <ul className="a-mono max-h-32 space-y-0.5 overflow-auto text-[length:var(--a-text-xs)] text-a-fg-muted">
-          {log.length === 0 ? <li>—</li> : log.map((l) => <li key={l}>{l}</li>)}
+          {logLines.length === 0 ? (
+            <li>—</li>
+          ) : (
+            logLines.map((l) => (
+              <li key={l.id}>
+                <span className="text-a-fg-subtle">{l.at}</span>
+                {" · "}
+                <span
+                  className={
+                    l.source === "thunder" ? "text-a-accent" : undefined
+                  }
+                >
+                  {l.source === "thunder" ? "THU" : "REP"}
+                </span>
+                {" · "}
+                {l.text}
+              </li>
+            ))
+          )}
         </ul>
       </section>
 

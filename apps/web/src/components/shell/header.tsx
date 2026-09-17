@@ -97,16 +97,8 @@ export function ShellHeader() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [axBusy, setAxBusy] = useState(false);
   const [axHint, setAxHint] = useState<string | null>(null);
-  const [clock, setClock] = useState(() =>
-    new Date().toLocaleTimeString("fr-TN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }),
-  );
-  const [netOnline, setNetOnline] = useState(
-    typeof navigator !== "undefined" ? navigator.onLine : true,
-  );
+  const [clock, setClock] = useState("--:--");
+  const [netOnline, setNetOnline] = useState(true);
   const setMobileNavOpen = useShellStore((s) => s.setMobileNavOpen);
   const setPaletteOpen = useShellStore((s) => s.setPaletteOpen);
   const spectreEnabled = useShellStore((s) => s.spectreEnabled);
@@ -140,7 +132,7 @@ export function ShellHeader() {
   }, []);
 
   useEffect(() => {
-    const id = window.setInterval(() => {
+    const tick = () =>
       setClock(
         new Date().toLocaleTimeString("fr-TN", {
           hour: "2-digit",
@@ -148,11 +140,13 @@ export function ShellHeader() {
           hour12: false,
         }),
       );
-    }, 15_000);
+    tick();
+    const id = window.setInterval(tick, 15_000);
     return () => window.clearInterval(id);
   }, []);
 
   useEffect(() => {
+    setNetOnline(navigator.onLine);
     function onOnline() {
       setNetOnline(true);
     }

@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
   Res,
   Sse,
   UseGuards,
@@ -34,12 +35,13 @@ import { AdapterRegistryService } from './adapters/adapter.registry';
 import { MonitorSnapshotService } from './observability/monitor-snapshot.service';
 import { ThunderMetricsService } from './observability/thunder-metrics.service';
 import type { ThunderMonitorSnapshot } from './observability/monitor-snapshot.types';
+import { ThunderCcLayoutService } from './cc-layout/thunder-cc-layout.service';
 import { EnqueueHelloJobDto, EnqueueTestJobDto } from './thunder.dto';
 import { ThunderDevOnlyGuard } from './thunder-dev-only.guard';
 import { IntentPrepareDto } from './intent/intent.dto';
 import { IntentPrepareService } from './intent/intent-prepare.service';
 
-const MONITOR_SSE_MS = 2_000;
+const MONITOR_SSE_MS = 10_000;
 
 @Controller('api/v1/thunder')
 @UseGuards(SessionGuard, TenancyGuard, PermissionGuard)
@@ -55,12 +57,36 @@ export class ThunderController {
     private readonly adapters: AdapterRegistryService,
     private readonly entitlements: EntitlementEvaluatorService,
     private readonly intentPrepare: IntentPrepareService,
+    private readonly ccLayout: ThunderCcLayoutService,
   ) {}
 
   @Get('monitor/snapshot')
   @RequirePermission(PERMISSION_KEYS.systemMonitoringView)
   getMonitorSnapshot() {
     return this.monitorSnapshot.snapshot();
+  }
+
+  /** USER layout for Thunder Command Center (set_value USER scope). */
+  @Get('cc/layout')
+  @RequirePermission(PERMISSION_KEYS.systemMonitoringView)
+  async getCcLayout(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+  ) {
+    const layout = await this.ccLayout.get(tenancy.companyId, user.id);
+    return { layout };
+  }
+
+  @Put('cc/layout')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission(PERMISSION_KEYS.systemMonitoringView)
+  async putCcLayout(
+    @CurrentUser() user: IamUser,
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() body: unknown,
+  ) {
+    const layout = await this.ccLayout.put(tenancy.companyId, user.id, body);
+    return { layout };
   }
 
   /**

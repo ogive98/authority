@@ -771,6 +771,28 @@ export const UI_STRINGS_IT: Record<string, string> = {
   Notification: "Notifica",
   "Surface masquée": "Superficie nascosta",
   "Modes ops désactivés": "Modalità ops disattivate",
+
+  // Thunder Health → Repair context menu
+  "Ouvrir Réparation": "Apri Riparazione",
+  "Module Repair": "Modulo Repair",
+  "Scanner maintenant": "Scansiona ora",
+  "Scan Quick · Runtime + Kernel": "Scan Quick · Runtime + Kernel",
+  Diagnostics: "Diagnostica",
+  "Findings · incidents": "Findings · incidenti",
+  "Dépanner alertes critiques / dégradées":
+    "Ripara alert critici / degradati",
+  "Aucune alerte — scan L0/L1": "Nessun alert — scan L0/L1",
+  "Réparer sérieusement": "Ripara seriamente",
+  "Deep L2 · scénarios SAFE/LOW allowlistés":
+    "Deep L2 · scenari SAFE/LOW in allowlist",
+  Dépanner: "Ripara",
+  "Rafraîchir le snapshot": "Aggiorna lo snapshot",
+  "Actions Repair Thunder Health": "Azioni Repair Thunder Health",
+  "Thunder Health · Repair": "Thunder Health · Repair",
+  "Thunder Health": "Thunder Health",
+  "Voir module Repair": "Vedi modulo Repair",
+  "Journal + exécution live": "Journal + esecuzione live",
+  "En cours…": "In corso…",
 };
 export function routeLabel(
   part: string,

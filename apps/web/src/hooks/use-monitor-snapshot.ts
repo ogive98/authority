@@ -1,118 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { monitorPollMs } from "@/lib/dev-light";
 import type { ThunderMonitorSnapshot } from "@/lib/thunder/monitor-types";
 
 export type MonitorSnapshot = ThunderMonitorSnapshot;
 
 export const MONITOR_SNAPSHOT_QUERY_KEY = ["thunder-monitor"] as const;
-export const MONITOR_SSE_PATH = "/api/v1/thunder/monitor/stream";
 
-export async function fetchMonitorSnapshot(): Promise<ThunderMonitorSnapshot> {
-  const res = await fetch("/api/v1/thunder/monitor/snapshot", {
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
-  if (!res.ok) {
-    throw new Error(`monitor ${res.status}`);
+const FETCH_TIMEOUT_MS = 5_000;
+
+export async function fetchMonitorSnapshot(
+  signal?: AbortSignal,
+): Promise<ThunderMonitorSnapshot> {
+  const ctrl = new AbortController();
+  const onAbort = () => ctrl.abort();
+  signal?.addEventListener("abort", onAbort);
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch("/api/v1/thunder/monitor/snapshot", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`monitor ${res.status}`);
+    return (await res.json()) as ThunderMonitorSnapshot;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", onAbort);
   }
-  return res.json() as Promise<ThunderMonitorSnapshot>;
-}
-
-function useDocumentVisible(): boolean {
-  const [visible, setVisible] = useState(true);
-  useEffect(() => {
-    function sync() {
-      setVisible(document.visibilityState === "visible");
-    }
-    sync();
-    document.addEventListener("visibilitychange", sync);
-    return () => document.removeEventListener("visibilitychange", sync);
-  }, []);
-  return visible;
 }
 
 /**
- * Thunder monitor — poll + SSE (reuse API `/thunder/monitor/stream`).
- * SSE updates React Query cache; poll is fallback / light-mode cadence.
+ * Shell gauges / home — poll only, no SSE, slow cadence.
+ * Command Center uses `useThunderCcSnapshot` (isolated).
  */
-export function useMonitorSnapshot(opts?: { sse?: boolean }) {
-  const visible = useDocumentVisible();
-  const queryClient = useQueryClient();
-  const sseWanted = opts?.sse !== false;
-  const [sseLive, setSseLive] = useState(false);
-
-  useEffect(() => {
-    if (!sseWanted || !visible) {
-      setSseLive(false);
-      return;
-    }
-
-    let es: EventSource | null = null;
-    let intentionalClose = false;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
-
-    function connect() {
-      if (intentionalClose) return;
-      es = new EventSource(MONITOR_SSE_PATH, { withCredentials: true });
-
-      es.onopen = () => setSseLive(true);
-
-      es.onmessage = (ev) => {
-        try {
-          const parsed = JSON.parse(ev.data) as unknown;
-          const data =
-            parsed &&
-            typeof parsed === "object" &&
-            "schemaVersion" in parsed &&
-            (parsed as ThunderMonitorSnapshot).schemaVersion === 1
-              ? (parsed as ThunderMonitorSnapshot)
-              : parsed &&
-                  typeof parsed === "object" &&
-                  "data" in parsed &&
-                  typeof (parsed as { data: unknown }).data === "object"
-                ? ((parsed as { data: ThunderMonitorSnapshot }).data)
-                : null;
-          if (data?.schemaVersion === 1) {
-            queryClient.setQueryData(MONITOR_SNAPSHOT_QUERY_KEY, data);
-          }
-        } catch {
-          /* ignore malformed frames */
-        }
-      };
-
-      es.onerror = () => {
-        setSseLive(false);
-        es?.close();
-        es = null;
-        if (!intentionalClose) {
-          retryTimer = setTimeout(connect, 4000);
-        }
-      };
-    }
-
-    connect();
-
-    return () => {
-      intentionalClose = true;
-      if (retryTimer) clearTimeout(retryTimer);
-      es?.close();
-      setSseLive(false);
-    };
-  }, [sseWanted, visible, queryClient]);
-
+export function useMonitorSnapshot(_opts?: { sse?: boolean }) {
   return useQuery({
     queryKey: MONITOR_SNAPSHOT_QUERY_KEY,
-    queryFn: fetchMonitorSnapshot,
-    // When SSE is live, poll sparsely as safety net; otherwise normal cadence.
-    refetchInterval: visible
-      ? sseLive
-        ? Math.max(monitorPollMs() * 4, 30_000)
-        : monitorPollMs()
-      : false,
+    queryFn: ({ signal }) => fetchMonitorSnapshot(signal),
+    refetchInterval: () => {
+      if (typeof document !== "undefined" && document.hidden) return false;
+      const ms = monitorPollMs();
+      return ms === false ? false : Math.max(ms, 30_000);
+    },
     refetchIntervalInBackground: false,
     retry: false,
+    staleTime: 15_000,
   });
 }
