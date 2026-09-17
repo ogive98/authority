@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   colSpanClass,
@@ -11,6 +11,7 @@ import {
 import {
   ensureThunderWidgetsRegistered,
   THUNDER_COMMAND_CENTER,
+  THUNDER_WIDGET_DEFINITIONS,
 } from "@/lib/thunder/command-center-catalog";
 import {
   deriveThunderHealth,
@@ -56,6 +57,8 @@ function WidgetRenderer({
   const hideWidget = useThunderDashboardStore((s) => s.hideWidget);
   const updateWidget = useThunderDashboardStore((s) => s.updateWidget);
   const removeWidget = useThunderDashboardStore((s) => s.removeWidget);
+  const reorderWidgets = useThunderDashboardStore((s) => s.reorderWidgets);
+  const duplicateWidget = useThunderDashboardStore((s) => s.duplicateWidget);
 
   const snap = monitor.data;
   const loadState = monitorState(monitor, liveMode);
@@ -250,10 +253,31 @@ function WidgetRenderer({
         colSpanClass(instance.position.w),
         "min-h-0",
         editMode && "ring-1 ring-a-accent/30",
+        editMode && "cursor-grab active:cursor-grabbing",
       )}
+      draggable={editMode}
+      onDragStart={(e) => {
+        if (!editMode) return;
+        e.dataTransfer.setData("text/thunder-widget-id", instance.id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      onDragOver={(e) => {
+        if (!editMode) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+      }}
+      onDrop={(e) => {
+        if (!editMode) return;
+        e.preventDefault();
+        const fromId = e.dataTransfer.getData("text/thunder-widget-id");
+        if (fromId) reorderWidgets(fromId, instance.id);
+      }}
     >
       {editMode ? (
         <div className="mb-1 flex flex-wrap gap-1">
+          <span className="rounded bg-a-accent-muted px-1.5 py-0.5 text-[10px] font-medium text-a-accent">
+            Drag
+          </span>
           <button
             type="button"
             className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
@@ -281,6 +305,13 @@ function WidgetRenderer({
             }
           >
             −w
+          </button>
+          <button
+            type="button"
+            className="rounded bg-a-surface-3 px-1.5 py-0.5 text-[10px] text-a-fg-muted"
+            onClick={() => duplicateWidget(instance.id)}
+          >
+            Dup
           </button>
           <button
             type="button"
@@ -314,6 +345,9 @@ export function ThunderCommandCenter() {
   const resetLayout = useThunderDashboardStore((s) => s.resetLayout);
   const compact = useThunderDashboardStore((s) => s.compact);
   const setCompact = useThunderDashboardStore((s) => s.setCompact);
+  const addWidget = useThunderDashboardStore((s) => s.addWidget);
+  const showWidget = useThunderDashboardStore((s) => s.showWidget);
+  const [addOpen, setAddOpen] = useState(false);
 
   useEffect(() => {
     ensureThunderWidgetsRegistered();
@@ -321,6 +355,18 @@ export function ThunderCommandCenter() {
 
   const canView =
     grants == null || grants.has("system_monitoring.view");
+
+  const hidden = useMemo(
+    () => widgets.filter((w) => !w.visibility),
+    [widgets],
+  );
+
+  const addableDefs = useMemo(() => {
+    return THUNDER_WIDGET_DEFINITIONS.filter((d) => {
+      if (grants == null) return true;
+      return d.permissions.every((p) => grants.has(p));
+    });
+  }, [grants]);
 
   const visible = useMemo(() => {
     return [...widgets]
@@ -387,6 +433,16 @@ export function ThunderCommandCenter() {
             >
               Layout
             </AButton>
+            {editMode ? (
+              <AButton
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => setAddOpen((v) => !v)}
+              >
+                + Widget
+              </AButton>
+            ) : null}
             <AButton
               type="button"
               size="sm"
@@ -418,6 +474,58 @@ export function ThunderCommandCenter() {
           </div>
         }
       />
+
+      {editMode && addOpen ? (
+        <div className="a-card mt-3 p-3">
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-a-fg-subtle">
+            Ajouter un widget
+          </p>
+          <ul className="a-ios-scroll grid max-h-48 grid-cols-1 gap-1 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
+            {addableDefs.map((d) => (
+              <li key={d.id}>
+                <button
+                  type="button"
+                  className="flex w-full flex-col rounded-[var(--a-radius-sm)] px-2.5 py-2 text-left hover:bg-a-surface-3"
+                  onClick={() => {
+                    addWidget(d.id);
+                    setAddOpen(false);
+                  }}
+                >
+                  <span className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                    {d.name}
+                  </span>
+                  <span className="text-[10px] text-a-fg-subtle">
+                    {d.description}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {hidden.length > 0 ? (
+            <div className="mt-3 border-t border-[color:var(--a-border-subtle)] pt-2">
+              <p className="mb-1 text-[11px] font-medium text-a-fg-muted">
+                Masqués
+              </p>
+              <ul className="flex flex-wrap gap-1">
+                {hidden.map((w) => {
+                  const def = globalWidgetRegistry.find(w.widgetDefinitionId);
+                  return (
+                    <li key={w.id}>
+                      <button
+                        type="button"
+                        className="rounded-full bg-a-surface-3 px-2 py-0.5 text-[10px] text-a-fg hover:bg-a-accent-muted"
+                        onClick={() => showWidget(w.id)}
+                      >
+                        {def?.name ?? w.widgetDefinitionId}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div
         className={cn(

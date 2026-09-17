@@ -192,6 +192,25 @@ export function IncidentsWidget({
           </div>
         ))}
       </div>
+      <div className="mt-3 space-y-1 border-t border-[color:var(--a-border-subtle)] pt-2">
+        <MetricRow label="Job DLQ" value={String(snap?.jobs.dlq ?? 0)} />
+        <MetricRow
+          label="Outbox DLQ"
+          value={String(snap?.events.outboxDlq ?? 0)}
+        />
+        {(snap?.breakers.filter((b) => b.state !== "CLOSED") ?? []).map((b) => (
+          <p
+            key={b.dependencyKey}
+            className="a-mono text-[10px] text-a-warning-fg"
+            title={b.openedAt ?? undefined}
+          >
+            {b.dependencyKey} · {b.state} · fail {b.failures}
+          </p>
+        ))}
+        {openBreakers === 0 ? (
+          <p className="text-[10px] text-a-fg-subtle">Tous les breakers CLOSED</p>
+        ) : null}
+      </div>
     </WidgetShell>
   );
 }

@@ -174,14 +174,14 @@ export const HELP_MODULES: HelpModule[] = [
           fr: [
             "Ouvrez `/thunder` (Réparation → Thunder Core) ou le dialog Thunder → Command Center.",
             "Chaque widget lit le snapshot monitor (SSE/poll) — pas de KPI inventés.",
-            "Layout : bouton Layout pour redimensionner / masquer ; Reset pour le défaut.",
+            "Layout : bouton Layout — drag & drop, +w/−w, Dup, Hide, Remove ; + Widget pour ajouter.",
             "Seuils d’alertes : Préférences → Poste → Thunder Core — alertes.",
             "Permission : `system_monitoring.view` (adapters/signaux : `thunder.intel.read`).",
           ],
           it: [
             "Apri `/thunder` (Riparazione → Thunder Core) o il dialog Thunder → Command Center.",
             "Ogni widget legge lo snapshot monitor (SSE/poll) — nessun KPI inventato.",
-            "Layout: pulsante Layout per ridimensionare / nascondere ; Reset per il default.",
+            "Layout: pulsante Layout — drag & drop, +w/−w, Dup, Hide, Remove ; + Widget per aggiungere.",
             "Soglie alert: Preferenze → Postazione → Thunder Core — alert.",
             "Permesso: `system_monitoring.view` (adapter/segnali: `thunder.intel.read`).",
           ],
