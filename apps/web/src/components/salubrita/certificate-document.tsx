@@ -23,13 +23,13 @@ export function SalubritaCertificateDocument({
     >
       <header className="grid grid-cols-2 gap-4 border-b border-black/20 pb-3">
         <div className="space-y-0.5 text-[11px]">
-          <p className="font-semibold">Dr. Mohamed METHNANI</p>
+          <p className="font-medium">Dr. Mohamed METHNANI</p>
           <p>Medicine Vétérinaire</p>
           <p>65, Rue Mimosas 2080 Ariana</p>
           <p>Tel: +216-20342809</p>
         </div>
         <div className="space-y-0.5 text-right text-[11px]">
-          <p className="font-semibold">Dr. Mohamed METHNANI</p>
+          <p className="font-medium">Dr. Mohamed METHNANI</p>
           <p>Medicine Vétérinaire</p>
           <p>65, Rue Mimosas 2080 Ariana</p>
           <p>Tel: +216-20342809</p>
@@ -41,7 +41,7 @@ export function SalubritaCertificateDocument({
         <h1 className="text-[15px] font-bold uppercase tracking-wide">
           Certificat de salubrité produit de
         </h1>
-        <p className="text-[13px] font-semibold">
+        <p className="text-[13px] font-medium">
           FATTORIE COVELLI GROUP-MF 1327082/N
         </p>
         <p className="text-[11px]">
@@ -57,12 +57,12 @@ export function SalubritaCertificateDocument({
       <table className="w-full border-collapse text-left text-[10px]">
         <thead>
           <tr className="border-b border-black">
-            <th className="py-1.5 pr-2 font-semibold">COD Prod.</th>
-            <th className="py-1.5 pr-2 font-semibold">DESIGNATION</th>
-            <th className="py-1.5 pr-2 font-semibold">Date Production</th>
-            <th className="py-1.5 pr-2 font-semibold">Date emballage</th>
-            <th className="py-1.5 pr-2 font-semibold">DLC</th>
-            <th className="py-1.5 font-semibold">Jour après emballage</th>
+            <th className="py-1.5 pr-2 font-medium">COD Prod.</th>
+            <th className="py-1.5 pr-2 font-medium">DESIGNATION</th>
+            <th className="py-1.5 pr-2 font-medium">Date Production</th>
+            <th className="py-1.5 pr-2 font-medium">Date emballage</th>
+            <th className="py-1.5 pr-2 font-medium">DLC</th>
+            <th className="py-1.5 font-medium">Jour après emballage</th>
           </tr>
         </thead>
         <tbody>
@@ -73,16 +73,16 @@ export function SalubritaCertificateDocument({
             >
               <td className="a-mono py-1 pr-2 align-top">{row.productSku}</td>
               <td className="py-1 pr-2 align-top">{row.productName}</td>
-              <td className="a-mono py-1 pr-2 align-top tabular-nums">
+              <td className="a-mono py-1 pr-2 align-top a-tabular">
                 {fmtFr(row.productionDate)}
               </td>
-              <td className="a-mono py-1 pr-2 align-top tabular-nums">
+              <td className="a-mono py-1 pr-2 align-top a-tabular">
                 {fmtFr(row.packDate)}
               </td>
-              <td className="a-mono py-1 pr-2 align-top tabular-nums">
+              <td className="a-mono py-1 pr-2 align-top a-tabular">
                 {fmtFr(row.dlc)}
               </td>
-              <td className="a-mono py-1 align-top tabular-nums">
+              <td className="a-mono py-1 align-top a-tabular">
                 {row.daysAfterPack}
               </td>
             </tr>

@@ -46,7 +46,7 @@ export function RepairFlowDiagram({ danger }: Props) {
           <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
             Flux live
           </p>
-          <h2 className="text-[length:var(--a-text-lg)] font-semibold tracking-tight">
+          <h2 className="text-[length:var(--a-text-lg)] font-medium tracking-tight">
             Orchestration Thunder
           </h2>
         </div>

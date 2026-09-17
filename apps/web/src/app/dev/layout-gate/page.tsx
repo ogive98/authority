@@ -84,7 +84,7 @@ export default function DevLayoutPage() {
               <ASoftTr>
                 <td className="px-3 py-2">SO-1001</td>
                 <td className="px-3 py-2">ATLAS</td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums">
+                <td className="px-3 py-2 text-right a-mono a-tabular">
                   1&nbsp;250,000
                 </td>
                 <td className="px-3 py-2">

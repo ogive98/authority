@@ -216,7 +216,7 @@ export function RepairMissionRail({
             <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
               Guide
             </p>
-            <h3 className="mt-0.5 text-[length:var(--a-text-lg)] font-semibold tracking-tight">
+            <h3 className="mt-0.5 text-[length:var(--a-text-lg)] font-medium tracking-tight">
               {focus.label}
             </h3>
             <p className="mt-1 a-mono text-[length:var(--a-text-xs)] text-a-accent-hover">

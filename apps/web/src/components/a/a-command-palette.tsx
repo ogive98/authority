@@ -241,7 +241,7 @@ export function ACommandPalette({
                 ) : (
                   groups.map((g) => (
                     <div key={g.group} className="mb-2">
-                      <p className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-a-fg-subtle">
+                      <p className="px-3 pb-1 pt-1.5 text-[10px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
                         {g.label}
                       </p>
                       <ul>

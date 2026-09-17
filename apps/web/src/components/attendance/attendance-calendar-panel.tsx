@@ -205,7 +205,7 @@ export function AttendanceCalendarPanel({
               return (
                 <div
                   key={day}
-                  className={`flex min-h-10 flex-col items-center justify-center rounded-[10px] text-[length:var(--a-text-xs)] tabular-nums ${dayClass(kind)}`}
+                  className={`flex min-h-10 flex-col items-center justify-center rounded-[10px] text-[length:var(--a-text-xs)] a-tabular ${dayClass(kind)}`}
                   title={kind ? calendarKindLabel(kind) : undefined}
                 >
                   <span className="font-medium">{day}</span>
@@ -247,7 +247,7 @@ export function AttendanceCalendarPanel({
                           {row.type ? ` · ${row.type}` : ""}
                         </ABadge>
                       </td>
-                      <td className="a-mono a-table-cell tabular-nums">
+                      <td className="a-mono a-tabular a-table-cell">
                         {row.startDate} → {row.endDate}
                       </td>
                       <td className="a-table-cell text-a-fg-muted">
@@ -264,7 +264,7 @@ export function AttendanceCalendarPanel({
 
       {mode === "adv" ? (
         <div className="space-y-3 border-t border-transparent pt-2">
-          <h3 className="text-[length:var(--a-text-sm)] font-semibold text-a-fg">
+          <h3 className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
             Ajouter une pénalité (ADV)
           </h3>
           {formError ? (

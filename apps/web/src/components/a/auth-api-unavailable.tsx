@@ -16,7 +16,7 @@ export function AuthApiUnavailable({
         className="a-underlay w-full max-w-md space-y-4 rounded-[var(--a-radius-md)] p-[var(--a-space-6)]"
         role="alert"
       >
-        <h1 className="text-[length:var(--a-text-lg)] font-semibold">{title}</h1>
+        <h1 className="text-[length:var(--a-text-lg)] font-medium">{title}</h1>
         <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">{message}</p>
         <AButton type="button" onClick={() => window.location.reload()}>
           Réessayer

@@ -38,7 +38,7 @@ export default function DevPrimitivesPage() {
       mainClassName="mx-auto max-w-3xl space-y-[var(--a-space-7)] px-[var(--a-space-6)] py-[var(--a-space-7)]"
     >
       <section className="a-underlay space-y-4 rounded-[var(--a-radius-md)] p-[var(--a-space-5)]">
-        <h2 className="text-[length:var(--a-text-lg)] font-semibold">AButton</h2>
+        <h2 className="text-[length:var(--a-text-lg)] font-medium">AButton</h2>
         <div className="flex flex-wrap gap-3">
           <AButton>Primary</AButton>
           <AButton variant="secondary">Secondary</AButton>
@@ -51,7 +51,7 @@ export default function DevPrimitivesPage() {
       </section>
 
       <section className="a-underlay space-y-4 rounded-[var(--a-radius-md)] p-[var(--a-space-5)]">
-        <h2 className="text-[length:var(--a-text-lg)] font-semibold">AInput</h2>
+        <h2 className="text-[length:var(--a-text-lg)] font-medium">AInput</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <AInput placeholder="Référence commande" />
           <AInput placeholder="Désactivé" disabled />
@@ -59,7 +59,7 @@ export default function DevPrimitivesPage() {
       </section>
 
       <section className="a-underlay space-y-4 rounded-[var(--a-radius-md)] p-[var(--a-space-5)]">
-        <h2 className="text-[length:var(--a-text-lg)] font-semibold">
+        <h2 className="text-[length:var(--a-text-lg)] font-medium">
           ADecimalField
         </h2>
         <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -86,7 +86,7 @@ export default function DevPrimitivesPage() {
       </section>
 
       <section className="a-underlay space-y-4 rounded-[var(--a-radius-md)] p-[var(--a-space-5)]">
-        <h2 className="text-[length:var(--a-text-lg)] font-semibold">ABadge</h2>
+        <h2 className="text-[length:var(--a-text-lg)] font-medium">ABadge</h2>
         <div className="flex flex-wrap gap-2">
           <ABadge>Neutral</ABadge>
           <ABadge tone="accent">Accent</ABadge>
@@ -99,7 +99,7 @@ export default function DevPrimitivesPage() {
       </section>
 
       <section className="a-underlay space-y-4 rounded-[var(--a-radius-md)] p-[var(--a-space-5)]">
-        <h2 className="text-[length:var(--a-text-lg)] font-semibold">
+        <h2 className="text-[length:var(--a-text-lg)] font-medium">
           ATabs · ADialog · APagination
         </h2>
         <ATabs
@@ -143,7 +143,7 @@ export default function DevPrimitivesPage() {
       </section>
 
       <section className="a-underlay space-y-4 rounded-[var(--a-radius-md)] p-[var(--a-space-5)]">
-        <h2 className="text-[length:var(--a-text-lg)] font-semibold">
+        <h2 className="text-[length:var(--a-text-lg)] font-medium">
           ASoftTable
         </h2>
         <ASoftTable>

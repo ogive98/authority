@@ -33,7 +33,7 @@ export function AWorkflowStepper({ steps, className }: AWorkflowStepperProps) {
           <span
             className={cn(
               "rounded-md px-2 py-1",
-              step.current && "bg-a-accent/15 font-semibold text-a-accent",
+              step.current && "bg-a-accent/15 font-medium text-a-accent",
               step.done && !step.current && "text-a-fg-muted",
               !step.done && !step.current && "text-a-fg-subtle",
             )}

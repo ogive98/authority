@@ -76,7 +76,7 @@ function KpiCard({
         </span>
       </div>
       <p className="mt-4 text-[length:var(--a-text-sm)] text-a-fg-muted">{label}</p>
-      <p className="a-mono a-tabular mt-1 text-[length:var(--a-text-2xl)] font-semibold tracking-tight">
+      <p className="a-mono a-tabular mt-1 text-[length:var(--a-text-2xl)] font-medium tracking-tight">
         {value}
       </p>
     </article>
@@ -93,7 +93,7 @@ export default function DevTokensPage() {
       >
         <div className="flex items-center gap-3 px-[var(--a-space-5)] py-[var(--a-space-5)]">
           <div
-            className="flex h-8 w-8 items-center justify-center border text-[length:var(--a-text-sm)] font-semibold"
+            className="flex h-8 w-8 items-center justify-center border text-[length:var(--a-text-sm)] font-medium"
             style={{
               borderColor: "var(--a-border-strong)",
               background: "var(--a-surface-2)",
@@ -104,7 +104,7 @@ export default function DevTokensPage() {
             A
           </div>
           <div>
-            <p className="text-[length:var(--a-text-md)] font-semibold tracking-tight">
+            <p className="text-[length:var(--a-text-md)] font-medium tracking-tight">
               AUTHORITY
             </p>
             <p className="a-mono text-[length:var(--a-text-xs)] text-a-fg-subtle">
@@ -218,7 +218,7 @@ export default function DevTokensPage() {
             {/* Surfaces ladder */}
             <section className="a-card space-y-4 p-[var(--a-space-5)] lg:col-span-3">
               <div>
-                <h2 className="text-[length:var(--a-text-lg)] font-semibold">
+                <h2 className="text-[length:var(--a-text-lg)] font-medium">
                   Surfaces
                 </h2>
                 <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -249,7 +249,7 @@ export default function DevTokensPage() {
             {/* Accent + SPECTRE */}
             <section className="a-card space-y-4 p-[var(--a-space-5)] lg:col-span-2">
               <div>
-                <h2 className="text-[length:var(--a-text-lg)] font-semibold">
+                <h2 className="text-[length:var(--a-text-lg)] font-medium">
                   Accent & SPECTRE
                 </h2>
                 <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -298,7 +298,7 @@ export default function DevTokensPage() {
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="a-card space-y-4 p-[var(--a-space-5)]">
               <div>
-                <h2 className="text-[length:var(--a-text-lg)] font-semibold">
+                <h2 className="text-[length:var(--a-text-lg)] font-medium">
                   Sémantique
                 </h2>
                 <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -328,7 +328,7 @@ export default function DevTokensPage() {
 
             <section className="a-card space-y-4 p-[var(--a-space-5)]">
               <div>
-                <h2 className="text-[length:var(--a-text-lg)] font-semibold">
+                <h2 className="text-[length:var(--a-text-lg)] font-medium">
                   Typographie
                 </h2>
                 <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -366,7 +366,7 @@ export default function DevTokensPage() {
           {/* Spacing + radius */}
           <section className="a-card space-y-5 p-[var(--a-space-5)]">
             <div>
-              <h2 className="text-[length:var(--a-text-lg)] font-semibold">
+              <h2 className="text-[length:var(--a-text-lg)] font-medium">
                 Spacing & radius
               </h2>
               <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">

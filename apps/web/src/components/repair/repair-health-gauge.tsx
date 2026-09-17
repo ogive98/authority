@@ -83,7 +83,7 @@ export function RepairHealthGauge({
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
             className={cn(
-              "a-mono text-[length:var(--a-text-3xl)] font-semibold tabular-nums",
+              "a-mono text-[length:var(--a-text-3xl)] font-medium a-tabular",
               tone,
             )}
           >
@@ -103,7 +103,7 @@ export function RepairHealthGauge({
         <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
           Thunder Shield
         </p>
-        <p className="text-[length:var(--a-text-xl)] font-semibold tracking-tight text-a-fg">
+        <p className="text-[length:var(--a-text-xl)] font-medium tracking-tight text-a-fg">
           {label}
         </p>
         {sublabel ? (

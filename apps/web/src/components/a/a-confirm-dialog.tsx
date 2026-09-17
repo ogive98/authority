@@ -89,7 +89,7 @@ export function AConfirmDialog({
             "a-glass-strong rounded-[var(--a-radius-lg)] p-5 focus:outline-none shadow-[var(--a-shadow-panel)]",
           )}
         >
-          <Dialog.Title className="text-[length:var(--a-text-lg)] font-semibold">
+          <Dialog.Title className="text-[length:var(--a-text-lg)] font-medium">
             {resolvedTitle}
           </Dialog.Title>
           <Dialog.Description className="mt-2 text-[length:var(--a-text-sm)] text-a-fg-muted">

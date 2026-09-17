@@ -27,7 +27,7 @@ export function AContextPanel({
       )}
     >
       {title ? (
-        <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.04em] text-a-fg-muted">
+        <h2 className="mb-3 text-[13px] font-medium uppercase tracking-[0.04em] text-a-fg-muted">
           {title}
         </h2>
       ) : null}

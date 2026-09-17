@@ -22,7 +22,7 @@ export function ADemoWatermark({
       aria-hidden
     >
       <span
-        className="a-mono select-none text-[clamp(4rem,18vw,12rem)] font-semibold tracking-[0.2em] text-a-fg opacity-[0.06]"
+        className="a-mono select-none text-[clamp(4rem,18vw,12rem)] font-medium tracking-[0.2em] text-a-fg opacity-[0.06]"
         style={{ transform: "rotate(-18deg)" }}
       >
         {label}

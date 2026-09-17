@@ -117,7 +117,7 @@ export default function DevFieldAclPage() {
             <dt className="text-[length:var(--a-text-sm)] text-a-fg-muted">
               Salaire
             </dt>
-            <dd className="mt-1 text-[length:var(--a-text-lg)] font-semibold">
+            <dd className="mt-1 text-[length:var(--a-text-lg)] font-medium">
               <ASensitiveValue
                 label="Salaire"
                 value={WAGE_DEMO}
@@ -129,7 +129,7 @@ export default function DevFieldAclPage() {
             <dt className="text-[length:var(--a-text-sm)] text-a-fg-muted">
               Montant commande
             </dt>
-            <dd className="a-mono a-tabular mt-1 text-[length:var(--a-text-lg)] font-semibold">
+            <dd className="a-mono a-tabular mt-1 text-[length:var(--a-text-lg)] font-medium">
               {CA_DEMO}
             </dd>
           </div>

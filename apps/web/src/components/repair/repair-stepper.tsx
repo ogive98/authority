@@ -104,7 +104,7 @@ export function RepairStepper({
             <p className="text-[length:var(--a-text-sm)] font-medium">
               Progression
             </p>
-            <span className="a-mono text-[length:var(--a-text-sm)] tabular-nums text-a-fg-muted">
+            <span className="a-mono text-[length:var(--a-text-sm)] a-tabular text-a-fg-muted">
               {Math.round(progress)}%
             </span>
           </div>
@@ -159,7 +159,7 @@ export function RepairStepper({
                 className="transition-[stroke-dashoffset] duration-500"
               />
             </svg>
-            <span className="a-mono text-[length:var(--a-text-xl)] font-semibold tabular-nums">
+            <span className="a-mono text-[length:var(--a-text-xl)] font-medium a-tabular">
               {Math.round(progress)}
             </span>
           </div>

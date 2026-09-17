@@ -411,7 +411,7 @@ export function RepairControlWorkspace() {
               <k.icon className="h-3.5 w-3.5" strokeWidth={1.75} />
               {k.label}
             </div>
-            <p className="a-mono mt-1 text-[length:var(--a-text-lg)] font-medium tabular-nums">
+            <p className="a-mono mt-1 text-[length:var(--a-text-lg)] font-medium a-tabular">
               {k.value}
             </p>
           </div>

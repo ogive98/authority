@@ -320,7 +320,7 @@ export function PrefsModesOpsPanel({
               .filter((m) => m.key !== "home" && m.key !== "settings")
               .map((m) => (
                 <div key={m.key}>
-                  <p className="text-[length:var(--a-text-xs)] font-semibold uppercase tracking-wider text-a-orange">
+                  <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-orange">
                     {m.name}
                   </p>
                   <div className="mt-1">
