@@ -91,7 +91,7 @@ function WifiIndicator({ online }: { online: boolean }) {
 
   return (
     <span
-      className="inline-flex items-center justify-center text-[var(--a-success)] drop-shadow-[0_0_6px_var(--a-success)]"
+      className="inline-flex items-center justify-center text-[var(--a-success)]"
       title={t("wifiOnline")}
     >
       <Wifi className="h-4 w-4" strokeWidth={SIDEBAR_STROKE} />
@@ -159,7 +159,7 @@ function ThunderCoreDialog({
 
           <div className="mt-5 space-y-5">
             <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-a-fg-subtle">
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
                 {t("surface")}
               </p>
               <div className="grid grid-cols-4 gap-1.5 rounded-[var(--a-radius-md)] bg-a-surface-3/70 p-1.5">
@@ -169,7 +169,7 @@ function ThunderCoreDialog({
                     type="button"
                     onClick={() => setSurfaceMode(s.id)}
                     className={cn(
-                      "a-action-quiet rounded-[var(--a-radius-sm)] px-1 py-2.5 text-[11px] font-semibold",
+                      "a-action-quiet rounded-[var(--a-radius-sm)] px-1 py-2.5 text-[11px] font-medium",
                       surfaceMode === s.id && "is-active text-a-fg",
                     )}
                   >
@@ -179,7 +179,7 @@ function ThunderCoreDialog({
               </div>
             </div>
             <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-a-fg-subtle">
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
                 {t("density")}
               </p>
               <div className="grid grid-cols-3 gap-1.5 rounded-[var(--a-radius-md)] bg-a-surface-3/70 p-1.5">
@@ -189,7 +189,7 @@ function ThunderCoreDialog({
                     type="button"
                     onClick={() => setDensity(d.id)}
                     className={cn(
-                      "a-action-quiet rounded-[var(--a-radius-sm)] px-1 py-2.5 text-[11px] font-semibold",
+                      "a-action-quiet rounded-[var(--a-radius-sm)] px-1 py-2.5 text-[11px] font-medium",
                       density === d.id && "is-active text-a-fg",
                     )}
                   >
@@ -208,7 +208,7 @@ function ThunderCoreDialog({
             </Link>
           </div>
 
-          <Dialog.Close className="a-action-primary mt-5 w-full px-3 py-3 text-[15px] font-semibold">
+          <Dialog.Close className="a-action-primary mt-5 w-full px-3 py-3 text-[15px] font-medium">
             {t("close")}
           </Dialog.Close>
         </Dialog.Content>
@@ -394,7 +394,7 @@ export function SmartActionDock() {
       </div>
 
       {!dockCollapsed ? (
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-a-accent">
+        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-a-accent">
           {t("smartActions")}
         </p>
       ) : null}
@@ -423,7 +423,7 @@ export function SmartActionDock() {
 
       <div>
         {!dockCollapsed ? (
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-a-fg-subtle">
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-a-fg-subtle">
             {t("system")}
           </p>
         ) : null}
@@ -544,7 +544,7 @@ function MobileDockBody({ onClose }: { onClose: () => void }) {
   return (
     <div className="flex max-h-[75dvh] flex-col gap-2 overflow-y-auto p-4 pb-8">
       <div className="mx-auto mb-1 h-1 w-10 rounded-sm bg-a-surface-4" />
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-a-fg-subtle">
+      <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-a-fg-subtle">
         {t("smartActions")}
       </p>
       {tiles.map((a) =>

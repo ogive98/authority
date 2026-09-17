@@ -912,7 +912,7 @@
     background-clip: padding-box;
   }
 
-  /* Floating toolbox — quarter-circle frost + orange icons */
+  /* Floating toolbox — quarter-arc opaque fan + accent handle (D294) */
   .a-toolbox {
     position: fixed;
     right: 0.65rem;
@@ -1000,11 +1000,9 @@
     justify-content: center;
     opacity: 0;
     transform: translate3d(0, 0, 0) scale(0.35);
-    filter: blur(5px);
     transition:
-      opacity 320ms cubic-bezier(0.32, 0.72, 0, 1),
-      transform 480ms cubic-bezier(0.32, 0.72, 0, 1),
-      filter 280ms ease;
+      opacity var(--a-dur-med) var(--a-ease-out),
+      transform var(--a-dur-slow) var(--a-ease-out);
     transition-delay: 0ms;
     pointer-events: none;
   }
@@ -1012,7 +1010,6 @@
   .a-toolbox-open .a-toolbox-item {
     opacity: 1;
     transform: translate3d(var(--a-toolbox-x), var(--a-toolbox-y), 0) scale(1);
-    filter: blur(0);
     pointer-events: auto;
     z-index: 1;
     transition-delay: calc(var(--a-toolbox-i, 0) * 36ms);
@@ -1323,7 +1320,7 @@
 
   .a-toolbox-notes::placeholder { color: var(--a-fg-subtle); }
 
-  /* Always thin orange bar — no square / lightning FAB */
+  /* Thin accent handle — one accent, no decorative infinite glow (D294) */
   .a-toolbox-fab,
   .a-toolbox-fab-bar-only {
     position: absolute;
@@ -1342,16 +1339,14 @@
     cursor: pointer;
     pointer-events: auto;
     color: transparent;
-    background: linear-gradient(180deg, #fb923c 0%, #f97316 42%, #ea580c 100%);
-    box-shadow:
-      0 8px 22px color-mix(in srgb, #f97316 55%, transparent),
-      0 0 28px color-mix(in srgb, #fb923c 35%, transparent);
+    background: var(--a-accent);
+    box-shadow: var(--a-shadow-card);
     transition:
-      width 320ms cubic-bezier(0.32, 0.72, 0, 1),
-      height 320ms cubic-bezier(0.32, 0.72, 0, 1),
-      transform 280ms cubic-bezier(0.32, 0.72, 0, 1),
-      box-shadow 420ms ease;
-    animation: a-toolbox-bar-breathe 3.2s ease-in-out infinite;
+      width var(--a-dur-med) var(--a-ease-out),
+      height var(--a-dur-med) var(--a-ease-out),
+      transform var(--a-dur-med) var(--a-ease-out),
+      box-shadow var(--a-dur-med) ease;
+    animation: none;
   }
 
   .a-toolbox-fab-bar {
@@ -1367,29 +1362,13 @@
     width: 0.55rem;
     height: 3.6rem;
     border-radius: 999px;
-    transform: translateY(-2px) scale(1.04);
+    transform: translateY(-2px);
     animation: none;
-    box-shadow:
-      0 12px 28px color-mix(in srgb, #f97316 65%, transparent),
-      0 0 36px color-mix(in srgb, #fb923c 45%, transparent);
+    box-shadow: var(--a-shadow-panel);
   }
 
   .a-toolbox-fab:active {
     transform: scale(0.96);
-  }
-
-  @keyframes a-toolbox-bar-breathe {
-    0%,
-    100% {
-      box-shadow:
-        0 8px 22px color-mix(in srgb, #f97316 55%, transparent),
-        0 0 28px color-mix(in srgb, #fb923c 35%, transparent);
-    }
-    50% {
-      box-shadow:
-        0 12px 30px color-mix(in srgb, #f97316 70%, transparent),
-        0 0 40px color-mix(in srgb, #fb923c 50%, transparent);
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {

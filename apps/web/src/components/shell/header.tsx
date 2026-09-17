@@ -294,7 +294,7 @@ export function ShellHeader() {
             axBusy && "opacity-60",
           )}
         >
-          <span className="relative z-[1] drop-shadow-[0_0_10px_color-mix(in_srgb,var(--a-accent)_55%,transparent)]">
+          <span className="relative z-[1]">
             X
           </span>
         </button>
@@ -314,7 +314,7 @@ export function ShellHeader() {
         >
           <Bell className="h-4 w-4" strokeWidth={1.5} />
           {unread > 0 ? (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-a-danger px-1 text-[9px] font-semibold text-white">
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-a-danger px-1 text-[9px] font-medium text-white">
               {unread > 9 ? "9+" : unread}
             </span>
           ) : null}
@@ -343,7 +343,7 @@ export function ShellHeader() {
           label={t("ghostEnter")}
           lockedHint={t("modeLockedHint")}
           icon={Ghost}
-          toneClass="hover:text-a-accent-2"
+          toneClass="hover:text-a-accent"
           onEnter={enterGhost}
         />
 

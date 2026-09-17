@@ -82,7 +82,7 @@ function arcOffset(index: number, total: number, radiusPx: number) {
 }
 
 /**
- * Floating toolbox — frost fan, orange icons, idle → expandable bar.
+ * Floating toolbox — opaque fan, accent icons, idle → expandable bar (D294).
  */
 export function FloatingToolbox() {
   const listId = useId();
