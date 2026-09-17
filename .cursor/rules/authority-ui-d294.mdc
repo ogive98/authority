@@ -1,0 +1,13 @@
+---
+alwaysApply: true
+description: AUTHORITY D294 visual constitution
+globs:
+- apps/web/\*\*/\*.{ts,tsx,css}
+---
+
+Read `AUTHORITY_GRAPHIC_MASTER_PACK/00_START_HERE.md`, `10_TOKENS.md`,
+`12_COMPONENT_SYSTEM.md`, and `40_CURSOR_MASTER.md`.
+
+D294 is LOCKED. Reuse tokens and A\* components. One accent. No
+gradients/blur/decorative infinite motion. One primary. Use the icon
+registry. Never hardcode modules.

@@ -8,8 +8,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   AOverflowMenu,
@@ -21,6 +23,7 @@ import {
   ASoftTh,
   ASoftThead,
   ASoftTr,
+  ATabs,
   erpListDescription,
   type AComboboxOption,
 } from "@/components/a";
@@ -42,7 +45,6 @@ import {
   type ShipmentStatus,
 } from "@/lib/delivery";
 import { fetchAssignments } from "@/lib/fleet";
-import { ATabs } from "@/components/a/a-tabs";
 import { useStatusLabel } from "@/hooks/use-status-label";
 import { shouldHideDeliveryRoute } from "@/lib/ops-visibility";
 import { usePrefsStore } from "@/stores/prefs-store";
@@ -675,83 +677,80 @@ export default function DeliveryPage() {
         description="Commande confirmée · tournée optionnelle."
       >
         {form ? (
-          <div className="space-y-[var(--a-space-4)]">
+          <div className="space-y-5">
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-warning">
                 {formError}
               </p>
             ) : null}
 
-            <ACombobox
-              label="Commande confirmée"
-              valueId={form.orderId}
-              displayValue={form.orderLabel}
-              onDisplayChange={(text) => {
-                setForm({
-                  ...form,
-                  orderLabel: text,
-                  orderId: null,
-                });
-                scheduleOrderSearch(text);
-              }}
-              onSelect={(opt) => {
-                const match = eligibleCache.find((o) => o.id === opt.id);
-                setForm({
-                  ...form,
-                  orderId: opt.id,
-                  orderLabel: opt.label,
-                  driverLabel:
-                    form.driverLabel.trim() ||
-                    match?.preferredDriver ||
-                    "",
-                });
-              }}
-              onOpen={() => void refreshOrders(form.orderLabel.trim())}
-              options={orderOpts}
-              loading={orderLoading}
-              placeholder="N° commande…"
-              emptyText="Aucune commande confirmée disponible"
-            />
-
-            <ACombobox
-              label="Tournée (optionnel)"
-              valueId={form.roundId}
-              displayValue={form.roundLabel}
-              onDisplayChange={(text) => {
-                setForm({ ...form, roundLabel: text, roundId: null });
-              }}
-              onSelect={(opt) => {
-                const driverFromRound =
-                  String(opt.label).split(" · ")[1]?.trim() || "";
-                setForm({
-                  ...form,
-                  roundId: opt.id,
-                  roundLabel: opt.label,
-                  driverLabel: form.driverLabel.trim() || driverFromRound,
-                });
-              }}
-              onOpen={() => void refreshRounds()}
-              options={roundOpts}
-              placeholder="Choisir une tournée…"
-              emptyText="Aucune tournée — créez-en une"
-            />
-
-            <div className="space-y-1">
-              <label
-                htmlFor="dlv-driver"
-                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-              >
-                Livreur
-              </label>
-              <AInput
-                id="dlv-driver"
-                value={form.driverLabel}
-                onChange={(e) =>
-                  setForm({ ...form, driverLabel: e.target.value })
-                }
-                placeholder="Nom du livreur"
+            <AFormSection title="Commande & tournée">
+              <ACombobox
+                label="Commande confirmée"
+                valueId={form.orderId}
+                displayValue={form.orderLabel}
+                onDisplayChange={(text) => {
+                  setForm({
+                    ...form,
+                    orderLabel: text,
+                    orderId: null,
+                  });
+                  scheduleOrderSearch(text);
+                }}
+                onSelect={(opt) => {
+                  const match = eligibleCache.find((o) => o.id === opt.id);
+                  setForm({
+                    ...form,
+                    orderId: opt.id,
+                    orderLabel: opt.label,
+                    driverLabel:
+                      form.driverLabel.trim() ||
+                      match?.preferredDriver ||
+                      "",
+                  });
+                }}
+                onOpen={() => void refreshOrders(form.orderLabel.trim())}
+                options={orderOpts}
+                loading={orderLoading}
+                placeholder="N° commande…"
+                emptyText="Aucune commande confirmée disponible"
               />
-            </div>
+
+              <ACombobox
+                label="Tournée (optionnel)"
+                valueId={form.roundId}
+                displayValue={form.roundLabel}
+                onDisplayChange={(text) => {
+                  setForm({ ...form, roundLabel: text, roundId: null });
+                }}
+                onSelect={(opt) => {
+                  const driverFromRound =
+                    String(opt.label).split(" · ")[1]?.trim() || "";
+                  setForm({
+                    ...form,
+                    roundId: opt.id,
+                    roundLabel: opt.label,
+                    driverLabel: form.driverLabel.trim() || driverFromRound,
+                  });
+                }}
+                onOpen={() => void refreshRounds()}
+                options={roundOpts}
+                placeholder="Choisir une tournée…"
+                emptyText="Aucune tournée — créez-en une"
+              />
+
+              <AField label="Livreur" htmlFor="dlv-driver">
+                <AInput
+                  id="dlv-driver"
+                  value={form.driverLabel}
+                  onChange={(e) =>
+                    setForm({ ...form, driverLabel: e.target.value })
+                  }
+                  placeholder="Nom du livreur"
+                />
+              </AField>
+            </AFormSection>
+
             <div className="flex justify-end gap-2 pt-2">
               <AButton
                 type="button"
@@ -782,60 +781,44 @@ export default function DeliveryPage() {
         description="Planifier une tournée (date + livreur)."
       >
         {roundForm ? (
-          <div className="space-y-[var(--a-space-4)]">
+          <div className="space-y-5">
             {roundError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-warning">
                 {roundError}
               </p>
             ) : null}
-            <div className="space-y-1">
-              <label
-                htmlFor="dlv-round-date"
-                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-              >
-                Date
-              </label>
-              <AInput
-                id="dlv-round-date"
-                type="date"
-                value={roundForm.date}
-                onChange={(e) =>
-                  setRoundForm({ ...roundForm, date: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-1">
-              <label
-                htmlFor="dlv-round-driver"
-                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-              >
-                Livreur
-              </label>
-              <AInput
-                id="dlv-round-driver"
-                value={roundForm.driverLabel}
-                onChange={(e) =>
-                  setRoundForm({ ...roundForm, driverLabel: e.target.value })
-                }
-                placeholder="Nom du livreur"
-              />
-            </div>
-            <div className="space-y-1">
-              <label
-                htmlFor="dlv-round-notes"
-                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-              >
-                Notes
-              </label>
-              <AInput
-                id="dlv-round-notes"
-                value={roundForm.notes}
-                onChange={(e) =>
-                  setRoundForm({ ...roundForm, notes: e.target.value })
-                }
-                placeholder="Optionnel"
-              />
-            </div>
+            <AFormSection title="Planification">
+              <AField label="Date" htmlFor="dlv-round-date" required>
+                <AInput
+                  id="dlv-round-date"
+                  type="date"
+                  value={roundForm.date}
+                  onChange={(e) =>
+                    setRoundForm({ ...roundForm, date: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Livreur" htmlFor="dlv-round-driver" required>
+                <AInput
+                  id="dlv-round-driver"
+                  value={roundForm.driverLabel}
+                  onChange={(e) =>
+                    setRoundForm({ ...roundForm, driverLabel: e.target.value })
+                  }
+                  placeholder="Nom du livreur"
+                />
+              </AField>
+              <AField label="Notes" htmlFor="dlv-round-notes">
+                <AInput
+                  id="dlv-round-notes"
+                  value={roundForm.notes}
+                  onChange={(e) =>
+                    setRoundForm({ ...roundForm, notes: e.target.value })
+                  }
+                  placeholder="Optionnel"
+                />
+              </AField>
+            </AFormSection>
             <div className="flex justify-end gap-2 pt-2">
               <AButton
                 type="button"

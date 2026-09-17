@@ -9,8 +9,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   AOverflowMenu,
@@ -22,6 +24,7 @@ import {
   ASoftTh,
   ASoftThead,
   ASoftTr,
+  ATabs,
   erpListDescription,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
@@ -38,7 +41,6 @@ import { softSelect } from "@/lib/soft-glass-ui";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import { fetchSuppliers, type Supplier } from "@/lib/suppliers";
 import { fetchTaxCodes, type TaxCode } from "@/lib/tax";
-import { ATabs } from "@/components/a/a-tabs";
 
 type LoadState =
   | { kind: "loading" }
@@ -416,156 +418,136 @@ function FinanceApBillsPageInner() {
         description="Master `/suppliers` optionnel. HT + code TVA (stub TVA19) ou TTC sans TVA. Poster freeze tax_line (D276)."
       >
         {form ? (
-          <div className="space-y-3">
+          <div className="space-y-5">
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {formError}
               </p>
             ) : null}
-            {suppliers.length > 0 ? (
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                  Fournisseur (master)
-                </span>
-                <select
-                  className={softSelect}
-                  value={form.supplierId}
-                  onChange={(e) => {
-                    const supplierId = e.target.value;
-                    const match = suppliers.find((s) => s.id === supplierId);
-                    setForm({
-                      ...form,
-                      supplierId,
-                      vendorName: match
-                        ? match.legalName
-                        : form.vendorName,
-                    });
-                  }}
-                >
-                  <option value="">— Texte libre —</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.code} · {s.legalName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <label className="block space-y-1">
-              <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                Nom affiché *
-              </span>
-              <AInput
-                value={form.vendorName}
-                onChange={(e) =>
-                  setForm({ ...form, vendorName: e.target.value })
-                }
-                placeholder="Ex. Laiterie Nord"
-              />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                Montant HT TND (TVA)
-              </span>
-              <AInput
-                value={form.amountHt}
-                onChange={(e) =>
-                  setForm({ ...form, amountHt: e.target.value })
-                }
-                inputMode="decimal"
-                placeholder="vide = TTC seul"
-              />
-            </label>
-            {form.amountHt.trim() ? (
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                  Code TVA
-                </span>
-                <select
-                  className={softSelect}
-                  value={form.taxCodeId}
-                  onChange={(e) =>
-                    setForm({ ...form, taxCodeId: e.target.value })
-                  }
-                >
-                  <option value="">TVA19 stub si dispo</option>
-                  {taxCodes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.code} — {c.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                  Montant total TTC TND *
-                </span>
+
+            <AFormSection title="Fournisseur">
+              {suppliers.length > 0 ? (
+                <AField label="Fournisseur (master)">
+                  <select
+                    className={softSelect}
+                    value={form.supplierId}
+                    onChange={(e) => {
+                      const supplierId = e.target.value;
+                      const match = suppliers.find((s) => s.id === supplierId);
+                      setForm({
+                        ...form,
+                        supplierId,
+                        vendorName: match
+                          ? match.legalName
+                          : form.vendorName,
+                      });
+                    }}
+                  >
+                    <option value="">— Texte libre —</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.code} · {s.legalName}
+                      </option>
+                    ))}
+                  </select>
+                </AField>
+              ) : null}
+              <AField label="Nom affiché" required>
                 <AInput
-                  value={form.amountTotal}
+                  value={form.vendorName}
                   onChange={(e) =>
-                    setForm({ ...form, amountTotal: e.target.value })
+                    setForm({ ...form, vendorName: e.target.value })
+                  }
+                  placeholder="Ex. Laiterie Nord"
+                />
+              </AField>
+            </AFormSection>
+
+            <AFormSection title="Montants">
+              <AField label="Montant HT TND (TVA)">
+                <AInput
+                  value={form.amountHt}
+                  onChange={(e) =>
+                    setForm({ ...form, amountHt: e.target.value })
                   }
                   inputMode="decimal"
-                  placeholder="0.000"
+                  placeholder="vide = TTC seul"
                 />
-              </label>
-            )}
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                  Date facture *
-                </span>
+              </AField>
+              {form.amountHt.trim() ? (
+                <AField label="Code TVA">
+                  <select
+                    className={softSelect}
+                    value={form.taxCodeId}
+                    onChange={(e) =>
+                      setForm({ ...form, taxCodeId: e.target.value })
+                    }
+                  >
+                    <option value="">TVA19 stub si dispo</option>
+                    {taxCodes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code} — {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </AField>
+              ) : (
+                <AField label="Montant total TTC TND" required>
+                  <AInput
+                    value={form.amountTotal}
+                    onChange={(e) =>
+                      setForm({ ...form, amountTotal: e.target.value })
+                    }
+                    inputMode="decimal"
+                    placeholder="0.000"
+                  />
+                </AField>
+              )}
+            </AFormSection>
+
+            <AFormSection title="Dates & références">
+              <div className="grid grid-cols-2 gap-3">
+                <AField label="Date facture" required>
+                  <AInput
+                    type="date"
+                    value={form.billDate}
+                    onChange={(e) =>
+                      setForm({ ...form, billDate: e.target.value })
+                    }
+                  />
+                </AField>
+                <AField label="Échéance">
+                  <AInput
+                    type="date"
+                    value={form.dueDate}
+                    onChange={(e) =>
+                      setForm({ ...form, dueDate: e.target.value })
+                    }
+                  />
+                </AField>
+              </div>
+              <AField label="Libellé">
                 <AInput
-                  type="date"
-                  value={form.billDate}
+                  value={form.label}
+                  onChange={(e) => setForm({ ...form, label: e.target.value })}
+                />
+              </AField>
+              <AField label="Référence externe">
+                <AInput
+                  value={form.reference}
                   onChange={(e) =>
-                    setForm({ ...form, billDate: e.target.value })
+                    setForm({ ...form, reference: e.target.value })
                   }
                 />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                  Échéance
-                </span>
+              </AField>
+              <AField label="Notes">
                 <AInput
-                  type="date"
-                  value={form.dueDate}
-                  onChange={(e) =>
-                    setForm({ ...form, dueDate: e.target.value })
-                  }
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 />
-              </label>
-            </div>
-            <label className="block space-y-1">
-              <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                Libellé
-              </span>
-              <AInput
-                value={form.label}
-                onChange={(e) => setForm({ ...form, label: e.target.value })}
-              />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                Référence externe
-              </span>
-              <AInput
-                value={form.reference}
-                onChange={(e) =>
-                  setForm({ ...form, reference: e.target.value })
-                }
-              />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-[length:var(--a-text-xs)] text-a-muted">
-                Notes
-              </span>
-              <AInput
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
-            </label>
+              </AField>
+            </AFormSection>
+
             <div className="flex justify-end gap-2 pt-2">
               <AButton
                 type="button"

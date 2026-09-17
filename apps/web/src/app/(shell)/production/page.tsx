@@ -8,8 +8,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   APageBody,
@@ -358,7 +360,7 @@ export default function ProductionPage() {
         onOpenChange={setDrawerOpen}
         title={drawerMode === "create" ? "Nouvel OF" : "Déclaration atelier"}
       >
-        <div className="space-y-4 p-1">
+        <div className="space-y-5 p-4">
           {formError ? (
             <p className="rounded-[var(--a-radius-md)] bg-a-danger-soft px-3 py-2 text-[length:var(--a-text-sm)] text-a-danger-fg">
               {formError}
@@ -367,57 +369,47 @@ export default function ProductionPage() {
 
           {drawerMode === "create" ? (
             <>
-              <label className="block space-y-1.5">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Produit fini
-                </span>
-                <select
-                  className={softSelect}
-                  value={productId}
-                  onChange={(e) => setProductId(e.target.value)}
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.sku} · {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Entrepôt
-                </span>
-                <select
-                  className={softSelect}
-                  value={warehouseId}
-                  onChange={(e) => setWarehouseId(e.target.value)}
-                >
-                  {warehouses.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.code} · {w.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Qté planifiée
-                </span>
-                <AInput
-                  value={plannedQty}
-                  onChange={(e) => setPlannedQty(e.target.value)}
-                  inputMode="decimal"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Lot out (optionnel)
-                </span>
-                <AInput
-                  value={lotOut}
-                  onChange={(e) => setLotOut(e.target.value)}
-                />
-              </label>
+              <AFormSection title="Ordre de fabrication">
+                <AField label="Produit fini">
+                  <select
+                    className={softSelect}
+                    value={productId}
+                    onChange={(e) => setProductId(e.target.value)}
+                  >
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.sku} · {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </AField>
+                <AField label="Entrepôt">
+                  <select
+                    className={softSelect}
+                    value={warehouseId}
+                    onChange={(e) => setWarehouseId(e.target.value)}
+                  >
+                    {warehouses.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.code} · {w.name}
+                      </option>
+                    ))}
+                  </select>
+                </AField>
+                <AField label="Qté planifiée">
+                  <AInput
+                    value={plannedQty}
+                    onChange={(e) => setPlannedQty(e.target.value)}
+                    inputMode="decimal"
+                  />
+                </AField>
+                <AField label="Lot out (optionnel)">
+                  <AInput
+                    value={lotOut}
+                    onChange={(e) => setLotOut(e.target.value)}
+                  />
+                </AField>
+              </AFormSection>
               <AButton
                 type="button"
                 className="w-full"
@@ -433,69 +425,63 @@ export default function ProductionPage() {
                 {selected?.number} · consomme MP puis poste le PF en stock
                 (lots FEFO si trackLot).
               </p>
-              <label className="block space-y-1.5">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Matière / composant
-                </span>
-                <select
-                  className={softSelect}
-                  value={mpProductId}
-                  onChange={(e) => setMpProductId(e.target.value)}
+              <AFormSection title="Consommation MP">
+                <AField label="Matière / composant">
+                  <select
+                    className={softSelect}
+                    value={mpProductId}
+                    onChange={(e) => setMpProductId(e.target.value)}
+                  >
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.sku} · {p.name}
+                        {p.trackLot ? " · lot" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </AField>
+                <AField label="Qté consommée">
+                  <AInput
+                    value={mpQty}
+                    onChange={(e) => setMpQty(e.target.value)}
+                    inputMode="decimal"
+                  />
+                </AField>
+                <AField
+                  label="Lot matière (lotIn)"
+                  required={
+                    !!products.find((p) => p.id === mpProductId)?.trackLot
+                  }
                 >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.sku} · {p.name}
-                      {p.trackLot ? " · lot" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Qté consommée
-                </span>
-                <AInput
-                  value={mpQty}
-                  onChange={(e) => setMpQty(e.target.value)}
-                  inputMode="decimal"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Lot matière (lotIn)
-                  {products.find((p) => p.id === mpProductId)?.trackLot
-                    ? " *"
-                    : ""}
-                </span>
-                <AInput
-                  value={mpLotIn}
-                  onChange={(e) => setMpLotIn(e.target.value)}
-                  placeholder="Obligatoire si MP suivi par lot"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Qté output
-                </span>
-                <AInput
-                  value={outputQty}
-                  onChange={(e) => setOutputQty(e.target.value)}
-                  inputMode="decimal"
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Lot out
-                  {products.find((p) => p.id === selected?.productId)?.trackLot
-                    ? " *"
-                    : ""}
-                </span>
-                <AInput
-                  value={declareLot}
-                  onChange={(e) => setDeclareLot(e.target.value)}
-                  placeholder="Code lot PF → inv_lot"
-                />
-              </label>
+                  <AInput
+                    value={mpLotIn}
+                    onChange={(e) => setMpLotIn(e.target.value)}
+                    placeholder="Obligatoire si MP suivi par lot"
+                  />
+                </AField>
+              </AFormSection>
+              <AFormSection title="Output PF">
+                <AField label="Qté output">
+                  <AInput
+                    value={outputQty}
+                    onChange={(e) => setOutputQty(e.target.value)}
+                    inputMode="decimal"
+                  />
+                </AField>
+                <AField
+                  label="Lot out"
+                  required={
+                    !!products.find((p) => p.id === selected?.productId)
+                      ?.trackLot
+                  }
+                >
+                  <AInput
+                    value={declareLot}
+                    onChange={(e) => setDeclareLot(e.target.value)}
+                    placeholder="Code lot PF → inv_lot"
+                  />
+                </AField>
+              </AFormSection>
               <AButton
                 type="button"
                 className="w-full"

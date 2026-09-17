@@ -7,8 +7,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   APageBody,
@@ -678,141 +680,137 @@ export default function UsersPage() {
             )}
           </div>
         ) : form ? (
-          <div className="space-y-4 p-4">
-            {!editing ? (
-              <Field label="Mode">
-                <select
-                  className={softSelect}
-                  value={createMode}
-                  onChange={(e) =>
-                    setCreateMode(e.target.value as "invite" | "password")
-                  }
-                >
-                  <option value="invite">Invitation (lien + Outlook)</option>
-                  <option value="password">Mot de passe immédiat</option>
-                </select>
-              </Field>
-            ) : null}
-            {!editing ? (
-              <Field label="E-mail">
+          <div className="space-y-5 p-4">
+            <AFormSection title="Identité">
+              {!editing ? (
+                <AField label="Mode">
+                  <select
+                    className={softSelect}
+                    value={createMode}
+                    onChange={(e) =>
+                      setCreateMode(e.target.value as "invite" | "password")
+                    }
+                  >
+                    <option value="invite">Invitation (lien + Outlook)</option>
+                    <option value="password">Mot de passe immédiat</option>
+                  </select>
+                </AField>
+              ) : null}
+              {!editing ? (
+                <AField label="E-mail">
+                  <AInput
+                    type="email"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
+                  />
+                </AField>
+              ) : (
+                <p className="a-mono text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  {form.email}
+                </p>
+              )}
+              <AField label="Nom affiché">
                 <AInput
-                  type="email"
-                  value={form.email}
+                  value={form.displayName}
                   onChange={(e) =>
-                    setForm({ ...form, email: e.target.value })
+                    setForm({ ...form, displayName: e.target.value })
                   }
                 />
-              </Field>
-            ) : (
-              <p className="a-mono text-[length:var(--a-text-sm)] text-a-fg-muted">
-                {form.email}
-              </p>
-            )}
-            <Field label="Nom affiché">
-              <AInput
-                value={form.displayName}
-                onChange={(e) =>
-                  setForm({ ...form, displayName: e.target.value })
-                }
-              />
-            </Field>
-            <Field label="Rôle">
-              <select
-                className={softSelect}
-                value={form.roleCode}
-                onChange={(e) =>
-                  setForm({ ...form, roleCode: e.target.value })
-                }
-              >
-                {(roles.length ? roles : FALLBACK_ROLES).map((r) => (
-                  <option key={r.code} value={r.code}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            {editing ? (
-              <Field label="Statut">
+              </AField>
+            </AFormSection>
+
+            <AFormSection title="Accès">
+              <AField label="Rôle">
                 <select
                   className={softSelect}
-                  value={form.status}
+                  value={form.roleCode}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
-                      status: e.target.value as CompanyUserStatus,
-                    })
+                    setForm({ ...form, roleCode: e.target.value })
                   }
                 >
-                  {(
-                    [
-                      "ACTIVE",
-                      "LOCKED",
-                      "DISABLED",
-                      ...(form.status === "INVITED"
-                        ? (["INVITED"] as const)
-                        : []),
-                    ] as CompanyUserStatus[]
-                  ).map((s) => (
-                    <option key={s} value={s}>
-                      {STATUS_LABELS[s]}
+                  {(roles.length ? roles : FALLBACK_ROLES).map((r) => (
+                    <option key={r.code} value={r.code}>
+                      {r.label}
                     </option>
                   ))}
                 </select>
-              </Field>
-            ) : null}
-            {editing || createMode === "password" ? (
-              <Field
-                label={
-                  editing
-                    ? "Nouveau mot de passe (optionnel)"
-                    : "Mot de passe initial"
-                }
-              >
-                <AInput
-                  type="password"
-                  autoComplete="new-password"
-                  value={form.password}
-                  onChange={(e) =>
-                    setForm({ ...form, password: e.target.value })
-                  }
-                  minLength={
+              </AField>
+              {editing ? (
+                <AField label="Statut">
+                  <select
+                    className={softSelect}
+                    value={form.status}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        status: e.target.value as CompanyUserStatus,
+                      })
+                    }
+                  >
+                    {(
+                      [
+                        "ACTIVE",
+                        "LOCKED",
+                        "DISABLED",
+                        ...(form.status === "INVITED"
+                          ? (["INVITED"] as const)
+                          : []),
+                      ] as CompanyUserStatus[]
+                    ).map((s) => (
+                      <option key={s} value={s}>
+                        {STATUS_LABELS[s]}
+                      </option>
+                    ))}
+                  </select>
+                </AField>
+              ) : null}
+              {editing || createMode === "password" ? (
+                <AField
+                  label={
                     editing
-                      ? undefined
-                      : (mailStatus?.minPasswordLength ?? 8)
+                      ? "Nouveau mot de passe (optionnel)"
+                      : "Mot de passe initial"
                   }
-                />
-                {!editing ? (
-                  <p className="mt-1.5 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Vous définissez le mot de passe ici (
-                    {mailStatus?.minPasswordLength ?? 8} caractères min.) et le
-                    transmettez à la personne.
-                  </p>
-                ) : form.status === "INVITED" ? (
-                  <p className="mt-1.5 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Saisir un mot de passe active le compte et invalide le lien
-                    d’invitation.
-                  </p>
-                ) : null}
-              </Field>
-            ) : (
-              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                Un lien d’activation (
-                {mailStatus?.ttlDays ?? 7} jours) sera généré. Envoi SMTP selon
-                Préférences → Envois (auto-send
-                {mailStatus?.autoSend === false ? " désactivé" : ""}
-                ) — sinon Copier / Outlook.
-              </p>
-            )}
+                  hint={
+                    !editing
+                      ? `Vous définissez le mot de passe ici (${mailStatus?.minPasswordLength ?? 8} caractères min.) et le transmettez à la personne.`
+                      : form.status === "INVITED"
+                        ? "Saisir un mot de passe active le compte et invalide le lien d’invitation."
+                        : undefined
+                  }
+                >
+                  <AInput
+                    type="password"
+                    autoComplete="new-password"
+                    value={form.password}
+                    onChange={(e) =>
+                      setForm({ ...form, password: e.target.value })
+                    }
+                    minLength={
+                      editing
+                        ? undefined
+                        : (mailStatus?.minPasswordLength ?? 8)
+                    }
+                  />
+                </AField>
+              ) : (
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Un lien d’activation (
+                  {mailStatus?.ttlDays ?? 7} jours) sera généré. Envoi SMTP selon
+                  Préférences → Envois (auto-send
+                  {mailStatus?.autoSend === false ? " désactivé" : ""}
+                  ) — sinon Copier / Outlook.
+                </p>
+              )}
+            </AFormSection>
 
             {editing ? (
-              <div className="space-y-3 border-t border-transparent pt-4">
-                <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
-                  Droits société (USER)
-                </p>
-                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Les droits du rôle ({roleLabel(form.roleCode)}) s’ajoutent
-                  automatiquement. Cases = droits directs sur cette société.
-                </p>
+              <AFormSection
+                title="Droits société (USER)"
+                description={`Les droits du rôle (${roleLabel(form.roleCode)}) s’ajoutent automatiquement. Cases = droits directs sur cette société.`}
+              >
                 {grantsLoading ? <ASkeleton className="h-24 w-full" /> : null}
                 {!grantsLoading && grantsMeta ? (
                   <ul className="max-h-[40vh] space-y-1 overflow-y-auto">
@@ -853,7 +851,7 @@ export default function UsersPage() {
                     })}
                   </ul>
                 ) : null}
-              </div>
+              </AFormSection>
             ) : null}
 
             {formError ? (
@@ -865,22 +863,5 @@ export default function UsersPage() {
         ) : null}
       </ADrawer>
     </>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1">
-      <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-        {label}
-      </label>
-      {children}
-    </div>
   );
 }

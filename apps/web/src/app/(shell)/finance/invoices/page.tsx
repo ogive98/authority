@@ -10,8 +10,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   AOverflowMenu,
@@ -580,63 +582,64 @@ function FinanceInvoicesPageInner() {
         className="max-w-xl"
       >
         {form ? (
-          <div className="space-y-4">
-            <ACombobox
-              label="Client"
-              valueId={form.customerId}
-              displayValue={form.customerLabel}
-              onDisplayChange={(text) => {
-                setForm({ ...form, customerLabel: text, customerId: null });
-                scheduleCustomerSearch(text);
-              }}
-              onSelect={(opt) => {
-                const pref = customerPrefs[opt.id] ?? "DELIVERY_NOTE";
-                setForm({
-                  ...form,
-                  customerId: opt.id,
-                  customerLabel: opt.label,
-                  fulfillmentDoc: pref,
-                });
-              }}
-              onOpen={() => void refreshCustomers(form.customerLabel)}
-              options={customerOpts}
-              loading={customerLoading}
-              placeholder="Code ou raison sociale…"
-              emptyText="Aucun client"
-            />
-
-            <FulfillmentDocToggle
-              value={form.fulfillmentDoc}
-              onChange={(fulfillmentDoc) =>
-                setForm({ ...form, fulfillmentDoc })
-              }
-              hint="Préférence fiche client — change seulement le titre. Même lignes, même compta, mêmes modes."
-            />
-
-            <div className="space-y-1">
-              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Échéance
-              </label>
-              <AInput
-                type="date"
-                value={form.dueDate}
-                onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+          <div className="space-y-5">
+            <AFormSection title="Client & document">
+              <ACombobox
+                label="Client"
+                valueId={form.customerId}
+                displayValue={form.customerLabel}
+                onDisplayChange={(text) => {
+                  setForm({ ...form, customerLabel: text, customerId: null });
+                  scheduleCustomerSearch(text);
+                }}
+                onSelect={(opt) => {
+                  const pref = customerPrefs[opt.id] ?? "DELIVERY_NOTE";
+                  setForm({
+                    ...form,
+                    customerId: opt.id,
+                    customerLabel: opt.label,
+                    fulfillmentDoc: pref,
+                  });
+                }}
+                onOpen={() => void refreshCustomers(form.customerLabel)}
+                options={customerOpts}
+                loading={customerLoading}
+                placeholder="Code ou raison sociale…"
+                emptyText="Aucun client"
               />
-            </div>
 
-            <div className="space-y-1">
-              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Libellé
-              </label>
-              <AInput
-                value={form.label}
-                onChange={(e) => setForm({ ...form, label: e.target.value })}
+              <FulfillmentDocToggle
+                value={form.fulfillmentDoc}
+                onChange={(fulfillmentDoc) =>
+                  setForm({ ...form, fulfillmentDoc })
+                }
+                hint="Préférence fiche client — change seulement le titre. Même lignes, même compta, mêmes modes."
               />
-            </div>
+            </AFormSection>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[13px] font-medium text-a-fg">Lignes</p>
+            <AFormSection title="Échéance / libellé">
+              <AField label="Échéance">
+                <AInput
+                  type="date"
+                  value={form.dueDate}
+                  onChange={(e) =>
+                    setForm({ ...form, dueDate: e.target.value })
+                  }
+                />
+              </AField>
+
+              <AField label="Libellé">
+                <AInput
+                  value={form.label}
+                  onChange={(e) =>
+                    setForm({ ...form, label: e.target.value })
+                  }
+                />
+              </AField>
+            </AFormSection>
+
+            <AFormSection title="Lignes">
+              <div className="flex items-center justify-end">
                 <AButton
                   type="button"
                   size="sm"
@@ -700,7 +703,9 @@ function FinanceInvoicesPageInner() {
                   <select
                     className={softSelect}
                     value={line.productId}
-                    onChange={(e) => void applyProductToLine(idx, e.target.value)}
+                    onChange={(e) =>
+                      void applyProductToLine(idx, e.target.value)
+                    }
                     aria-label={`Produit ligne ${idx + 1}`}
                   >
                     <option value="">Produit (optionnel)…</option>
@@ -765,7 +770,8 @@ function FinanceInvoicesPageInner() {
                   </div>
                   {line.vatSource === "stub" ? (
                     <p className="text-[length:var(--a-text-xs)] text-a-warning">
-                      Stub TVA19 — à valider avec le comptable (pas FODEC/timbre).
+                      Stub TVA19 — à valider avec le comptable (pas
+                      FODEC/timbre).
                     </p>
                   ) : line.vatSource === "product" ? (
                     <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -774,18 +780,18 @@ function FinanceInvoicesPageInner() {
                   ) : null}
                 </div>
               ))}
-            </div>
 
-            <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
-              <input
-                type="checkbox"
-                checked={form.issue}
-                onChange={(e) =>
-                  setForm({ ...form, issue: e.target.checked })
-                }
-              />
-              Émettre immédiatement (crée la créance AR sur TTC)
-            </label>
+              <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
+                <input
+                  type="checkbox"
+                  checked={form.issue}
+                  onChange={(e) =>
+                    setForm({ ...form, issue: e.target.checked })
+                  }
+                />
+                Émettre immédiatement (crée la créance AR sur TTC)
+              </label>
+            </AFormSection>
 
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">

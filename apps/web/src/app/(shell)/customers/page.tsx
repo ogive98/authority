@@ -11,6 +11,7 @@ import {
   AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   APageBody,
@@ -548,209 +549,342 @@ export default function CustomersPage() {
         }
       >
         {form ? (
-          <div className="space-y-4 p-4">
-            {!editing ? (
-              <Field label="Code">
+          <div className="space-y-5 p-4">
+            <AFormSection title="Identité">
+              {!editing ? (
+                <Field label="Code">
+                  <AInput
+                    value={form.code}
+                    onChange={(e) =>
+                      setForm({ ...form, code: e.target.value })
+                    }
+                  />
+                </Field>
+              ) : null}
+              <Field label="Raison sociale">
                 <AInput
-                  value={form.code}
+                  value={form.legalName}
                   onChange={(e) =>
-                    setForm({ ...form, code: e.target.value })
+                    setForm({ ...form, legalName: e.target.value })
                   }
                 />
               </Field>
-            ) : null}
-            <Field label="Raison sociale">
-              <AInput
-                value={form.legalName}
-                onChange={(e) =>
-                  setForm({ ...form, legalName: e.target.value })
-                }
-              />
-            </Field>
-            <Field label="Surnom (prise de commande)">
-              <AInput
-                value={form.nickname}
-                onChange={(e) =>
-                  setForm({ ...form, nickname: e.target.value })
-                }
-                placeholder="Ex. Atlas"
-              />
-            </Field>
-            <Field label="Matricule fiscal">
-              <AInput
-                value={form.taxId}
-                onChange={(e) => setForm({ ...form, taxId: e.target.value })}
-              />
-            </Field>
-            <Field label="Commercial">
-              <AInput
-                value={form.salesRep}
-                onChange={(e) =>
-                  setForm({ ...form, salesRep: e.target.value })
-                }
-              />
-            </Field>
-            <Field label="Conditions de paiement">
-              <AInput
-                value={form.paymentTerms}
-                onChange={(e) =>
-                  setForm({ ...form, paymentTerms: e.target.value })
-                }
-              />
-            </Field>
-            <Field label="Plafond crédit (TND)">
-              <AInput
-                className="a-mono"
-                value={form.creditLimit}
-                onChange={(e) =>
-                  setForm({ ...form, creditLimit: e.target.value })
-                }
-                placeholder="Ex. 5000.000"
-                inputMode="decimal"
-              />
-            </Field>
+              <Field label="Surnom (prise de commande)">
+                <AInput
+                  value={form.nickname}
+                  onChange={(e) =>
+                    setForm({ ...form, nickname: e.target.value })
+                  }
+                  placeholder="Ex. Atlas"
+                />
+              </Field>
+              <Field label="Matricule fiscal">
+                <AInput
+                  value={form.taxId}
+                  onChange={(e) => setForm({ ...form, taxId: e.target.value })}
+                />
+              </Field>
+              <Field label="Commercial">
+                <AInput
+                  value={form.salesRep}
+                  onChange={(e) =>
+                    setForm({ ...form, salesRep: e.target.value })
+                  }
+                />
+              </Field>
+            </AFormSection>
 
-            {editing ? (
-              <div className="a-underlay space-y-3 rounded-md p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
-                    Hub financier
-                  </p>
-                  <Link
-                    href="/finance"
-                    className="text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
-                  >
-                    Ouvrir Finance →
-                  </Link>
-                </div>
-                {financeHub.kind === "loading" ? (
-                  <ASkeleton className="h-16 w-full" />
-                ) : null}
-                {financeHub.kind === "forbidden" ? (
-                  <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Finance non accessible (`finance.ar.read`).
-                  </p>
-                ) : null}
-                {financeHub.kind === "error" ? (
-                  <p className="text-[length:var(--a-text-xs)] text-a-danger">
-                    {financeHub.message}
-                  </p>
-                ) : null}
-                {financeHub.kind === "ok" ? (
-                  <>
-                    {financeHub.data.creditPressure?.level === "warn" ||
-                    financeHub.data.creditPressure?.level === "breach" ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <ABadge
-                          tone={
-                            financeHub.data.creditPressure.level === "breach"
-                              ? "danger"
-                              : "warning"
-                          }
-                        >
-                          {financeHub.data.creditPressure.level === "breach"
-                            ? "Crédit dépassé"
-                            : "Pression crédit"}
-                        </ABadge>
-                        <span className="a-mono text-[11px] text-a-fg-muted">
-                          {financeHub.data.creditPressure.ratio != null
-                            ? `${Math.round(financeHub.data.creditPressure.ratio * 100)}%`
-                            : "—"}{" "}
-                          du plafond · seuil{" "}
-                          {Math.round(
-                            financeHub.data.creditPressure.warnRatio * 100,
-                          )}
-                          %
-                        </span>
-                      </div>
-                    ) : null}
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      <div>
-                        <p className="text-[10px] text-a-fg-muted">Encours</p>
-                        <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
-                          {financeHub.data.credit.outstandingBalance}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-a-fg-muted">Échu</p>
-                        <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
-                          {financeHub.data.aging.overdueTotal}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-a-fg-muted">Disponible</p>
-                        <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
-                          {financeHub.data.availableCredit ?? "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-a-fg-muted">Ouverts</p>
-                        <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
-                          {financeHub.data.openCount}
-                          {financeHub.data.overdueCount > 0
-                            ? ` · ${financeHub.data.overdueCount} éch.`
-                            : ""}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
-                      {financeHub.data.aging.buckets.map((b) => (
-                        <div
-                          key={b.key}
-                          className="rounded-md bg-a-surface-3 px-2 py-1.5"
-                        >
-                          <p className="text-[10px] text-a-fg-muted">{b.label}</p>
-                          <p className="a-mono text-[11px] tabular-nums text-a-fg">
-                            {b.amountOpen}
-                          </p>
-                          <p className="text-[10px] text-a-fg-subtle">
-                            {b.count} créance{b.count === 1 ? "" : "s"}
+            <AFormSection title="Crédit / zone">
+              <Field label="Conditions de paiement">
+                <AInput
+                  value={form.paymentTerms}
+                  onChange={(e) =>
+                    setForm({ ...form, paymentTerms: e.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Plafond crédit (TND)">
+                <AInput
+                  className="a-mono"
+                  value={form.creditLimit}
+                  onChange={(e) =>
+                    setForm({ ...form, creditLimit: e.target.value })
+                  }
+                  placeholder="Ex. 5000.000"
+                  inputMode="decimal"
+                />
+              </Field>
+              <Field label="Zone">
+                <select
+                  className={softSelect}
+                  value={form.zoneId}
+                  onChange={(e) =>
+                    setForm({ ...form, zoneId: e.target.value })
+                  }
+                >
+                  <option value="">— Aucune —</option>
+                  {zones.map((z) => (
+                    <option key={z.id} value={z.id}>
+                      {z.code} · {z.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              {editing ? (
+                <div className="a-underlay space-y-3 rounded-md p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                      Hub financier
+                    </p>
+                    <Link
+                      href="/finance"
+                      className="text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
+                    >
+                      Ouvrir Finance →
+                    </Link>
+                  </div>
+                  {financeHub.kind === "loading" ? (
+                    <ASkeleton className="h-16 w-full" />
+                  ) : null}
+                  {financeHub.kind === "forbidden" ? (
+                    <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Finance non accessible (`finance.ar.read`).
+                    </p>
+                  ) : null}
+                  {financeHub.kind === "error" ? (
+                    <p className="text-[length:var(--a-text-xs)] text-a-danger">
+                      {financeHub.message}
+                    </p>
+                  ) : null}
+                  {financeHub.kind === "ok" ? (
+                    <>
+                      {financeHub.data.creditPressure?.level === "warn" ||
+                      financeHub.data.creditPressure?.level === "breach" ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <ABadge
+                            tone={
+                              financeHub.data.creditPressure.level === "breach"
+                                ? "danger"
+                                : "warning"
+                            }
+                          >
+                            {financeHub.data.creditPressure.level === "breach"
+                              ? "Crédit dépassé"
+                              : "Pression crédit"}
+                          </ABadge>
+                          <span className="a-mono text-[11px] text-a-fg-muted">
+                            {financeHub.data.creditPressure.ratio != null
+                              ? `${Math.round(financeHub.data.creditPressure.ratio * 100)}%`
+                              : "—"}{" "}
+                            du plafond · seuil{" "}
+                            {Math.round(
+                              financeHub.data.creditPressure.warnRatio * 100,
+                            )}
+                            %
+                          </span>
+                        </div>
+                      ) : null}
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div>
+                          <p className="text-[10px] text-a-fg-muted">Encours</p>
+                          <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                            {financeHub.data.credit.outstandingBalance}
                           </p>
                         </div>
+                        <div>
+                          <p className="text-[10px] text-a-fg-muted">Échu</p>
+                          <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                            {financeHub.data.aging.overdueTotal}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-a-fg-muted">
+                            Disponible
+                          </p>
+                          <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                            {financeHub.data.availableCredit ?? "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-a-fg-muted">Ouverts</p>
+                          <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                            {financeHub.data.openCount}
+                            {financeHub.data.overdueCount > 0
+                              ? ` · ${financeHub.data.overdueCount} éch.`
+                              : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+                        {financeHub.data.aging.buckets.map((b) => (
+                          <div
+                            key={b.key}
+                            className="rounded-md bg-a-surface-3 px-2 py-1.5"
+                          >
+                            <p className="text-[10px] text-a-fg-muted">
+                              {b.label}
+                            </p>
+                            <p className="a-mono text-[11px] tabular-nums text-a-fg">
+                              {b.amountOpen}
+                            </p>
+                            <p className="text-[10px] text-a-fg-subtle">
+                              {b.count} créance{b.count === 1 ? "" : "s"}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-a-fg-subtle">
+                        Aging au {financeHub.data.aging.asOf} · TND as-recorded ·
+                        source Finance (pas de doublon customers)
+                      </p>
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {editing ? (
+                <div className="a-underlay space-y-3 rounded-md p-3">
+                  <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
+                    Tarifs négociés (HT TND)
+                  </p>
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Priorité portail / suggestion ADV — avant dernier prix
+                    commande.
+                  </p>
+                  {(editing.prices ?? []).length > 0 ? (
+                    <ul className="space-y-1.5 text-[length:var(--a-text-sm)]">
+                      {(editing.prices as CustomerPrice[]).map((p) => (
+                        <li
+                          key={p.id}
+                          className="flex items-center justify-between gap-2"
+                        >
+                          <span className="min-w-0 truncate">
+                            {p.productSku ?? "SKU"} · {p.productName ?? "—"}
+                          </span>
+                          <span className="a-mono shrink-0 tabular-nums">
+                            {p.unitPriceHt} {p.currency}
+                          </span>
+                          <AButton
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={priceBusy}
+                            onClick={() => void onDeletePrice(p.productId)}
+                          >
+                            Retirer
+                          </AButton>
+                        </li>
                       ))}
-                    </div>
-                    <p className="text-[10px] text-a-fg-subtle">
-                      Aging au {financeHub.data.aging.asOf} · TND as-recorded ·
-                      source Finance (pas de doublon customers)
+                    </ul>
+                  ) : (
+                    <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                      Aucun tarif agréé.
                     </p>
-                  </>
-                ) : null}
-              </div>
-            ) : null}
+                  )}
+                  <div className="grid gap-2 sm:grid-cols-[1fr_7rem_auto]">
+                    <select
+                      className={softSelect}
+                      value={priceProductId}
+                      onChange={(e) => setPriceProductId(e.target.value)}
+                    >
+                      <option value="">Produit…</option>
+                      {priceProducts.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.sku} · {p.name}
+                        </option>
+                      ))}
+                    </select>
+                    <AInput
+                      value={priceHt}
+                      onChange={(e) => setPriceHt(e.target.value)}
+                      inputMode="decimal"
+                      placeholder="0.000"
+                      className="a-mono"
+                    />
+                    <AButton
+                      type="button"
+                      size="sm"
+                      disabled={priceBusy || !priceProductId || !priceHt}
+                      onClick={() => void onSavePrice()}
+                    >
+                      Enregistrer
+                    </AButton>
+                  </div>
+                </div>
+              ) : null}
+            </AFormSection>
 
-            <FulfillmentDocToggle
-              value={form.fulfillmentDoc}
-              onChange={(fulfillmentDoc) =>
-                setForm({ ...form, fulfillmentDoc })
-              }
-              hint="Titre imprimé — même contenu, même compta. Défaut : bon de livraison."
-            />
-
-            <Field label="Zone">
-              <select
-                className={softSelect}
-                value={form.zoneId}
-                onChange={(e) =>
-                  setForm({ ...form, zoneId: e.target.value })
+            <AFormSection title="Document BL / Facture">
+              <FulfillmentDocToggle
+                value={form.fulfillmentDoc}
+                onChange={(fulfillmentDoc) =>
+                  setForm({ ...form, fulfillmentDoc })
                 }
-              >
-                <option value="">— Aucune —</option>
-                {zones.map((z) => (
-                  <option key={z.id} value={z.id}>
-                    {z.code} · {z.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
+                hint="Titre imprimé — même contenu, même compta. Défaut : bon de livraison."
+              />
+            </AFormSection>
 
-            <div className="space-y-3 rounded-[var(--a-radius-sm)] bg-a-surface-3 p-3">
-              <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
-                Certificat de salubrité
-              </p>
-              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                Canaux d’envoi depuis Stock → Certificat. Contacts e-mail /
-                WhatsApp ci-dessous.
-              </p>
+            <AFormSection
+              title="Contact"
+              description={
+                editing
+                  ? "Ajouter un contact"
+                  : "Contact initial (optionnel)"
+              }
+            >
+              <Field label="Nom contact">
+                <AInput
+                  value={form.contactName}
+                  onChange={(e) =>
+                    setForm({ ...form, contactName: e.target.value })
+                  }
+                />
+              </Field>
+              <Field label="Téléphone">
+                <AInput
+                  value={form.contactPhone}
+                  onChange={(e) =>
+                    setForm({ ...form, contactPhone: e.target.value })
+                  }
+                />
+              </Field>
+              <Field label="WhatsApp">
+                <AInput
+                  value={form.contactWhatsapp}
+                  onChange={(e) =>
+                    setForm({ ...form, contactWhatsapp: e.target.value })
+                  }
+                  placeholder="Ex. 216XXXXXXXX"
+                />
+              </Field>
+              <Field label="Email">
+                <AInput
+                  value={form.contactEmail}
+                  onChange={(e) =>
+                    setForm({ ...form, contactEmail: e.target.value })
+                  }
+                />
+              </Field>
+              {editing?.contacts && editing.contacts.length > 0 ? (
+                <div className="space-y-1 text-[length:var(--a-text-sm)]">
+                  <p className="text-a-fg-muted">Contacts existants</p>
+                  {editing.contacts.map((c) => (
+                    <p key={c.id} className="text-a-fg">
+                      {c.name}
+                      {c.phone ? ` · ${c.phone}` : ""}
+                      {c.whatsapp ? ` · WA ${c.whatsapp}` : ""}
+                      {c.email ? ` · ${c.email}` : ""}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+            </AFormSection>
+
+            <AFormSection
+              title="Salubrité"
+              description="Canaux d’envoi depuis Stock → Certificat. Contacts e-mail / WhatsApp ci-dessus."
+            >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[length:var(--a-text-sm)] text-a-fg">
                   Outlook
@@ -790,141 +924,13 @@ export default function CustomersPage() {
                   }
                 />
               </div>
-            </div>
+            </AFormSection>
 
             {editing?.blocked ? (
               <p className="text-[length:var(--a-text-sm)] text-[color:var(--a-danger)]">
                 Client bloqué
                 {editing.blockedReason ? ` — ${editing.blockedReason}` : ""}
               </p>
-            ) : null}
-
-            {editing ? (
-              <div className="a-underlay space-y-3 rounded-md p-3">
-                <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
-                  Tarifs négociés (HT TND)
-                </p>
-                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                  Priorité portail / suggestion ADV — avant dernier prix
-                  commande.
-                </p>
-                {(editing.prices ?? []).length > 0 ? (
-                  <ul className="space-y-1.5 text-[length:var(--a-text-sm)]">
-                    {(editing.prices as CustomerPrice[]).map((p) => (
-                      <li
-                        key={p.id}
-                        className="flex items-center justify-between gap-2"
-                      >
-                        <span className="min-w-0 truncate">
-                          {p.productSku ?? "SKU"} · {p.productName ?? "—"}
-                        </span>
-                        <span className="a-mono shrink-0 tabular-nums">
-                          {p.unitPriceHt} {p.currency}
-                        </span>
-                        <AButton
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          disabled={priceBusy}
-                          onClick={() => void onDeletePrice(p.productId)}
-                        >
-                          Retirer
-                        </AButton>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                    Aucun tarif agréé.
-                  </p>
-                )}
-                <div className="grid gap-2 sm:grid-cols-[1fr_7rem_auto]">
-                  <select
-                    className={softSelect}
-                    value={priceProductId}
-                    onChange={(e) => setPriceProductId(e.target.value)}
-                  >
-                    <option value="">Produit…</option>
-                    {priceProducts.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.sku} · {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  <AInput
-                    value={priceHt}
-                    onChange={(e) => setPriceHt(e.target.value)}
-                    inputMode="decimal"
-                    placeholder="0.000"
-                    className="a-mono"
-                  />
-                  <AButton
-                    type="button"
-                    size="sm"
-                    disabled={priceBusy || !priceProductId || !priceHt}
-                    onClick={() => void onSavePrice()}
-                  >
-                    Enregistrer
-                  </AButton>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="border-t border-white/5 pt-4">
-              <p className="mb-3 text-[length:var(--a-text-sm)] text-a-fg-muted">
-                {editing
-                  ? "Ajouter un contact"
-                  : "Contact initial (optionnel)"}
-              </p>
-              <div className="space-y-3">
-                <Field label="Nom contact">
-                  <AInput
-                    value={form.contactName}
-                    onChange={(e) =>
-                      setForm({ ...form, contactName: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="Téléphone">
-                  <AInput
-                    value={form.contactPhone}
-                    onChange={(e) =>
-                      setForm({ ...form, contactPhone: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="WhatsApp">
-                  <AInput
-                    value={form.contactWhatsapp}
-                    onChange={(e) =>
-                      setForm({ ...form, contactWhatsapp: e.target.value })
-                    }
-                    placeholder="Ex. 216XXXXXXXX"
-                  />
-                </Field>
-                <Field label="Email">
-                  <AInput
-                    value={form.contactEmail}
-                    onChange={(e) =>
-                      setForm({ ...form, contactEmail: e.target.value })
-                    }
-                  />
-                </Field>
-              </div>
-            </div>
-
-            {editing?.contacts && editing.contacts.length > 0 ? (
-              <div className="space-y-1 text-[length:var(--a-text-sm)]">
-                <p className="text-a-fg-muted">Contacts existants</p>
-                {editing.contacts.map((c) => (
-                  <p key={c.id} className="text-a-fg">
-                    {c.name}
-                    {c.phone ? ` · ${c.phone}` : ""}
-                    {c.whatsapp ? ` · WA ${c.whatsapp}` : ""}
-                    {c.email ? ` · ${c.email}` : ""}
-                  </p>
-                ))}
-              </div>
             ) : null}
 
             {formError ? (

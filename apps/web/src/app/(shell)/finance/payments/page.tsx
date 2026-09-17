@@ -10,8 +10,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   AOverflowMenu,
@@ -517,92 +519,85 @@ function FinancePaymentsPageInner() {
         title="Nouveau paiement"
       >
         {form ? (
-          <div className="space-y-4">
-            <ACombobox
-              label="Client"
-              valueId={form.customerId}
-              displayValue={form.customerLabel}
-              options={customerOpts}
-              loading={customerLoading}
-              placeholder="Rechercher un client…"
-              onOpen={() => void refreshCustomers(form.customerLabel.trim())}
-              onDisplayChange={(text) => {
-                setForm({
-                  ...form,
-                  customerLabel: text,
-                  customerId: null,
-                });
-                scheduleCustomerSearch(text);
-              }}
-              onSelect={(opt) => {
-                setForm({
-                  ...form,
-                  customerId: opt.id,
-                  customerLabel: opt.label,
-                });
-              }}
-            />
-            <div className="space-y-1">
-              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Montant (TND)
-              </label>
-              <AInput
-                className="a-mono"
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Méthode
-              </label>
-              <select
-                className={softSelect}
-                value={form.method}
-                onChange={(e) =>
+          <div className="space-y-5">
+            <AFormSection title="Client & montant">
+              <ACombobox
+                label="Client"
+                valueId={form.customerId}
+                displayValue={form.customerLabel}
+                options={customerOpts}
+                loading={customerLoading}
+                placeholder="Rechercher un client…"
+                onOpen={() => void refreshCustomers(form.customerLabel.trim())}
+                onDisplayChange={(text) => {
                   setForm({
                     ...form,
-                    method: e.target.value as PaymentMethod,
-                  })
-                }
-              >
-                {METHODS.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Date
-              </label>
-              <AInput
-                type="date"
-                value={form.paymentDate}
-                onChange={(e) =>
-                  setForm({ ...form, paymentDate: e.target.value })
-                }
+                    customerLabel: text,
+                    customerId: null,
+                  });
+                  scheduleCustomerSearch(text);
+                }}
+                onSelect={(opt) => {
+                  setForm({
+                    ...form,
+                    customerId: opt.id,
+                    customerLabel: opt.label,
+                  });
+                }}
               />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Référence
-              </label>
-              <AInput
-                value={form.reference}
-                onChange={(e) =>
-                  setForm({ ...form, reference: e.target.value })
-                }
-              />
-            </div>
+              <AField label="Montant (TND)">
+                <AInput
+                  className="a-mono"
+                  value={form.amount}
+                  onChange={(e) =>
+                    setForm({ ...form, amount: e.target.value })
+                  }
+                />
+              </AField>
+            </AFormSection>
+
+            <AFormSection title="Méthode & référence">
+              <AField label="Méthode">
+                <select
+                  className={softSelect}
+                  value={form.method}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      method: e.target.value as PaymentMethod,
+                    })
+                  }
+                >
+                  {METHODS.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </AField>
+              <AField label="Date">
+                <AInput
+                  type="date"
+                  value={form.paymentDate}
+                  onChange={(e) =>
+                    setForm({ ...form, paymentDate: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Référence">
+                <AInput
+                  value={form.reference}
+                  onChange={(e) =>
+                    setForm({ ...form, reference: e.target.value })
+                  }
+                />
+              </AField>
+            </AFormSection>
+
             {(form.method === "CHEQUE" ||
               form.method === "BILL_OF_EXCHANGE") && (
-              <>
-                <div className="space-y-1">
-                  <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                    N° instrument
-                  </label>
+              <AFormSection title="Instrument">
+                <AField label="N° instrument">
                   <AInput
                     value={form.instrumentNumber}
                     onChange={(e) =>
@@ -612,22 +607,16 @@ function FinancePaymentsPageInner() {
                       })
                     }
                   />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                    Banque
-                  </label>
+                </AField>
+                <AField label="Banque">
                   <AInput
                     value={form.bankName}
                     onChange={(e) =>
                       setForm({ ...form, bankName: e.target.value })
                     }
                   />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                    Échéance instrument
-                  </label>
+                </AField>
+                <AField label="Échéance instrument">
                   <AInput
                     type="date"
                     value={form.dueDate}
@@ -635,9 +624,10 @@ function FinancePaymentsPageInner() {
                       setForm({ ...form, dueDate: e.target.value })
                     }
                   />
-                </div>
-              </>
+                </AField>
+              </AFormSection>
             )}
+
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {formError}
@@ -667,9 +657,7 @@ function FinancePaymentsPageInner() {
       >
         <div className="space-y-4">
           <div className="space-y-1">
-            <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Politique
-            </label>
+            <label className="a-field-label">Politique</label>
             <select
               className={softSelect}
               value={policy}

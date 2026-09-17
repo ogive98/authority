@@ -203,7 +203,7 @@ export function ShellSidebar() {
     const inner = (
       <>
         <Icon
-          className="h-5 w-5 shrink-0 text-a-sky"
+          className="h-5 w-5 shrink-0 text-a-accent"
           strokeWidth={STROKE}
           aria-hidden
         />

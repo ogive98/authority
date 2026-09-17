@@ -37,11 +37,11 @@ type Rule = {
   kind: string;
 };
 
-/** Chrome accents only: text-a-accent | text-a-violet | text-a-sky */
+/** D294 — one chrome accent: text-a-accent (muted/subtle for secondary). */
 const FEATURE_RULES: Rule[] = [
   {
     match: /deliver|livr|truck|shipment|tournée/i,
-    colorClass: "text-a-sky",
+    colorClass: "text-a-accent",
     motion: "drive",
     kind: "truck",
   },
@@ -53,7 +53,7 @@ const FEATURE_RULES: Rule[] = [
   },
   {
     match: /invoice|facture|document/i,
-    colorClass: "text-a-sky",
+    colorClass: "text-a-accent",
     motion: "doc",
     kind: "doc",
   },
@@ -71,7 +71,7 @@ const FEATURE_RULES: Rule[] = [
   },
   {
     match: /stock|lot|invent|package|colis/i,
-    colorClass: "text-a-violet",
+    colorClass: "text-a-accent",
     motion: "lift",
     kind: "package",
   },
@@ -89,37 +89,37 @@ const FEATURE_RULES: Rule[] = [
   },
   {
     match: /job.?title|poste|mansioni/i,
-    colorClass: "text-a-sky",
+    colorClass: "text-a-accent",
     motion: "stamp",
     kind: "job",
   },
   {
     match: /bulletin|payslip|buste/i,
-    colorClass: "text-a-sky",
+    colorClass: "text-a-accent",
     motion: "doc",
     kind: "doc",
   },
   {
     match: /customer|client|employé|contrat|hr|rh|user|people/i,
-    colorClass: "text-a-violet",
+    colorClass: "text-a-accent",
     motion: "people",
     kind: "people",
   },
   {
     match: /tax|tva|fiscal|landmark|accounting|compta/i,
-    colorClass: "text-a-violet",
+    colorClass: "text-a-accent",
     motion: "stamp",
     kind: "tax",
   },
   {
     match: /repair|répar|wrench/i,
-    colorClass: "text-a-sky",
+    colorClass: "text-a-accent",
     motion: "wrench",
     kind: "repair",
   },
   {
     match: /alert|alerte|signal/i,
-    colorClass: "text-a-violet",
+    colorClass: "text-a-accent",
     motion: "alert",
     kind: "alert",
   },
@@ -131,7 +131,7 @@ const FEATURE_RULES: Rule[] = [
   },
   {
     match: /report|rapport|kpi|chart|pilot/i,
-    colorClass: "text-a-sky",
+    colorClass: "text-a-accent",
     motion: "chart",
     kind: "chart",
   },
@@ -149,7 +149,7 @@ const FEATURE_RULES: Rule[] = [
   },
   {
     match: /preview|aperçu|spark/i,
-    colorClass: "text-a-violet",
+    colorClass: "text-a-accent",
     motion: "spark",
     kind: "spark",
   },
@@ -158,7 +158,7 @@ const FEATURE_RULES: Rule[] = [
 const MODULE_RULES: Rule[] = [
   {
     match: /^delivery|supply$/i,
-    colorClass: "text-a-sky",
+    colorClass: "text-a-accent",
     motion: "drive",
     kind: "truck",
   },
@@ -176,7 +176,7 @@ const MODULE_RULES: Rule[] = [
   },
   {
     match: /^inventory|stock$/i,
-    colorClass: "text-a-violet",
+    colorClass: "text-a-accent",
     motion: "lift",
     kind: "package",
   },
@@ -188,19 +188,19 @@ const MODULE_RULES: Rule[] = [
   },
   {
     match: /^hr|rh|payroll|identity|customers|suppliers$/i,
-    colorClass: "text-a-violet",
+    colorClass: "text-a-accent",
     motion: "people",
     kind: "people",
   },
   {
     match: /^tax$/i,
-    colorClass: "text-a-violet",
+    colorClass: "text-a-accent",
     motion: "stamp",
     kind: "tax",
   },
   {
     match: /^repair$/i,
-    colorClass: "text-a-sky",
+    colorClass: "text-a-accent",
     motion: "wrench",
     kind: "repair",
   },

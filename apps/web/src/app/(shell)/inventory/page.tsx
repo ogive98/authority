@@ -7,8 +7,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   AOverflowMenu,
@@ -293,46 +295,49 @@ export default function InventoryPage() {
         }
       >
         {form ? (
-          <div className="space-y-4 p-4">
-            <Field label="Entrepôt">
-              <select
-                className={softSelect}
-                value={form.warehouseId}
-                onChange={(e) =>
-                  setForm({ ...form, warehouseId: e.target.value })
-                }
-              >
-                {warehouses.length === 0 ? (
-                  <option value="">Aucun entrepôt</option>
-                ) : null}
-                {warehouses.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.code} — {w.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Produit">
-              <select
-                className={softSelect}
-                value={form.productId}
-                onChange={(e) =>
-                  setForm({ ...form, productId: e.target.value })
-                }
-              >
-                {products.length === 0 ? (
-                  <option value="">Aucun produit</option>
-                ) : null}
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.sku} — {p.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
+          <div className="space-y-5 p-4">
+            <AFormSection title="Cible">
+              <AField label="Entrepôt">
+                <select
+                  className={softSelect}
+                  value={form.warehouseId}
+                  onChange={(e) =>
+                    setForm({ ...form, warehouseId: e.target.value })
+                  }
+                >
+                  {warehouses.length === 0 ? (
+                    <option value="">Aucun entrepôt</option>
+                  ) : null}
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.code} — {w.name}
+                    </option>
+                  ))}
+                </select>
+              </AField>
+              <AField label="Produit">
+                <select
+                  className={softSelect}
+                  value={form.productId}
+                  onChange={(e) =>
+                    setForm({ ...form, productId: e.target.value })
+                  }
+                >
+                  {products.length === 0 ? (
+                    <option value="">Aucun produit</option>
+                  ) : null}
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.sku} — {p.name}
+                    </option>
+                  ))}
+                </select>
+              </AField>
+            </AFormSection>
+
             {products.find((p) => p.id === form.productId)?.trackLot ? (
-              <>
-                <Field label="Code lot (requis)">
+              <AFormSection title="Lot">
+                <AField label="Code lot (requis)">
                   <AInput
                     value={form.lotCode}
                     onChange={(e) =>
@@ -340,8 +345,8 @@ export default function InventoryPage() {
                     }
                     placeholder="LOT-2026-0001"
                   />
-                </Field>
-                <Field label="DLC">
+                </AField>
+                <AField label="DLC">
                   <AInput
                     type="date"
                     value={form.dlc}
@@ -349,24 +354,28 @@ export default function InventoryPage() {
                       setForm({ ...form, dlc: e.target.value })
                     }
                   />
-                </Field>
-              </>
+                </AField>
+              </AFormSection>
             ) : null}
-            <Field label="Écart quantité">
-              <AInput
-                value={form.qtyDelta}
-                onChange={(e) =>
-                  setForm({ ...form, qtyDelta: e.target.value })
-                }
-                placeholder="ex. 10 ou -2.5"
-              />
-            </Field>
-            <Field label="Motif (optionnel)">
-              <AInput
-                value={form.reason}
-                onChange={(e) => setForm({ ...form, reason: e.target.value })}
-              />
-            </Field>
+
+            <AFormSection title="Ajustement">
+              <AField label="Écart quantité">
+                <AInput
+                  value={form.qtyDelta}
+                  onChange={(e) =>
+                    setForm({ ...form, qtyDelta: e.target.value })
+                  }
+                  placeholder="ex. 10 ou -2.5"
+                />
+              </AField>
+              <AField label="Motif (optionnel)">
+                <AInput
+                  value={form.reason}
+                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                />
+              </AField>
+            </AFormSection>
+
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-[color:var(--a-danger)]">
                 {formError}
@@ -376,20 +385,5 @@ export default function InventoryPage() {
         ) : null}
       </ADrawer>
     </>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1">
-      <label className="text-[12px] text-a-fg-subtle">{label}</label>
-      {children}
-    </div>
   );
 }

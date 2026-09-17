@@ -327,7 +327,7 @@ export function ShellHeader() {
           label={t("spectreEnter")}
           lockedHint={t("modeLockedHint")}
           icon={Eye}
-          toneClass="hover:text-a-spectre"
+          toneClass="hover:text-a-fg-muted"
           onEnter={enterSpectre}
         />
         <OpsModeIcon

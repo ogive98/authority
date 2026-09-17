@@ -8,8 +8,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   AOverflowMenu,
@@ -21,6 +23,7 @@ import {
   ASoftTh,
   ASoftThead,
   ASoftTr,
+  ATabs,
   erpListDescription,
 } from "@/components/a";
 import {
@@ -35,7 +38,6 @@ import {
   type ProductOption,
 } from "@/lib/inventory";
 import { softSelect } from "@/lib/soft-glass-ui";
-import { ATabs } from "@/components/a/a-tabs";
 
 const STATUS_FILTERS = [
   { id: "all", label: "Tous" },
@@ -402,69 +404,67 @@ export default function InventoryLotsPage() {
         }
       >
         {form ? (
-          <div className="space-y-3">
-            <label className="block space-y-1">
-              <span className="text-[12px] text-a-fg-muted">Entrepôt</span>
-              <select
-                className={softSelect}
-                value={form.warehouseId}
-                onChange={(e) =>
-                  setForm({ ...form, warehouseId: e.target.value })
-                }
-              >
-                {warehouses.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.code} — {w.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block space-y-1">
-              <span className="text-[12px] text-a-fg-muted">Produit</span>
-              <select
-                className={softSelect}
-                value={form.productId}
-                onChange={(e) =>
-                  setForm({ ...form, productId: e.target.value })
-                }
-              >
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.sku} — {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block space-y-1">
-              <span className="text-[12px] text-a-fg-muted">Code lot</span>
-              <AInput
-                value={form.lotCode}
-                onChange={(e) =>
-                  setForm({ ...form, lotCode: e.target.value })
-                }
-                placeholder="LOT-2026-0001"
-              />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-[12px] text-a-fg-muted">DLC</span>
-              <AInput
-                type="date"
-                value={form.dlc}
-                onChange={(e) => setForm({ ...form, dlc: e.target.value })}
-              />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-[12px] text-a-fg-muted">
-                Quantité initiale (opt.)
-              </span>
-              <AInput
-                value={form.initialQty}
-                onChange={(e) =>
-                  setForm({ ...form, initialQty: e.target.value })
-                }
-                placeholder="0"
-              />
-            </label>
+          <div className="space-y-5">
+            <AFormSection title="Emplacement">
+              <AField label="Entrepôt">
+                <select
+                  className={softSelect}
+                  value={form.warehouseId}
+                  onChange={(e) =>
+                    setForm({ ...form, warehouseId: e.target.value })
+                  }
+                >
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.code} — {w.name}
+                    </option>
+                  ))}
+                </select>
+              </AField>
+              <AField label="Produit">
+                <select
+                  className={softSelect}
+                  value={form.productId}
+                  onChange={(e) =>
+                    setForm({ ...form, productId: e.target.value })
+                  }
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.sku} — {p.name}
+                    </option>
+                  ))}
+                </select>
+              </AField>
+            </AFormSection>
+
+            <AFormSection title="Lot">
+              <AField label="Code lot" required>
+                <AInput
+                  value={form.lotCode}
+                  onChange={(e) =>
+                    setForm({ ...form, lotCode: e.target.value })
+                  }
+                  placeholder="LOT-2026-0001"
+                />
+              </AField>
+              <AField label="DLC">
+                <AInput
+                  type="date"
+                  value={form.dlc}
+                  onChange={(e) => setForm({ ...form, dlc: e.target.value })}
+                />
+              </AField>
+              <AField label="Quantité initiale (opt.)">
+                <AInput
+                  value={form.initialQty}
+                  onChange={(e) =>
+                    setForm({ ...form, initialQty: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </AField>
+            </AFormSection>
           </div>
         ) : null}
       </ADrawer>

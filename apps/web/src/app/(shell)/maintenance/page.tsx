@@ -9,18 +9,23 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
+  AListUtilities,
   APageBody,
   AScreenHeader,
   ASkeleton,
   ASoftTable,
   ASoftThead,
   ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
-import { softChipClass, softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
+import { ATabs } from "@/components/a/a-tabs";
 import { fetchVehicles, type FleetVehicle } from "@/lib/fleet";
 import {
   MNT_ASSET_STATUS_LABELS,
@@ -341,7 +346,10 @@ export default function MaintenancePage() {
       <AScreenHeader
         kicker="Maintenance"
         title="Équipements & OT"
-        description="Soft Glass · fiche équipement · OT préventif ADV · chips historique · lien flotte (D258)."
+        description={erpListDescription(
+          tab === "assets" && state.kind === "ok" ? state.items.length : null,
+          "Fiche équipement · OT préventif ADV · historique · lien flotte (D258).",
+        )}
         primary={
           tab === "assets" ? (
             <AButton type="button" size="sm" onClick={openCreate}>
@@ -390,41 +398,36 @@ export default function MaintenancePage() {
                 />
               }
               filters={
-                <div className="flex flex-wrap gap-2">
-                  {(
-                    [
-                      { id: "" as const, label: "Tous" },
-                      { id: "ONLINE" as const, label: "En ligne" },
-                      { id: "DOWN" as const, label: "Hors service" },
-                    ] as const
-                  ).map((chip) => (
-                    <button
-                      key={chip.id || "all"}
-                      type="button"
-                      className={softChipClass(statusFilter === chip.id)}
-                      onClick={() => setStatusFilter(chip.id)}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                  <button
+                <div className="flex flex-wrap items-center gap-2">
+                  <ATabs
+                    ariaLabel="Filtrer par statut"
+                    value={statusFilter || "all"}
+                    onValueChange={(id) => {
+                      const next = (id === "all" ? "" : id) as
+                        | ""
+                        | MntAssetStatus;
+                      setStatusFilter(next);
+                    }}
+                    items={[
+                      { id: "all", label: "Tous" },
+                      { id: "ONLINE", label: "En ligne" },
+                      { id: "DOWN", label: "Hors service" },
+                    ]}
+                  />
+                  <AButton
                     type="button"
-                    className={softChipClass(dueOnly)}
+                    size="sm"
+                    variant={dueOnly ? "primary" : "secondary"}
                     onClick={() => setDueOnly((v) => !v)}
                   >
                     Préventif dû
-                  </button>
+                  </AButton>
                 </div>
               }
               utilities={
-                <AButton
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => void loadAssets(q, statusFilter, dueOnly)}
-                >
-                  Filtrer
-                </AButton>
+                <AListUtilities
+                  onFilter={() => void loadAssets(q, statusFilter, dueOnly)}
+                />
               }
             />
 
@@ -561,24 +564,22 @@ export default function MaintenancePage() {
           <>
             <AFilterBar
               filters={
-                <div className="flex flex-wrap gap-2">
-                  {(
-                    [
-                      { id: "OPEN" as const, label: "Ouverts" },
-                      { id: "DONE" as const, label: "Terminés" },
-                      { id: "" as const, label: "Tous" },
-                    ] as const
-                  ).map((chip) => (
-                    <button
-                      key={chip.id || "all-wo"}
-                      type="button"
-                      className={softChipClass(woStatusFilter === chip.id)}
-                      onClick={() => setWoStatusFilter(chip.id)}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
+                <ATabs
+                  ariaLabel="Filtrer OT par statut"
+                  value={woStatusFilter || "all"}
+                  onValueChange={(id) => {
+                    const next = (id === "all" ? "" : id) as "" | MntWoStatus;
+                    setWoStatusFilter(next);
+                  }}
+                  items={[
+                    { id: "OPEN", label: "Ouverts" },
+                    { id: "DONE", label: "Terminés" },
+                    { id: "all", label: "Tous" },
+                  ]}
+                />
+              }
+              utilities={
+                <AListUtilities onFilter={() => void loadWo()} />
               }
             />
             {woError ? (
@@ -672,84 +673,84 @@ export default function MaintenancePage() {
         title={editAsset ? "Éditer équipement" : "Nouvel équipement"}
       >
         {form ? (
-          <div className="flex flex-col gap-3">
+          <div className="space-y-5 p-4">
             {formError ? (
-              <p className="text-sm text-[color:var(--a-danger)]">{formError}</p>
+              <p className="text-[length:var(--a-text-sm)] text-a-danger">
+                {formError}
+              </p>
             ) : null}
-            {!editAsset ? (
-              <label className="flex flex-col gap-1 text-sm">
-                Code
+            <AFormSection title="Identité">
+              {!editAsset ? (
+                <AField label="Code">
+                  <AInput
+                    value={form.code}
+                    onChange={(e) =>
+                      setForm({ ...form, code: e.target.value })
+                    }
+                  />
+                </AField>
+              ) : (
+                <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+                  Code · {editAsset.code}
+                </p>
+              )}
+              <AField label="Libellé">
                 <AInput
-                  value={form.code}
+                  value={form.label}
                   onChange={(e) =>
-                    setForm({ ...form, code: e.target.value })
+                    setForm({ ...form, label: e.target.value })
                   }
                 />
-              </label>
-            ) : (
-              <p className="text-sm text-[color:var(--a-muted)]">
-                Code · {editAsset.code}
-              </p>
-            )}
-            <label className="flex flex-col gap-1 text-sm">
-              Libellé
-              <AInput
-                value={form.label}
-                onChange={(e) =>
-                  setForm({ ...form, label: e.target.value })
-                }
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Type
-              <select
-                className={softSelect}
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-              >
-                {ASSET_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {MNT_ASSET_TYPE_LABELS[t]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Véhicule flotte (optionnel)
-              <select
-                className={softSelect}
-                value={form.vehicleId}
-                onChange={(e) =>
-                  setForm({ ...form, vehicleId: e.target.value })
-                }
-              >
-                <option value="">— Aucun —</option>
-                {vehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.code} · {v.plate}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Prochain préventif
-              <AInput
-                type="date"
-                value={form.nextPreventiveAt}
-                onChange={(e) =>
-                  setForm({ ...form, nextPreventiveAt: e.target.value })
-                }
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Notes
-              <AInput
-                value={form.notes}
-                onChange={(e) =>
-                  setForm({ ...form, notes: e.target.value })
-                }
-              />
-            </label>
+              </AField>
+              <AField label="Type">
+                <select
+                  className={softSelect}
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                >
+                  {ASSET_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {MNT_ASSET_TYPE_LABELS[t]}
+                    </option>
+                  ))}
+                </select>
+              </AField>
+              <AField label="Véhicule flotte (optionnel)">
+                <select
+                  className={softSelect}
+                  value={form.vehicleId}
+                  onChange={(e) =>
+                    setForm({ ...form, vehicleId: e.target.value })
+                  }
+                >
+                  <option value="">— Aucun —</option>
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.code} · {v.plate}
+                    </option>
+                  ))}
+                </select>
+              </AField>
+            </AFormSection>
+            <AFormSection title="Planification">
+              <AField label="Prochain préventif">
+                <AInput
+                  type="date"
+                  value={form.nextPreventiveAt}
+                  onChange={(e) =>
+                    setForm({ ...form, nextPreventiveAt: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Notes">
+                <AInput
+                  value={form.notes}
+                  onChange={(e) =>
+                    setForm({ ...form, notes: e.target.value })
+                  }
+                />
+              </AField>
+            </AFormSection>
             <AButton
               type="button"
               disabled={busy}
@@ -767,60 +768,60 @@ export default function MaintenancePage() {
         title="Nouvel OT"
       >
         {woForm ? (
-          <div className="flex flex-col gap-3">
+          <div className="space-y-5 p-4">
             {formError ? (
-              <p className="text-sm text-[color:var(--a-danger)]">{formError}</p>
+              <p className="text-[length:var(--a-text-sm)] text-a-danger">
+                {formError}
+              </p>
             ) : null}
-            <label className="flex flex-col gap-1 text-sm">
-              Équipement
-              <select
-                className={softSelect}
-                value={woForm.assetId}
-                onChange={(e) =>
-                  setWoForm({ ...woForm, assetId: e.target.value })
-                }
-              >
-                {assets.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.code} · {a.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Type
-              <select
-                className={softSelect}
-                value={woForm.type}
-                onChange={(e) =>
-                  setWoForm({
-                    ...woForm,
-                    type: e.target.value as MntWoType,
-                  })
-                }
-              >
-                <option value="BREAKDOWN">Panne</option>
-                <option value="PREVENTIVE">Préventif</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Titre
-              <AInput
-                value={woForm.title}
-                onChange={(e) =>
-                  setWoForm({ ...woForm, title: e.target.value })
-                }
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Notes
-              <AInput
-                value={woForm.notes}
-                onChange={(e) =>
-                  setWoForm({ ...woForm, notes: e.target.value })
-                }
-              />
-            </label>
+            <AFormSection title="Ordre de travail">
+              <AField label="Équipement">
+                <select
+                  className={softSelect}
+                  value={woForm.assetId}
+                  onChange={(e) =>
+                    setWoForm({ ...woForm, assetId: e.target.value })
+                  }
+                >
+                  {assets.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.code} · {a.label}
+                    </option>
+                  ))}
+                </select>
+              </AField>
+              <AField label="Type">
+                <select
+                  className={softSelect}
+                  value={woForm.type}
+                  onChange={(e) =>
+                    setWoForm({
+                      ...woForm,
+                      type: e.target.value as MntWoType,
+                    })
+                  }
+                >
+                  <option value="BREAKDOWN">Panne</option>
+                  <option value="PREVENTIVE">Préventif</option>
+                </select>
+              </AField>
+              <AField label="Titre">
+                <AInput
+                  value={woForm.title}
+                  onChange={(e) =>
+                    setWoForm({ ...woForm, title: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Notes">
+                <AInput
+                  value={woForm.notes}
+                  onChange={(e) =>
+                    setWoForm({ ...woForm, notes: e.target.value })
+                  }
+                />
+              </AField>
+            </AFormSection>
             <AButton
               type="button"
               disabled={busy || !woForm.assetId}

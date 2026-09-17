@@ -113,27 +113,27 @@ export function toneClasses(tone: NavTone, active: boolean) {
   if (tone === "sky") {
     return {
       chip: active
-        ? "bg-a-sky text-white"
-        : "bg-a-sky-soft text-a-sky",
-      text: active ? "text-a-sky" : "text-a-fg-muted",
+        ? "bg-a-accent text-a-accent-fg"
+        : "bg-a-accent-muted text-a-accent",
+      text: active ? "text-a-accent" : "text-a-fg-muted",
       ring: "",
     };
   }
   if (tone === "orange") {
-    /* Legacy tone key — maps to violet (blue/violet/sky chrome only). */
+    /* D294 — one accent; legacy tone keys map to accent */
     return {
       chip: active
-        ? "bg-a-violet text-white"
-        : "bg-a-violet-soft text-a-violet",
-      text: active ? "text-a-violet" : "text-a-fg-muted",
+        ? "bg-a-accent text-a-accent-fg"
+        : "bg-a-accent-muted text-a-accent",
+      text: active ? "text-a-accent" : "text-a-fg-muted",
       ring: "",
     };
   }
   return {
     chip: active
-      ? "bg-a-violet text-white"
-      : "bg-a-violet-soft text-a-violet",
-    text: active ? "text-a-violet" : "text-a-fg-muted",
+      ? "bg-a-accent text-a-accent-fg"
+      : "bg-a-accent-muted text-a-accent",
+    text: active ? "text-a-accent" : "text-a-fg-muted",
     ring: "",
   };
 }

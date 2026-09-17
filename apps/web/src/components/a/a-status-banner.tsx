@@ -7,7 +7,7 @@ const toneClass: Record<BannerTone, string> = {
   info: "bg-a-info-soft text-a-info-fg",
   warning: "bg-a-warning-soft text-a-warning-fg",
   danger: "bg-a-danger-soft text-a-danger-fg",
-  spectre: "bg-a-spectre-muted text-a-spectre-fg",
+  spectre: "bg-a-surface-3 text-a-fg",
 };
 
 export type AStatusBannerProps = {

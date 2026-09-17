@@ -8,8 +8,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   APageBody,
@@ -347,29 +349,28 @@ export default function ProductionWorksheetsPage() {
           </AButton>
         }
       >
-        <div className="flex flex-col gap-3">
-          <label className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-            Produit
-            <select
-              className={cn(softSelect, "mt-1 w-full")}
-              value={productId}
-              onChange={(e) => setProductId(e.target.value)}
-            >
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.sku} — {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-            Qté demandée (KG)
-            <AInput
-              className="mt-1"
-              value={requestedQty}
-              onChange={(e) => setRequestedQty(e.target.value)}
-            />
-          </label>
+        <div className="space-y-5 p-4">
+          <AFormSection title="Ligne produit">
+            <AField label="Produit">
+              <select
+                className={cn(softSelect, "w-full")}
+                value={productId}
+                onChange={(e) => setProductId(e.target.value)}
+              >
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.sku} — {p.name}
+                  </option>
+                ))}
+              </select>
+            </AField>
+            <AField label="Qté demandée (KG)">
+              <AInput
+                value={requestedQty}
+                onChange={(e) => setRequestedQty(e.target.value)}
+              />
+            </AField>
+          </AFormSection>
           {formError ? (
             <p className="text-[length:var(--a-text-sm)] text-a-danger">
               {formError}
@@ -430,53 +431,58 @@ export default function ProductionWorksheetsPage() {
         }
       >
         {selected ? (
-          <div className="flex flex-col gap-3">
-            {selected.lines.map((line) => (
-              <div
-                key={line.id}
-                className="a-underlay rounded-[var(--a-radius-sm)] p-3"
-              >
-                <p className="text-[length:var(--a-text-sm)]">
-                  {line.productSku ?? line.productId.slice(0, 8)} — demandé{" "}
-                  <span className="a-mono a-tabular">
-                    {line.requestedQty} {line.unit}
-                  </span>
-                </p>
-                {selected.status === "DRAFT" ||
-                selected.status === "PREPARED" ? (
-                  <label className="mt-2 block text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    {selected.status === "DRAFT"
-                      ? "Qté préparée"
-                      : "Qté pesée (manuel)"}
-                    <AInput
-                      className="mt-1"
-                      value={lineQty[line.id] ?? ""}
-                      onChange={(e) =>
-                        setLineQty((m) => ({
-                          ...m,
-                          [line.id]: e.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-                ) : (
-                  <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
-                    Préparé {line.preparedQty ?? "—"} · Pesé{" "}
-                    {line.weighedQty ?? "—"}
+          <div className="space-y-5 p-4">
+            <AFormSection title="Lignes">
+              {selected.lines.map((line) => (
+                <div
+                  key={line.id}
+                  className="a-underlay rounded-[var(--a-radius-sm)] p-3"
+                >
+                  <p className="text-[length:var(--a-text-sm)]">
+                    {line.productSku ?? line.productId.slice(0, 8)} — demandé{" "}
+                    <span className="a-mono a-tabular">
+                      {line.requestedQty} {line.unit}
+                    </span>
                   </p>
-                )}
-              </div>
-            ))}
+                  {selected.status === "DRAFT" ||
+                  selected.status === "PREPARED" ? (
+                    <AField
+                      className="mt-2"
+                      label={
+                        selected.status === "DRAFT"
+                          ? "Qté préparée"
+                          : "Qté pesée (manuel)"
+                      }
+                    >
+                      <AInput
+                        value={lineQty[line.id] ?? ""}
+                        onChange={(e) =>
+                          setLineQty((m) => ({
+                            ...m,
+                            [line.id]: e.target.value,
+                          }))
+                        }
+                      />
+                    </AField>
+                  ) : (
+                    <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      Préparé {line.preparedQty ?? "—"} · Pesé{" "}
+                      {line.weighedQty ?? "—"}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </AFormSection>
 
             {selected.status === "WEIGHED" ? (
-              <label className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                Note contrôle (obligatoire si rejet)
-                <AInput
-                  className="mt-1"
-                  value={controlNote}
-                  onChange={(e) => setControlNote(e.target.value)}
-                />
-              </label>
+              <AFormSection title="Contrôle">
+                <AField label="Note contrôle (obligatoire si rejet)">
+                  <AInput
+                    value={controlNote}
+                    onChange={(e) => setControlNote(e.target.value)}
+                  />
+                </AField>
+              </AFormSection>
             ) : null}
 
             {formError ? (

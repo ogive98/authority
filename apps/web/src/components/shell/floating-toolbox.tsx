@@ -244,7 +244,7 @@ export function FloatingToolbox() {
               >
                 <span className="a-toolbox-glyph">
                   <Icon
-                    className="h-5 w-5 text-a-orange"
+                    className="h-5 w-5 text-a-accent"
                     strokeWidth={1.5}
                     aria-hidden
                   />

@@ -7,8 +7,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   APageBody,
@@ -345,125 +347,107 @@ export default function DocumentsPage() {
         title="Déposer un fichier"
         description="Lier une cible renseigne customerId pour le partage portal."
       >
-        <div className="space-y-[var(--a-space-4)]">
+        <div className="space-y-5 p-4">
           {formError ? (
             <p className="text-[length:var(--a-text-sm)] text-a-warning">
               {formError}
             </p>
           ) : null}
-          <div className="space-y-1">
-            <label
-              htmlFor="doc-title"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Titre
-            </label>
-            <AInput
-              id="doc-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="BL signé, preuve…"
-            />
-          </div>
-          <div className="space-y-1">
-            <label
-              htmlFor="doc-vis"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Visibilité
-            </label>
-            <select
-              id="doc-vis"
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value)}
-              className={softSelect}
-            >
-              <option value="INTERNAL">INTERNAL</option>
-              <option value="CUSTOMER_PORTAL">CUSTOMER_PORTAL</option>
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label
-              htmlFor="doc-link-type"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Lien
-            </label>
-            <select
-              id="doc-link-type"
-              value={linkType}
-              onChange={(e) => {
-                const next = e.target.value as (typeof LINK_TYPES)[number];
-                setLinkType(next);
-                setLinkId("");
-                if (
-                  next === "CLAIM" ||
-                  next === "ORDER" ||
-                  next === "SHIPMENT" ||
-                  next === "CUSTOMER"
-                ) {
-                  setVisibility("CUSTOMER_PORTAL");
-                }
-              }}
-              className={softSelect}
-            >
-              {LINK_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          {linkType !== "NONE" ? (
-            <div className="space-y-1">
-              <label
-                htmlFor="doc-link-id"
-                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-              >
-                Cible {linkType}
-              </label>
+          <AFormSection title="Fichier">
+            <AField label="Titre" htmlFor="doc-title">
+              <AInput
+                id="doc-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="BL signé, preuve…"
+              />
+            </AField>
+            <AField label="Visibilité" htmlFor="doc-vis">
               <select
-                id="doc-link-id"
-                value={linkId}
-                onChange={(e) => setLinkId(e.target.value)}
+                id="doc-vis"
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value)}
                 className={softSelect}
-                disabled={linkLoading}
               >
-                <option value="">
-                  {linkLoading ? "Chargement…" : "Choisir…"}
-                </option>
-                {linkTargets.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label}
+                <option value="INTERNAL">INTERNAL</option>
+                <option value="CUSTOMER_PORTAL">CUSTOMER_PORTAL</option>
+              </select>
+            </AField>
+            <AField label="Fichier" htmlFor="doc-file">
+              <input
+                id="doc-file"
+                type="file"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-[length:var(--a-text-sm)]"
+              />
+            </AField>
+          </AFormSection>
+
+          <AFormSection
+            title="Lien métier"
+            description="Lier une cible renseigne customerId pour le partage portal."
+          >
+            <AField label="Lien" htmlFor="doc-link-type">
+              <select
+                id="doc-link-type"
+                value={linkType}
+                onChange={(e) => {
+                  const next = e.target.value as (typeof LINK_TYPES)[number];
+                  setLinkType(next);
+                  setLinkId("");
+                  if (
+                    next === "CLAIM" ||
+                    next === "ORDER" ||
+                    next === "SHIPMENT" ||
+                    next === "CUSTOMER"
+                  ) {
+                    setVisibility("CUSTOMER_PORTAL");
+                  }
+                }}
+                className={softSelect}
+              >
+                {LINK_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
                   </option>
                 ))}
               </select>
-              {visibility === "CUSTOMER_PORTAL" ? (
-                <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
-                  Le client lié verra ce fichier sur /portal/documents.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-          {visibility === "CUSTOMER_PORTAL" && linkType === "NONE" ? (
-            <p className="text-[length:var(--a-text-xs)] text-a-warning">
-              Sans lien, pas de customerId — le portal ne verra pas ce fichier.
-            </p>
-          ) : null}
-          <div className="space-y-1">
-            <label
-              htmlFor="doc-file"
-              className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-            >
-              Fichier
-            </label>
-            <input
-              id="doc-file"
-              type="file"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="block w-full text-[length:var(--a-text-sm)]"
-            />
-          </div>
+            </AField>
+            {linkType !== "NONE" ? (
+              <AField
+                label={`Cible ${linkType}`}
+                htmlFor="doc-link-id"
+                hint={
+                  visibility === "CUSTOMER_PORTAL"
+                    ? "Le client lié verra ce fichier sur /portal/documents."
+                    : undefined
+                }
+              >
+                <select
+                  id="doc-link-id"
+                  value={linkId}
+                  onChange={(e) => setLinkId(e.target.value)}
+                  className={softSelect}
+                  disabled={linkLoading}
+                >
+                  <option value="">
+                    {linkLoading ? "Chargement…" : "Choisir…"}
+                  </option>
+                  {linkTargets.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </AField>
+            ) : null}
+            {visibility === "CUSTOMER_PORTAL" && linkType === "NONE" ? (
+              <p className="text-[length:var(--a-text-xs)] text-a-warning">
+                Sans lien, pas de customerId — le portal ne verra pas ce fichier.
+              </p>
+            ) : null}
+          </AFormSection>
+
           <div className="flex justify-end gap-2 pt-2">
             <AButton
               type="button"

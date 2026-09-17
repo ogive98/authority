@@ -1,61 +1,44 @@
 ---
-description: AUTHORITY visual identity — Progressive Intelligence OS (ZIP pack v1) supersedes Soft Glass D161
+description: AUTHORITY D294 visual constitution — Graphic Master Pack v2 supersedes Soft Glass and ZIP multi-accent
 alwaysApply: true
 ---
 
-# Visual identity lock — Progressive Intelligence OS (ZIP pack v1)
+# Visual identity lock — D294 AUTHORITY Premium
 
-**Decision 2026-09-16 (product):** the Cursor pack
-`AUTHORITY_UIUX_PROGRESSIVE_REFACTOR_CURSOR_PACK_v1` + `12_SCREENSHOTS/` is the
-**visual source of truth**. Soft Glass Enterprise OS **D161 is superseded** for
-colors, chrome, cards, and action grammar.
+**Decision 2026-09-17 (product):** `GRAPHIC_MASTER_PACK_v2` / D294 is the
+**visual source of truth**. Soft Glass D161 and ZIP multi-accent (violet/sky/orange
+chrome) are **superseded**.
 
-**Still locked (non-visual):** registry-driven nav · no fake KPI/CA inventés ·
-Prefs VALIDATED rates · features never in sidebar · Smart Action Dock = right rail ·
-backend/API/business rules unchanged.
+Docs: `04_UI_UX/GRAPHIC_MASTER_PACK_v2/00_START_HERE.md` · `10_TOKENS.md` ·
+`40_CURSOR_MASTER.md`
 
-**Supersedes:** Soft Glass D161 · Contiental Apple · Utility Cube · Wick.
-
-Reference pixels: `04_UI_UX/PROGRESSIVE_REFACTOR_PACK_v1/12_SCREENSHOTS/`.
+**Still locked (non-visual):** registry-driven nav · no fake KPI · Prefs VALIDATED ·
+features never in sidebar · Smart Action Dock = right rail · backend unchanged.
 
 ## Before any UI work
 
-1. Read `apps/web/src/app/globals.css` (`--a-*` only — ZIP-tuned).
+1. Read `apps/web/src/app/globals.css` (`--a-*` D294 only).
 2. Reuse `AppShell` + Mission Control + Smart Action Dock + `A*`.
-3. Match references: `/` · `/dev/primitives` · list/detail anatomy from pack.
-4. Registry-driven — never hardcode sidebar modules/actions/KPI inventions.
+3. One accent only (`--a-accent`). No module colors.
+4. Registry-driven — never hardcode sidebar modules/actions.
 
-## Locked identity (ZIP)
+## Locked identity (D294)
 
-| Token | Value |
-|-------|--------|
-| Fonts | Outfit + JetBrains Mono (tabular) |
-| Canvas | Near-black / charcoal `#0b0e14` (dark default) |
-| Surfaces | Raised panels `#12161f`–`#181e2a` with **subtle hairline** |
-| Accent primary | Electric blue / cyan `#4f8cff` · `#22d3ee` |
-| Accents (actions) | Blue · cyan · violet · emerald · orange (semantic diamonds) |
-| Radius | Soft panels ~8–12px (not Soft Glass 2px tight-only) |
-| Cards | Allowed as ZIP panels (subtle border + fill) — not Bootstrap boxes |
-| Primary CTA | Luminous accent text / light fill (e.g. « + New order ») — not heavy teal frame |
-| Density | ERP-first, scannable |
+| Token | Light | Dark |
+|-------|--------|------|
+| Canvas | `#f5f6f8` | `#14161a` |
+| Surface 2 | `#ffffff` | `#1b1e24` |
+| Accent | `#2f5fdd` | `#6f93e8` |
+| Font | system sans + mono numérique | same |
+| Radius | 6 / 10 / 14px | same |
+| Primary CTA | one visible primary per screen | same |
 
-## Chrome (mandatory — ZIP anatomy)
+## Forbidden (D294)
 
-```text
-┌ topbar: AUTHORITY wordmark · ⌘K search · FR · Online · clock · (ops/user) ─┐
-├ sidebar modules (registry) ┬ main (Mission Control / list / detail) ┬ SMART ACTIONS ┤
-└────────────────────────────┴────────────────────────────────────────┴───────────────┘
-```
-
-- Features **never** in sidebar → Mission Control / module feature list
-- Right rail = Smart Action Dock only (cyan « SMART ACTIONS » title)
-- Ops modes exit only via calculator unlock
-- Live KPIs only (`/home-kpis`) — layout may match ZIP cards; **values never invented**
-
-## Forbidden
-
-- Reverting to Soft Glass zero-frame / teal-only identity as SoT
-- Second parallel design system beside this ZIP OS
-- Hardcoded fake dashboard metrics (€ / CA)
-- Feature lists inside the sidebar
-- Replacing Smart Action Dock with a module ContextRail
+- Soft Glass materials as SoT (blur page surfaces, teal Soft Glass identity)
+- Multi-accent chrome (`--a-violet` / `--a-sky` / `--a-orange` as design accents)
+- Decorative gradients (except login if explicitly allowed)
+- Page-surface blur / glass vibrancy
+- Second parallel design system
+- Hardcoded fake dashboard metrics
+- Features inside the sidebar

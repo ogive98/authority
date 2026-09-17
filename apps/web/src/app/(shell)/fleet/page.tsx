@@ -9,9 +9,12 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
+  AListUtilities,
   APageBody,
   AScreenHeader,
   ASkeleton,
@@ -19,9 +22,11 @@ import {
   ASoftThead,
   ASoftTr,
   ASwitch,
+  erpListDescription,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
-import { softChipClass, softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
+import { ATabs } from "@/components/a/a-tabs";
 import { fetchRounds, type DeliveryRound } from "@/lib/delivery";
 import {
   FLEET_VEHICLE_STATUS_LABELS,
@@ -336,7 +341,10 @@ export default function FleetPage() {
       <AScreenHeader
         kicker="Flotte"
         title="Véhicules & planning"
-        description="Fiche · historique · froid / capacité · pas de GPS (D254)."
+        description={erpListDescription(
+          tab === "vehicles" && state.kind === "ok" ? state.items.length : null,
+          "Fiche · historique · froid / capacité · pas de GPS (D254).",
+        )}
         primary={
           tab === "vehicles" ? (
             <AButton type="button" size="sm" onClick={openCreate}>
@@ -380,37 +388,25 @@ export default function FleetPage() {
                 />
               }
               filters={
-                <div
-                  className="flex flex-wrap gap-2"
-                  role="tablist"
-                  aria-label="Filtrer par statut"
-                >
-                  {STATUS_CHIPS.map((chip) => {
-                    const active = statusFilter === chip.id;
-                    return (
-                      <button
-                        key={chip.id || "all"}
-                        type="button"
-                        role="tab"
-                        aria-selected={active}
-                        onClick={() => setStatusFilter(chip.id)}
-                        className={softChipClass(active)}
-                      >
-                        {chip.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                <ATabs
+                  ariaLabel="Filtrer par statut"
+                  value={statusFilter || "all"}
+                  onValueChange={(id) => {
+                    const next = (id === "all" ? "" : id) as
+                      | ""
+                      | FleetVehicleStatus;
+                    setStatusFilter(next);
+                  }}
+                  items={STATUS_CHIPS.map((chip) => ({
+                    id: chip.id || "all",
+                    label: chip.label,
+                  }))}
+                />
               }
               utilities={
-                <AButton
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => void loadVehicles(q, statusFilter)}
-                >
-                  Filtrer
-                </AButton>
+                <AListUtilities
+                  onFilter={() => void loadVehicles(q, statusFilter)}
+                />
               }
             />
 
@@ -604,67 +600,69 @@ export default function FleetPage() {
         title="Nouveau véhicule"
       >
         {form && (
-          <div className="space-y-3">
+          <div className="space-y-5 p-4">
             {formError && (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {formError}
               </p>
             )}
-            <Field label="Code">
-              <AInput
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
-              />
-            </Field>
-            <Field label="Plaque">
-              <AInput
-                value={form.plate}
-                onChange={(e) => setForm({ ...form, plate: e.target.value })}
-              />
-            </Field>
-            <Field label="Chauffeur habitué">
-              <AInput
-                value={form.usualDriverLabel}
-                onChange={(e) =>
-                  setForm({ ...form, usualDriverLabel: e.target.value })
-                }
-                placeholder="Ex. Karim"
-              />
-            </Field>
-            <Field label="Capacité (kg)">
-              <AInput
-                value={form.capacityKg}
-                onChange={(e) =>
-                  setForm({ ...form, capacityKg: e.target.value })
-                }
-              />
-            </Field>
-            <Field label="Odomètre (km)">
-              <AInput
-                value={form.odometerKm}
-                onChange={(e) =>
-                  setForm({ ...form, odometerKm: e.target.value })
-                }
-              />
-            </Field>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                Froid
-              </span>
-              <ASwitch
-                label="Froid"
-                checked={form.cold}
-                onCheckedChange={(checked) =>
-                  setForm({ ...form, cold: checked })
-                }
-              />
-            </div>
-            <Field label="Notes">
-              <AInput
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
-            </Field>
+            <AFormSection title="Identité">
+              <AField label="Code">
+                <AInput
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value })}
+                />
+              </AField>
+              <AField label="Plaque">
+                <AInput
+                  value={form.plate}
+                  onChange={(e) => setForm({ ...form, plate: e.target.value })}
+                />
+              </AField>
+              <AField label="Chauffeur habitué">
+                <AInput
+                  value={form.usualDriverLabel}
+                  onChange={(e) =>
+                    setForm({ ...form, usualDriverLabel: e.target.value })
+                  }
+                  placeholder="Ex. Karim"
+                />
+              </AField>
+            </AFormSection>
+            <AFormSection title="Capacité">
+              <AField label="Capacité (kg)">
+                <AInput
+                  value={form.capacityKg}
+                  onChange={(e) =>
+                    setForm({ ...form, capacityKg: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Odomètre (km)">
+                <AInput
+                  value={form.odometerKm}
+                  onChange={(e) =>
+                    setForm({ ...form, odometerKm: e.target.value })
+                  }
+                />
+              </AField>
+              <div className="flex items-center justify-between gap-3">
+                <span className="a-field-label">Froid</span>
+                <ASwitch
+                  label="Froid"
+                  checked={form.cold}
+                  onCheckedChange={(checked) =>
+                    setForm({ ...form, cold: checked })
+                  }
+                />
+              </div>
+              <AField label="Notes">
+                <AInput
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
+              </AField>
+            </AFormSection>
             <div className="flex justify-end gap-2 pt-2">
               <AButton
                 type="button"
@@ -691,7 +689,7 @@ export default function FleetPage() {
         title="Affecter un véhicule"
       >
         {assignForm && (
-          <div className="space-y-3">
+          <div className="space-y-5 p-4">
             {assignHint?.requiresCold && (
               <p className="a-underlay rounded-md p-3 text-[length:var(--a-text-sm)] text-a-fg">
                 Tournée avec produits périssables — véhicule froid requis
@@ -706,56 +704,58 @@ export default function FleetPage() {
                 {formError}
               </p>
             )}
-            <Field label="Véhicule">
-              <select
-                className={softSelect}
-                value={assignForm.vehicleId}
-                onChange={(e) =>
-                  setAssignForm({
-                    ...assignForm,
-                    vehicleId: e.target.value,
-                  })
-                }
-              >
-                {assignVehicleOptions.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.code} · {v.plate}
-                    {v.cold ? " · froid" : ""}
-                    {v.capacityKg ? ` · ${v.capacityKg} kg` : ""}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Chauffeur (texte libre)">
-              <AInput
-                value={assignForm.driverLabel}
-                onChange={(e) =>
-                  setAssignForm({
-                    ...assignForm,
-                    driverLabel: e.target.value,
-                  })
-                }
-              />
-            </Field>
-            <Field label="Charge (kg) — optionnel">
-              <AInput
-                value={assignForm.payloadKg}
-                onChange={(e) =>
-                  setAssignForm({
-                    ...assignForm,
-                    payloadKg: e.target.value,
-                  })
-                }
-              />
-            </Field>
-            <Field label="Notes">
-              <AInput
-                value={assignForm.notes}
-                onChange={(e) =>
-                  setAssignForm({ ...assignForm, notes: e.target.value })
-                }
-              />
-            </Field>
+            <AFormSection title="Affectation">
+              <AField label="Véhicule">
+                <select
+                  className={softSelect}
+                  value={assignForm.vehicleId}
+                  onChange={(e) =>
+                    setAssignForm({
+                      ...assignForm,
+                      vehicleId: e.target.value,
+                    })
+                  }
+                >
+                  {assignVehicleOptions.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.code} · {v.plate}
+                      {v.cold ? " · froid" : ""}
+                      {v.capacityKg ? ` · ${v.capacityKg} kg` : ""}
+                    </option>
+                  ))}
+                </select>
+              </AField>
+              <AField label="Chauffeur (texte libre)">
+                <AInput
+                  value={assignForm.driverLabel}
+                  onChange={(e) =>
+                    setAssignForm({
+                      ...assignForm,
+                      driverLabel: e.target.value,
+                    })
+                  }
+                />
+              </AField>
+              <AField label="Charge (kg) — optionnel">
+                <AInput
+                  value={assignForm.payloadKg}
+                  onChange={(e) =>
+                    setAssignForm({
+                      ...assignForm,
+                      payloadKg: e.target.value,
+                    })
+                  }
+                />
+              </AField>
+              <AField label="Notes">
+                <AInput
+                  value={assignForm.notes}
+                  onChange={(e) =>
+                    setAssignForm({ ...assignForm, notes: e.target.value })
+                  }
+                />
+              </AField>
+            </AFormSection>
             <div className="flex justify-end gap-2 pt-2">
               <AButton
                 type="button"
@@ -776,22 +776,5 @@ export default function FleetPage() {
         )}
       </ADrawer>
     </>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block space-y-1">
-      <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-        {label}
-      </span>
-      {children}
-    </label>
   );
 }

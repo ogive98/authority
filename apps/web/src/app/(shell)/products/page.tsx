@@ -7,8 +7,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   APageBody,
@@ -329,142 +331,154 @@ export default function ProductsPage() {
         }
       >
         {form ? (
-          <div className="space-y-4 p-4">
-            <Field label="SKU" htmlFor="prd-sku">
-              <AInput
-                id="prd-sku"
-                value={form.sku}
-                onChange={(e) =>
-                  setForm((f) => (f ? { ...f, sku: e.target.value } : f))
-                }
-                required
-              />
-            </Field>
-            <Field label="Nom" htmlFor="prd-name">
-              <AInput
-                id="prd-name"
-                value={form.name}
-                onChange={(e) =>
-                  setForm((f) => (f ? { ...f, name: e.target.value } : f))
-                }
-                required
-              />
-            </Field>
-            <Field label="Type" htmlFor="prd-type">
-              <select
-                id="prd-type"
-                className={softSelect}
-                value={form.typeKey}
-                onChange={(e) =>
-                  setForm((f) => (f ? { ...f, typeKey: e.target.value } : f))
-                }
-              >
-                {types.map((t) => (
-                  <option key={t.code} value={t.code}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Unité" htmlFor="prd-uom">
-              <select
-                id="prd-uom"
-                className={softSelect}
-                value={form.uom}
-                onChange={(e) =>
-                  setForm((f) => (f ? { ...f, uom: e.target.value } : f))
-                }
-              >
-                {uoms.map((t) => (
-                  <option key={t.code} value={t.code}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Classe de stockage" htmlFor="prd-storage">
-              <select
-                id="prd-storage"
-                className={softSelect}
-                value={form.storageClassKey}
-                onChange={(e) =>
-                  setForm((f) =>
-                    f ? { ...f, storageClassKey: e.target.value } : f,
-                  )
-                }
-              >
-                {storages.map((t) => (
-                  <option key={t.code} value={t.code}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field
-              label="Conservation (jours après emballage)"
-              htmlFor="prd-shelf"
+          <div className="space-y-5 p-4">
+            <AFormSection title="Identité">
+              <Field label="SKU" htmlFor="prd-sku">
+                <AInput
+                  id="prd-sku"
+                  value={form.sku}
+                  onChange={(e) =>
+                    setForm((f) => (f ? { ...f, sku: e.target.value } : f))
+                  }
+                  required
+                />
+              </Field>
+              <Field label="Nom" htmlFor="prd-name">
+                <AInput
+                  id="prd-name"
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm((f) => (f ? { ...f, name: e.target.value } : f))
+                  }
+                  required
+                />
+              </Field>
+              <Field label="Type" htmlFor="prd-type">
+                <select
+                  id="prd-type"
+                  className={softSelect}
+                  value={form.typeKey}
+                  onChange={(e) =>
+                    setForm((f) => (f ? { ...f, typeKey: e.target.value } : f))
+                  }
+                >
+                  {types.map((t) => (
+                    <option key={t.code} value={t.code}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </AFormSection>
+
+            <AFormSection title="Unité & stockage">
+              <Field label="Unité" htmlFor="prd-uom">
+                <select
+                  id="prd-uom"
+                  className={softSelect}
+                  value={form.uom}
+                  onChange={(e) =>
+                    setForm((f) => (f ? { ...f, uom: e.target.value } : f))
+                  }
+                >
+                  {uoms.map((t) => (
+                    <option key={t.code} value={t.code}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Classe de stockage" htmlFor="prd-storage">
+                <select
+                  id="prd-storage"
+                  className={softSelect}
+                  value={form.storageClassKey}
+                  onChange={(e) =>
+                    setForm((f) =>
+                      f ? { ...f, storageClassKey: e.target.value } : f,
+                    )
+                  }
+                >
+                  {storages.map((t) => (
+                    <option key={t.code} value={t.code}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </AFormSection>
+
+            <AFormSection
+              title="Conservation & allergènes"
+              description="Sert au certificat de salubrité et au calcul de la DLC."
             >
-              <AInput
-                id="prd-shelf"
-                value={form.shelfLifeDays}
-                onChange={(e) => {
-                  const shelfLifeDays = e.target.value;
-                  const hasDays = shelfLifeDays.trim().length > 0;
-                  setForm((f) =>
-                    f
-                      ? {
-                          ...f,
-                          shelfLifeDays,
-                          ...(hasDays
-                            ? { trackLot: true, perishable: true }
-                            : {}),
-                        }
-                      : f,
-                  );
-                }}
-                placeholder="7, 30, 60… (vide = hors certificat)"
-                inputMode="numeric"
-              />
-              <p className="text-[11px] text-a-fg-subtle">
-                Sert au certificat de salubrité et au calcul de la DLC.
-              </p>
-            </Field>
-            <Field label="Allergènes (codes, virgules)" htmlFor="prd-allergens">
-              <AInput
-                id="prd-allergens"
-                value={form.allergenFlags}
-                onChange={(e) =>
-                  setForm((f) =>
-                    f ? { ...f, allergenFlags: e.target.value } : f,
-                  )
-                }
-                placeholder={
-                  allergens.map((a) => a.code).join(", ") || "aucun"
-                }
-              />
-            </Field>
-            <div className="space-y-1.5">
-              <ASwitch
-                label="Suivi par lot et DLC"
-                checked={form.trackLot || form.perishable}
-                onCheckedChange={(v) =>
-                  setForm((f) =>
-                    f
-                      ? {
-                          ...f,
-                          trackLot: v,
-                          perishable: v,
-                          ...(v ? {} : { shelfLifeDays: "" }),
-                        }
-                      : f,
-                  )
-                }
-              />
-              <p className="text-[11px] text-a-fg-subtle">
-                Obligatoire pour fromage / FEFO. Activé si conservation
-                renseignée.
-              </p>
-            </div>
+              <Field
+                label="Conservation (jours après emballage)"
+                htmlFor="prd-shelf"
+              >
+                <AInput
+                  id="prd-shelf"
+                  value={form.shelfLifeDays}
+                  onChange={(e) => {
+                    const shelfLifeDays = e.target.value;
+                    const hasDays = shelfLifeDays.trim().length > 0;
+                    setForm((f) =>
+                      f
+                        ? {
+                            ...f,
+                            shelfLifeDays,
+                            ...(hasDays
+                              ? { trackLot: true, perishable: true }
+                              : {}),
+                          }
+                        : f,
+                    );
+                  }}
+                  placeholder="7, 30, 60… (vide = hors certificat)"
+                  inputMode="numeric"
+                />
+              </Field>
+              <Field
+                label="Allergènes (codes, virgules)"
+                htmlFor="prd-allergens"
+              >
+                <AInput
+                  id="prd-allergens"
+                  value={form.allergenFlags}
+                  onChange={(e) =>
+                    setForm((f) =>
+                      f ? { ...f, allergenFlags: e.target.value } : f,
+                    )
+                  }
+                  placeholder={
+                    allergens.map((a) => a.code).join(", ") || "aucun"
+                  }
+                />
+              </Field>
+              <div className="space-y-1.5">
+                <ASwitch
+                  label="Suivi par lot et DLC"
+                  checked={form.trackLot || form.perishable}
+                  onCheckedChange={(v) =>
+                    setForm((f) =>
+                      f
+                        ? {
+                            ...f,
+                            trackLot: v,
+                            perishable: v,
+                            ...(v ? {} : { shelfLifeDays: "" }),
+                          }
+                        : f,
+                    )
+                  }
+                />
+                <p className="text-[11px] text-a-fg-subtle">
+                  Obligatoire pour fromage / FEFO. Activé si conservation
+                  renseignée.
+                </p>
+              </div>
+            </AFormSection>
+
             {formError ? (
               <p
                 className="text-[length:var(--a-text-sm)] text-a-danger"
@@ -490,14 +504,8 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-1.5">
-      <label
-        htmlFor={htmlFor}
-        className="text-[length:var(--a-text-sm)] text-a-fg"
-      >
-        {label}
-      </label>
+    <AField label={label} htmlFor={htmlFor}>
       {children}
-    </div>
+    </AField>
   );
 }

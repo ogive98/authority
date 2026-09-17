@@ -8,8 +8,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   AOverflowMenu,
@@ -860,34 +862,59 @@ export default function FinanceBankingPage() {
         title="Nouveau compte bancaire"
       >
         {accountForm ? (
-          <div className="space-y-3">
-            <Field
-              label="Code"
-              value={accountForm.code}
-              onChange={(v) => setAccountForm({ ...accountForm, code: v })}
-            />
-            <Field
-              label="Libellé"
-              value={accountForm.label}
-              onChange={(v) => setAccountForm({ ...accountForm, label: v })}
-            />
-            <Field
-              label="Banque"
-              value={accountForm.bankName}
-              onChange={(v) => setAccountForm({ ...accountForm, bankName: v })}
-            />
-            <Field
-              label="RIB"
-              value={accountForm.rib}
-              onChange={(v) => setAccountForm({ ...accountForm, rib: v })}
-            />
-            <Field
-              label="Compte GL (optionnel)"
-              value={accountForm.glAccountCode}
-              onChange={(v) =>
-                setAccountForm({ ...accountForm, glAccountCode: v })
-              }
-            />
+          <div className="space-y-5 p-4">
+            <AFormSection title="Identité">
+              <AField label="Code" htmlFor="bank-code">
+                <AInput
+                  id="bank-code"
+                  value={accountForm.code}
+                  onChange={(e) =>
+                    setAccountForm({ ...accountForm, code: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Libellé" htmlFor="bank-label">
+                <AInput
+                  id="bank-label"
+                  value={accountForm.label}
+                  onChange={(e) =>
+                    setAccountForm({ ...accountForm, label: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Banque" htmlFor="bank-name">
+                <AInput
+                  id="bank-name"
+                  value={accountForm.bankName}
+                  onChange={(e) =>
+                    setAccountForm({ ...accountForm, bankName: e.target.value })
+                  }
+                />
+              </AField>
+            </AFormSection>
+            <AFormSection title="Coordonnées">
+              <AField label="RIB" htmlFor="bank-rib">
+                <AInput
+                  id="bank-rib"
+                  value={accountForm.rib}
+                  onChange={(e) =>
+                    setAccountForm({ ...accountForm, rib: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Compte GL (optionnel)" htmlFor="bank-gl">
+                <AInput
+                  id="bank-gl"
+                  value={accountForm.glAccountCode}
+                  onChange={(e) =>
+                    setAccountForm({
+                      ...accountForm,
+                      glAccountCode: e.target.value,
+                    })
+                  }
+                />
+              </AField>
+            </AFormSection>
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {formError}
@@ -910,33 +937,58 @@ export default function FinanceBankingPage() {
         title="Ligne de relevé"
       >
         {lineForm ? (
-          <div className="space-y-3">
-            <Field
-              label="Date"
-              type="date"
-              value={lineForm.lineDate}
-              onChange={(v) => setLineForm({ ...lineForm, lineDate: v })}
-            />
-            <Field
-              label="Montant TND (+ crédit / − débit)"
-              value={lineForm.amount}
-              onChange={(v) => setLineForm({ ...lineForm, amount: v })}
-            />
-            <Field
-              label="Référence"
-              value={lineForm.reference}
-              onChange={(v) => setLineForm({ ...lineForm, reference: v })}
-            />
-            <Field
-              label="Contrepartie"
-              value={lineForm.counterparty}
-              onChange={(v) => setLineForm({ ...lineForm, counterparty: v })}
-            />
-            <Field
-              label="Mémo"
-              value={lineForm.memo}
-              onChange={(v) => setLineForm({ ...lineForm, memo: v })}
-            />
+          <div className="space-y-5 p-4">
+            <AFormSection title="Ligne">
+              <AField label="Date" htmlFor="line-date">
+                <AInput
+                  id="line-date"
+                  type="date"
+                  value={lineForm.lineDate}
+                  onChange={(e) =>
+                    setLineForm({ ...lineForm, lineDate: e.target.value })
+                  }
+                />
+              </AField>
+              <AField
+                label="Montant TND (+ crédit / − débit)"
+                htmlFor="line-amount"
+              >
+                <AInput
+                  id="line-amount"
+                  value={lineForm.amount}
+                  onChange={(e) =>
+                    setLineForm({ ...lineForm, amount: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Référence" htmlFor="line-ref">
+                <AInput
+                  id="line-ref"
+                  value={lineForm.reference}
+                  onChange={(e) =>
+                    setLineForm({ ...lineForm, reference: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Contrepartie" htmlFor="line-cp">
+                <AInput
+                  id="line-cp"
+                  value={lineForm.counterparty}
+                  onChange={(e) =>
+                    setLineForm({ ...lineForm, counterparty: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Mémo" htmlFor="line-memo">
+                <AInput
+                  id="line-memo"
+                  value={lineForm.memo}
+                  onChange={(e) =>
+                    setLineForm({ ...lineForm, memo: e.target.value })
+                  }
+                />
+              </AField>
+            </AFormSection>
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {formError}
@@ -959,16 +1011,20 @@ export default function FinanceBankingPage() {
         title="Import CSV"
         description="Colonnes date,amount,reference,counterparty,memo — + crédit / − débit."
       >
-        <div className="space-y-3">
-          <textarea
-            className="a-underlay a-mono min-h-[12rem] w-full rounded-md p-3 text-[length:var(--a-text-xs)] text-a-fg"
-            value={csvText}
-            onChange={(e) => {
-              setCsvText(e.target.value);
-              setCsvPreview(null);
-            }}
-            spellCheck={false}
-          />
+        <div className="space-y-5 p-4">
+          <AFormSection title="Contenu">
+            <AField label="CSV">
+              <textarea
+                className="a-underlay a-mono min-h-[12rem] w-full rounded-md p-3 text-[length:var(--a-text-xs)] text-a-fg"
+                value={csvText}
+                onChange={(e) => {
+                  setCsvText(e.target.value);
+                  setCsvPreview(null);
+                }}
+                spellCheck={false}
+              />
+            </AField>
+          </AFormSection>
           {csvPreview ? (
             <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
               {csvPreview.lineCount} ligne(s) · délimiteur «{" "}
@@ -1017,16 +1073,20 @@ export default function FinanceBankingPage() {
         title="Import OFX"
         description="OFX 1.x SGML — STMTTRN + FITID obligatoire (dédup par compte)."
       >
-        <div className="space-y-3">
-          <textarea
-            className="a-underlay a-mono min-h-[12rem] w-full rounded-md p-3 text-[length:var(--a-text-xs)] text-a-fg"
-            value={ofxText}
-            onChange={(e) => {
-              setOfxText(e.target.value);
-              setOfxPreview(null);
-            }}
-            spellCheck={false}
-          />
+        <div className="space-y-5 p-4">
+          <AFormSection title="Contenu">
+            <AField label="OFX">
+              <textarea
+                className="a-underlay a-mono min-h-[12rem] w-full rounded-md p-3 text-[length:var(--a-text-xs)] text-a-fg"
+                value={ofxText}
+                onChange={(e) => {
+                  setOfxText(e.target.value);
+                  setOfxPreview(null);
+                }}
+                spellCheck={false}
+              />
+            </AField>
+          </AFormSection>
           {ofxPreview ? (
             <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
               {ofxPreview.lineCount} txn · {ofxPreview.duplicateFitIdCount}{" "}
@@ -1217,76 +1277,88 @@ export default function FinanceBankingPage() {
         description="Nom libre ou facture AP postée · montant TND · GL Dr AP / Cr Banque via Thunder (D273)."
       >
         {apForm ? (
-          <div className="space-y-3">
-            <label className="block space-y-1">
-              <span className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Facture AP (optionnel)
-              </span>
-              <select
-                className={softSelect}
-                value={apForm.apBillId}
-                onChange={(e) => {
-                  const apBillId = e.target.value;
-                  const bill = postedBills.find((b) => b.id === apBillId);
-                  setApForm({
-                    ...apForm,
-                    apBillId,
-                    vendorName: bill
-                      ? bill.vendorName
-                      : apForm.vendorName,
-                    amount:
-                      bill && !apForm.amount
-                        ? bill.amountTotal
-                        : apForm.amount,
-                  });
-                }}
-              >
-                <option value="">— Aucune —</option>
-                {postedBills.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.number} — {b.vendorName} ({b.amountTotal} {b.currency})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Field
-              label="Fournisseur"
-              value={apForm.vendorName}
-              onChange={(v) => setApForm({ ...apForm, vendorName: v })}
-            />
-            <Field
-              label="Montant TND"
-              value={apForm.amount}
-              onChange={(v) => setApForm({ ...apForm, amount: v })}
-            />
-            <label className="block space-y-1">
-              <span className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-                Mode
-              </span>
-              <select
-                className={softSelect}
-                value={apForm.method}
-                onChange={(e) =>
-                  setApForm({ ...apForm, method: e.target.value })
-                }
-              >
-                <option value="BANK_TRANSFER">Virement</option>
-                <option value="CHEQUE">Chèque</option>
-                <option value="CASH">Espèces</option>
-                <option value="OTHER">Autre</option>
-              </select>
-            </label>
-            <Field
-              label="Date"
-              type="date"
-              value={apForm.paymentDate}
-              onChange={(v) => setApForm({ ...apForm, paymentDate: v })}
-            />
-            <Field
-              label="Référence"
-              value={apForm.reference}
-              onChange={(v) => setApForm({ ...apForm, reference: v })}
-            />
+          <div className="space-y-5 p-4">
+            <AFormSection title="Décaissement">
+              <AField label="Facture AP (optionnel)">
+                <select
+                  className={softSelect}
+                  value={apForm.apBillId}
+                  onChange={(e) => {
+                    const apBillId = e.target.value;
+                    const bill = postedBills.find((b) => b.id === apBillId);
+                    setApForm({
+                      ...apForm,
+                      apBillId,
+                      vendorName: bill
+                        ? bill.vendorName
+                        : apForm.vendorName,
+                      amount:
+                        bill && !apForm.amount
+                          ? bill.amountTotal
+                          : apForm.amount,
+                    });
+                  }}
+                >
+                  <option value="">— Aucune —</option>
+                  {postedBills.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.number} — {b.vendorName} ({b.amountTotal} {b.currency})
+                    </option>
+                  ))}
+                </select>
+              </AField>
+              <AField label="Fournisseur" htmlFor="ap-vendor">
+                <AInput
+                  id="ap-vendor"
+                  value={apForm.vendorName}
+                  onChange={(e) =>
+                    setApForm({ ...apForm, vendorName: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Montant TND" htmlFor="ap-amount">
+                <AInput
+                  id="ap-amount"
+                  value={apForm.amount}
+                  onChange={(e) =>
+                    setApForm({ ...apForm, amount: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Mode">
+                <select
+                  className={softSelect}
+                  value={apForm.method}
+                  onChange={(e) =>
+                    setApForm({ ...apForm, method: e.target.value })
+                  }
+                >
+                  <option value="BANK_TRANSFER">Virement</option>
+                  <option value="CHEQUE">Chèque</option>
+                  <option value="CASH">Espèces</option>
+                  <option value="OTHER">Autre</option>
+                </select>
+              </AField>
+              <AField label="Date" htmlFor="ap-date">
+                <AInput
+                  id="ap-date"
+                  type="date"
+                  value={apForm.paymentDate}
+                  onChange={(e) =>
+                    setApForm({ ...apForm, paymentDate: e.target.value })
+                  }
+                />
+              </AField>
+              <AField label="Référence" htmlFor="ap-ref">
+                <AInput
+                  id="ap-ref"
+                  value={apForm.reference}
+                  onChange={(e) =>
+                    setApForm({ ...apForm, reference: e.target.value })
+                  }
+                />
+              </AField>
+            </AFormSection>
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {formError}
@@ -1313,36 +1385,6 @@ function Kpi({ label, value }: { label: string; value: string }) {
       <p className="a-mono text-[length:var(--a-text-lg)] tabular-nums text-a-fg">
         {value}
       </p>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-}) {
-  const id = label.toLowerCase().replace(/\s+/g, "-");
-  return (
-    <div className="space-y-1">
-      <label
-        htmlFor={id}
-        className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-      >
-        {label}
-      </label>
-      <AInput
-        id={id}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
     </div>
   );
 }

@@ -8,8 +8,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   APageBody,
@@ -318,89 +320,80 @@ export default function AutomationPage() {
         }}
         title="Nouveau profil"
       >
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Code
-            </label>
-            <AInput
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="OVERDUE_HINT"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Nom
-            </label>
-            <AInput
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Relances échues"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Mode
-            </label>
-            <select
-              className={softSelect}
-              value={mode}
-              onChange={(e) => setMode(e.target.value as AtmProfileMode)}
-            >
-              {(catalog?.modes ?? [])
-                .filter((m) => m.allowed)
-                .map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
+        <div className="space-y-5 p-4">
+          <AFormSection title="Identité">
+            <AField label="Code">
+              <AInput
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="OVERDUE_HINT"
+              />
+            </AField>
+            <AField label="Nom">
+              <AInput
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Relances échues"
+              />
+            </AField>
+          </AFormSection>
+
+          <AFormSection title="Comportement">
+            <AField label="Mode">
+              <select
+                className={softSelect}
+                value={mode}
+                onChange={(e) => setMode(e.target.value as AtmProfileMode)}
+              >
+                {(catalog?.modes ?? [])
+                  .filter((m) => m.allowed)
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+              </select>
+            </AField>
+            <AField label="Déclencheur">
+              <select
+                className={softSelect}
+                value={triggerKind}
+                onChange={(e) =>
+                  setTriggerKind(e.target.value as AtmTriggerKind)
+                }
+              >
+                {(catalog?.triggers ?? []).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
                   </option>
                 ))}
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Déclencheur
+              </select>
+            </AField>
+            <AField label="Action">
+              <select
+                className={softSelect}
+                value={actionKind}
+                onChange={(e) =>
+                  setActionKind(e.target.value as AtmActionKind)
+                }
+              >
+                {(catalog?.actions ?? []).map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label}
+                  </option>
+                ))}
+              </select>
+            </AField>
+            <label className="flex items-center gap-2 text-[length:var(--a-text-sm)] text-a-fg">
+              <input
+                type="checkbox"
+                checked={shadowMode}
+                onChange={(e) => setShadowMode(e.target.checked)}
+              />
+              Mode shadow (log only)
             </label>
-            <select
-              className={softSelect}
-              value={triggerKind}
-              onChange={(e) =>
-                setTriggerKind(e.target.value as AtmTriggerKind)
-              }
-            >
-              {(catalog?.triggers ?? []).map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-[length:var(--a-text-sm)] text-a-fg-muted">
-              Action
-            </label>
-            <select
-              className={softSelect}
-              value={actionKind}
-              onChange={(e) =>
-                setActionKind(e.target.value as AtmActionKind)
-              }
-            >
-              {(catalog?.actions ?? []).map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
-            <input
-              type="checkbox"
-              checked={shadowMode}
-              onChange={(e) => setShadowMode(e.target.checked)}
-            />
-            Mode shadow (log only)
-          </label>
+          </AFormSection>
+
           {formError ? (
             <p className="text-[length:var(--a-text-sm)] text-a-danger">
               {formError}

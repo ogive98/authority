@@ -8,8 +8,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   APageBody,
   AScreenHeader,
@@ -299,112 +301,126 @@ export default function SuppliersPage() {
         title="Nouveau fournisseur"
       >
         {form && (
-          <div className="space-y-3">
+          <div className="space-y-5">
             {formError && (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {formError}
               </p>
             )}
-            <Field label="Code">
-              <AInput
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
-              />
-            </Field>
-            <Field label="Raison sociale">
-              <AInput
-                value={form.legalName}
-                onChange={(e) =>
-                  setForm({ ...form, legalName: e.target.value })
-                }
-              />
-            </Field>
-            <Field label="Matricule fiscal">
-              <AInput
-                value={form.taxId}
-                onChange={(e) =>
-                  setForm({ ...form, taxId: e.target.value })
-                }
-              />
-            </Field>
-            <Field label="Catégorie">
-              <select
-                className={softSelect}
-                value={form.category}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    category: e.target.value as SupplierCategory,
-                  })
-                }
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {SUPPLIER_CATEGORY_LABELS[c]}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Délai (jours)">
+
+            <AFormSection title="Identité">
+              <AField label="Code" required>
                 <AInput
-                  value={form.leadTimeDays}
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value })}
+                />
+              </AField>
+              <AField label="Raison sociale" required>
+                <AInput
+                  value={form.legalName}
                   onChange={(e) =>
-                    setForm({ ...form, leadTimeDays: e.target.value })
+                    setForm({ ...form, legalName: e.target.value })
                   }
                 />
-              </Field>
-              <Field label="MOQ défaut">
+              </AField>
+              <AField label="Matricule fiscal">
                 <AInput
-                  value={form.moqDefault}
+                  value={form.taxId}
                   onChange={(e) =>
-                    setForm({ ...form, moqDefault: e.target.value })
+                    setForm({ ...form, taxId: e.target.value })
                   }
                 />
-              </Field>
-            </div>
-            <Field label="Conditions de paiement">
-              <AInput
-                value={form.paymentTerms}
-                onChange={(e) =>
-                  setForm({ ...form, paymentTerms: e.target.value })
-                }
-              />
-            </Field>
-            <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
-              <ASwitch
-                checked={form.preferred}
-                onCheckedChange={(v) =>
-                  setForm({ ...form, preferred: v })
-                }
-              />
-              Fournisseur préféré
-            </label>
-            <Field label="Contact (optionnel)">
-              <AInput
-                placeholder="Nom"
-                value={form.contactName}
-                onChange={(e) =>
-                  setForm({ ...form, contactName: e.target.value })
-                }
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <AInput
-                placeholder="Téléphone"
-                value={form.contactPhone}
-                onChange={(e) =>
-                  setForm({ ...form, contactPhone: e.target.value })
-                }
-              />
-              <AInput
-                placeholder="E-mail"
-                value={form.contactEmail}
-                onChange={(e) =>
-                  setForm({ ...form, contactEmail: e.target.value })
-                }
-              />
-            </div>
+              </AField>
+              <AField label="Catégorie">
+                <select
+                  className={softSelect}
+                  value={form.category}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      category: e.target.value as SupplierCategory,
+                    })
+                  }
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {SUPPLIER_CATEGORY_LABELS[c]}
+                    </option>
+                  ))}
+                </select>
+              </AField>
+            </AFormSection>
+
+            <AFormSection title="Conditions">
+              <div className="grid grid-cols-2 gap-3">
+                <AField label="Délai (jours)">
+                  <AInput
+                    value={form.leadTimeDays}
+                    onChange={(e) =>
+                      setForm({ ...form, leadTimeDays: e.target.value })
+                    }
+                  />
+                </AField>
+                <AField label="MOQ défaut">
+                  <AInput
+                    value={form.moqDefault}
+                    onChange={(e) =>
+                      setForm({ ...form, moqDefault: e.target.value })
+                    }
+                  />
+                </AField>
+              </div>
+              <AField label="Conditions de paiement">
+                <AInput
+                  value={form.paymentTerms}
+                  onChange={(e) =>
+                    setForm({ ...form, paymentTerms: e.target.value })
+                  }
+                />
+              </AField>
+              <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
+                <ASwitch
+                  checked={form.preferred}
+                  onCheckedChange={(v) =>
+                    setForm({ ...form, preferred: v })
+                  }
+                />
+                Fournisseur préféré
+              </label>
+            </AFormSection>
+
+            <AFormSection title="Contact">
+              <AField label="Contact (optionnel)">
+                <AInput
+                  placeholder="Nom"
+                  value={form.contactName}
+                  onChange={(e) =>
+                    setForm({ ...form, contactName: e.target.value })
+                  }
+                />
+              </AField>
+              <div className="grid grid-cols-2 gap-3">
+                <AField label="Téléphone">
+                  <AInput
+                    placeholder="Téléphone"
+                    value={form.contactPhone}
+                    onChange={(e) =>
+                      setForm({ ...form, contactPhone: e.target.value })
+                    }
+                  />
+                </AField>
+                <AField label="E-mail">
+                  <AInput
+                    placeholder="E-mail"
+                    value={form.contactEmail}
+                    onChange={(e) =>
+                      setForm({ ...form, contactEmail: e.target.value })
+                    }
+                  />
+                </AField>
+              </div>
+            </AFormSection>
+
             <div className="flex justify-end gap-2 pt-2">
               <AButton
                 type="button"
@@ -427,22 +443,5 @@ export default function SuppliersPage() {
         )}
       </ADrawer>
     </>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block space-y-1">
-      <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-        {label}
-      </span>
-      {children}
-    </label>
   );
 }

@@ -23,6 +23,7 @@ import {
   ASoftThead,
   ASoftTr,
   ASwitch,
+  ATabs,
   type AOverflowItem,
 } from "@/components/a";
 import { FulfillmentDocToggle } from "@/components/fulfillment-doc-toggle";
@@ -69,7 +70,7 @@ import {
   type PortalMembership,
   type PortalMembershipRole,
 } from "@/lib/customers";
-import { softChipClass, softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -844,30 +845,17 @@ export default function Customer360Page() {
                   </div>
                 ) : null}
 
-                <div
-                  className="flex flex-wrap gap-2"
-                  role="tablist"
-                  aria-label="Sections fiche client"
-                >
-                  {(
-                    [
-                      { id: "overview", label: "Synthèse" },
-                      { id: "documents", label: "Documents" },
-                      { id: "communications", label: "Communication" },
-                    ] as const
-                  ).map((chip) => (
-                    <button
-                      key={chip.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={tab === chip.id}
-                      className={softChipClass(tab === chip.id)}
-                      onClick={() => setTab(chip.id)}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
+                <ATabs
+                  variant="underline"
+                  ariaLabel="Sections fiche client"
+                  value={tab}
+                  onValueChange={(id) => setTab(id as FicheTab)}
+                  items={[
+                    { id: "overview", label: "Synthèse" },
+                    { id: "documents", label: "Documents" },
+                    { id: "communications", label: "Communication" },
+                  ]}
+                />
 
                 <APageSection title="Indicateurs">
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

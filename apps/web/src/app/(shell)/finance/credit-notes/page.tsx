@@ -9,8 +9,10 @@ import {
   ADrawer,
   AEmptyState,
   AErrorState,
+  AField,
   AFilterBar,
   AForbiddenState,
+  AFormSection,
   AInput,
   AListUtilities,
   AOverflowMenu,
@@ -22,6 +24,7 @@ import {
   ASoftTh,
   ASoftThead,
   ASoftTr,
+  ATabs,
   erpListDescription,
   type AComboboxOption,
 } from "@/components/a";
@@ -40,7 +43,6 @@ import {
 } from "@/lib/finance";
 import { fetchTaxCodes, formatRateBps, type TaxCode } from "@/lib/tax";
 import { softSelect } from "@/lib/soft-glass-ui";
-import { ATabs } from "@/components/a/a-tabs";
 
 type LoadState =
   | { kind: "loading" }
@@ -450,54 +452,48 @@ function FinanceCreditNotesPageInner() {
         description="Facture source obligatoire — lignes partielles ou copie intégrale. Cap = TTC facture."
       >
         {form ? (
-          <div className="space-y-4">
-            <ACombobox
-              label="Facture émise"
-              valueId={form.invoiceId}
-              displayValue={form.invoiceLabel}
-              options={invoiceOpts}
-              loading={invoiceLoading}
-              placeholder="Rechercher une facture…"
-              onOpen={() => void refreshInvoices(form.invoiceLabel.trim())}
-              onDisplayChange={(text) => {
-                setForm({
-                  ...form,
-                  invoiceLabel: text,
-                  invoiceId: null,
-                });
-                scheduleInvoiceSearch(text);
-              }}
-              onSelect={selectInvoice}
-            />
-            <div className="space-y-1">
-              <label
-                htmlFor="cn-reason"
-                className="text-[length:var(--a-text-sm)] text-a-fg-muted"
-              >
-                Motif
+          <div className="space-y-5">
+            <AFormSection title="Facture & motif">
+              <ACombobox
+                label="Facture émise"
+                valueId={form.invoiceId}
+                displayValue={form.invoiceLabel}
+                options={invoiceOpts}
+                loading={invoiceLoading}
+                placeholder="Rechercher une facture…"
+                onOpen={() => void refreshInvoices(form.invoiceLabel.trim())}
+                onDisplayChange={(text) => {
+                  setForm({
+                    ...form,
+                    invoiceLabel: text,
+                    invoiceId: null,
+                  });
+                  scheduleInvoiceSearch(text);
+                }}
+                onSelect={selectInvoice}
+              />
+              <AField label="Motif" htmlFor="cn-reason">
+                <AInput
+                  id="cn-reason"
+                  value={form.reason}
+                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                />
+              </AField>
+              <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
+                <input
+                  type="checkbox"
+                  checked={form.copyFull}
+                  onChange={(e) =>
+                    setForm({ ...form, copyFull: e.target.checked })
+                  }
+                />
+                Copier toutes les lignes de la facture
               </label>
-              <AInput
-                id="cn-reason"
-                value={form.reason}
-                onChange={(e) => setForm({ ...form, reason: e.target.value })}
-              />
-            </div>
-            <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
-              <input
-                type="checkbox"
-                checked={form.copyFull}
-                onChange={(e) =>
-                  setForm({ ...form, copyFull: e.target.checked })
-                }
-              />
-              Copier toutes les lignes de la facture
-            </label>
+            </AFormSection>
+
             {!form.copyFull ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[length:var(--a-text-sm)] font-medium">
-                    Lignes
-                  </p>
+              <AFormSection title="Lignes">
+                <div className="flex items-center justify-end">
                   <AButton
                     type="button"
                     variant="secondary"
@@ -519,7 +515,7 @@ function FinanceCreditNotesPageInner() {
                 {form.lines.map((line, idx) => (
                   <div
                     key={idx}
-                    className="a-underlay space-y-2 p-[length:var(--a-space-3)]"
+                    className="space-y-2 rounded-[var(--a-radius-sm)] bg-a-surface-3/60 p-3"
                   >
                     <AInput
                       placeholder="Description"
@@ -582,18 +578,22 @@ function FinanceCreditNotesPageInner() {
                     </div>
                   </div>
                 ))}
-              </div>
+              </AFormSection>
             ) : null}
-            <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
-              <input
-                type="checkbox"
-                checked={form.issue}
-                onChange={(e) =>
-                  setForm({ ...form, issue: e.target.checked })
-                }
-              />
-              Émettre immédiatement
-            </label>
+
+            <AFormSection>
+              <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
+                <input
+                  type="checkbox"
+                  checked={form.issue}
+                  onChange={(e) =>
+                    setForm({ ...form, issue: e.target.checked })
+                  }
+                />
+                Émettre immédiatement
+              </label>
+            </AFormSection>
+
             {formError ? (
               <p className="text-[length:var(--a-text-sm)] text-a-danger">
                 {formError}

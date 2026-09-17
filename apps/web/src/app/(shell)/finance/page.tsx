@@ -22,6 +22,7 @@ import {
   ASoftTh,
   ASoftThead,
   ASoftTr,
+  ATabs,
   erpListDescription,
   type AComboboxOption,
 } from "@/components/a";
@@ -43,9 +44,8 @@ import {
   type FinOpenItem,
   type OpenItemStatus,
 } from "@/lib/finance";
-import { softChipClass, softSelect } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 import { useStatusLabel } from "@/hooks/use-status-label";
-import { ATabs } from "@/components/a/a-tabs";
 
 type LoadState =
   | { kind: "loading" }
@@ -875,24 +875,21 @@ export default function FinancePage() {
                   </select>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className={softChipClass(dunningChannel === "EMAIL")}
-                    onClick={() => setDunningChannel("EMAIL")}
-                    disabled={!dunningPreview.eligible}
-                  >
-                    Email
-                  </button>
-                  <button
-                    type="button"
-                    className={softChipClass(dunningChannel === "WHATSAPP")}
-                    onClick={() => setDunningChannel("WHATSAPP")}
-                    disabled={!dunningPreview.eligible}
-                  >
-                    WhatsApp
-                  </button>
-                </div>
+                <ATabs
+                  ariaLabel="Canal relance"
+                  value={dunningChannel}
+                  onValueChange={(id) =>
+                    setDunningChannel(id as "EMAIL" | "WHATSAPP")
+                  }
+                  items={[
+                    { id: "EMAIL", label: "Email", disabled: !dunningPreview.eligible },
+                    {
+                      id: "WHATSAPP",
+                      label: "WhatsApp",
+                      disabled: !dunningPreview.eligible,
+                    },
+                  ]}
+                />
 
                 <div className="space-y-1">
                   <p className="text-[length:var(--a-text-sm)] font-medium">

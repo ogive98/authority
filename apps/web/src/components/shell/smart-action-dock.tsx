@@ -218,11 +218,7 @@ function ThunderCoreDialog({
   );
 }
 
-const DOCK_SPARK = [
-  "text-a-accent",
-  "text-a-sky",
-  "text-a-violet",
-] as const;
+const DOCK_SPARK = ["text-a-accent"] as const;
 
 function ActionTile({
   action,
@@ -250,7 +246,7 @@ function ActionTile({
           spark,
         )}
       >
-        <Sparkles className="h-4 w-4" strokeWidth={SIDEBAR_STROKE} aria-hidden />
+        <Icon className="h-4 w-4" strokeWidth={SIDEBAR_STROKE} aria-hidden />
       </Link>
     );
   }
@@ -260,7 +256,7 @@ function ActionTile({
       href={action.href}
       className="a-nav-row group flex w-full items-center gap-2.5 rounded-[var(--a-radius-sm)] px-1.5 py-1.5 text-left"
     >
-      <Sparkles
+      <Icon
         className={cn("h-4 w-4 shrink-0", spark)}
         strokeWidth={SIDEBAR_STROKE}
         aria-hidden
@@ -273,7 +269,6 @@ function ActionTile({
           <span className="a-mono text-[10px] text-a-fg-subtle">{shortcut}</span>
         ) : null}
       </span>
-      <Icon className="h-3.5 w-3.5 shrink-0 text-a-fg-subtle opacity-0 transition-opacity group-hover:opacity-100" strokeWidth={1.5} aria-hidden />
     </Link>
   );
 }
@@ -398,7 +393,7 @@ export function SmartActionDock() {
       </div>
 
       {!dockCollapsed ? (
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-a-sky">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-a-accent">
           {t("smartActions")}
         </p>
       ) : null}
@@ -463,7 +458,7 @@ export function SmartActionDock() {
             className="a-nav-row flex items-center gap-2.5 rounded-md px-1.5 py-1.5 text-[12.5px] font-medium text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
           >
             <Settings2
-              className="h-5 w-5 shrink-0 text-a-violet"
+              className="h-5 w-5 shrink-0 text-a-accent"
               strokeWidth={SIDEBAR_STROKE}
             />
             {t("preferences")}
@@ -474,7 +469,7 @@ export function SmartActionDock() {
           <Link
             href="/settings#apparence"
             aria-label={t("preferences")}
-            className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)] text-a-violet"
+            className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)] text-a-accent"
           >
             <Settings2 className="h-5 w-5" strokeWidth={SIDEBAR_STROKE} />
           </Link>

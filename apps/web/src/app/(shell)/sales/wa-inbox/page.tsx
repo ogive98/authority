@@ -16,6 +16,7 @@ import {
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ATabs,
   type AComboboxOption,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
@@ -325,18 +326,18 @@ export default function SalesWaInboxPage() {
       <APageBody>
         <AFilterBar
           search={
-            <div className="flex flex-wrap gap-2">
-              {STATUS_FILTERS.map((f) => (
-                <button
-                  key={f.id || "all"}
-                  type="button"
-                  className={softChipClass(statusFilter === f.id)}
-                  onClick={() => setStatusFilter(f.id)}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            <ATabs
+              ariaLabel="Filtrer par statut"
+              value={statusFilter || "all"}
+              onValueChange={(id) => {
+                const next = (id === "all" ? "" : id) as "" | WaInboxStatus;
+                setStatusFilter(next);
+              }}
+              items={STATUS_FILTERS.map((f) => ({
+                id: f.id || "all",
+                label: f.label,
+              }))}
+            />
           }
         />
 

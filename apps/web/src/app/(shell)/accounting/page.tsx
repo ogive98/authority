@@ -27,6 +27,7 @@ import {
   ASoftTable,
   ASoftThead,
   ASoftTr,
+  ATabs,
 } from "@/components/a";
 import {
   ENTRY_STATUS_FILTERS,
@@ -56,11 +57,7 @@ import { localizeUiString } from "@/lib/i18n/route-labels";
 import { useStatusLabel } from "@/hooks/use-status-label";
 import { useLocaleStore } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
-import {
-  softChipClass,
-  softSelect,
-  softUnderlineTabClass,
-} from "@/lib/soft-glass-ui";
+import { softSelect, softUnderlineTabClass } from "@/lib/soft-glass-ui";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 
@@ -575,22 +572,20 @@ function AccountingPageInner() {
                   filters={
                     <>
                       {periodSelect}
-                      <div className="flex flex-wrap gap-2">
-                        {ENTRY_STATUS_FILTERS.map((chip) => {
-                          const active = statusFilter === chip.id;
-                          return (
-                            <button
-                              key={chip.id || "all"}
-                              type="button"
-                              className={softChipClass(active)}
-                              onClick={() => selectStatus(chip.id)}
-                            >
-                              {localizeUiString(chip.label, locale) ??
-                                chip.label}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <ATabs
+                        ariaLabel="Filtrer par statut"
+                        value={statusFilter || "all"}
+                        onValueChange={(id) => {
+                          const next = (
+                            id === "all" ? "" : id
+                          ) as "" | AccEntryStatus;
+                          selectStatus(next);
+                        }}
+                        items={ENTRY_STATUS_FILTERS.map((chip) => ({
+                          id: chip.id || "all",
+                          label: chip.label,
+                        }))}
+                      />
                       {state.patchSample?.applied ? (
                         <ABadge tone="warning">
                           PATCH échantillon {state.patchSample.kept}/
