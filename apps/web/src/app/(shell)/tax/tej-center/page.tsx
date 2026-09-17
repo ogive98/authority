@@ -369,7 +369,7 @@ export default function TejCenterPage() {
             <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg">
               تاج Tej — plateforme d’échange à des fins fiscales
             </p>
-            <p className="text-[length:var(--a-text-xs)] text-a-muted">
+            <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               AUTHORITY prépare un XML local pour import manuel dans Tej. Aucune
               transmission API · schéma officiel XSD non revendiqué.
             </p>
@@ -433,14 +433,14 @@ export default function TejCenterPage() {
           <div className="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <APageSection title="Retenues">
               <div className={`${softPanel} space-y-2 p-4`}>
-                <p className="a-mono text-[length:var(--a-text-2xl)] tabular-nums">
+                <p className="a-mono a-tabular text-[length:var(--a-text-2xl)]">
                   {overview.withholdings.total}
                 </p>
-                <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Période {overview.periodLabel}
                 </p>
                 {overview.withholdings.bySide ? (
-                  <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                  <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                     AP {overview.withholdings.bySide.AP} · AR{" "}
                     {overview.withholdings.bySide.AR}
                   </p>
@@ -449,41 +449,41 @@ export default function TejCenterPage() {
             </APageSection>
             <APageSection title="À valider">
               <div className={`${softPanel} space-y-2 p-4`}>
-                <p className="a-mono text-[length:var(--a-text-2xl)] tabular-nums">
+                <p className="a-mono a-tabular text-[length:var(--a-text-2xl)]">
                   {overview.withholdings.needingValidation}
                 </p>
-                <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   DETECTED / CALCULATED
                 </p>
               </div>
             </APageSection>
             <APageSection title="Validées">
               <div className={`${softPanel} space-y-2 p-4`}>
-                <p className="a-mono text-[length:var(--a-text-2xl)] tabular-nums">
+                <p className="a-mono a-tabular text-[length:var(--a-text-2xl)]">
                   {overview.withholdings.validated}
                 </p>
-                <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums text-a-muted">
+                <p className="a-mono a-tabular text-[length:var(--a-text-sm)] text-a-fg-muted">
                   Cert. prêts : {overview.withholdings.certificateReady}
                 </p>
               </div>
             </APageSection>
             <APageSection title="Lots TEJ">
               <div className={`${softPanel} space-y-2 p-4`}>
-                <p className="a-mono text-[length:var(--a-text-2xl)] tabular-nums">
+                <p className="a-mono a-tabular text-[length:var(--a-text-2xl)]">
                   {overview.withholdings.tejPrepared}
                 </p>
-                <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   À accuser :{" "}
                   {overview.withholdings.awaitingImportAck ??
                     overview.withholdings.tejPrepared}{" "}
                   · Importés {overview.withholdings.transmitted ?? 0}
                 </p>
-                <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Acceptés {overview.withholdings.accepted ?? 0} · Rejetés{" "}
                   {overview.withholdings.rejected ?? 0} · packs{" "}
                   {overview.tejExports.packs}
                 </p>
-                <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums text-a-muted">
+                <p className="a-mono a-tabular text-[length:var(--a-text-sm)] text-a-fg-muted">
                   {overview.withholdings.amountWithheldValidated} TND
                 </p>
               </div>
@@ -527,7 +527,7 @@ export default function TejCenterPage() {
                       </ABadge>
                     </ASoftTd>
                     <ASoftTd numeric>{ex.withholdingCount}</ASoftTd>
-                    <ASoftTd className="a-mono text-[length:var(--a-text-xs)] text-a-muted">
+                    <ASoftTd className="a-mono text-[length:var(--a-text-xs)] text-a-fg-muted">
                       {ex.contentSha256.slice(0, 12)}…
                     </ASoftTd>
                     <ASoftTd numeric>
@@ -575,7 +575,7 @@ export default function TejCenterPage() {
                 <ASoftTr key={row.id}>
                   <ASoftTd>
                     <div className="font-medium">{row.vendorName}</div>
-                    <div className="text-[length:var(--a-text-xs)] text-a-muted">
+                    <div className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                       {row.periodLabel ?? "—"}
                       {row.certificateNumber
                         ? ` · ${row.certificateNumber}`
@@ -608,7 +608,7 @@ export default function TejCenterPage() {
                   <ASoftTd numeric>{row.baseAmount}</ASoftTd>
                   <ASoftTd numeric>{row.withholdingAmount}</ASoftTd>
                   <ASoftTd numeric>{row.netPayable ?? "—"}</ASoftTd>
-                  <ASoftTd className="max-w-[16rem] text-[length:var(--a-text-xs)] text-a-muted">
+                  <ASoftTd className="max-w-[16rem] text-[length:var(--a-text-xs)] text-a-fg-muted">
                     {row.decisionCode}
                   </ASoftTd>
                   <ASoftTd numeric>
@@ -720,7 +720,7 @@ export default function TejCenterPage() {
                       row.status !== "TRANSMITTED" &&
                       row.status !== "ACCEPTED" &&
                       row.status !== "REJECTED" ? (
-                        <span className="text-a-muted">—</span>
+                        <span className="text-a-fg-muted">—</span>
                       ) : null}
                     </div>
                   </ASoftTd>
@@ -812,8 +812,8 @@ export default function TejCenterPage() {
                   {detectPreview.decisionCode}
                 </ABadge>
               </p>
-              <p className="text-a-muted">{detectPreview.decisionReason}</p>
-              <p className="a-mono tabular-nums">
+              <p className="text-a-fg-muted">{detectPreview.decisionReason}</p>
+              <p className="a-mono a-tabular">
                 RAS {detectPreview.withholdingAmount} · net{" "}
                 {detectPreview.netPayable ?? "—"}
               </p>

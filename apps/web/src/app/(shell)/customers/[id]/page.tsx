@@ -908,7 +908,7 @@ export default function Customer360Page() {
                           <p className="text-[10px] text-a-fg-muted">
                             {b.label}
                           </p>
-                          <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+                          <p className="a-mono a-tabular text-[length:var(--a-text-sm)]">
                             {b.amountOpen}
                           </p>
                           <p className="text-[10px] text-a-fg-muted">
@@ -1110,7 +1110,7 @@ export default function Customer360Page() {
                         checked={withholdingArEnabled}
                         onChange={setWithholdingArEnabled}
                       />
-                      <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Si activé + Prefs tax.ras VALIDATED : à l’émission
                         facture, une retenue CALCULATED est créée dans TEJ
                         Center (montants facture inchangés).
@@ -1498,7 +1498,7 @@ export default function Customer360Page() {
                           <span className="min-w-0 truncate">
                             {p.productSku ?? "SKU"} · {p.productName ?? "—"}
                           </span>
-                          <span className="a-mono shrink-0 tabular-nums">
+                          <span className="a-mono a-tabular shrink-0">
                             {p.unitPriceHt} {p.currency}
                           </span>
                           <AButton

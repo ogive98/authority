@@ -222,7 +222,7 @@ export default function FinancePaymentFichePage() {
                 <APageSection title="Identité">
                   <dl className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Client
                       </dt>
                       <dd className="text-[length:var(--a-text-sm)]">
@@ -230,7 +230,7 @@ export default function FinancePaymentFichePage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Méthode
                       </dt>
                       <dd className="text-[length:var(--a-text-sm)]">
@@ -238,15 +238,15 @@ export default function FinancePaymentFichePage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Référence
                       </dt>
-                      <dd className="font-mono text-[length:var(--a-text-sm)] tabular-nums">
+                      <dd className="a-mono a-tabular text-[length:var(--a-text-sm)]">
                         {pay.reference ?? "—"}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Notes
                       </dt>
                       <dd className="text-[length:var(--a-text-sm)]">
@@ -259,26 +259,26 @@ export default function FinancePaymentFichePage() {
                 <APageSection title="Montants">
                   <dl className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Total
                       </dt>
-                      <dd className="font-mono text-[length:var(--a-text-lg)] tabular-nums">
+                      <dd className="a-mono a-tabular text-[length:var(--a-text-lg)]">
                         {pay.amount} {pay.currency}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Non affecté
                       </dt>
-                      <dd className="font-mono text-[length:var(--a-text-lg)] tabular-nums">
+                      <dd className="a-mono a-tabular text-[length:var(--a-text-lg)]">
                         {pay.amountUnallocated} {pay.currency}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Date / compta
                       </dt>
-                      <dd className="font-mono text-[length:var(--a-text-sm)] tabular-nums">
+                      <dd className="a-mono a-tabular text-[length:var(--a-text-sm)]">
                         {pay.paymentDate} → {pay.accountingDate}
                       </dd>
                     </div>
@@ -287,7 +287,7 @@ export default function FinancePaymentFichePage() {
 
                 <APageSection title="Instruments">
                   {pay.instruments.length === 0 ? (
-                    <p className="text-[length:var(--a-text-sm)] text-a-muted">
+                    <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                       Aucun instrument (espèces / virement / carte).
                     </p>
                   ) : (
@@ -304,10 +304,10 @@ export default function FinancePaymentFichePage() {
                         {pay.instruments.map((inst) => (
                           <ASoftTr key={inst.id}>
                             <ASoftTd>{inst.type}</ASoftTd>
-                            <ASoftTd className="font-mono tabular-nums">
+                            <ASoftTd className="a-mono a-tabular">
                               {inst.number}
                             </ASoftTd>
-                            <ASoftTd numeric className="font-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {inst.amount}
                             </ASoftTd>
                             <ASoftTd>
@@ -325,7 +325,7 @@ export default function FinancePaymentFichePage() {
 
                 <APageSection title="Affectations">
                   {pay.allocations.length === 0 ? (
-                    <p className="text-[length:var(--a-text-sm)] text-a-muted">
+                    <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                       Aucune affectation.{" "}
                       {canAllocate
                         ? "Utilisez « Affecter » (politiques A–G)."
@@ -343,13 +343,13 @@ export default function FinancePaymentFichePage() {
                       <tbody>
                         {pay.allocations.map((a) => (
                           <ASoftTr key={a.id}>
-                            <ASoftTd className="font-mono tabular-nums text-[length:var(--a-text-xs)]">
+                            <ASoftTd className="a-mono a-tabular text-[length:var(--a-text-xs)]">
                               {a.openItemId.slice(0, 8)}…
                             </ASoftTd>
-                            <ASoftTd numeric className="font-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {a.amount} {pay.currency}
                             </ASoftTd>
-                            <ASoftTd className="font-mono tabular-nums">
+                            <ASoftTd className="a-mono a-tabular">
                               {a.paidAt.slice(0, 10)}
                             </ASoftTd>
                           </ASoftTr>
@@ -362,7 +362,7 @@ export default function FinancePaymentFichePage() {
             }
             context={
               <AContextPanel title="Cycle">
-                <ul className="space-y-2 text-[length:var(--a-text-sm)] text-a-muted">
+                <ul className="space-y-2 text-[length:var(--a-text-sm)] text-a-fg-muted">
                   <li>
                     Statut :{" "}
                     <span className="text-a-fg">
@@ -434,7 +434,7 @@ export default function FinancePaymentFichePage() {
             <div className="space-y-2 text-[length:var(--a-text-sm)]">
               <p className="text-a-fg-muted">
                 Reste non affecté prévu :{" "}
-                <span className="a-mono tabular-nums text-a-fg">
+                <span className="a-mono a-tabular text-a-fg">
                   {plan.remainder.toFixed(3)}
                 </span>
               </p>
@@ -445,7 +445,7 @@ export default function FinancePaymentFichePage() {
                     className="flex justify-between a-underlay rounded-md px-2 py-1.5"
                   >
                     <span className="a-mono">{l.openItemNumber}</span>
-                    <span className="a-mono tabular-nums">
+                    <span className="a-mono a-tabular">
                       {l.amount.toFixed(3)}
                     </span>
                   </li>

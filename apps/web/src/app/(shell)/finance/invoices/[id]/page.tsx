@@ -223,7 +223,7 @@ export default function FinanceInvoiceFichePage() {
               <p className="text-[length:var(--a-text-sm)] font-medium">
                 RAS client liée — TEJ Center
               </p>
-              <p className="text-[length:var(--a-text-xs)] text-a-muted">
+              <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                 Retenue créée à l’émission (Prefs tax.ras). Valider / certificat /
                 XML dans TEJ Center. Transmission DISABLED.
               </p>
@@ -368,24 +368,24 @@ export default function FinanceInvoiceFichePage() {
                           <ASoftTr key={l.id}>
                             <ASoftTd className="a-mono">{l.lineNo}</ASoftTd>
                             <ASoftTd>{l.description}</ASoftTd>
-                            <ASoftTd numeric className="a-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {l.qty}
                             </ASoftTd>
-                            <ASoftTd numeric className="a-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {l.unitPriceHt}
                             </ASoftTd>
                             <ASoftTd className="a-mono text-a-fg-muted">
                               {l.taxCode ?? "—"}
                             </ASoftTd>
-                            <ASoftTd numeric className="a-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {l.amountHt}
                             </ASoftTd>
-                            <ASoftTd numeric className="a-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {l.amountTax}
                             </ASoftTd>
                             <ASoftTd
                               numeric
-                              className="a-mono tabular-nums font-medium"
+                              className="a-mono a-tabular font-medium"
                             >
                               {l.amountTtc}
                             </ASoftTd>
@@ -406,17 +406,17 @@ export default function FinanceInvoiceFichePage() {
                 <dl className="space-y-3 text-[length:var(--a-text-sm)]">
                   <div>
                     <dt className="text-a-fg-muted">HT</dt>
-                    <dd className="a-mono tabular-nums font-medium">
+                    <dd className="a-mono a-tabular font-medium">
                       {inv.amountHt}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-a-fg-muted">TVA</dt>
-                    <dd className="a-mono tabular-nums">{inv.amountTax}</dd>
+                    <dd className="a-mono a-tabular">{inv.amountTax}</dd>
                   </div>
                   <div>
                     <dt className="text-a-fg-muted">FODEC</dt>
-                    <dd className="a-mono tabular-nums">
+                    <dd className="a-mono a-tabular">
                       {inv.amountFodec ?? "0.000"}
                       {!inv.expertiseApplied?.fodec ? (
                         <span className="ml-1 text-[length:var(--a-text-xs)] text-a-fg-subtle">
@@ -427,7 +427,7 @@ export default function FinanceInvoiceFichePage() {
                   </div>
                   <div>
                     <dt className="text-a-fg-muted">Timbre</dt>
-                    <dd className="a-mono tabular-nums">
+                    <dd className="a-mono a-tabular">
                       {inv.amountTimbre ?? "0.000"}
                       {!inv.expertiseApplied?.timbre ? (
                         <span className="ml-1 text-[length:var(--a-text-xs)] text-a-fg-subtle">
@@ -438,7 +438,7 @@ export default function FinanceInvoiceFichePage() {
                   </div>
                   <div>
                     <dt className="text-a-fg-muted">TTC</dt>
-                    <dd className="a-mono tabular-nums text-[length:var(--a-text-base)] font-semibold">
+                    <dd className="a-mono a-tabular text-[length:var(--a-text-base)] font-medium">
                       {inv.amountTotal} {inv.currency}
                     </dd>
                   </div>

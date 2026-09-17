@@ -342,10 +342,10 @@ export default function SupplierDetailPage() {
               ] as const
             ).map(([label, value]) => (
               <div key={label} className={`${softPanel} space-y-1 p-3`}>
-                <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   {label}
                 </p>
-                <p className="a-mono text-[length:var(--a-text-xl)] tabular-nums">
+                <p className="a-mono a-tabular text-[length:var(--a-text-xl)]">
                   {value}
                 </p>
               </div>
@@ -385,7 +385,7 @@ export default function SupplierDetailPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <APageSection title="Factures AP récentes">
             {summary.recent.bills.length === 0 ? (
-              <p className="text-[length:var(--a-text-sm)] text-a-muted">
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                 Aucune facture liée à ce master.
               </p>
             ) : (
@@ -398,7 +398,7 @@ export default function SupplierDetailPage() {
                     >
                       {b.number}
                     </Link>
-                    <span className="a-mono tabular-nums">{b.amountTotal}</span>
+                    <span className="a-mono a-tabular">{b.amountTotal}</span>
                     <ABadge tone="neutral">{b.status}</ABadge>
                   </li>
                 ))}
@@ -413,7 +413,7 @@ export default function SupplierDetailPage() {
           </APageSection>
           <APageSection title="Paiements AP récents">
             {summary.recent.payments.length === 0 ? (
-              <p className="text-[length:var(--a-text-sm)] text-a-muted">
+              <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                 Aucun paiement via facture liée.
               </p>
             ) : (
@@ -421,7 +421,7 @@ export default function SupplierDetailPage() {
                 {summary.recent.payments.map((p) => (
                   <li key={p.id} className="flex justify-between gap-2">
                     <span className="a-mono">{p.number}</span>
-                    <span className="a-mono tabular-nums">{p.amount}</span>
+                    <span className="a-mono a-tabular">{p.amount}</span>
                     <ABadge tone="neutral">{p.status}</ABadge>
                   </li>
                 ))}
@@ -432,7 +432,7 @@ export default function SupplierDetailPage() {
 
         <APageSection title="Timeline">
           {timeline.length === 0 ? (
-            <p className="text-[length:var(--a-text-sm)] text-a-muted">
+            <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
               Pas encore d’événements AP.
             </p>
           ) : (
@@ -450,12 +450,12 @@ export default function SupplierDetailPage() {
                       {t.title}
                     </Link>
                     {t.subtitle ? (
-                      <span className="ml-2 text-[length:var(--a-text-xs)] text-a-muted">
+                      <span className="ml-2 text-[length:var(--a-text-xs)] text-a-fg-muted">
                         {t.subtitle}
                       </span>
                     ) : null}
                   </div>
-                  <span className="a-mono text-[length:var(--a-text-xs)] text-a-muted">
+                  <span className="a-mono text-[length:var(--a-text-xs)] text-a-fg-muted">
                     {t.at.slice(0, 10)}
                     {t.amount ? ` · ${t.amount}` : ""}
                   </span>

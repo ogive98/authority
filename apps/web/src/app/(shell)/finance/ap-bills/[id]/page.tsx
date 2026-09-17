@@ -311,7 +311,7 @@ export default function FinanceApBillFichePage() {
                 <APageSection title="Identité">
                   <dl className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Fournisseur
                       </dt>
                       <dd className="text-[length:var(--a-text-sm)]">
@@ -319,7 +319,7 @@ export default function FinanceApBillFichePage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Libellé
                       </dt>
                       <dd className="text-[length:var(--a-text-sm)]">
@@ -327,15 +327,15 @@ export default function FinanceApBillFichePage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Référence
                       </dt>
-                      <dd className="font-mono text-[length:var(--a-text-sm)] tabular-nums">
+                      <dd className="a-mono a-tabular text-[length:var(--a-text-sm)]">
                         {bill.reference ?? "—"}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Notes
                       </dt>
                       <dd className="text-[length:var(--a-text-sm)]">
@@ -347,42 +347,42 @@ export default function FinanceApBillFichePage() {
                 <APageSection title="Montants">
                   <dl className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         HT
                       </dt>
-                      <dd className="font-mono text-[length:var(--a-text-lg)] tabular-nums">
+                      <dd className="a-mono a-tabular text-[length:var(--a-text-lg)]">
                         {bill.amountHt ?? "0.000"} {bill.currency}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         TVA
                       </dt>
-                      <dd className="font-mono text-[length:var(--a-text-lg)] tabular-nums">
+                      <dd className="a-mono a-tabular text-[length:var(--a-text-lg)]">
                         {bill.amountTax ?? "0.000"} {bill.currency}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Total TTC
                       </dt>
-                      <dd className="font-mono text-[length:var(--a-text-lg)] tabular-nums">
+                      <dd className="a-mono a-tabular text-[length:var(--a-text-lg)]">
                         {bill.amountTotal} {bill.currency}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Décaissé
                       </dt>
-                      <dd className="font-mono text-[length:var(--a-text-lg)] tabular-nums">
+                      <dd className="a-mono a-tabular text-[length:var(--a-text-lg)]">
                         {bill.amountPaid ?? "0.000"} {bill.currency}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <dt className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         Date / échéance
                       </dt>
-                      <dd className="font-mono text-[length:var(--a-text-sm)] tabular-nums">
+                      <dd className="a-mono a-tabular text-[length:var(--a-text-sm)]">
                         {bill.billDate}
                         {bill.dueDate ? ` → ${bill.dueDate}` : ""}
                       </dd>
@@ -391,7 +391,7 @@ export default function FinanceApBillFichePage() {
                 </APageSection>
                 <APageSection title="Lignes">
                   {(bill.lines?.length ?? 0) === 0 ? (
-                    <p className="text-[length:var(--a-text-sm)] text-a-muted">
+                    <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                       Aucune ligne TVA — facture TTC as-recorded. GL TVA
                       déductible seulement si Prefs{" "}
                       <span className="a-mono">accounting.gl.vat_input</span>{" "}
@@ -412,20 +412,20 @@ export default function FinanceApBillFichePage() {
                       <tbody>
                         {bill.lines?.map((l) => (
                           <ASoftTr key={l.id}>
-                            <ASoftTd className="font-mono tabular-nums">
+                            <ASoftTd className="a-mono a-tabular">
                               {l.lineNo}
                             </ASoftTd>
                             <ASoftTd>{l.description}</ASoftTd>
-                            <ASoftTd className="font-mono text-a-muted">
+                            <ASoftTd className="a-mono text-a-fg-muted">
                               {l.taxCode ?? "—"}
                             </ASoftTd>
-                            <ASoftTd numeric className="font-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {l.amountHt}
                             </ASoftTd>
-                            <ASoftTd numeric className="font-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {l.amountTax}
                             </ASoftTd>
-                            <ASoftTd numeric className="font-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {l.amountTtc}
                             </ASoftTd>
                           </ASoftTr>
@@ -436,7 +436,7 @@ export default function FinanceApBillFichePage() {
                 </APageSection>
                 <APageSection title="Décaissements liés">
                   {(bill.payments?.length ?? 0) === 0 ? (
-                    <p className="text-[length:var(--a-text-sm)] text-a-muted">
+                    <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                       Aucun décaissement lié.{" "}
                       {bill.status === "POSTED"
                         ? "Utilisez « Décaisser » (partiel OK)."
@@ -455,13 +455,13 @@ export default function FinanceApBillFichePage() {
                       <tbody>
                         {bill.payments?.map((p) => (
                           <ASoftTr key={p.id}>
-                            <ASoftTd className="font-mono tabular-nums">
+                            <ASoftTd className="a-mono a-tabular">
                               {p.number}
                             </ASoftTd>
-                            <ASoftTd className="font-mono tabular-nums">
+                            <ASoftTd className="a-mono a-tabular">
                               {p.paymentDate}
                             </ASoftTd>
-                            <ASoftTd numeric className="font-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {p.amount} {p.currency}
                             </ASoftTd>
                             <ASoftTd>
@@ -481,7 +481,7 @@ export default function FinanceApBillFichePage() {
             }
             context={
               <AContextPanel title="Cycle">
-                <ul className="space-y-2 text-[length:var(--a-text-sm)] text-a-muted">
+                <ul className="space-y-2 text-[length:var(--a-text-sm)] text-a-fg-muted">
                   <li>
                     Statut :{" "}
                     <span className="text-a-fg">
@@ -490,7 +490,7 @@ export default function FinanceApBillFichePage() {
                   </li>
                   <li>
                     Postée le :{" "}
-                    <span className="font-mono tabular-nums text-a-fg">
+                    <span className="a-mono a-tabular text-a-fg">
                       {bill.postedAt ? bill.postedAt.slice(0, 10) : "—"}
                     </span>
                   </li>
@@ -516,7 +516,7 @@ export default function FinanceApBillFichePage() {
       >
         {payForm && bill ? (
           <div className="space-y-3">
-            <p className="text-[length:var(--a-text-sm)] text-a-muted">
+            <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
               {bill.number} — {bill.vendorName}
             </p>
             {payError ? (
@@ -536,7 +536,7 @@ export default function FinanceApBillFichePage() {
               </p>
             ) : null}
             {rasPreviewAmount != null && payForm.applyRas ? (
-              <p className="a-mono text-[length:var(--a-text-sm)] tabular-nums">
+              <p className="a-mono a-tabular text-[length:var(--a-text-sm)]">
                 Net estimé :{" "}
                 {(
                   Number(payForm.amount.replace(",", ".")) - rasPreviewAmount
@@ -560,7 +560,7 @@ export default function FinanceApBillFichePage() {
               </div>
             ) : null}
             <label className="block space-y-1">
-              <span className="text-[length:var(--a-text-xs)] text-a-muted">
+              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                 Montant base TND * (avant RAS)
               </span>
               <AInput
@@ -572,7 +572,7 @@ export default function FinanceApBillFichePage() {
               />
             </label>
             <label className="block space-y-1">
-              <span className="text-[length:var(--a-text-xs)] text-a-muted">
+              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                 Mode
               </span>
               <select
@@ -589,7 +589,7 @@ export default function FinanceApBillFichePage() {
               </select>
             </label>
             <label className="block space-y-1">
-              <span className="text-[length:var(--a-text-xs)] text-a-muted">
+              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                 Date
               </span>
               <AInput
@@ -601,7 +601,7 @@ export default function FinanceApBillFichePage() {
               />
             </label>
             <label className="block space-y-1">
-              <span className="text-[length:var(--a-text-xs)] text-a-muted">
+              <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                 Référence
               </span>
               <AInput

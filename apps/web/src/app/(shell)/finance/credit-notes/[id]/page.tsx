@@ -246,16 +246,16 @@ export default function FinanceCreditNoteFichePage() {
                           <ASoftTr key={l.id}>
                             <ASoftTd className="a-mono">{l.lineNo}</ASoftTd>
                             <ASoftTd>{l.description}</ASoftTd>
-                            <ASoftTd numeric className="a-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {l.qty}
                             </ASoftTd>
-                            <ASoftTd numeric className="a-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {l.unitPriceHt}
                             </ASoftTd>
                             <ASoftTd className="a-mono">
                               {l.taxCode ?? "—"}
                             </ASoftTd>
-                            <ASoftTd numeric className="a-mono tabular-nums">
+                            <ASoftTd numeric className="a-mono a-tabular">
                               {l.amountTtc}
                             </ASoftTd>
                           </ASoftTr>
@@ -275,39 +275,39 @@ export default function FinanceCreditNoteFichePage() {
                 <dl className="space-y-3 text-[length:var(--a-text-sm)]">
                   <div className="flex justify-between gap-4">
                     <dt className="text-a-fg-muted">HT</dt>
-                    <dd className="a-mono tabular-nums">{cn.amountHt}</dd>
+                    <dd className="a-mono a-tabular">{cn.amountHt}</dd>
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt className="text-a-fg-muted">TVA</dt>
-                    <dd className="a-mono tabular-nums">{cn.amountTax}</dd>
+                    <dd className="a-mono a-tabular">{cn.amountTax}</dd>
                   </div>
                   {cn.amountFodec != null && Number(cn.amountFodec) > 0 ? (
                     <div className="flex justify-between gap-4">
                       <dt className="text-a-fg-muted">FODEC</dt>
-                      <dd className="a-mono tabular-nums">{cn.amountFodec}</dd>
+                      <dd className="a-mono a-tabular">{cn.amountFodec}</dd>
                     </div>
                   ) : null}
                   {cn.amountTimbre != null && Number(cn.amountTimbre) > 0 ? (
                     <div className="flex justify-between gap-4">
                       <dt className="text-a-fg-muted">Timbre</dt>
-                      <dd className="a-mono tabular-nums">{cn.amountTimbre}</dd>
+                      <dd className="a-mono a-tabular">{cn.amountTimbre}</dd>
                     </div>
                   ) : null}
                   <div className="flex justify-between gap-4 border-t border-transparent pt-2">
                     <dt className="font-medium">TTC</dt>
-                    <dd className="a-mono tabular-nums font-medium">
+                    <dd className="a-mono a-tabular font-medium">
                       {cn.amountTotal} {cn.currency}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt className="text-a-fg-muted">Appliqué AR</dt>
-                    <dd className="a-mono tabular-nums">
+                    <dd className="a-mono a-tabular">
                       {cn.amountAppliedToAr}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt className="text-a-fg-muted">Non appliqué</dt>
-                    <dd className="a-mono tabular-nums">
+                    <dd className="a-mono a-tabular">
                       {cn.amountUnapplied}
                     </dd>
                   </div>
