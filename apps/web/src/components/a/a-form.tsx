@@ -13,8 +13,7 @@ export type AFieldProps = {
 };
 
 /**
- * ZIP form field — label + control + optional hint.
- * Prefer over ad-hoc `<label className="text-a-fg-muted">` in drawers.
+ * D294 form field — label above (13px/500 muted) + control + hint/error.
  */
 export function AField({
   label,
@@ -53,8 +52,7 @@ export type AFormSectionProps = {
 };
 
 /**
- * ZIP drawer/form section — one business question per block.
- * Bare (no panel chrome) so drawers stay dense.
+ * D294 form section — one business question per block.
  */
 export function AFormSection({
   title,
@@ -67,7 +65,7 @@ export function AFormSection({
       {title || description ? (
         <div className="min-w-0">
           {title ? (
-            <h3 className="text-[length:var(--a-text-sm)] font-semibold tracking-[-0.01em] text-a-fg">
+            <h3 className="text-[length:var(--a-text-md)] font-medium tracking-[-0.01em] text-a-fg">
               {title}
             </h3>
           ) : null}

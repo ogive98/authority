@@ -52,7 +52,7 @@ export function AScreenHeader({
       className={cn(
         "flex flex-col gap-3 px-6 pb-3 pt-5 md:px-8",
         sticky &&
-          "sticky top-12 z-[var(--a-z-sticky)] bg-[var(--a-gradient-canvas)]/80 backdrop-blur-xl",
+          "sticky top-12 z-[var(--a-z-sticky)] bg-a-surface-1",
       )}
     >
       {breadcrumb ? (

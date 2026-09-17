@@ -15,9 +15,9 @@ export type ASoftTableProps = TableHTMLAttributes<HTMLTableElement> & {
 };
 
 /**
- * Full-width Soft Glass table host — no frame (D225).
+ * Full-width D294 table host — dense, sticky header via ASoftThead.
  * Prefer `ASoftTable` + `ASoftThead` / `ASoftTr` / `ASoftTh` / `ASoftTd`
- * over raw `softTableWrap` + `<table>` on new screens (Stage 2).
+ * over raw `softTableWrap` + `<table>` on new screens.
  */
 export function ASoftTable({
   children,
@@ -82,7 +82,7 @@ export function ASoftTh({
     <th
       className={cn(
         "a-table-cell font-medium text-a-fg-muted",
-        numeric && "text-right",
+        numeric && "a-mono a-tabular text-right",
         className,
       )}
       {...props}
@@ -103,7 +103,11 @@ export function ASoftTd({
 }) {
   return (
     <td
-      className={cn("a-table-cell", numeric && "text-right", className)}
+      className={cn(
+        "a-table-cell",
+        numeric && "a-mono a-tabular text-right",
+        className,
+      )}
       {...props}
     >
       {children}

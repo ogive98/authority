@@ -25,7 +25,7 @@ export const softTableWrap =
   "a-underlay overflow-x-auto rounded-[var(--a-radius-lg)]";
 
 export const softThead =
-  "bg-a-surface-3/80 text-a-fg-muted";
+  "sticky top-0 z-[1] bg-a-surface-3 text-a-fg-muted";
 
 export const softTr =
   "border-b border-[color:var(--a-border-subtle)] transition-colors hover:bg-a-surface-3/55 last:border-b-0";

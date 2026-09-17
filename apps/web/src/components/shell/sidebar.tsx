@@ -28,7 +28,7 @@ const STROKE = 1.5;
 const SYSTEM_MODULE_KEYS = new Set(["repair", "settings"]);
 
 /**
- * Finder sidebar — Modules + Système, icônes orange plus grandes.
+ * Finder sidebar — Modules + Système, D294 active marker.
  */
 export function ShellSidebar() {
   const { t } = useShellT();

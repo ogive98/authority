@@ -29,7 +29,7 @@ function SoftRing({ value }: { value: number }) {
   const c = 2 * Math.PI * r;
   const dash = (pct / 100) * c;
   return (
-    <svg viewBox="0 0 80 80" className="h-20 w-20 a-glow-pulse" aria-hidden>
+    <svg viewBox="0 0 80 80" className="h-20 w-20" aria-hidden>
       <circle
         cx="40"
         cy="40"
