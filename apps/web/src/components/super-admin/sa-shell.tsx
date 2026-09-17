@@ -41,7 +41,7 @@ export function SuperAdminShell({ children }: { children: ReactNode }) {
         className={cn(
           "flex w-56 shrink-0 flex-col border-r border-a-border-subtle",
           isRepair
-            ? "bg-a-surface-2/70 backdrop-blur-[var(--a-glass-blur)]"
+            ? "bg-a-surface-2"
             : "bg-a-surface-1",
         )}
       >
@@ -91,7 +91,7 @@ export function SuperAdminShell({ children }: { children: ReactNode }) {
         <header
           className={cn(
             "flex h-12 shrink-0 items-center justify-between border-b border-a-border-subtle px-4",
-            isRepair && "bg-a-surface-2/50 backdrop-blur-[var(--a-glass-blur)]",
+            isRepair && "bg-a-surface-2",
           )}
         >
           <p className="a-mono text-[length:var(--a-text-sm)] tracking-wide">

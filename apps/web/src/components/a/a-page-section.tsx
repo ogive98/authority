@@ -13,7 +13,7 @@ export type APageSectionProps = {
   bare?: boolean;
 };
 
-/** One section = one business question (D225). Soft Glass underlay. */
+/** One section = one business question (D294). Opaque card when not bare. */
 export function APageSection({
   title,
   description,
@@ -28,12 +28,14 @@ export function APageSection({
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             {title ? (
-              <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-a-fg">
+              <h2 className="text-[length:var(--a-text-md)] font-medium tracking-[-0.01em] text-a-fg">
                 {title}
               </h2>
             ) : null}
             {description ? (
-              <p className="mt-0.5 text-[13px] text-a-fg-muted">{description}</p>
+              <p className="mt-0.5 text-[length:var(--a-text-sm)] text-a-fg-muted">
+                {description}
+              </p>
             ) : null}
           </div>
           {action ? (

@@ -344,7 +344,7 @@ export function ShellSidebar() {
       {mobileOpen ? (
         <button
           type="button"
-          className="fixed inset-0 z-[var(--a-z-dropdown)] bg-black/20 backdrop-blur-[2px] md:hidden"
+          className="fixed inset-0 z-[var(--a-z-dropdown)] bg-black/30 md:hidden"
           aria-label="Fermer le menu"
           onClick={() => setMobileNavOpen(false)}
         />

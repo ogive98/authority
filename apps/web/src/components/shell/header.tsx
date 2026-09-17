@@ -218,7 +218,7 @@ export function ShellHeader() {
   const anyOps = spectreEnabled || patchEnabled || ghostEnabled;
 
   return (
-    <header className="relative z-[var(--a-z-sticky)] flex h-14 w-full shrink-0 items-center gap-3 border-b border-[color:var(--a-border-subtle)] bg-a-surface-1/95 px-3 backdrop-blur-md md:px-5">
+    <header className="relative z-[var(--a-z-sticky)] flex h-14 w-full shrink-0 items-center gap-3 border-b border-[color:var(--a-border-subtle)] bg-a-surface-1 px-3 md:px-5">
       <button
         type="button"
         className="a-action-quiet inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted md:hidden"

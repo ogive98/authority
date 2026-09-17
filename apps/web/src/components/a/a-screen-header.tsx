@@ -67,14 +67,14 @@ export function AScreenHeader({
           ) : null}
           <h1
             className={cn(
-              "text-[clamp(1.35rem,2.2vw,1.75rem)] font-semibold tracking-[-0.03em] text-a-fg",
+              "text-[length:var(--a-text-xl)] font-medium tracking-[-0.03em] text-a-fg",
               kickerL && "mt-1",
             )}
           >
             {titleL}
           </h1>
           {description ? (
-            <p className="mt-1 max-w-2xl text-[13px] text-a-fg-muted">
+            <p className="mt-1 max-w-2xl text-[length:var(--a-text-sm)] text-a-fg-muted">
               {description}
             </p>
           ) : null}

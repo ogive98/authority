@@ -48,7 +48,7 @@ export function ADialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[var(--a-z-modal)] bg-a-fg/35 backdrop-blur-sm data-[state=open]:animate-in" />
+        <Dialog.Overlay className="fixed inset-0 z-[var(--a-z-modal)] bg-a-fg/40 data-[state=open]:animate-in" />
         <Dialog.Content
           className={cn(
             "fixed top-1/2 left-1/2 z-[var(--a-z-modal)] max-h-[min(90vh,40rem)] -translate-x-1/2 -translate-y-1/2",
@@ -59,7 +59,7 @@ export function ADialog({
         >
           <div className="flex shrink-0 items-start justify-between gap-3">
             <div className="min-w-0">
-              <Dialog.Title className="truncate text-[length:var(--a-text-lg)] font-semibold tracking-[var(--a-tracking-title)]">
+              <Dialog.Title className="truncate text-[length:var(--a-text-lg)] font-medium tracking-[var(--a-tracking-title)]">
                 {t(title)}
               </Dialog.Title>
               {description ? (

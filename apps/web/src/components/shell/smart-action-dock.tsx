@@ -133,17 +133,15 @@ function ThunderCoreDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[var(--a-z-modal)] bg-black/25 backdrop-blur-[18px]" />
+        <Dialog.Overlay className="fixed inset-0 z-[var(--a-z-modal)] bg-black/40" />
         <Dialog.Content
           className={cn(
             "fixed top-1/2 left-1/2 z-[var(--a-z-modal)] w-[min(22.5rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 outline-none",
-            "rounded-[var(--a-radius-lg)] p-6",
-            "bg-[color-mix(in_srgb,var(--a-surface-2)_88%,transparent)]",
-            "shadow-[0_24px_80px_rgb(0_0_0/0.35),0_0_0_0.5px_rgb(255_255_255/0.12)_inset]",
-            "backdrop-blur-[40px] saturate-[180%]",
+            "rounded-[var(--a-radius-lg)] border border-[color:var(--a-border-subtle)] bg-a-surface-2 p-6",
+            "shadow-[var(--a-shadow-panel)]",
           )}
         >
-          <Dialog.Title className="flex items-center gap-2.5 text-[17px] font-semibold tracking-[-0.02em] text-a-fg">
+          <Dialog.Title className="flex items-center gap-2.5 text-[length:var(--a-text-lg)] font-medium tracking-[-0.02em] text-a-fg">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] bg-a-accent/20 text-a-accent">
               <Zap
                 className="h-4 w-4"

@@ -13,7 +13,7 @@ export type AListUtilitiesProps = {
 };
 
 /**
- * ZIP ERP list utilities — Filter · Group · Columns · Density (quiet text).
+ * D294 ERP list utilities — Filter · Group · Columns · Density (quiet text).
  * Group/Columns are placeholders until saved-views land; Density wires Prefs.
  */
 export function AListUtilities({ onFilter, className }: AListUtilitiesProps) {

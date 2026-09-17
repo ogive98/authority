@@ -74,7 +74,7 @@ export function EmployeePortalShell({
   return (
     <div className="flex min-h-screen flex-col bg-a-surface-1 text-a-fg">
       <ASkipLink />
-      <header className="flex h-14 shrink-0 items-center justify-between gap-2 bg-a-surface-2/80 px-[var(--a-space-5)] backdrop-blur-[20px] backdrop-saturate-[180%]">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-2 bg-a-surface-2 px-[var(--a-space-5)]">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link
             href={EMPLOYEE_PORTAL_HOME_PATH}

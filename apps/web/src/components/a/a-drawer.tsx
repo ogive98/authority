@@ -29,7 +29,7 @@ export function ADrawer({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[var(--a-z-modal)] bg-a-fg/35 backdrop-blur-sm data-[state=open]:animate-in" />
+        <Dialog.Overlay className="fixed inset-0 z-[var(--a-z-modal)] bg-a-fg/40 data-[state=open]:animate-in" />
         <Dialog.Content
           className={cn(
             "a-glass-strong fixed inset-y-0 right-0 z-[var(--a-z-modal)] flex w-full max-w-lg flex-col",
@@ -39,7 +39,7 @@ export function ADrawer({
         >
           <div className="flex h-14 shrink-0 items-center justify-between px-5">
             <div className="min-w-0">
-              <Dialog.Title className="truncate text-[length:var(--a-text-md)] font-semibold tracking-[var(--a-tracking-title)]">
+              <Dialog.Title className="truncate text-[length:var(--a-text-md)] font-medium tracking-[var(--a-tracking-title)]">
                 {title}
               </Dialog.Title>
               {description ? (
