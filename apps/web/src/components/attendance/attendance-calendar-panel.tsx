@@ -66,10 +66,10 @@ function dayKindMap(
 }
 
 function dayClass(kind: AttCalendarKind | undefined): string {
-  if (kind === "LEAVE") return "bg-emerald-500/25 text-emerald-200";
-  if (kind === "ABSENCE") return "bg-rose-500/30 text-rose-100";
-  if (kind === "PENALTY") return "bg-orange-500/30 text-orange-100";
-  return "bg-a-surface-3/40 text-a-fg-muted";
+  if (kind === "LEAVE") return "bg-a-success-soft text-a-success-fg";
+  if (kind === "ABSENCE") return "bg-a-danger-soft text-a-danger-fg";
+  if (kind === "PENALTY") return "bg-a-warning-soft text-a-warning-fg";
+  return "bg-a-surface-3 text-a-fg-muted";
 }
 
 /**
@@ -180,13 +180,13 @@ export function AttendanceCalendarPanel({
     >
 
       <div className="flex flex-wrap gap-2 text-[length:var(--a-text-xs)]">
-        <span className="rounded-md bg-emerald-500/25 px-2 py-1 text-emerald-200">
+        <span className="rounded-md bg-a-success-soft px-2 py-1 text-a-success-fg">
           Congé
         </span>
-        <span className="rounded-md bg-rose-500/30 px-2 py-1 text-rose-100">
+        <span className="rounded-md bg-a-danger-soft px-2 py-1 text-a-danger-fg">
           Absence
         </span>
-        <span className="rounded-md bg-orange-500/30 px-2 py-1 text-orange-100">
+        <span className="rounded-md bg-a-warning-soft px-2 py-1 text-a-warning-fg">
           Pénalité
         </span>
       </div>

@@ -134,7 +134,7 @@ export function PrefsModesOpsPanel({
     <div className="max-w-2xl space-y-10">
       <section className="space-y-3">
         <div>
-          <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+          <h2 className="text-[length:var(--a-text-md)] font-medium text-a-accent">
             Code sortie modes
           </h2>
           <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -179,7 +179,7 @@ export function PrefsModesOpsPanel({
 
       <section className="space-y-3">
         <div>
-          <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+          <h2 className="text-[length:var(--a-text-md)] font-medium text-a-accent">
             PATCH
           </h2>
           <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -274,7 +274,7 @@ export function PrefsModesOpsPanel({
 
       <section className="space-y-3">
         <div>
-          <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+          <h2 className="text-[length:var(--a-text-md)] font-medium text-a-accent">
             GHOST
           </h2>
           <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -320,7 +320,7 @@ export function PrefsModesOpsPanel({
               .filter((m) => m.key !== "home" && m.key !== "settings")
               .map((m) => (
                 <div key={m.key}>
-                  <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-orange">
+                  <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-accent">
                     {m.name}
                   </p>
                   <div className="mt-1">
@@ -354,7 +354,7 @@ export function PrefsModesOpsPanel({
       </section>
 
       <section>
-        <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+        <h2 className="text-[length:var(--a-text-md)] font-medium text-a-accent">
           SPECTRE
         </h2>
         <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">

@@ -559,7 +559,7 @@ export function RepairWorkspace() {
               {dashboard?.pendingRepairs ?? 0} réparation(s) en attente
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5 text-[color:var(--a-violet)]" strokeWidth={1.75} />
+              <Shield className="h-3.5 w-3.5 text-a-accent" strokeWidth={1.75} />
               {dashboard?.coverage?.executableCount ?? "—"} executors ·{" "}
               {dashboard?.coverage?.blockedCount ?? "—"} BLOCKED · SAFE/LOW only
             </span>
@@ -738,7 +738,7 @@ export function RepairWorkspace() {
             </section>
             <section className="a-underlay rounded-md p-4">
               <h2 className="mb-3 flex items-center gap-2 font-medium">
-                <Shield className="h-4 w-4 text-[color:var(--a-violet)]" strokeWidth={1.75} />
+                <Shield className="h-4 w-4 text-a-accent" strokeWidth={1.75} />
                 Incidents
               </h2>
               <ul className="space-y-2">

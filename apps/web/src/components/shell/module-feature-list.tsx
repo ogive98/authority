@@ -107,20 +107,22 @@ export function ModuleFeatureList({
                 <Link
                   href={f.href}
                   className={cn(
-                    "group a-underlay flex items-center gap-3 rounded-[var(--a-radius-md)] px-3.5 py-3",
-                    "transition-all duration-200 hover:bg-a-surface-3 hover:translate-x-0.5",
+                    "group a-card flex items-center gap-3 rounded-[var(--a-radius-md)] px-3.5 py-3",
+                    "transition-colors duration-200 hover:bg-a-surface-3",
                     embedded && "py-2.5",
                   )}
                 >
                   <span
                     className={cn(
-                      "flex shrink-0 items-center justify-center rounded-[var(--a-radius-sm)] bg-a-accent-muted",
+                      "flex shrink-0 items-center justify-center rounded-[var(--a-radius-sm)] bg-a-accent-muted text-a-accent",
                       embedded ? "h-9 w-9" : "h-10 w-10",
-                      p.colorClass,
                     )}
                     aria-hidden
                   >
-                    <Icon className="h-4.5 w-4.5" strokeWidth={1.75} />
+                    <Icon
+                      className={cn("h-[1.125rem] w-[1.125rem]", p.colorClass)}
+                      strokeWidth={1.75}
+                    />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[length:var(--a-text-md)] font-medium tracking-[-0.02em] text-a-fg">
@@ -152,7 +154,7 @@ export function ModuleFeatureList({
       >
         <header className="mb-3 shrink-0">
           <div className="flex flex-wrap items-end justify-between gap-2">
-            <h2 className="text-[length:var(--a-text-lg)] font-bold tracking-[var(--a-tracking-title)] text-a-fg">
+            <h2 className="text-[length:var(--a-text-lg)] font-medium tracking-[var(--a-tracking-title)] text-a-fg">
               {mod.name}
             </h2>
             <p className="a-mono text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -177,7 +179,7 @@ export function ModuleFeatureList({
               Module
             </p>
             <div className="mt-1 flex flex-wrap items-end justify-between gap-2">
-              <h2 className="text-[length:var(--a-text-xl)] font-bold tracking-[var(--a-tracking-title)] text-a-fg">
+              <h2 className="text-[length:var(--a-text-xl)] font-medium tracking-[var(--a-tracking-title)] text-a-fg">
                 {mod.name}
               </h2>
               <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">

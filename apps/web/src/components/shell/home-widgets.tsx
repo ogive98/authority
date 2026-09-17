@@ -159,18 +159,22 @@ export function ModuleShortcutsWidget({ className }: { className?: string }) {
             <li key={f.id}>
                 <Link
                   href={f.href}
-                  className="group flex items-center gap-2.5 rounded-xl px-2 py-2 text-[length:var(--a-text-sm)] text-a-fg transition-colors hover:bg-a-surface-3"
+                  className="group flex items-center gap-2.5 rounded-[var(--a-radius-md)] px-2 py-2 text-[length:var(--a-text-sm)] text-a-fg transition-colors hover:bg-a-surface-3"
                 >
                   <span
-                    className={cn(
-                      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--a-radius-sm)] bg-a-accent-muted",
-                      personalityForFeature(f.id, f.label).colorClass,
-                    )}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--a-radius-sm)] bg-a-accent-muted text-a-accent"
                     aria-hidden
                   >
                     {(() => {
                       const Icon = resolveFeatureIcon(f.id, f.label);
-                      return <Icon className="h-4 w-4" strokeWidth={1.75} />;
+                      const tone = personalityForFeature(f.id, f.label)
+                        .colorClass;
+                      return (
+                        <Icon
+                          className={cn("h-4 w-4", tone)}
+                          strokeWidth={1.75}
+                        />
+                      );
                     })()}
                   </span>
                   <span className="min-w-0 flex-1 truncate font-medium">

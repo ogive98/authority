@@ -62,10 +62,10 @@ const HASH_COMPARTMENTS = new Set<PrefsCompartmentId>([
 ]);
 
 const SURFACE_LABELS: Record<SurfaceMode, string> = {
-  ghost: "Ghost (matériau glass)",
-  patch: "Patch (matériau glass)",
-  solid: "Solid (matériau glass)",
-  minimal: "Minimal (matériau glass)",
+  ghost: "Ghost (surface D294)",
+  patch: "Patch (surface D294)",
+  solid: "Solid (surface D294)",
+  minimal: "Minimal (surface D294)",
 };
 
 type GlMapForm = {
@@ -1057,11 +1057,11 @@ export default function SettingsPage() {
                   onClick={() => selectCompartment(c.id)}
                   className={`w-full rounded-md px-3 py-2 text-left transition-colors ${
                     active
-                      ? "bg-a-orange-soft text-a-fg"
+                      ? "bg-a-accent-muted text-a-fg"
                       : "text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
                   }`}
                 >
-                  <span className="block text-[length:var(--a-text-sm)] font-medium text-a-orange">
+                  <span className="block text-[length:var(--a-text-sm)] font-medium text-a-accent">
                     {c.label}
                   </span>
                   <span className="mt-0.5 block text-[length:var(--a-text-xs)] text-a-fg-subtle">
@@ -1076,7 +1076,7 @@ export default function SettingsPage() {
             {compartment === "poste" ? (
               <section className={`${softPanel} max-w-xl`}>
                 <div>
-                  <p className="text-[length:var(--a-text-sm)] font-medium text-a-orange">
+                  <p className="text-[length:var(--a-text-sm)] font-medium text-a-accent">
                     Thème
                   </p>
                   <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -1085,7 +1085,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium text-a-orange">
+                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium text-a-accent">
                     Densité
                   </p>
                   <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -1151,7 +1151,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium text-a-orange">
+                  <p className="mb-2 text-[length:var(--a-text-sm)] font-medium text-a-accent">
                     Sidebar — auto-réduction
                   </p>
                   <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -1196,7 +1196,7 @@ export default function SettingsPage() {
 
             {compartment === "societe" ? (
               <section className={`${softPanel} max-w-xl`}>
-                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-accent">
                   Contexte
                 </h2>
                 <dl className="grid grid-cols-[8rem_1fr] gap-y-3 text-[length:var(--a-text-sm)]">
@@ -1229,7 +1229,7 @@ export default function SettingsPage() {
             {compartment === "finance" && canCompanyWrite ? (
               <section className={`${softPanel} max-w-xl space-y-6`}>
                 <div>
-                  <h2 className="mb-2 text-[length:var(--a-text-md)] font-medium text-a-orange">
+                  <h2 className="mb-2 text-[length:var(--a-text-md)] font-medium text-a-accent">
                     Recouvrement — jalons J+n
                   </h2>
                   <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -1240,7 +1240,7 @@ export default function SettingsPage() {
                   <CollectionRemindDaysEditor canWrite={canCompanyWrite} />
                 </div>
                 <div>
-                  <h2 className="mb-2 text-[length:var(--a-text-md)] font-medium text-a-orange">
+                  <h2 className="mb-2 text-[length:var(--a-text-md)] font-medium text-a-accent">
                     Crédit — seuil pression
                   </h2>
                   <p className="mb-3 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -1250,7 +1250,7 @@ export default function SettingsPage() {
                   <CreditWarnRatioEditor canWrite={canCompanyWrite} />
                 </div>
                 <div>
-                  <h2 className="mb-1 text-[length:var(--a-text-md)] font-medium text-a-orange">
+                  <h2 className="mb-1 text-[length:var(--a-text-md)] font-medium text-a-accent">
                     Crédit — blocage commandes
                   </h2>
                   <PrefsToggleRow
@@ -1268,7 +1268,7 @@ export default function SettingsPage() {
 
             {compartment === "comptabilite" && canCompanyWrite ? (
               <section className={`${softPanel} max-w-xl`}>
-                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-accent">
                   Mapping Finance→GL
                 </h2>
                 <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -1358,7 +1358,7 @@ export default function SettingsPage() {
             {compartment === "ventes" && canCompanyWrite ? (
               <section className={`${softPanel} max-w-xl space-y-6`}>
                 <div>
-                  <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+                  <h2 className="text-[length:var(--a-text-md)] font-medium text-a-accent">
                     Ventes
                   </h2>
                   <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -1403,7 +1403,7 @@ export default function SettingsPage() {
                   </label>
                 </div>
                 <div>
-                  <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+                  <h2 className="text-[length:var(--a-text-md)] font-medium text-a-accent">
                     Stock — lots journaliers
                   </h2>
                   <p className="mt-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -1469,7 +1469,7 @@ export default function SettingsPage() {
 
             {compartment === "roles" && canCompanyWrite ? (
               <section className={`${softPanel} max-w-xl`}>
-                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-orange">
+                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-accent">
                   Overrides par rôle
                 </h2>
                 <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
@@ -2039,7 +2039,7 @@ export default function SettingsPage() {
                 ) : null}
 
                 <div className="space-y-4 a-underlay rounded-md p-4">
-                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-orange">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-accent">
                     Salubrité
                   </h2>
                   <div className="space-y-1">
@@ -2075,7 +2075,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-4 a-underlay rounded-md p-4">
-                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-orange">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-accent">
                     Invitations
                   </h2>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -2179,7 +2179,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-4 a-underlay rounded-md p-4">
-                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-orange">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-accent">
                     SMTP société
                   </h2>
                   <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">
@@ -2280,7 +2280,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-4 a-underlay rounded-md p-4">
-                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-orange">
+                  <h2 className="text-[length:var(--a-text-sm)] font-medium text-a-accent">
                     Relances finance (SMTP dédié + WA Cloud)
                   </h2>
                   <p className="text-[length:var(--a-text-xs)] text-a-fg-subtle">

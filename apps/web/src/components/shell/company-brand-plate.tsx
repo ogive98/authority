@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+const POWERED_BY = "Powered by AUTHORITY · Haithem Hammami R";
+
 /**
- * Brand — logo société | Powered by AUTHORITY (D095 Contiental).
+ * Brand — logo société (PNG Covelli) | Powered by AUTHORITY (D294).
  * `bar` = topbar ; `hero` = pages publiques (login/invite).
  */
 export function CompanyBrandPlate({
@@ -38,7 +40,7 @@ export function CompanyBrandPlate({
       />
 
       {isHero ? (
-        <span className="mt-3 flex flex-col items-center leading-[1.1]">
+        <span className="mt-3 flex flex-col items-center leading-[1.15]">
           <span className="text-[10px] font-medium tracking-[0.06em] text-a-fg-subtle">
             Powered by
           </span>
@@ -46,7 +48,7 @@ export function CompanyBrandPlate({
             AUTHORITY
           </span>
           <span className="mt-1 text-[10px] font-normal tracking-[0.02em] text-a-fg-subtle">
-            Haithem Hammami
+            Haithem Hammami R
           </span>
         </span>
       ) : (
@@ -60,7 +62,7 @@ export function CompanyBrandPlate({
               AUTHORITY
             </span>
             <span className="mt-0.5 text-[9px] font-normal tracking-[0.02em] text-a-fg-subtle">
-              Haithem Hammami
+              Haithem Hammami R
             </span>
           </span>
         </>
@@ -78,7 +80,8 @@ export function CompanyBrandPlate({
           : "inline-flex min-w-0 items-center gap-1.5",
         className,
       )}
-      aria-label="Fattorie Covelli — Powered by AUTHORITY — Haithem Hammami"
+      aria-label={`Fattorie Covelli — ${POWERED_BY}`}
+      title={POWERED_BY}
       suppressHydrationWarning
     >
       {inner}

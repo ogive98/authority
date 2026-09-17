@@ -235,7 +235,7 @@ export function ShellHeader() {
       >
         AUTHORITY
       </Link>
-      <CompanyBrandPlate className="hidden min-w-0 shrink-0 xl:flex" />
+      <CompanyBrandPlate className="hidden min-w-0 shrink-0 md:flex" />
 
       <div className="flex min-w-0 flex-1 justify-center px-1 md:px-4">
         <button

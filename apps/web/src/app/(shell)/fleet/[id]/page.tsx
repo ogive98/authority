@@ -89,7 +89,7 @@ const STATUSES = Object.keys(
 const LOG_KINDS = Object.keys(FLEET_LOG_KIND_LABELS) as FleetLogKind[];
 
 function LogKindIcon({ kind }: { kind: FleetLogKind }) {
-  const cls = "inline h-3.5 w-3.5 text-a-orange";
+  const cls = "inline h-3.5 w-3.5 text-a-accent";
   if (kind === "ODOMETER") return <Gauge className={cls} aria-hidden />;
   if (kind === "OIL_CHANGE") return <Droplets className={cls} aria-hidden />;
   if (kind === "TIRES") return <CircleDot className={cls} aria-hidden />;

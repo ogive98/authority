@@ -82,8 +82,9 @@ export function PortalShell({
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Link
             href={PORTAL_HOME_PATH}
-            className="inline-flex min-w-0 shrink-0 items-center gap-2"
-            aria-label="Fattorie Covelli Portal — Powered by AUTHORITY"
+            className="inline-flex min-w-0 shrink-0 items-center gap-2.5"
+            aria-label="Fattorie Covelli Portal — Powered by AUTHORITY · Haithem Hammami R"
+            title="Powered by AUTHORITY · Haithem Hammami R"
           >
             <Image
               src="/brand/company-logo.png"
@@ -93,8 +94,16 @@ export function PortalShell({
               className="a-brand-logo h-8 w-auto object-contain object-left"
               priority
             />
-            <span className="hidden text-[10px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle sm:inline">
-              Portal
+            <span className="hidden min-w-0 flex-col leading-[1.05] sm:flex">
+              <span className="text-[9px] font-medium tracking-[0.04em] text-a-fg-subtle">
+                Powered by
+              </span>
+              <span className="text-[12px] font-medium tracking-[-0.02em] text-a-fg">
+                AUTHORITY
+              </span>
+              <span className="text-[9px] text-a-fg-subtle">
+                Haithem Hammami R
+              </span>
             </span>
           </Link>
           {customerLabel ? (

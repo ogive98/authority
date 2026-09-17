@@ -74,7 +74,7 @@ export function AuthorityXPairPanel() {
 
   return (
     <div className="space-y-3 pt-4">
-      <p className="text-[length:var(--a-text-sm)] font-medium text-a-orange">
+      <p className="text-[length:var(--a-text-sm)] font-medium text-a-accent">
         {t("AUTHORITY X")}
       </p>
       <p className="text-[length:var(--a-text-xs)] leading-snug text-a-fg-muted">

@@ -3,7 +3,7 @@
 import { MissionControl } from "@/components/shell/mission-control";
 
 /**
- * Home = Mission Control (D161) — adaptive widgets + module features.
+ * Home = Mission Control (D294) — adaptive widgets + module features.
  * Sidebar selects module; dock exposes registry actions.
  */
 export default function HomePage() {

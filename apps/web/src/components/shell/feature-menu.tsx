@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
 import { cycleTab, getFocusable } from "@/lib/a11y";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useShellStore } from "@/stores/shell-store";
+import {
+  personalityForFeature,
+  resolveFeatureIcon,
+} from "./icon-personality";
 
 function restoreRailFocus(moduleId: string) {
   requestAnimationFrame(() => {
@@ -19,7 +23,7 @@ function restoreRailFocus(moduleId: string) {
 }
 
 /**
- * Compact feature popover on module click.
+ * Compact feature popover on module click — D294 opaque card + feature icons.
  * Never full-height — a tall panel was intercepting clicks across the page.
  */
 export function FeatureMenu() {
@@ -82,13 +86,12 @@ export function FeatureMenu() {
       aria-modal="true"
       aria-label={`Fonctionnalités — ${mod.name}`}
       className={cn(
-        "a-glass-strong fixed top-12 left-14 z-[var(--a-z-dropdown)] flex w-52 flex-col",
-        "max-h-[min(20rem,calc(100vh-5rem))] overflow-hidden",
+        "a-card fixed top-12 left-14 z-[var(--a-z-dropdown)] flex w-60 flex-col",
+        "max-h-[min(24rem,calc(100vh-5rem))] overflow-hidden",
         "rounded-[var(--a-radius-md)]",
-        "shadow-[var(--a-shadow-panel)]",
       )}
     >
-      <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-3">
+      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-[color:var(--a-border-subtle)] px-3">
         <p className="truncate text-[length:var(--a-text-sm)] font-medium tracking-[var(--a-tracking-nav)]">
           {mod.name}
         </p>
@@ -96,7 +99,7 @@ export function FeatureMenu() {
           type="button"
           title="Fermer"
           aria-label="Fermer le menu fonctionnalités"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-[var(--a-radius-md)] text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
           onClick={closeMenu}
         >
           <X className="h-3.5 w-3.5" strokeWidth={1.75} />
@@ -111,19 +114,30 @@ export function FeatureMenu() {
                 ? pathname === "/"
                 : pathname === pathOnly ||
                   pathname.startsWith(pathOnly + "/");
+            const Icon = resolveFeatureIcon(f.id, f.label);
+            const p = personalityForFeature(f.id, f.label);
             return (
               <li key={f.id}>
                 <Link
                   href={f.href}
                   onClick={() => setFeatureMenuOpen(false)}
                   className={cn(
-                    "block rounded-[var(--a-radius-md)] px-2.5 py-2 text-[length:var(--a-text-sm)] transition-colors",
+                    "flex items-center gap-2.5 rounded-[var(--a-radius-sm)] px-2 py-2 text-[length:var(--a-text-sm)] transition-colors",
                     active
-                      ? "bg-a-surface-3 font-medium text-a-fg"
+                      ? "bg-a-accent-muted font-medium text-a-fg"
                       : "text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg",
                   )}
                 >
-                  {f.label}
+                  <span
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--a-radius-sm)] bg-a-surface-3 text-a-accent"
+                    aria-hidden
+                  >
+                    <Icon
+                      className={cn("h-3.5 w-3.5", p.colorClass)}
+                      strokeWidth={1.75}
+                    />
+                  </span>
+                  <span className="min-w-0 truncate">{f.label}</span>
                 </Link>
               </li>
             );

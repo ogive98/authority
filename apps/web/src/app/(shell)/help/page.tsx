@@ -82,7 +82,7 @@ export default function HelpPage() {
             </div>
 
             <div>
-              <h3 className="text-[12px] font-medium uppercase tracking-[0.06em] text-a-orange">
+              <h3 className="text-[12px] font-medium uppercase tracking-[0.06em] text-a-accent">
                 {intro.whenLabel}
               </h3>
               <p className="mt-1 text-[13px] text-a-fg-muted">
@@ -91,7 +91,7 @@ export default function HelpPage() {
             </div>
 
             <div className="space-y-5">
-              <h3 className="text-[12px] font-medium uppercase tracking-[0.06em] text-a-orange">
+              <h3 className="text-[12px] font-medium uppercase tracking-[0.06em] text-a-accent">
                 {intro.featuresLabel}
               </h3>
               {mod.features.map((feat) => (
@@ -121,7 +121,7 @@ export default function HelpPage() {
 
             {mod.locks ? (
               <div>
-                <h3 className="text-[12px] font-medium uppercase tracking-[0.06em] text-a-orange">
+                <h3 className="text-[12px] font-medium uppercase tracking-[0.06em] text-a-accent">
                   {intro.locksLabel}
                 </h3>
                 <ul className="mt-1 list-disc space-y-1 pl-5 text-[13px] text-a-fg-muted">

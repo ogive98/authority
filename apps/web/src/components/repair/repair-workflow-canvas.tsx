@@ -78,8 +78,8 @@ export function RepairWorkflowCanvas({
         <defs>
           <linearGradient id="repair-edge" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="var(--a-accent)" stopOpacity="0.35" />
-            <stop offset="50%" stopColor="var(--a-violet)" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="var(--a-sky)" stopOpacity="0.4" />
+            <stop offset="50%" stopColor="var(--a-accent)" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="var(--a-accent)" stopOpacity="0.35" />
           </linearGradient>
         </defs>
 
@@ -89,7 +89,7 @@ export function RepairWorkflowCanvas({
           cy={y}
           r={86}
           fill="none"
-          stroke="color-mix(in srgb, var(--a-violet) 12%, transparent)"
+          stroke="color-mix(in srgb, var(--a-accent) 12%, transparent)"
           strokeWidth="1"
           className="repair-orbit"
         />
@@ -145,7 +145,7 @@ export function RepairWorkflowCanvas({
                   r={28}
                   fill="none"
                   stroke={
-                    isActive ? "var(--a-accent)" : "var(--a-accent-2)"
+                    isActive ? "var(--a-accent)" : "var(--a-border-strong)"
                   }
                   strokeOpacity={isActive ? 0.35 : 0.25}
                   strokeWidth={2}
@@ -159,13 +159,13 @@ export function RepairWorkflowCanvas({
                     ? "var(--a-accent)"
                     : isDone
                       ? "var(--a-accent-muted)"
-                      : "color-mix(in srgb, var(--a-surface-2) 92%, transparent)"
+                      : "var(--a-surface-2)"
                 }
                 stroke={
                   isActive
                     ? "var(--a-accent-hover)"
                     : isDone
-                      ? "var(--a-accent-2)"
+                      ? "var(--a-accent)"
                       : "var(--a-border-strong)"
                 }
                 strokeWidth={1.5}

@@ -42,7 +42,7 @@ export type FeedIconDef = {
   toneClass: string;
   softBg: string;
   label: string;
-  /** Liquid glass disc class (iOS-like). */
+  /** Optional motion class for the feed glyph disc. */
   liquidClass?: string;
 };
 
@@ -85,7 +85,7 @@ const NOTIFICATION_ICONS: Record<NotificationType, FeedIconDef> = {
   },
   system: {
     icon: CloudLightning,
-    toneClass: "text-a-accent-2",
+    toneClass: "text-a-accent",
     softBg: "bg-a-info-soft",
     label: "Système",
     liquidClass: "a-liquid-translate",
@@ -148,7 +148,7 @@ const ACTIVITY_EXTRA: Record<"user" | "metric" | "idle", FeedIconDef> = {
   },
   metric: {
     icon: Gauge,
-    toneClass: "text-a-accent-2",
+    toneClass: "text-a-accent",
     softBg: "bg-a-info-soft",
     label: "Métrique",
     liquidClass: "a-liquid-calendar",

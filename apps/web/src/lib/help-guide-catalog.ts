@@ -103,13 +103,37 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Cliquez l’icône du module dans la sidebar Finder.",
-            "Sur `/`, la liste AUTHORITY des features du module apparaît.",
+            "Sur `/`, la liste D294 des fonctionnalités du module apparaît (icônes accent unique).",
+            "Un second clic module ouvre le menu compact fonctionnalités (carte opaque).",
             "Cliquez une feature pour ouvrir la route métier.",
           ],
           it: [
             "Clicca l’icona del modulo nella sidebar Finder.",
-            "Su `/` compare l’elenco AUTHORITY delle feature del modulo.",
+            "Su `/` compare l’elenco D294 delle funzioni del modulo (icone un accento).",
+            "Un secondo clic modulo apre il menu compatto funzioni (card opaca).",
             "Clicca una feature per aprire la route operativa.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Marque société (logo Covelli)",
+          it: "Marchio azienda (logo Covelli)",
+        },
+        when: {
+          fr: "Identification visuelle siège / portails.",
+          it: "Identificazione visiva sede / portali.",
+        },
+        steps: {
+          fr: [
+            "Topbar : logo PNG Fattorie Covelli (`/brand/company-logo.png`).",
+            "À droite du logo : Powered by AUTHORITY · Haithem Hammami R.",
+            "Même marque sur login métier, Customer Portal et Employee Portal.",
+          ],
+          it: [
+            "Topbar: logo PNG Fattorie Covelli (`/brand/company-logo.png`).",
+            "A destra del logo: Powered by AUTHORITY · Haithem Hammami R.",
+            "Stesso marchio su login, Customer Portal e Employee Portal.",
           ],
         },
       },
@@ -124,14 +148,14 @@ export const HELP_MODULES: HelpModule[] = [
         },
         steps: {
           fr: [
-            "Cliquez l’orbe « X » teal dans la topbar (à gauche des notifications).",
+            "Cliquez l’orbe « X » accent dans la topbar (à gauche des notifications).",
             "Le companion AUTHORITY X passe au premier plan — AUTHORITY reste ouvert derrière.",
             "Sinon : raccourci CTRL+X si le tray Electron tourne.",
             "Appairage : Préférences → Poste → Générer un code, coller dans X (jeton keyring, D274).",
             "Si hors ligne : lancez `npm run dev -w authority-x` (tray).",
           ],
           it: [
-            "Clicca l’orbe « X » teal nella topbar (a sinistra delle notifiche).",
+            "Clicca l’orbe « X » accent nella topbar (a sinistra delle notifiche).",
             "Il companion AUTHORITY X passa in primo piano — AUTHORITY resta aperto sotto.",
             "Altrimenti: scorciatoia CTRL+X se il tray Electron è attivo.",
             "Associazione: Preferenze → Postazione → Genera un codice, incolla in X (token keyring, D274).",
@@ -193,11 +217,13 @@ export const HELP_MODULES: HelpModule[] = [
     locks: {
       fr: [
         "Les features ne sont jamais listées dans la sidebar.",
+        "D294 : un accent, surfaces opaques — pas de Soft Glass / multi-couleur chrome.",
         "Pas de KPI inventés — montants TND uniquement si données API.",
         "Notifications = inbox AUTHORITY (D247–D249/D290) — prefs poste local · pas un CRM · pas d’OF auto.",
       ],
       it: [
         "Le feature non sono mai elencate nella sidebar.",
+        "D294: un accento, superfici opache — niente Soft Glass / chrome multi-colore.",
         "Nessun KPI inventato — importi TND solo se dati API.",
         "Notifiche = inbox AUTHORITY (D247–D249/D290) — prefs postazione local · non un CRM · niente OF auto.",
       ],

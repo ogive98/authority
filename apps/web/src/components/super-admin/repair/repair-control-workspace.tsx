@@ -339,7 +339,7 @@ export function RepairControlWorkspace() {
     <div className="repair-workspace space-y-5 p-[var(--a-space-6)]">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-[0.14em] text-a-violet">
+          <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-[0.14em] text-a-accent">
             Module Repair · Thunder Control
           </p>
           <h1 className="mt-1 text-[length:var(--a-text-2xl)] font-medium tracking-tight text-a-fg">
@@ -474,7 +474,7 @@ export function RepairControlWorkspace() {
                     className={cn(
                       "rounded-full px-3 py-1.5 text-[length:var(--a-text-sm)] transition-colors",
                       domains.includes(d.id)
-                        ? "bg-[var(--a-violet-soft)] text-[color:var(--a-violet)]"
+                        ? "bg-a-accent-muted text-a-accent"
                         : "bg-a-surface-3 text-a-fg-muted hover:bg-a-surface-4 hover:text-a-fg",
                     )}
                   >

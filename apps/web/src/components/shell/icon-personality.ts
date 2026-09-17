@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { iconForFeature, iconForModule } from "./module-icons";
 
 /**
- * Per-feature visual identity: Progressive OS blue / violet / sky only.
+ * Per-feature visual identity — D294 one accent (`text-a-accent`).
  * Outline Lucide only — no filled chips / frames · no raw hex.
  */
 export type IconMotion =
