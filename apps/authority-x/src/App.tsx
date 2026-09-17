@@ -272,7 +272,7 @@ export function App() {
       /* ignore */
     }
     setOpenError(
-      "AUTHORITY ne s’ouvre pas — lancez Soft Glass (npm run dev) sur :3000",
+      "AUTHORITY ne s’ouvre pas — lancez AUTHORITY (npm run dev) sur :3000",
     );
   }
 
@@ -422,7 +422,7 @@ export function App() {
                 type="button"
                 className={`ax-mode-opt${workflowMode === "human" ? " is-on" : ""}`}
                 onClick={() => setWorkflowMode("human")}
-                title="Confirmer avant Soft Glass"
+                title="Confirmer avant AUTHORITY"
                 tabIndex={open ? 0 : -1}
               >
                 Valider
@@ -431,7 +431,7 @@ export function App() {
                 type="button"
                 className={`ax-mode-opt${workflowMode === "auto" ? " is-on" : ""}`}
                 onClick={() => setWorkflowMode("auto")}
-                title="Ouvre Soft Glass automatiquement"
+                title="Ouvre AUTHORITY automatiquement"
                 tabIndex={open ? 0 : -1}
               >
                 Direct
@@ -440,11 +440,11 @@ export function App() {
             <button
               type="button"
               className="ax-btn-authority"
-              title="Ouvrir AUTHORITY Soft Glass"
+              title="Ouvrir AUTHORITY"
               tabIndex={open ? 0 : -1}
               onClick={() => void openAuthority("/")}
             >
-              Soft Glass
+              AUTHORITY
             </button>
           </div>
 
@@ -467,7 +467,7 @@ export function App() {
 
             {showPair ? (
               <div className="ax-pair">
-                <div className="ax-hint">Appairage Soft Glass</div>
+                <div className="ax-hint">Appairage AUTHORITY</div>
                 <p className="ax-pair-help">
                   Préférences → Poste → Générer un code, puis coller ici.
                 </p>
@@ -607,7 +607,7 @@ export function App() {
 
             {showLog ? (
               <div className="ax-log">
-                <div className="ax-hint">Étapes — clic = Soft Glass</div>
+                <div className="ax-hint">Étapes — clic = AUTHORITY</div>
                 {logs.map((item, i) => {
                   const clickable = Boolean(stepsClickable && item.href);
                   const Tag = clickable ? "button" : "div";
@@ -661,7 +661,7 @@ export function App() {
                   <div className="ax-ready">
                     <div className="ax-ready-title">Confirmation</div>
                     <div className="ax-ready-desc">
-                      Ouvrir AUTHORITY Soft Glass maintenant ?
+                      Ouvrir AUTHORITY maintenant ?
                     </div>
                     <div className="ax-validate-actions">
                       <button
@@ -686,7 +686,7 @@ export function App() {
                   <div className="ax-ready">
                     <div className="ax-ready-title">✓ Prêt</div>
                     <div className="ax-ready-desc">
-                      Soft Glass doit tourner sur http://127.0.0.1:3000
+                      AUTHORITY doit tourner sur http://127.0.0.1:3000
                     </div>
                     <button
                       type="button"

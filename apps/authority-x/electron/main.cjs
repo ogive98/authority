@@ -20,7 +20,7 @@ const fs = require("fs");
 
 const isDev = !app.isPackaged;
 const DEV_URL = "http://127.0.0.1:5173";
-/** Loopback summon port — Soft Glass topbar POSTs here to open X */
+/** Loopback summon port — AUTHORITY topbar POSTs here to open X */
 const SUMMON_PORT = 17898;
 
 /** @type {BrowserWindow | null} */
@@ -319,7 +319,7 @@ function createTray() {
 }
 
 /**
- * Soft Glass topbar → fetch http://127.0.0.1:17898/open
+ * AUTHORITY topbar → fetch http://127.0.0.1:17898/open
  * Brings AUTHORITY X to front (AUTHORITY stays open in background).
  */
 function startSummonServer() {
@@ -426,7 +426,7 @@ app.whenReady().then(() => {
       paired: Boolean(auth),
       note: auth
         ? "Device token in OS keyring — Thunder prepare uses Bearer."
-        : "Unpaired — paste Soft Glass Poste code (D274).",
+        : "Unpaired — paste AUTHORITY Poste code (D274).",
     };
   });
 

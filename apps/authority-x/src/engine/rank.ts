@@ -50,7 +50,7 @@ export function rankSuggestions(input: {
     let description: string;
     switch (action.id) {
       case "transfer":
-        description = `Banque Soft Glass · Treasury pending — ${money}`;
+        description = `Banque AUTHORITY · Treasury pending — ${money}`;
         break;
       case "ap_payment":
         description = `Règlement fournisseur ${label}`;
@@ -66,7 +66,7 @@ export function rankSuggestions(input: {
         break;
       case "open_entity":
         description = primary
-          ? `${entityKindLabel(primary.kind)} · fiche Soft Glass`
+          ? `${entityKindLabel(primary.kind)} · fiche AUTHORITY`
           : "Voir le compte / profil";
         break;
       default:

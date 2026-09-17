@@ -92,7 +92,7 @@ export function routeForEntity(
   }
 
   if (actionId === "transfer") {
-    // CREATE_TRANSFER absent — Soft Glass banking only (pending Treasury)
+    // CREATE_TRANSFER absent — AUTHORITY banking only (pending Treasury)
     return "/finance/banking?source=authority_x&note=treasury_pending";
   }
 
