@@ -18,8 +18,8 @@ export type MeRegistry = {
 };
 
 /**
- * Offline / API-down fallback — full Contiental nav so chrome stays usable
- * when Nest hangs (authenticated session assumed by shell layout).
+ * Offline / API-down catalog — used only to merge missing feature hrefs into
+ * modules the API already returned. Never pad the rail with this list (D294 Track E).
  */
 export const FALLBACK_REGISTRY: MeRegistry = {
   companyId: null,
@@ -255,49 +255,32 @@ export const UNAUTH_REGISTRY: MeRegistry = {
   flags: [],
 };
 
-/** Ensure Accueil so the icon rail never goes blank.
- * Merge FALLBACK features into known modules only — do not invent extra modules
- * when the API already returned a tenancy registry (D111).
+/**
+ * Trust `/me/registry` activation: ensure Accueil only; never invent modules
+ * or pad features when the API already returned a tenancy registry (D294 Track E).
  */
 export function ensureShellModules(data: MeRegistry): MeRegistry {
   if (!data.modules?.length) {
-    return FALLBACK_REGISTRY;
+    return UNAUTH_REGISTRY;
   }
-  const modules = data.modules.map((mod) => {
-    const fb = FALLBACK_REGISTRY.modules.find((m) => m.key === mod.key);
-    if (!fb?.features?.length) return mod;
-    const seen = new Set(mod.features.map((f) => f.id));
-    const merged = [
-      ...mod.features,
-      ...fb.features.filter((f) => !seen.has(f.id)),
-    ];
-    return merged.length === mod.features.length
-      ? mod
-      : { ...mod, features: merged };
-  });
-  const keys = new Set(modules.map((m) => m.key));
-  if (!keys.has("home")) {
-    const home = FALLBACK_REGISTRY.modules.find((m) => m.key === "home");
-    if (home) modules.unshift(home);
-  }
-  // When authenticated with company context, do not pad the full FALLBACK rail.
+  // Tenancy registry — do not merge FALLBACK features (catalog ≠ activation).
   if (data.companyId) {
-    return { ...data, modules };
+    const keys = new Set(data.modules.map((m) => m.key));
+    if (keys.has("home")) return data;
+    const home = UNAUTH_REGISTRY.modules.find((m) => m.key === "home");
+    return home
+      ? { ...data, modules: [home, ...data.modules] }
+      : data;
   }
-  for (const fb of FALLBACK_REGISTRY.modules) {
-    if (!keys.has(fb.key)) {
-      modules.push(fb);
-      keys.add(fb.key);
-    }
-  }
-  return { ...data, modules };
+  // Sparse / no company — only Accueil, never full FALLBACK rail.
+  return UNAUTH_REGISTRY;
 }
 
 const REGISTRY_TIMEOUT_MS = 4_000;
 
 /**
- * Never throws — shell chrome must keep icons even when Nest is down / hangs.
- * 401 → Accueil only (session gate should redirect; this avoids fake full nav).
+ * Never throws — shell chrome must keep Accueil even when Nest is down / hangs.
+ * 401/403 / network / non-OK → Accueil only (do not fake enabled modules).
  */
 export async function fetchMeRegistry(): Promise<MeRegistry> {
   try {
@@ -310,11 +293,11 @@ export async function fetchMeRegistry(): Promise<MeRegistry> {
       return UNAUTH_REGISTRY;
     }
     if (!res.ok) {
-      return FALLBACK_REGISTRY;
+      return UNAUTH_REGISTRY;
     }
     const data = (await res.json()) as MeRegistry;
     return ensureShellModules(data);
   } catch {
-    return FALLBACK_REGISTRY;
+    return UNAUTH_REGISTRY;
   }
 }

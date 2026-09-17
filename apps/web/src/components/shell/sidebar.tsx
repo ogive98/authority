@@ -9,7 +9,6 @@ import {
   PanelLeft,
   PanelLeftClose,
   Settings2,
-  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -296,15 +295,7 @@ export function ShellSidebar() {
           <ul className="flex flex-col gap-px">
             {repair ? (
               <ModuleRow mod={repair} expanded={expanded} />
-            ) : (
-              <SystemLink
-                href="/repair"
-                label="Réparation"
-                icon={Wrench}
-                expanded={expanded}
-                onClick={() => activateModule("repair")}
-              />
-            )}
+            ) : null}
             <SystemLink
               href="/settings"
               label={settingsMod?.name ?? t("preferences")}

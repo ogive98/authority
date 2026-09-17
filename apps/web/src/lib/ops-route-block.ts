@@ -142,3 +142,52 @@ export function resolveOpsRouteBlock(
 
   return null;
 }
+
+/** Paths that stay reachable without a matching registry feature href. */
+const REGISTRY_GATE_ALLOWLIST = [
+  "/",
+  "/help",
+  "/settings",
+  "/account",
+  "/users",
+  "/preview",
+  "/dev",
+  "/search",
+] as const;
+
+function isRegistryGateAllowlisted(pathname: string): boolean {
+  const p = normalizePath(pathname);
+  if (p === "/") return true;
+  return REGISTRY_GATE_ALLOWLIST.some(
+    (root) => root !== "/" && (p === root || p.startsWith(`${root}/`)),
+  );
+}
+
+export type RegistryRouteBlock = {
+  reason: "module-inactive";
+  title: string;
+  message: string;
+};
+
+/**
+ * UX gate when tenancy registry succeeded but the URL is outside activated modules.
+ * Does not replace API authorization. Skipped when companyId is null (degraded/unauth).
+ */
+export function resolveRegistryRouteBlock(
+  loc: { pathname: string; search: string; hash: string },
+  registry: MeRegistry,
+): RegistryRouteBlock | null {
+  if (!registry.companyId) return null;
+  if (isRegistryGateAllowlisted(loc.pathname)) return null;
+  if (longestMatchingFeature(registry, loc)) return null;
+  if (loc.pathname.startsWith("/m/")) {
+    const key = loc.pathname.split("/")[2];
+    if (key && registry.modules.some((m) => m.key === key)) return null;
+  }
+  return {
+    reason: "module-inactive",
+    title: "Module indisponible",
+    message:
+      "Cette surface n’est pas dans votre registre actif (module désactivé, flag, ou permission). Contactez un administrateur si vous y aviez accès.",
+  };
+}

@@ -4,13 +4,16 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AEmptyState } from "@/components/a";
 import { useMeRegistry } from "@/hooks/use-me-registry";
-import { resolveOpsRouteBlock } from "@/lib/ops-route-block";
+import {
+  resolveOpsRouteBlock,
+  resolveRegistryRouteBlock,
+} from "@/lib/ops-route-block";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 
 /**
- * Blocks deep URLs for GHOST-hidden features / PATCH-GHOST delivery / accounting partial (D208).
- * Does not 403 the API.
+ * Blocks deep URLs for GHOST-hidden features / PATCH delivery / accounting partial (D208)
+ * and inactive modules missing from `/me/registry` (D294 Track E). Does not 403 the API.
  */
 export function OpsRouteGate({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
@@ -18,7 +21,7 @@ export function OpsRouteGate({ children }: { children: ReactNode }) {
   const ghostEnabled = useShellStore((s) => s.ghostEnabled);
   const patchEnabled = useShellStore((s) => s.patchEnabled);
   const prefs = usePrefsStore((s) => s.opsVisibility);
-  const { unfiltered } = useMeRegistry();
+  const { unfiltered, isSuccess, isPlaceholderData } = useMeRegistry();
 
   useEffect(() => {
     const sync = () => {
@@ -37,18 +40,33 @@ export function OpsRouteGate({ children }: { children: ReactNode }) {
     };
   }, [pathname]);
 
-  const block = resolveOpsRouteBlock(loc, unfiltered, {
+  const opsBlock = resolveOpsRouteBlock(loc, unfiltered, {
     ghostEnabled,
     patchEnabled,
     prefs,
   });
 
-  if (block) {
+  if (opsBlock) {
     return (
       <div className="p-[var(--a-space-6)]">
-        <AEmptyState title={block.title} description={block.message} />
+        <AEmptyState title={opsBlock.title} description={opsBlock.message} />
       </div>
     );
+  }
+
+  // Only gate after a real tenancy registry — not Accueil placeholder / degraded.
+  if (isSuccess && !isPlaceholderData) {
+    const registryBlock = resolveRegistryRouteBlock(loc, unfiltered);
+    if (registryBlock) {
+      return (
+        <div className="p-[var(--a-space-6)]">
+          <AEmptyState
+            title={registryBlock.title}
+            description={registryBlock.message}
+          />
+        </div>
+      );
+    }
   }
 
   return children;

@@ -7,7 +7,7 @@ import { PrefsToggleRow } from "@/components/settings/prefs-toggle-row";
 import { localizeRegistry } from "@/lib/i18n/registry-labels";
 import {
   ensureShellModules,
-  FALLBACK_REGISTRY,
+  UNAUTH_REGISTRY,
   fetchMeRegistry,
   type MeRegistry,
 } from "@/lib/registry";
@@ -47,11 +47,11 @@ export function PrefsModesOpsPanel({
   const query = useQuery<MeRegistry>({
     queryKey: ["me-registry"],
     queryFn: fetchMeRegistry,
-    placeholderData: FALLBACK_REGISTRY,
+    placeholderData: (previous) => previous ?? UNAUTH_REGISTRY,
     staleTime: 30_000,
   });
   const modules = useMemo(() => {
-    const raw = ensureShellModules(query.data ?? FALLBACK_REGISTRY);
+    const raw = ensureShellModules(query.data ?? UNAUTH_REGISTRY);
     const localized = localizeRegistry(raw, locale);
     return localized.modules;
   }, [query.data, locale]);

@@ -56,7 +56,7 @@ function SoftRing({ value }: { value: number }) {
 }
 
 /**
- * Soft Glass feature list — full (D160) or embedded column for Mission Control (D161).
+ * Feature list — full or embedded column for Mission Control (D294).
  */
 export function ModuleFeatureList({
   moduleKey,

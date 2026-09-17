@@ -30,7 +30,7 @@ export default function DevRegistryPage() {
         Gate : flag <span className="a-mono">platform.search</span> off → pas
         de feature « Recherche » ; on → apparaît après refetch. Modules
         DISABLED absents. Super Admin jamais listé. Session API requise
-        (sinon fallback local).
+        (sinon Accueil only — pas de rail fallback inventé).
       </p>
 
       <div className="a-card space-y-2 p-4 text-[length:var(--a-text-sm)]">

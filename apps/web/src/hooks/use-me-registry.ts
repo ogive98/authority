@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  FALLBACK_REGISTRY,
+  UNAUTH_REGISTRY,
   fetchMeRegistry,
   type MeRegistry,
 } from "@/lib/registry";
@@ -22,11 +22,12 @@ export function useMeRegistry() {
   const query = useQuery<MeRegistry>({
     queryKey: ["me-registry"],
     queryFn: fetchMeRegistry,
-    placeholderData: FALLBACK_REGISTRY,
+    /** Accueil until API returns — never flash a fake full rail (D294 Track E). */
+    placeholderData: (previous) => previous ?? UNAUTH_REGISTRY,
     staleTime: 30_000,
   });
 
-  const raw = query.data ?? FALLBACK_REGISTRY;
+  const raw = query.data ?? UNAUTH_REGISTRY;
   const data = useMemo(() => {
     const localized = localizeRegistry(raw, locale);
     return filterRegistryForOpsModes(localized, {

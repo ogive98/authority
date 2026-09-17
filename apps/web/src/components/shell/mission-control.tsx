@@ -34,7 +34,7 @@ function WidgetChrome({
       className={cn(
         "a-card a-stagger-in p-4 md:p-5",
         accent &&
-          "ring-1 ring-[color-mix(in_oklab,var(--a-violet)_35%,transparent)]",
+          "ring-1 ring-[color-mix(in_oklab,var(--a-accent)_35%,transparent)]",
         className,
       )}
     >
@@ -49,7 +49,7 @@ function WidgetChrome({
 }
 
 /**
- * Mission Control — ZIP Progressive OS layout (live KPIs only).
+ * Mission Control — D294 layout (live KPIs only; registry-driven modules).
  */
 export function MissionControl({ className }: { className?: string }) {
   const { t } = useShellT();
@@ -70,7 +70,7 @@ export function MissionControl({ className }: { className?: string }) {
       )}
     >
       <header className="min-w-0">
-        <h1 className="text-[clamp(1.5rem,2.5vw,1.875rem)] font-semibold tracking-[-0.03em] text-a-fg">
+        <h1 className="text-[clamp(1.5rem,2.5vw,1.875rem)] font-medium tracking-[-0.03em] text-a-fg">
           {t("missionControl")}
         </h1>
         <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">

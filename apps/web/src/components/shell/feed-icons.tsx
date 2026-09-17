@@ -92,47 +92,47 @@ const NOTIFICATION_ICONS: Record<NotificationType, FeedIconDef> = {
   },
 };
 
-/** AI recommendations — violet liquid family (lock), distinct chroma. */
+/** AI recommendations — D294 single accent (no violet chrome). */
 const AI_ICONS: Record<AiRecommendationKind, FeedIconDef> = {
   stock: {
     icon: PackagePlus,
     toneClass: "text-white",
-    softBg: "bg-[var(--a-violet-soft)]",
+    softBg: "bg-[var(--a-accent-muted)]",
     label: "Stock",
     liquidClass: "a-liquid-ai-stock",
   },
   forecast: {
     icon: LineChart,
     toneClass: "text-white",
-    softBg: "bg-[var(--a-violet-soft)]",
+    softBg: "bg-[var(--a-accent-muted)]",
     label: "Prévision",
     liquidClass: "a-liquid-ai-forecast",
   },
   pricing: {
     icon: TrendingUp,
     toneClass: "text-white",
-    softBg: "bg-[var(--a-violet-soft)]",
+    softBg: "bg-[var(--a-accent-muted)]",
     label: "Prix",
     liquidClass: "a-liquid-ai-pricing",
   },
   quality: {
     icon: ShieldAlert,
     toneClass: "text-white",
-    softBg: "bg-[var(--a-violet-soft)]",
+    softBg: "bg-[var(--a-accent-muted)]",
     label: "Qualité",
     liquidClass: "a-liquid-ai-quality",
   },
   ops: {
     icon: Wrench,
     toneClass: "text-white",
-    softBg: "bg-[var(--a-violet-soft)]",
+    softBg: "bg-[var(--a-accent-muted)]",
     label: "Ops",
     liquidClass: "a-liquid-ai-ops",
   },
   generic: {
     icon: Sparkles,
     toneClass: "text-white",
-    softBg: "bg-[var(--a-violet-soft)]",
+    softBg: "bg-[var(--a-accent-muted)]",
     label: "IA",
     liquidClass: "a-liquid-ai-generic",
   },
