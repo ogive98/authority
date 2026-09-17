@@ -6,7 +6,7 @@ export const maintenanceManifest: ModuleManifest = {
   version: '1.0.0',
   apiVersion: '1',
   description:
-    'Maintenance Soft Glass — assets, WO, optional fleet link, preventive ADV (D256+D258)',
+    'Maintenance AUTHORITY — assets, WO, optional fleet link, preventive ADV (D256+D258)',
   capabilities: [
     {
       key: 'maintenance.asset',

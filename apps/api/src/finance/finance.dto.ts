@@ -560,7 +560,7 @@ export class CreateApBillDto {
   @MaxLength(160)
   vendorName?: string;
 
-  /** Soft Glass supplier master link (optional). Fills vendorName from legalName when omitted. */
+  /** AUTHORITY supplier master link (optional). Fills vendorName from legalName when omitted. */
   @IsOptional()
   @IsUUID()
   supplierId?: string;

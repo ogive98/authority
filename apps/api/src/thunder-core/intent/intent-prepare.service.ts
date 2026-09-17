@@ -45,7 +45,7 @@ export type IntentPrepareResult = {
   }>;
   ambiguous: boolean;
   suggestions: IntentSuggestionDto[];
-  /** Navigate-only Soft Glass contract — never a silent finance write */
+  /** Navigate-only AUTHORITY contract — never a silent finance write */
   openWorkflow: { href: string; prefill: Record<string, string> } | null;
 };
 
@@ -156,7 +156,7 @@ export class IntentPrepareService {
       let description: string;
       switch (action.id) {
         case 'transfer':
-          description = `Banque Soft Glass · Treasury pending — ${money}`;
+          description = `Banque AUTHORITY · Treasury pending — ${money}`;
           break;
         case 'ap_payment':
           description = `Règlement fournisseur ${label}`;
@@ -172,7 +172,7 @@ export class IntentPrepareService {
           break;
         case 'open_entity':
           description = primary
-            ? `Fiche Soft Glass · ${label}`
+            ? `Fiche AUTHORITY · ${label}`
             : 'Voir le compte / profil';
           break;
         default:

@@ -170,7 +170,7 @@ export class TaxController {
     });
   }
 
-  /** D282 — TEJ Center Soft Glass hub (counters; transmission DISABLED). */
+  /** D282 — TEJ Center AUTHORITY hub (counters; transmission DISABLED). */
   @Get('tej-center/overview')
   @RequirePermission(PERMISSION_KEYS.taxRead)
   tejCenterOverview(

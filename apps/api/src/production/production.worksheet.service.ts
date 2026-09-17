@@ -58,7 +58,7 @@ export type WorksheetDto = {
 
 /**
  * D292 — Digital Worksheet Prep→Weigh→Control (Production).
- * Manual weigh · Soft Glass human gates · outbox events · no stock/invoice mutation.
+ * Manual weigh · AUTHORITY human gates · outbox events · no stock/invoice mutation.
  */
 @Injectable()
 export class ProductionWorksheetService {

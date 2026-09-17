@@ -1,4 +1,4 @@
-/** UI extension contract — rendered via Soft Glass D161 in Phase 2+. */
+/** UI extension contract — rendered via AUTHORITY D294 in Phase 2+. */
 
 export type UiExtensionDefinition = {
   id: string;

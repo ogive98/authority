@@ -6,7 +6,7 @@ export const salesManifest: ModuleManifest = {
   version: '1.1.0',
   apiVersion: '1',
   description:
-    'Sales Soft Glass — list status chips, order fiche, draft PATCH (D223)',
+    'Sales AUTHORITY — list status chips, order fiche, draft PATCH (D223)',
   capabilities: [
     {
       key: 'sales.ping',

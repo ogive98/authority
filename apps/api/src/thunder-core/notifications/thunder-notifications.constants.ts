@@ -1,4 +1,4 @@
-/** D290 — Thunder HOW: materialize Soft Glass in-app inbox via NotificationsService.sync. */
+/** D290 — Thunder HOW: materialize AUTHORITY in-app inbox via NotificationsService.sync. */
 export const THUNDER_NOTIFICATIONS_CONSUMER_ID = 'notifications.materialize';
 
 export const THUNDER_NOTIFICATIONS_EVENT_TYPES = {

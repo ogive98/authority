@@ -42,7 +42,7 @@ type UpsertCandidate = {
 };
 
 /**
- * Soft Glass in-app inbox (D247/D248/D252).
+ * AUTHORITY in-app inbox (D247/D248/D252).
  * Sync materializes métier sources + reconciles stale unread — never invents rates;
  * WA_INBOX = human-gated draft only (no NLP auto-order / CRM).
  */
@@ -472,7 +472,7 @@ export class NotificationsService {
         type: 'task',
         priority: msg.status === WaInboundStatus.OPEN ? 'p1' : 'p2',
         title: `WhatsApp ${msg.fromPhone}`,
-        body: `${snippet || 'Message entrant'} — créer brouillon Soft Glass (humain).`,
+        body: `${snippet || 'Message entrant'} — créer brouillon AUTHORITY (humain).`,
         href: `/sales/wa-inbox`,
       });
     }

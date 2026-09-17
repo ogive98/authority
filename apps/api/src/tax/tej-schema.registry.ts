@@ -10,7 +10,7 @@ export type TejSchemaKind = 'LOCAL_DRAFT' | 'OFFICIAL_XSD';
 export type TejSchemaEntry = {
   id: string;
   kind: TejSchemaKind;
-  /** Human Soft Glass badge. */
+  /** Human AUTHORITY badge. */
   label: string;
   note: string;
   /** Absolute or repo-relative path — null until official artefact lands. */

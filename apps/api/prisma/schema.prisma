@@ -60,7 +60,7 @@ model CoreProcessedEvent {
 }
 
 /**
- * Soft Glass in-app inbox (D247) — company alerts, VALIDATED-prefs aware sources.
+ * AUTHORITY in-app inbox (D247) — company alerts, VALIDATED-prefs aware sources.
  * Deduped by companyId+dedupeKey; no WA/CRM messaging.
  */
 model CoreInAppNotification {
@@ -1360,7 +1360,7 @@ enum SupSupplierStatus {
 }
 
 /**
- * Supplier master Soft Glass V0 (D250) — MdParty SUPPLIER|BOTH + domain row.
+ * Supplier master AUTHORITY V0 (D250) — MdParty SUPPLIER|BOTH + domain row.
  * Out: PO, pricing, stock receipts, supplier portal, item prefs.
  */
 model SupSupplier {
@@ -1688,7 +1688,7 @@ model SalOrderLine {
   @@map("sal_order_line")
 }
 
-/** D251 — inbound WhatsApp message (human-gated → Soft Glass draft order). Not a CRM chat SoT. */
+/** D251 — inbound WhatsApp message (human-gated → AUTHORITY draft order). Not a CRM chat SoT. */
 enum WaInboundStatus {
   OPEN
   MATCHED
@@ -2231,14 +2231,14 @@ model FinApPayment {
 
 /**
  * AP vendor bill V0 (D236) — vendorName free text (D205).
- * Optional supplierId link (D250) — Soft Glass picker; vendorName still required for display.
+ * Optional supplierId link (D250) — AUTHORITY picker; vendorName still required for display.
  */
 model FinApBill {
   id          String         @id @default(uuid()) @db.Uuid
   companyId   String         @map("company_id") @db.Uuid
   number      String
   vendorName  String         @map("vendor_name")
-  /** Optional Soft Glass supplier master (D250) — free-text vendorName remains SoT display. */
+  /** Optional AUTHORITY supplier master (D250) — free-text vendorName remains SoT display. */
   supplierId  String?        @map("supplier_id") @db.Uuid
   status      FinApBillStatus @default(DRAFT)
   billDate    DateTime       @map("bill_date") @db.Date
@@ -3731,7 +3731,7 @@ model AtmRunLog {
 }
 
 /**
- * Fleet Soft Glass (D253+) — vehicles + assignment + carnet (D257).
+ * Fleet AUTHORITY (D253+) — vehicles + assignment + carnet (D257).
  * Out: GPS · vehicleId on DlvRound · HR driver FK.
  */
 enum FltVehicleStatus {
@@ -3824,7 +3824,7 @@ model FltAssignment {
 }
 
 /**
- * Maintenance Soft Glass V0 (D256) — assets + WO · optional fleet vehicle (1A) ·
+ * Maintenance AUTHORITY V0 (D256) — assets + WO · optional fleet vehicle (1A) ·
  * preventive date UI (2B). Out: Thunder preventive job · parts · OF block · full CMMS.
  */
 enum MntAssetStatus {

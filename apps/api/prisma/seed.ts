@@ -2526,7 +2526,7 @@ async function seedProductVatStubs(
   }
 }
 
-/** D272 — operational stubs so Soft Glass is not blocked until accountant.
+/** D272 — operational stubs so AUTHORITY is not blocked until accountant.
  * Marked STUB_UNTIL_EXPERT. TEJ transmission remains DISABLED in code forever.
  * Not legal claims — replace in Préférences → Expertise.
  */

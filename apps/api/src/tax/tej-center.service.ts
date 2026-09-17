@@ -44,7 +44,7 @@ export type TejCenterOverviewDto = {
 };
 
 /**
- * TEJ Center Soft Glass hub (D282) — counters only in Phase A.
+ * TEJ Center AUTHORITY hub (D282) — counters only in Phase A.
  * No official XML schema · no transmission.
  */
 @Injectable()

@@ -80,7 +80,7 @@ export class CreateEmployeeDto {
 
   /**
    * D219 — create Identity ACTIVE + role `employee` + link userId.
-   * Requires email. Default false when omitted (opt-in from Soft Glass UI).
+   * Requires email. Default false when omitted (opt-in from AUTHORITY UI).
    */
   @IsOptional()
   @IsBoolean()

@@ -10,7 +10,7 @@ export const attendanceManifest: ModuleManifest = {
   version: '0.1.0',
   apiVersion: '1',
   description:
-    'Attendance domain — leave API (PAID|UNPAID|OTHER); Soft Glass UI under HR Congés',
+    'Attendance domain — leave API (PAID|UNPAID|OTHER); AUTHORITY UI under HR Congés',
   capabilities: [
     {
       key: 'attendance.self',
@@ -64,7 +64,7 @@ export const attendanceManifest: ModuleManifest = {
     'attendance.absence.cancelled.v1',
     'attendance.rh_event.created.v1',
   ],
-  // Domain module only — Soft Glass nav lives under `hr` (Congés tab). Empty =
+  // Domain module only — AUTHORITY nav lives under `hr` (Congés tab). Empty =
   // hide from métier rail (D111 / D218 UX: not a parallel module icon).
   navigationEntries: [],
 };

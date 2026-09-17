@@ -119,7 +119,7 @@ export class DevicesController {
     if (req.authSource !== 'cookie') {
       throw new IdentityException(
         IDENTITY_ERROR_CODES.COOKIE_REQUIRED,
-        'Pairing requires a Soft Glass browser session.',
+        'Pairing requires an AUTHORITY browser session.',
         HttpStatus.UNAUTHORIZED,
       );
     }

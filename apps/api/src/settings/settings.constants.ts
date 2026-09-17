@@ -11,7 +11,7 @@ export const SETTINGS_ERROR_CODES = {
 export type SettingsErrorCode =
   (typeof SETTINGS_ERROR_CODES)[keyof typeof SETTINGS_ERROR_CODES];
 
-/** Seed / demo marker — Soft Glass must not show these as « Validé expert » (D280). */
+/** Seed / demo marker — AUTHORITY must not show these as « Validé expert » (D280). */
 export const STUB_UNTIL_EXPERT_MARKER = 'STUB_UNTIL_EXPERT';
 
 export function isStubUntilExpert(

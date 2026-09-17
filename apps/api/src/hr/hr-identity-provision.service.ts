@@ -22,7 +22,7 @@ export type HrProvisionResult = {
 
 /**
  * D219 — provision Identity ACTIVE + role `employee` for a new HrEmployee.
- * Provisional password returned once; Soft Glass welcome mail is best-effort.
+ * Provisional password returned once; AUTHORITY welcome mail is best-effort.
  */
 @Injectable()
 export class HrIdentityProvisionService {

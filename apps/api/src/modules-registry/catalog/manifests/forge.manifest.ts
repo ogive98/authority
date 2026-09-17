@@ -39,7 +39,7 @@ export const forgeManifest: ModuleManifest = {
       key: 'forge.metadata.read',
       moduleId: 'forge',
       version: '1',
-      description: 'List metadata definitions and Soft Glass bridge overlays',
+      description: 'List metadata definitions and AUTHORITY bridge overlays',
       permissionKey: 'forge.read',
       riskLevel: 'low',
     },

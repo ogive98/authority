@@ -219,7 +219,7 @@ export class ForgeController {
     return this.metadata.coverage(toForgeTenantContext(tenancy));
   }
 
-  /** ACTIVE rows for Soft Glass FeatureMetadata bridge (aliases / tags). */
+  /** ACTIVE rows for AUTHORITY FeatureMetadata bridge (aliases / tags). */
   @Get('metadata/bridge')
   @RequirePermission(PERMISSION_KEYS.forgeRead)
   metadataBridge(@CurrentTenancy() tenancy: TenancyContext) {

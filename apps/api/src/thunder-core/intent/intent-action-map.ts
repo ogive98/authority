@@ -17,7 +17,7 @@ export type IntentActionDef = {
   entityKinds: IntentEntityKind[];
 };
 
-/** Soft Glass navigation map — no CREATE_TRANSFER · no ledger */
+/** AUTHORITY navigation map — no CREATE_TRANSFER · no ledger */
 export const INTENT_ACTION_MAP: IntentActionDef[] = [
   {
     id: 'transfer',

@@ -6,7 +6,7 @@ export const fleetManifest: ModuleManifest = {
   version: '1.0.0',
   apiVersion: '1',
   description:
-    'Fleet Soft Glass — vehicles, assignment, carnet (vidange/pneus/carburant), usual driver (D257)',
+    'Fleet AUTHORITY — vehicles, assignment, carnet (vidange/pneus/carburant), usual driver (D257)',
   capabilities: [
     {
       key: 'fleet.manage',

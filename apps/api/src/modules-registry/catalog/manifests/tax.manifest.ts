@@ -13,7 +13,7 @@ export const taxManifest: ModuleManifest = {
   version: '1.1.0',
   apiVersion: '1',
   description:
-    'Tax Engine — TVA + RAS Engine Phase A (D282) + TEJ Center Soft Glass; FODEC/timbre/RAS/TEJ Prefs VALIDATED only; local TEJ XML draft; no invented rates; no TEJ transmission/API',
+    'Tax Engine — TVA + RAS Engine Phase A (D282) + TEJ Center AUTHORITY; FODEC/timbre/RAS/TEJ Prefs VALIDATED only; local TEJ XML draft; no invented rates; no TEJ transmission/API',
   capabilities: [
     {
       key: 'tax.read',

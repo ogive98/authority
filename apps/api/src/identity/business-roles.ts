@@ -39,7 +39,7 @@ export const BUSINESS_ROLE_CATALOGUE: ReadonlyArray<{
     code: 'employee',
     label: 'Salarié',
     description:
-      'Employee Portal + congés self — pas d’accès Soft Glass ADV',
+      'Employee Portal + congés self — pas d’accès AUTHORITY ADV',
   },
 ];
 

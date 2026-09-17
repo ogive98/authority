@@ -19,7 +19,7 @@ import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import { NotificationsService } from './notifications.service';
 
 /**
- * Soft Glass Centre d’activité (D247) — company inbox.
+ * AUTHORITY Centre d’activité (D247) — company inbox.
  * No module gate: available to any ADV session with tenancy + self.read.
  */
 @Controller('api/v1/notifications')

@@ -6,7 +6,7 @@ export const suppliersManifest: ModuleManifest = {
   version: '1.0.0',
   apiVersion: '1',
   description:
-    'Supplier master Soft Glass V0 — party, category, contacts, lead time, MOQ (D250)',
+    'Supplier master AUTHORITY V0 — party, category, contacts, lead time, MOQ (D250)',
   capabilities: [
     {
       key: 'suppliers.read',

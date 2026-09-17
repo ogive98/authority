@@ -4,7 +4,7 @@ import { SuppliersService } from './suppliers.service';
 import { SUPPLIERS_ERROR_CODES } from './suppliers.constants';
 
 describe('SuppliersService (unit wiring)', () => {
-  it('exposes error codes for Soft Glass clients', () => {
+  it('exposes error codes for AUTHORITY clients', () => {
     expect(SUPPLIERS_ERROR_CODES.NOT_FOUND).toBe('SUP.NOT_FOUND');
     expect(SUPPLIERS_ERROR_CODES.CODE_DUP).toBe('SUP.CODE_DUP');
   });

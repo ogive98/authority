@@ -13,7 +13,7 @@ import { ForgeController } from './forge.controller';
 
 /**
  * FORGE — foundation + API + metadata bridge (D277–D279).
- * Soft Glass UI. No AI / sandbox runtime.
+ * AUTHORITY UI. No AI / sandbox runtime.
  */
 @Module({
   imports: [

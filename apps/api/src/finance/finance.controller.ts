@@ -168,7 +168,7 @@ export class FinanceController {
     return this.financeService.arAging(tenancy.companyId, customerId);
   }
 
-  /** D181 — credit + aging + counts for Soft Glass customer hub. */
+  /** D181 — credit + aging + counts for AUTHORITY customer hub. */
   @Get('customers/:customerId/overview')
   @RequirePermission(PERMISSION_KEYS.financeArRead)
   customerOverview(

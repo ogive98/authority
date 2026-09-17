@@ -65,7 +65,7 @@ export class ThunderController {
 
   /**
    * AUTHORITY X intent prepare — orchestration only.
-   * Resolves entities + Soft Glass routes / prefill. Never writes ledger.
+   * Resolves entities + AUTHORITY routes / prefill. Never writes ledger.
    */
   @Post('intents/prepare')
   @HttpCode(HttpStatus.OK)

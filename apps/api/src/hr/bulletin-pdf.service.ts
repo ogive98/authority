@@ -186,7 +186,7 @@ export class BulletinPdfService {
   }
 }
 
-/** Minimal legal HTML (lock 9B) — not Soft Glass chrome. */
+/** Minimal legal HTML (lock 9B) — not product shell chrome. */
 export function renderMinimalLegalHtml(m: BulletinPdfModel): string {
   const esc = (s: string) =>
     s

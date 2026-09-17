@@ -52,7 +52,7 @@ export class MetadataRegistryService {
     return serializeMetadata(await this.findScoped(ctx, id));
   }
 
-  /** ACTIVE definitions only — for Soft Glass FeatureMetadata bridge overlays. */
+  /** ACTIVE definitions only — for AUTHORITY FeatureMetadata bridge overlays. */
   async listActiveForBridge(
     ctx: ForgeTenantContext,
   ): Promise<{ items: MetadataDefinitionDto[] }> {
