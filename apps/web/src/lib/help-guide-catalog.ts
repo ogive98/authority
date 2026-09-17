@@ -1959,13 +1959,13 @@ export const HELP_MODULES: HelpModule[] = [
     ],
     locks: {
       fr: [
-        "AUTHORITY D161 — pas de 2ᵉ design system.",
+        "AUTHORITY D294 — un accent, surfaces opaques, pas de 2ᵉ design system.",
         "Pas d’exécution de code / sandbox / agent IA.",
         "Extensions : DRAFT → ACTIVE interdit sans APPROVED.",
         "Métadonnées ACTIVE + schemaJson.commandId enrichissent ⌘K — pas de 2ᵉ ActionRegistry.",
       ],
       it: [
-        "AUTHORITY D161 — niente secondo design system.",
+        "AUTHORITY D294 — un accento, superfici opache, niente secondo design system.",
         "Niente esecuzione codice / sandbox / agente IA.",
         "Estensioni: DRAFT → ACTIVE vietato senza APPROVED.",
         "Metadati ACTIVE + schemaJson.commandId arricchiscono ⌘K — niente secondo ActionRegistry.",

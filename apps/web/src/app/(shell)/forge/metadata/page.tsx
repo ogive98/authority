@@ -34,7 +34,6 @@ import {
   type ForgeMetadataStatus,
   type ForgeMetadataType,
 } from "@/lib/forge";
-import { softSelect } from "@/lib/soft-glass-ui";
 
 type Load =
   | { kind: "loading" }
@@ -241,7 +240,7 @@ export default function ForgeMetadataPage() {
                     <ASoftTd className="a-mono">{row.key}</ASoftTd>
                     <ASoftTd>{FORGE_METADATA_TYPE_LABELS[row.type]}</ASoftTd>
                     <ASoftTd>{row.moduleKey}</ASoftTd>
-                    <ASoftTd className="a-mono text-a-muted">{cmd}</ASoftTd>
+                    <ASoftTd className="a-mono text-a-fg-muted">{cmd}</ASoftTd>
                     <ASoftTd>
                       <ABadge tone={metaTone(row.status)}>
                         {FORGE_METADATA_STATUS_LABELS[row.status]}
@@ -307,7 +306,7 @@ export default function ForgeMetadataPage() {
             </p>
           ) : null}
           <label className="block space-y-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-muted">
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Clé *
             </span>
             <AInput
@@ -318,7 +317,7 @@ export default function ForgeMetadataPage() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-muted">
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Module *
             </span>
             <AInput
@@ -328,11 +327,11 @@ export default function ForgeMetadataPage() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-muted">
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Type
             </span>
             <select
-              className={softSelect}
+              className="a-select"
               value={type}
               onChange={(e) => setType(e.target.value as ForgeMetadataType)}
             >
@@ -344,8 +343,8 @@ export default function ForgeMetadataPage() {
             </select>
           </label>
           <label className="block space-y-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-muted">
-              commandId (pont )
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+              commandId (pont ⌘K)
             </span>
             <AInput
               value={commandId}
@@ -355,7 +354,7 @@ export default function ForgeMetadataPage() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-muted">
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Alias ⌘K (virgules)
             </span>
             <AInput

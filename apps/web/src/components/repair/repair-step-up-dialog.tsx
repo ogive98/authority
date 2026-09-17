@@ -41,18 +41,18 @@ export function RepairStepUpDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-a-fg/25 p-4 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-a-fg/40 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="repair-stepup-title"
     >
-      <div className="w-full max-w-md a-underlay rounded-md p-5 shadow-[0_20px_50px_rgb(0_0_0_/0.18)]">
+      <div className="a-card w-full max-w-md rounded-[var(--a-radius-lg)] p-5 shadow-[var(--a-shadow-panel)]">
         <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-danger">
           Re-authentification
         </p>
         <h2
           id="repair-stepup-title"
-          className="mt-1 text-[length:var(--a-text-lg)] font-semibold tracking-tight"
+          className="mt-1 text-[length:var(--a-text-lg)] font-medium tracking-tight"
         >
           {title}
         </h2>

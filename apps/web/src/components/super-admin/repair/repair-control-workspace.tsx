@@ -405,7 +405,7 @@ export function RepairControlWorkspace() {
         ].map((k) => (
           <div
             key={k.label}
-            className="rounded-[var(--a-radius-lg)] a-underlay bg-a-surface-2/80 px-4 py-3 backdrop-blur-[var(--a-glass-blur)]"
+            className="a-card rounded-[var(--a-radius-md)] bg-a-surface-2 px-4 py-3"
           >
             <div className="flex items-center gap-2 text-[length:var(--a-text-xs)] text-a-fg-subtle">
               <k.icon className="h-3.5 w-3.5" strokeWidth={1.75} />

@@ -16,13 +16,16 @@ import {
   ASkeleton,
 } from "@/components/a";
 import { fetchForgeOverview, type ForgeOverview } from "@/lib/forge";
-import { softPanel } from "@/lib/soft-glass-ui";
+import { cn } from "@/lib/utils";
 
 type Load =
   | { kind: "loading" }
   | { kind: "ok"; data: ForgeOverview }
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
+
+const tileClass =
+  "a-card space-y-2 rounded-[var(--a-radius-md)] p-4";
 
 export default function ForgeOverviewPage() {
   const router = useRouter();
@@ -53,7 +56,7 @@ export default function ForgeOverviewPage() {
       <AScreenHeader
         kicker="FORGE"
         title="Vue d’ensemble"
-        description="Fondation d’extensions tenant —  D161 · pont métadonnées · IA / sandbox UNAVAILABLE."
+        description="Fondation d’extensions tenant — D294 · pont métadonnées · IA / sandbox UNAVAILABLE."
         primary={
           <AButton
             type="button"
@@ -102,18 +105,18 @@ export default function ForgeOverviewPage() {
         {data ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <APageSection title="Extensions">
-              <div className={`${softPanel} space-y-2 p-4`}>
-                <p className="a-mono text-[length:var(--a-text-2xl)] tabular-nums">
+              <div className={tileClass}>
+                <p className="a-mono a-tabular text-[length:var(--a-text-2xl)] font-medium">
                   {data.extensions.total}
                 </p>
-                <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Total enregistrées (tenant)
                 </p>
                 <ul className="space-y-1 text-[length:var(--a-text-sm)]">
                   {Object.entries(data.extensions.byStatus).map(([s, n]) => (
                     <li key={s} className="flex justify-between">
-                      <span className="text-a-muted">{s}</span>
-                      <span className="a-mono tabular-nums">{n}</span>
+                      <span className="text-a-fg-muted">{s}</span>
+                      <span className="a-mono a-tabular">{n}</span>
                     </li>
                   ))}
                 </ul>
@@ -126,19 +129,19 @@ export default function ForgeOverviewPage() {
               </div>
             </APageSection>
             <APageSection title="Demandes">
-              <div className={`${softPanel} space-y-2 p-4`}>
-                <p className="a-mono text-[length:var(--a-text-2xl)] tabular-nums">
+              <div className={tileClass}>
+                <p className="a-mono a-tabular text-[length:var(--a-text-2xl)] font-medium">
                   {data.featureRequests.total}
                 </p>
-                <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Feature requests
                 </p>
                 <ul className="space-y-1 text-[length:var(--a-text-sm)]">
                   {Object.entries(data.featureRequests.byStatus).map(
                     ([s, n]) => (
                       <li key={s} className="flex justify-between">
-                        <span className="text-a-muted">{s}</span>
-                        <span className="a-mono tabular-nums">{n}</span>
+                        <span className="text-a-fg-muted">{s}</span>
+                        <span className="a-mono a-tabular">{n}</span>
                       </li>
                     ),
                   )}
@@ -152,11 +155,11 @@ export default function ForgeOverviewPage() {
               </div>
             </APageSection>
             <APageSection title="Métadonnées">
-              <div className={`${softPanel} space-y-2 p-4`}>
-                <p className="a-mono text-[length:var(--a-text-2xl)] tabular-nums">
+              <div className={tileClass}>
+                <p className="a-mono a-tabular text-[length:var(--a-text-2xl)] font-medium">
                   {data.metadata?.total ?? 0}
                 </p>
-                <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Définitions · pont ⌘K ={" "}
                   {data.metadata?.activeWithCommandId ?? 0} ACTIVE
                 </p>
@@ -164,8 +167,8 @@ export default function ForgeOverviewPage() {
                   {Object.entries(data.metadata?.byStatus ?? {}).map(
                     ([s, n]) => (
                       <li key={s} className="flex justify-between">
-                        <span className="text-a-muted">{s}</span>
-                        <span className="a-mono tabular-nums">{n}</span>
+                        <span className="text-a-fg-muted">{s}</span>
+                        <span className="a-mono a-tabular">{n}</span>
                       </li>
                     ),
                   )}
@@ -179,7 +182,7 @@ export default function ForgeOverviewPage() {
               </div>
             </APageSection>
             <APageSection title="Limites">
-              <div className={`${softPanel} space-y-3 p-4`}>
+              <div className={cn(tileClass, "space-y-3")}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[length:var(--a-text-sm)]">IA</span>
                   <ABadge tone="neutral">{data.ai}</ABadge>
@@ -188,7 +191,7 @@ export default function ForgeOverviewPage() {
                   <span className="text-[length:var(--a-text-sm)]">Sandbox</span>
                   <ABadge tone="neutral">{data.sandbox}</ABadge>
                 </div>
-                <p className="text-[length:var(--a-text-xs)] text-a-muted">
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                   Pas d’agent autonome · pas de codegen · pas de déploiement
                   auto. Métadonnées ACTIVE enrichissent le catalog existant.
                 </p>
