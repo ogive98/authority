@@ -18,6 +18,8 @@ import { PrefsModesOpsPanel } from "@/components/settings/prefs-modes-ops-panel"
 import { PrefsToggleRow } from "@/components/settings/prefs-toggle-row";
 import { NotifPrefsPanel } from "@/components/settings/notif-prefs-panel";
 import { AuthorityXPairPanel } from "@/components/settings/authority-x-pair-panel";
+import { SmartActionsPrefsPanel } from "@/components/settings/smart-actions-prefs-panel";
+import { ThunderAlertsPrefsPanel } from "@/components/settings/thunder-alerts-prefs-panel";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import {
   fetchGlMapping,
@@ -1185,7 +1187,13 @@ export default function SettingsPage() {
                     </label>
                   ) : null}
                 </div>
-                <div className="space-y-3 border-t border-transparent pt-4">
+                <div className="space-y-3 border-t border-[color:var(--a-border-subtle)] pt-4">
+                  <SmartActionsPrefsPanel />
+                </div>
+                <div className="space-y-3 border-t border-[color:var(--a-border-subtle)] pt-4">
+                  <ThunderAlertsPrefsPanel />
+                </div>
+                <div className="space-y-3 border-t border-[color:var(--a-border-subtle)] pt-4">
                   <AuthorityXPairPanel />
                 </div>
                 <div className="space-y-3 border-t border-transparent pt-4">

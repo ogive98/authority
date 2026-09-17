@@ -127,13 +127,63 @@ export const HELP_MODULES: HelpModule[] = [
         steps: {
           fr: [
             "Topbar : logo PNG Fattorie Covelli (`/brand/company-logo.png`).",
-            "À droite du logo : Powered by AUTHORITY · Haithem Hammami R.",
+            "À droite du logo : Powered by AUTHORITY® · Haithem Hammami.",
             "Même marque sur login métier, Customer Portal et Employee Portal.",
           ],
           it: [
             "Topbar: logo PNG Fattorie Covelli (`/brand/company-logo.png`).",
-            "A destra del logo: Powered by AUTHORITY · Haithem Hammami R.",
+            "A destra del logo: Powered by AUTHORITY® · Haithem Hammami.",
             "Stesso marchio su login, Customer Portal e Employee Portal.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Smart Actions (rail droit)",
+          it: "Smart Actions (rail destro)",
+        },
+        when: {
+          fr: "Raccourcis fonctionnalités sur le dock.",
+          it: "Scorciatoie funzioni sul dock.",
+        },
+        steps: {
+          fr: [
+            "Préférences → Poste → Smart Actions : liste complète des fonctionnalités registry.",
+            "Cochez jusqu’à 5 entrées — elles apparaissent dans le rail droit.",
+            "Liste vide = classement automatique selon le module sélectionné.",
+            "Chaque tuile affiche les métadonnées (tags / entité) quand disponibles.",
+          ],
+          it: [
+            "Preferenze → Postazione → Smart Actions: elenco completo delle funzioni registry.",
+            "Seleziona fino a 5 voci — compaiono nel rail destro.",
+            "Elenco vuoto = ranking automatico secondo il modulo selezionato.",
+            "Ogni tile mostra i metadati (tag / entità) se disponibili.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Thunder Core Command Center",
+          it: "Thunder Core Command Center",
+        },
+        when: {
+          fr: "Supervision orchestration / health / queues.",
+          it: "Supervisione orchestration / health / code.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/thunder` (Réparation → Thunder Core) ou le dialog Thunder → Command Center.",
+            "Chaque widget lit le snapshot monitor (SSE/poll) — pas de KPI inventés.",
+            "Layout : bouton Layout pour redimensionner / masquer ; Reset pour le défaut.",
+            "Seuils d’alertes : Préférences → Poste → Thunder Core — alertes.",
+            "Permission : `system_monitoring.view` (adapters/signaux : `thunder.intel.read`).",
+          ],
+          it: [
+            "Apri `/thunder` (Riparazione → Thunder Core) o il dialog Thunder → Command Center.",
+            "Ogni widget legge lo snapshot monitor (SSE/poll) — nessun KPI inventato.",
+            "Layout: pulsante Layout per ridimensionare / nascondere ; Reset per il default.",
+            "Soglie alert: Preferenze → Postazione → Thunder Core — alert.",
+            "Permesso: `system_monitoring.view` (adapter/segnali: `thunder.intel.read`).",
           ],
         },
       },

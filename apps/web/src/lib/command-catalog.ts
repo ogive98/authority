@@ -193,6 +193,22 @@ export const COMMAND_CATALOG: CommandItem[] = [
     permissionKey: "forge.read",
   },
   {
+    id: "nav-thunder",
+    label: "Thunder Core",
+    group: "navigation",
+    href: "/thunder",
+    keywords: [
+      "thunder",
+      "monitor",
+      "command center",
+      "workers",
+      "queues",
+      "outbox",
+    ],
+    requiresModule: "repair",
+    permissionKey: "system_monitoring.view",
+  },
+  {
     id: "nav-suppliers",
     label: "Fournisseurs",
     group: "navigation",
@@ -345,6 +361,8 @@ export const DEMO_PERMISSION_GRANTS = new Set([
   "forge.approve",
   "automation.read",
   "settings.read",
+  "system_monitoring.view",
+  "thunder.intel.read",
 ]);
 
 /** Demo enabled modules — payroll OFF so related commands hide. */

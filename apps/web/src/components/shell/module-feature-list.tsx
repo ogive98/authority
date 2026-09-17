@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { tipsForPage } from "@/lib/tips-catalog";
+import { getFeatureMetadata } from "@/lib/feature-metadata";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useShellStore } from "@/stores/shell-store";
+import { useLocaleStore } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
 import {
   personalityForFeature,
@@ -69,6 +71,7 @@ export function ModuleFeatureList({
   variant?: "full" | "embedded";
 }) {
   const selectedModuleId = useShellStore((s) => s.selectedModuleId);
+  const locale = useLocaleStore((s) => s.locale);
   const { data: registry } = useMeRegistry();
   const key = moduleKey ?? selectedModuleId;
   const mod =
@@ -88,7 +91,7 @@ export function ModuleFeatureList({
   }
 
   const featureList = (
-    <div className="min-h-0 flex-1 overflow-auto pr-1">
+    <div className="a-ios-scroll min-h-0 flex-1 overflow-auto pr-1">
       {features.length === 0 ? (
         <p className="a-underlay rounded-[var(--a-radius-lg)] px-4 py-10 text-center text-[length:var(--a-text-sm)] text-a-fg-muted">
           Aucune fonctionnalité pour ce module.
@@ -98,6 +101,10 @@ export function ModuleFeatureList({
           {features.map((f, i) => {
             const Icon = resolveFeatureIcon(f.id, f.label);
             const p = personalityForFeature(f.id, f.label);
+            const meta =
+              getFeatureMetadata(`nav-${key}`, locale) ??
+              getFeatureMetadata(f.id, locale);
+            const tags = meta?.tags?.slice(0, 3) ?? [];
             return (
               <li
                 key={f.id}
@@ -131,6 +138,23 @@ export function ModuleFeatureList({
                     <span className="a-mono mt-0.5 block truncate text-[11px] text-a-fg-subtle">
                       {featureHint(f.href)}
                     </span>
+                    {tags.length > 0 || meta?.entity ? (
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {meta?.entity ? (
+                          <span className="rounded-[4px] bg-a-surface-3 px-1.5 py-px text-[9px] font-medium text-a-fg-subtle">
+                            {meta.entity}
+                          </span>
+                        ) : null}
+                        {tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-[4px] bg-a-surface-3 px-1.5 py-px text-[9px] font-medium text-a-fg-subtle"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </span>
+                    ) : null}
                   </span>
                   <ChevronRight
                     className="h-4 w-4 shrink-0 text-a-fg-subtle transition-transform duration-200 group-hover:translate-x-1 group-hover:text-a-accent"

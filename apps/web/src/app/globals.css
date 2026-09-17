@@ -693,22 +693,120 @@
     animation: none;
   }
 
-  /** AUTHORITY X orb — opaque surface, no glow pulse */
+  /** AUTHORITY X — glyph only, no surrounding disc */
+  .a-authority-x {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .a-authority-x:hover {
+    opacity: 0.8;
+  }
+
+  .a-authority-x:active {
+    transform: scale(0.94);
+  }
+
+  /** Legacy class kept for any residual refs — same as glyph-only */
   .a-authority-x-orb {
-    background: var(--a-surface-2);
+    background: transparent;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    box-shadow: var(--a-shadow-card);
-    border: 1px solid var(--a-border-subtle);
+    box-shadow: none;
+    border: 0;
     animation: none;
   }
 
   .a-authority-x-orb:hover {
-    box-shadow: var(--a-shadow-panel);
+    box-shadow: none;
   }
 
   .a-authority-x-orb:active {
-    transform: scale(0.96);
+    transform: scale(0.94);
+  }
+
+  /** Thunder Core bolt — lightning flash */
+  .a-thunder-bolt {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .a-thunder-bolt__icon {
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(
+      0 0 0 color-mix(in srgb, var(--a-accent) 0%, transparent)
+    );
+    animation: a-thunder-idle 2.8s ease-in-out infinite;
+  }
+
+  .a-thunder-bolt__flash {
+    pointer-events: none;
+    position: absolute;
+    inset: -6px;
+    border-radius: 999px;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--a-accent) 45%, transparent) 0%,
+      transparent 68%
+    );
+    opacity: 0;
+    animation: a-thunder-flash 2.8s ease-in-out infinite;
+  }
+
+  @keyframes a-thunder-idle {
+    0%,
+    70%,
+    100% {
+      transform: scale(1) rotate(0deg);
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    74% {
+      transform: scale(1.08) rotate(-6deg);
+      filter: drop-shadow(
+        0 0 8px color-mix(in srgb, var(--a-accent) 55%, transparent)
+      );
+    }
+    78% {
+      transform: scale(0.96) rotate(4deg);
+    }
+    82% {
+      transform: scale(1.04) rotate(-2deg);
+      filter: drop-shadow(
+        0 0 10px color-mix(in srgb, var(--a-accent) 70%, transparent)
+      );
+    }
+    88% {
+      transform: scale(1) rotate(0deg);
+      filter: drop-shadow(0 0 0 transparent);
+    }
+  }
+
+  @keyframes a-thunder-flash {
+    0%,
+    70%,
+    88%,
+    100% {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    74%,
+    82% {
+      opacity: 0.85;
+      transform: scale(1);
+    }
+    78% {
+      opacity: 0.25;
+      transform: scale(0.85);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .a-thunder-bolt__icon,
+    .a-thunder-bolt__flash {
+      animation: none;
+    }
   }
 
   @keyframes a-ops-idle {
@@ -873,11 +971,11 @@
   .a-ios-scroll {
     overscroll-behavior: contain;
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--a-fg) 28%, transparent) transparent;
+    scrollbar-color: color-mix(in srgb, var(--a-fg) 18%, transparent) transparent;
   }
 
   .a-ios-scroll::-webkit-scrollbar {
-    width: 5px;
+    width: 3px;
   }
 
   .a-ios-scroll::-webkit-scrollbar-button {
@@ -888,28 +986,30 @@
 
   .a-ios-scroll::-webkit-scrollbar-track {
     background: transparent;
-    margin-block: 6px;
+    margin-block: 8px;
   }
 
   .a-ios-scroll::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--a-fg) 22%, transparent);
+    background: color-mix(in srgb, var(--a-fg) 16%, transparent);
     border-radius: 999px;
-    border: 1px solid transparent;
-    background-clip: padding-box;
+    border: 0;
+    min-height: 28px;
   }
 
   .a-ios-scroll::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in srgb, var(--a-fg) 38%, transparent);
-    background-clip: padding-box;
+    background: color-mix(in srgb, var(--a-fg) 32%, transparent);
+  }
+
+  .a-ios-scroll::-webkit-scrollbar-corner {
+    background: transparent;
   }
 
   [data-theme="dark"] .a-ios-scroll {
-    scrollbar-color: color-mix(in srgb, var(--a-fg) 35%, transparent) transparent;
+    scrollbar-color: color-mix(in srgb, var(--a-fg) 28%, transparent) transparent;
   }
 
   [data-theme="dark"] .a-ios-scroll::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--a-fg) 32%, transparent);
-    background-clip: padding-box;
+    background: color-mix(in srgb, var(--a-fg) 26%, transparent);
   }
 
   /* Floating toolbox — quarter-arc opaque fan + accent handle (D294) */

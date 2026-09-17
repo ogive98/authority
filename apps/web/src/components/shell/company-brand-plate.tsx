@@ -4,10 +4,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-const POWERED_BY = "Powered by AUTHORITY · Haithem Hammami R";
+const POWERED_BY = "Powered by AUTHORITY® · Haithem Hammami";
+
+function AuthorityMark({ className }: { className?: string }) {
+  return (
+    <span className={cn("inline-flex items-baseline gap-0.5", className)}>
+      <span>AUTHORITY</span>
+      <sup
+        className="relative -top-px text-[0.65em] font-semibold leading-none text-a-fg-subtle"
+        aria-label="marque déposée"
+        title="marque déposée"
+      >
+        ®
+      </sup>
+    </span>
+  );
+}
 
 /**
- * Brand — logo société (PNG Covelli) | Powered by AUTHORITY (D294).
+ * Brand — logo société (PNG Covelli) | Powered by AUTHORITY® (D294).
  * `bar` = topbar ; `hero` = pages publiques (login/invite).
  */
 export function CompanyBrandPlate({
@@ -44,11 +59,9 @@ export function CompanyBrandPlate({
           <span className="text-[10px] font-medium tracking-[0.06em] text-a-fg-subtle">
             Powered by
           </span>
-          <span className="text-[15px] font-medium tracking-[-0.02em] text-a-fg">
-            AUTHORITY
-          </span>
+          <AuthorityMark className="text-[15px] font-medium tracking-[-0.02em] text-a-fg" />
           <span className="mt-1 text-[10px] font-normal tracking-[0.02em] text-a-fg-subtle">
-            Haithem Hammami R
+            Haithem Hammami
           </span>
         </span>
       ) : (
@@ -58,11 +71,9 @@ export function CompanyBrandPlate({
             <span className="text-[9px] font-medium tracking-[0.04em] text-a-fg-subtle">
               Powered by
             </span>
-            <span className="text-[13px] font-medium tracking-[-0.02em] text-a-fg">
-              AUTHORITY
-            </span>
+            <AuthorityMark className="text-[13px] font-medium tracking-[-0.02em] text-a-fg" />
             <span className="mt-0.5 text-[9px] font-normal tracking-[0.02em] text-a-fg-subtle">
-              Haithem Hammami R
+              Haithem Hammami
             </span>
           </span>
         </>

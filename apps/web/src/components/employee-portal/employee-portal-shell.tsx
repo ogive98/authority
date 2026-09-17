@@ -79,8 +79,8 @@ export function EmployeePortalShell({
           <Link
             href={EMPLOYEE_PORTAL_HOME_PATH}
             className="inline-flex min-w-0 shrink-0 items-center gap-2.5"
-            aria-label="Fattorie Covelli Employee Portal — Powered by AUTHORITY · Haithem Hammami R"
-            title="Powered by AUTHORITY · Haithem Hammami R"
+            aria-label="Fattorie Covelli Employee Portal — Powered by AUTHORITY® · Haithem Hammami"
+            title="Powered by AUTHORITY® · Haithem Hammami"
           >
             <Image
               src="/brand/company-logo.png"
@@ -94,11 +94,14 @@ export function EmployeePortalShell({
               <span className="text-[9px] font-medium tracking-[0.04em] text-a-fg-subtle">
                 Powered by
               </span>
-              <span className="text-[12px] font-medium tracking-[-0.02em] text-a-fg">
+              <span className="inline-flex items-baseline gap-0.5 text-[12px] font-medium tracking-[-0.02em] text-a-fg">
                 AUTHORITY
+                <sup className="text-[0.65em] text-a-fg-subtle" aria-label="marque déposée">
+                  ®
+                </sup>
               </span>
               <span className="text-[9px] text-a-fg-subtle">
-                Haithem Hammami R
+                Haithem Hammami
               </span>
             </span>
           </Link>

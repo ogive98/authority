@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Bell,
@@ -41,7 +40,7 @@ function IconBtn({
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "a-action-quiet inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted",
+        "a-action-quiet inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted",
         className,
       )}
     >
@@ -74,13 +73,13 @@ function OpsModeIcon({
       aria-label={label}
       onClick={onEnter}
       className={cn(
-        "a-ops-mode-icon group relative inline-flex h-9 w-9 items-center justify-center rounded-full",
-        "text-a-fg-muted transition-all duration-300 hover:scale-110 hover:bg-a-surface-3",
+        "a-ops-mode-icon group relative inline-flex h-7 w-7 items-center justify-center",
+        "text-a-fg-muted transition-colors duration-200 hover:text-a-fg",
         toneClass,
       )}
     >
       <Icon
-        className="h-4 w-4 transition-transform duration-500 group-hover:rotate-12"
+        className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-12"
         strokeWidth={1.5}
       />
       <span className="sr-only">{lockedHint}</span>
@@ -89,7 +88,7 @@ function OpsModeIcon({
 }
 
 /**
- * Full-width topbar — ZIP Progressive OS: AUTHORITY · ⌘K · FR · Online · clock.
+ * Full-width topbar — Covelli brand · ⌘K · status · ops (D294).
  */
 export function ShellHeader() {
   const { t, unread: unreadLabel } = useShellT();
@@ -218,7 +217,7 @@ export function ShellHeader() {
   const anyOps = spectreEnabled || patchEnabled || ghostEnabled;
 
   return (
-    <header className="relative z-[var(--a-z-sticky)] flex h-14 w-full shrink-0 items-center gap-3 border-b border-[color:var(--a-border-subtle)] bg-a-surface-1 px-3 md:px-5">
+    <header className="relative z-[var(--a-z-sticky)] flex h-14 w-full shrink-0 items-center gap-2 border-b border-[color:var(--a-border-subtle)] bg-a-surface-1 px-3 md:gap-3 md:px-5">
       <button
         type="button"
         className="a-action-quiet inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted md:hidden"
@@ -229,13 +228,7 @@ export function ShellHeader() {
         <Menu className="h-4 w-4" strokeWidth={1.5} />
       </button>
 
-      <Link
-        href="/"
-        className="shrink-0 text-[15px] font-bold tracking-[0.06em] text-a-fg md:text-[16px]"
-      >
-        AUTHORITY
-      </Link>
-      <CompanyBrandPlate className="hidden min-w-0 shrink-0 md:flex" />
+      <CompanyBrandPlate className="min-w-0 shrink-0" />
 
       <div className="flex min-w-0 flex-1 justify-center px-1 md:px-4">
         <button
@@ -256,8 +249,8 @@ export function ShellHeader() {
         </button>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-        <span className="mr-1 hidden items-center gap-2.5 text-[11px] font-medium text-a-fg-muted md:inline-flex">
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+        <span className="mr-1 hidden items-center gap-2 text-[11px] font-medium text-a-fg-muted md:inline-flex">
           <button
             type="button"
             onClick={toggleLocale}
@@ -266,7 +259,11 @@ export function ShellHeader() {
           >
             {locale === "it" ? "IT" : "FR"}
           </button>
-          <span className="inline-flex items-center gap-1.5">
+          <span
+            className="inline-flex items-center"
+            title={netOnline ? t("online") : t("wifiOffline")}
+            aria-label={netOnline ? t("online") : t("wifiOffline")}
+          >
             <span
               className={cn(
                 "inline-block size-1.5 rounded-full",
@@ -274,9 +271,6 @@ export function ShellHeader() {
               )}
               aria-hidden
             />
-            <span className={netOnline ? "text-a-fg" : "text-a-danger"}>
-              {netOnline ? t("online") : t("wifiOffline")}
-            </span>
           </span>
           <span className="a-mono text-a-fg-subtle">{clock}</span>
         </span>
@@ -288,15 +282,13 @@ export function ShellHeader() {
           disabled={axBusy}
           onClick={() => void openAuthorityX()}
           className={cn(
-            "a-authority-x-orb group relative inline-flex h-9 w-9 shrink-0 items-center justify-center",
-            "rounded-full text-[15px] font-bold tracking-tighter text-a-accent",
-            "transition-transform duration-300 hover:scale-110",
+            "a-authority-x group relative inline-flex h-8 w-8 shrink-0 items-center justify-center",
+            "text-[14px] font-bold tracking-tighter text-a-accent",
+            "transition-opacity duration-200 hover:opacity-80",
             axBusy && "opacity-60",
           )}
         >
-          <span className="relative z-[1]">
-            X
-          </span>
+          <span className="relative z-[1]">X</span>
         </button>
         {axHint ? (
           <span
@@ -320,32 +312,34 @@ export function ShellHeader() {
           ) : null}
         </IconBtn>
 
-        <div className="mx-0.5 hidden h-6 w-px bg-a-surface-4 sm:block" aria-hidden />
+        <div className="mx-0.5 hidden h-5 w-px bg-a-surface-4 sm:block" aria-hidden />
 
-        <OpsModeIcon
-          active={spectreEnabled}
-          label={t("spectreEnter")}
-          lockedHint={t("modeLockedHint")}
-          icon={Eye}
-          toneClass="hover:text-a-fg-muted"
-          onEnter={enterSpectre}
-        />
-        <OpsModeIcon
-          active={patchEnabled}
-          label={t("patchEnter")}
-          lockedHint={t("modeLockedHint")}
-          icon={Wrench}
-          toneClass="hover:text-a-warning"
-          onEnter={enterPatch}
-        />
-        <OpsModeIcon
-          active={ghostEnabled}
-          label={t("ghostEnter")}
-          lockedHint={t("modeLockedHint")}
-          icon={Ghost}
-          toneClass="hover:text-a-accent"
-          onEnter={enterGhost}
-        />
+        <div className="flex items-center gap-0">
+          <OpsModeIcon
+            active={spectreEnabled}
+            label={t("spectreEnter")}
+            lockedHint={t("modeLockedHint")}
+            icon={Eye}
+            toneClass="hover:text-a-fg-muted"
+            onEnter={enterSpectre}
+          />
+          <OpsModeIcon
+            active={patchEnabled}
+            label={t("patchEnter")}
+            lockedHint={t("modeLockedHint")}
+            icon={Wrench}
+            toneClass="hover:text-a-warning"
+            onEnter={enterPatch}
+          />
+          <OpsModeIcon
+            active={ghostEnabled}
+            label={t("ghostEnter")}
+            lockedHint={t("modeLockedHint")}
+            icon={Ghost}
+            toneClass="hover:text-a-accent"
+            onEnter={enterGhost}
+          />
+        </div>
 
         {anyOps ? (
           <span
@@ -369,7 +363,7 @@ export function ShellHeader() {
           onClick={toggleLocale}
           title={t("langToggle")}
           aria-label={t("langToggle")}
-          className="a-action-quiet inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted md:hidden"
+          className="a-action-quiet inline-flex h-8 w-8 items-center justify-center rounded-[var(--a-radius-sm)] text-a-fg-muted md:hidden"
         >
           <Languages className="h-4 w-4" strokeWidth={1.5} aria-hidden />
         </button>

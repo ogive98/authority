@@ -205,6 +205,11 @@ export const FALLBACK_REGISTRY: MeRegistry = {
           label: "Diagnostics",
           href: "/repair#diagnostics",
         },
+        {
+          id: "thunder-command-center",
+          label: "Thunder Core",
+          href: "/thunder",
+        },
       ],
     },
     {

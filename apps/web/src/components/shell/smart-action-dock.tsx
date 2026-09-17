@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   Package,
@@ -9,7 +9,6 @@ import {
   PanelRightOpen,
   PlusCircle,
   RefreshCw,
-  Settings2,
   ShoppingCart,
   Sparkles,
   Users,
@@ -19,6 +18,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { resolveDockActions, type ActionDefinition } from "@/lib/action-registry";
+import { getFeatureMetadata } from "@/lib/feature-metadata";
+import { resolvePinnedSmartActions } from "@/lib/smart-actions-pins";
 import { useMeGrants } from "@/hooks/use-me-grants";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useMonitorSnapshot } from "@/hooks/use-monitor-snapshot";
@@ -30,6 +31,10 @@ import {
 import { useShellStore } from "@/stores/shell-store";
 import { useLocaleStore, useShellT } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
+import {
+  personalityForFeature,
+  resolveFeatureIcon,
+} from "./icon-personality";
 
 const SURFACES: { id: SurfaceMode; label: string }[] = [
   { id: "patch", label: "Patch" },
@@ -47,6 +52,8 @@ const DENSITIES: { id: Density; label: string }[] = [
 const SIDEBAR_STROKE = 1.5;
 
 function dockIconFor(action: ActionDefinition): LucideIcon {
+  const fromFeature = resolveFeatureIcon(action.id, action.label);
+  if (fromFeature) return fromFeature;
   const hay = `${action.id} ${action.moduleId ?? ""} ${action.href ?? ""}`.toLowerCase();
   if (/sales|order|commande/.test(hay)) return ShoppingCart;
   if (/product|sku|catalogue/.test(hay)) return Package;
@@ -99,14 +106,14 @@ function WifiIndicator({ online }: { online: boolean }) {
   );
 }
 
-/** Single sync circle (RefreshCw) — D184. */
-function SyncCircle({ active }: { active: boolean }) {
+/** Sync arrows only — no surrounding disc (D294). */
+function SyncGlyph({ active }: { active: boolean }) {
   const { t } = useShellT();
   return (
     <span
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded-full",
-        active ? "bg-a-accent-muted text-a-accent" : "text-a-fg-muted",
+        "inline-flex items-center justify-center",
+        active ? "text-a-accent" : "text-a-fg-muted",
       )}
       title={active ? t("syncActive") : t("syncIdle")}
     >
@@ -114,6 +121,83 @@ function SyncCircle({ active }: { active: boolean }) {
         className={cn("h-4 w-4", active && "animate-spin")}
         strokeWidth={SIDEBAR_STROKE}
       />
+    </span>
+  );
+}
+
+/** Compact iOS-like resource ring. */
+function ResourceGauge({
+  label,
+  ratio,
+  detail,
+}: {
+  label: string;
+  ratio: number | null;
+  detail?: string;
+}) {
+  const pct = ratio == null ? null : Math.max(0, Math.min(100, Math.round(ratio * 100)));
+  const r = 15;
+  const c = 2 * Math.PI * r;
+  const dash = pct == null ? 0 : (pct / 100) * c;
+  const hot = pct != null && pct >= 85;
+
+  return (
+    <div
+      className="flex flex-col items-center gap-1"
+      title={detail ?? (pct != null ? `${label} ${pct}%` : label)}
+    >
+      <svg viewBox="0 0 40 40" className="h-9 w-9" aria-hidden>
+        <circle
+          cx="20"
+          cy="20"
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          className="text-a-surface-4"
+        />
+        <circle
+          cx="20"
+          cy="20"
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${c - dash}`}
+          transform="rotate(-90 20 20)"
+          className={cn(
+            "transition-[stroke-dasharray] duration-500",
+            hot ? "text-a-warning" : "text-a-accent",
+          )}
+        />
+        <text
+          x="20"
+          y="21.5"
+          textAnchor="middle"
+          fill="var(--a-fg)"
+          style={{ fontSize: 8, fontWeight: 600 }}
+        >
+          {pct == null ? "—" : pct}
+        </text>
+      </svg>
+      <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function ThunderBoltIcon({ className }: { className?: string }) {
+  return (
+    <span className={cn("a-thunder-bolt relative inline-flex", className)} aria-hidden>
+      <Zap
+        className="a-thunder-bolt__icon h-5 w-5 text-a-accent"
+        strokeWidth={1.75}
+        fill="currentColor"
+        fillOpacity={0.28}
+      />
+      <span className="a-thunder-bolt__flash" />
     </span>
   );
 }
@@ -143,14 +227,7 @@ function ThunderCoreDialog({
           )}
         >
           <Dialog.Title className="flex items-center gap-2.5 text-[length:var(--a-text-lg)] font-medium tracking-[-0.02em] text-a-fg">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--a-radius-sm)] bg-a-accent/20 text-a-accent">
-              <Zap
-                className="h-4 w-4"
-                strokeWidth={2}
-                fill="currentColor"
-                fillOpacity={0.35}
-              />
-            </span>
+            <ThunderBoltIcon />
             {t("thunderCore")}
           </Dialog.Title>
           <Dialog.Description className="mt-2 text-[13px] leading-snug text-a-fg-muted">
@@ -158,6 +235,14 @@ function ThunderCoreDialog({
           </Dialog.Description>
 
           <div className="mt-5 space-y-5">
+            <Link
+              href="/thunder"
+              onClick={() => onOpenChange(false)}
+              className="a-action-primary flex w-full items-center justify-center gap-2 rounded-[var(--a-radius-sm)] px-3.5 py-3 text-[14px] font-medium"
+            >
+              <Zap className="h-4 w-4" strokeWidth={1.75} />
+              Command Center
+            </Link>
             <div>
               <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-a-fg-subtle">
                 {t("surface")}
@@ -198,14 +283,6 @@ function ThunderCoreDialog({
                 ))}
               </div>
             </div>
-            <Link
-              href="/settings#apparence"
-              onClick={() => onOpenChange(false)}
-              className="a-action-quiet flex w-full items-center gap-2 rounded-[var(--a-radius-sm)] px-3.5 py-3 text-[14px]"
-            >
-              <Settings2 className="h-4 w-4" strokeWidth={1.5} />
-              {t("preferences")}
-            </Link>
           </div>
 
           <Dialog.Close className="a-action-primary mt-5 w-full px-3 py-3 text-[15px] font-medium">
@@ -217,35 +294,38 @@ function ThunderCoreDialog({
   );
 }
 
-const DOCK_SPARK = ["text-a-accent"] as const;
-
 function ActionTile({
   action,
   collapsed,
-  sparkIndex = 0,
 }: {
   action: ActionDefinition;
   collapsed: boolean;
-  sparkIndex?: number;
 }) {
+  const locale = useLocaleStore((s) => s.locale);
   if (!action.href) return null;
   const Icon = dockIconFor(action);
+  const meta = getFeatureMetadata(
+    action.id.startsWith("nav-") ? action.id : `nav-${action.moduleId ?? ""}`,
+    locale,
+  );
+  const tags = meta?.tags?.slice(0, 2) ?? [];
+  const personality = personalityForFeature(action.id, action.label);
   const shortcut = action.shortcut
     ? action.shortcut.keys.join("+")
     : null;
-  const spark = DOCK_SPARK[sparkIndex % DOCK_SPARK.length];
 
   if (collapsed) {
     return (
       <Link
         href={action.href}
         title={action.label}
-        className={cn(
-          "a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)]",
-          spark,
-        )}
+        className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)] text-a-accent"
       >
-        <Icon className="h-4 w-4" strokeWidth={SIDEBAR_STROKE} aria-hidden />
+        <Icon
+          className={cn("h-4 w-4", personality.colorClass)}
+          strokeWidth={SIDEBAR_STROKE}
+          aria-hidden
+        />
       </Link>
     );
   }
@@ -256,7 +336,7 @@ function ActionTile({
       className="a-nav-row group flex w-full items-center gap-2.5 rounded-[var(--a-radius-sm)] px-1.5 py-1.5 text-left"
     >
       <Icon
-        className={cn("h-4 w-4 shrink-0", spark)}
+        className={cn("h-4 w-4 shrink-0", personality.colorClass)}
         strokeWidth={SIDEBAR_STROKE}
         aria-hidden
       />
@@ -264,16 +344,31 @@ function ActionTile({
         <span className="block truncate text-[12.5px] font-medium tracking-[-0.015em] text-a-fg-muted group-hover:text-a-fg">
           {action.label}
         </span>
-        {shortcut ? (
-          <span className="a-mono text-[10px] text-a-fg-subtle">{shortcut}</span>
-        ) : null}
+        <span className="mt-0.5 flex flex-wrap items-center gap-1">
+          {shortcut ? (
+            <span className="a-mono text-[10px] text-a-fg-subtle">{shortcut}</span>
+          ) : null}
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-[4px] bg-a-surface-3 px-1 py-px text-[9px] font-medium tracking-wide text-a-fg-subtle"
+            >
+              {tag}
+            </span>
+          ))}
+          {meta?.entity ? (
+            <span className="a-mono text-[9px] text-a-fg-subtle">
+              {meta.entity}
+            </span>
+          ) : null}
+        </span>
       </span>
     </Link>
   );
 }
 
 /**
- * Smart Action Dock — shortcuts · system (wifi/sync/Thunder) (D167).
+ * Smart Action Dock — pinned features · gauges · Thunder (D294).
  */
 export function SmartActionDock() {
   const { t } = useShellT();
@@ -282,6 +377,7 @@ export function SmartActionDock() {
   const setDockCollapsed = useShellStore((s) => s.setDockCollapsed);
   const dockMobileOpen = useShellStore((s) => s.dockMobileOpen);
   const setDockMobileOpen = useShellStore((s) => s.setDockMobileOpen);
+  const smartActionIds = usePrefsStore((s) => s.smartActionIds);
   const { data: registry } = useMeRegistry();
   const { grants } = useMeGrants();
   const locale = useLocaleStore((s) => s.locale);
@@ -307,23 +403,35 @@ export function SmartActionDock() {
     };
   }, []);
 
-  const { primary, shortcuts } = resolveDockActions(
-    registry,
-    selectedModuleId,
-    5,
-    locale,
-    grants,
-  );
-  const tiles = [primary, ...shortcuts].filter(Boolean) as ActionDefinition[];
-  const unique = tiles.filter(
-    (a, i, arr) => arr.findIndex((x) => x.id === a.id) === i,
-  );
+  const unique = useMemo(() => {
+    const pinned = resolvePinnedSmartActions(registry, smartActionIds, locale);
+    if (pinned.length > 0) return pinned;
+    const { primary, shortcuts } = resolveDockActions(
+      registry,
+      selectedModuleId,
+      5,
+      locale,
+      grants,
+    );
+    const tiles = [primary, ...shortcuts].filter(Boolean) as ActionDefinition[];
+    return tiles.filter(
+      (a, i, arr) => arr.findIndex((x) => x.id === a.id) === i,
+    );
+  }, [registry, smartActionIds, selectedModuleId, locale, grants]);
 
   const snap = monitor.data;
   const platformOk = !!(snap?.db.ok && snap?.redis.ok && netOnline);
   const syncing =
     monitor.isFetching ||
     (snap != null && (snap.jobs.running > 0 || snap.pressure.shedP4));
+  const jobsRatio =
+    snap == null
+      ? null
+      : Math.min(
+          1,
+          (snap.jobs.running + snap.jobs.pending) /
+            Math.max(1, snap.jobs.running + snap.jobs.pending + 4),
+        );
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -340,7 +448,7 @@ export function SmartActionDock() {
   const body = (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-3",
+        "a-ios-scroll flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-3",
         dockCollapsed && "items-center px-1.5",
       )}
     >
@@ -350,7 +458,7 @@ export function SmartActionDock() {
           dockCollapsed ? "flex-col items-center" : "items-start justify-between",
         )}
       >
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="min-w-0 flex-1 space-y-3">
           <div
             className={cn(
               "flex items-center gap-2",
@@ -359,24 +467,37 @@ export function SmartActionDock() {
             title={platformOk ? t("online") : t("wifiOffline")}
           >
             <WifiIndicator online={platformOk} />
-            {!dockCollapsed ? (
-              <span
-                className={cn(
-                  "text-[11px] font-medium",
-                  platformOk ? "text-a-success-fg" : "text-a-danger",
-                )}
-              >
-                {t("online")}
-              </span>
-            ) : null}
-            <SyncCircle active={syncing} />
+            <SyncGlyph active={syncing} />
           </div>
-          {!dockCollapsed && snap ? (
-            <p className="a-mono text-[10px] text-a-fg-subtle">
-              CPU {Math.round((snap.cpu.usageRatio ?? 0) * 100)}% · RAM{" "}
-              {Math.round(snap.ram.usageRatio * 100)}% · Jobs{" "}
-              {snap.jobs.running}/{snap.jobs.pending}
-            </p>
+
+          {!dockCollapsed ? (
+            <div
+              className="grid grid-cols-3 gap-2 rounded-[var(--a-radius-md)] bg-a-surface-3/55 px-2 py-2.5"
+              aria-label={t("resources")}
+            >
+              <ResourceGauge
+                label="CPU"
+                ratio={snap?.cpu.usageRatio ?? null}
+              />
+              <ResourceGauge
+                label="RAM"
+                ratio={snap?.ram.usageRatio ?? null}
+              />
+              <ResourceGauge
+                label="Jobs"
+                ratio={jobsRatio}
+                detail={
+                  snap
+                    ? `${snap.jobs.running}/${snap.jobs.pending}`
+                    : undefined
+                }
+              />
+            </div>
+          ) : snap ? (
+            <ResourceGauge
+              label="CPU"
+              ratio={snap.cpu.usageRatio ?? null}
+            />
           ) : null}
         </div>
         <button
@@ -410,18 +531,13 @@ export function SmartActionDock() {
             {t("kpiEmpty")}
           </p>
         ) : (
-          unique.map((a, i) => (
-            <ActionTile
-              key={a.id}
-              action={a}
-              collapsed={dockCollapsed}
-              sparkIndex={i}
-            />
+          unique.map((a) => (
+            <ActionTile key={a.id} action={a} collapsed={dockCollapsed} />
           ))
         )}
       </div>
 
-      <div>
+      <div className="mt-auto">
         {!dockCollapsed ? (
           <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-a-fg-subtle">
             {t("system")}
@@ -438,10 +554,7 @@ export function SmartActionDock() {
               )}
               aria-label={t("thunderCoreOpen")}
             >
-              <Zap
-                className="h-5 w-5 shrink-0 text-a-accent"
-                strokeWidth={SIDEBAR_STROKE}
-              />
+              <ThunderBoltIcon />
               {!dockCollapsed ? (
                 <span className="truncate text-[12.5px] font-medium">
                   {t("thunderCore")}
@@ -451,31 +564,6 @@ export function SmartActionDock() {
           </li>
         </ul>
       </div>
-
-      {!dockCollapsed ? (
-        <div className="mt-auto pt-1">
-          <Link
-            href="/settings#apparence"
-            className="a-nav-row flex items-center gap-2.5 rounded-md px-1.5 py-1.5 text-[12.5px] font-medium text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
-          >
-            <Settings2
-              className="h-5 w-5 shrink-0 text-a-accent"
-              strokeWidth={SIDEBAR_STROKE}
-            />
-            {t("preferences")}
-          </Link>
-        </div>
-      ) : (
-        <div className="mt-auto flex flex-col items-center gap-2">
-          <Link
-            href="/settings#apparence"
-            aria-label={t("preferences")}
-            className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)] text-a-accent"
-          >
-            <Settings2 className="h-5 w-5" strokeWidth={SIDEBAR_STROKE} />
-          </Link>
-        </div>
-      )}
     </div>
   );
 
@@ -502,7 +590,7 @@ export function SmartActionDock() {
         aria-expanded={dockMobileOpen}
         onClick={() => setDockMobileOpen(!dockMobileOpen)}
       >
-        <Zap className="h-5 w-5" strokeWidth={1.75} />
+        <ThunderBoltIcon />
       </button>
 
       {dockMobileOpen ? (
@@ -525,24 +613,30 @@ export function SmartActionDock() {
 function MobileDockBody({ onClose }: { onClose: () => void }) {
   const { t } = useShellT();
   const selectedModuleId = useShellStore((s) => s.selectedModuleId);
+  const smartActionIds = usePrefsStore((s) => s.smartActionIds);
   const { data: registry } = useMeRegistry();
   const { grants } = useMeGrants();
   const locale = useLocaleStore((s) => s.locale);
-  const { primary, shortcuts } = resolveDockActions(
-    registry,
-    selectedModuleId,
-    8,
-    locale,
-    grants,
-  );
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  const tiles = useMemo(() => {
+    const pinned = resolvePinnedSmartActions(registry, smartActionIds, locale);
+    if (pinned.length > 0) return pinned;
+    const { primary, shortcuts } = resolveDockActions(
+      registry,
+      selectedModuleId,
+      8,
+      locale,
+      grants,
+    );
+    return [primary, ...shortcuts].filter(Boolean) as ActionDefinition[];
+  }, [registry, smartActionIds, selectedModuleId, locale, grants]);
+
   if (!mounted) return null;
 
-  const tiles = [primary, ...shortcuts].filter(Boolean) as ActionDefinition[];
-
   return (
-    <div className="flex max-h-[75dvh] flex-col gap-2 overflow-y-auto p-4 pb-8">
+    <div className="a-ios-scroll flex max-h-[75dvh] flex-col gap-2 overflow-y-auto p-4 pb-8">
       <div className="mx-auto mb-1 h-1 w-10 rounded-sm bg-a-surface-4" />
       <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-a-fg-subtle">
         {t("smartActions")}

@@ -97,6 +97,14 @@ export const FEATURE_METADATA_ENRICHMENTS: Record<
     ui: { preferredPresentation: "command", importance: "primary" },
     ai: { discoverable: true, executable: true },
   },
+  "nav-thunder": {
+    module: "repair",
+    tags: ["thunder", "monitor", "command-center", "ops"],
+    icon: "thunder.bolt",
+    aliases: ["monitoring", "queues", "outbox", "workers"],
+    ui: { preferredPresentation: "command", importance: "primary" },
+    ai: { discoverable: true, executable: true },
+  },
   "nav-products": {
     module: "products",
     entity: "product",

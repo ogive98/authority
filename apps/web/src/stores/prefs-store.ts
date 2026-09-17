@@ -17,6 +17,9 @@ import {
 export type Density = "comfortable" | "compact" | "spacious";
 export type SurfaceMode = "patch" | "ghost" | "solid" | "minimal";
 
+/** Max pinned Smart Actions in the right dock (user picks in Préférences). */
+export const SMART_ACTIONS_MAX = 5;
+
 type PrefsState = {
   density: Density;
   surfaceMode: SurfaceMode;
@@ -31,6 +34,11 @@ type PrefsState = {
   notifSoundVolume: number;
   notifSoundVariant: NotifSoundVariant;
   notifAnimEnabled: boolean;
+  /**
+   * Pinned Smart Actions — keys `moduleKey/featureId` (max 5).
+   * Empty → dock falls back to registry ranking.
+   */
+  smartActionIds: string[];
   setDensity: (d: Density) => void;
   setSurfaceMode: (m: SurfaceMode) => void;
   setShowSseBanner: (v: boolean) => void;
@@ -44,6 +52,8 @@ type PrefsState = {
   setNotifSoundVolume: (v: number) => void;
   setNotifSoundVariant: (v: NotifSoundVariant) => void;
   setNotifAnimEnabled: (v: boolean) => void;
+  setSmartActionIds: (ids: string[]) => void;
+  toggleSmartActionId: (id: string) => void;
   applyDensityToDom: (d: Density) => void;
   applySurfaceToDom: (m: SurfaceMode) => void;
 };
@@ -73,6 +83,7 @@ export const usePrefsStore = create<PrefsState>()(
       notifSoundVolume: 0.45,
       notifSoundVariant: "pulse",
       notifAnimEnabled: true,
+      smartActionIds: [],
       setDensity: (density) => {
         writeDensityAttr(density);
         set({ density });
@@ -116,6 +127,21 @@ export const usePrefsStore = create<PrefsState>()(
         }),
       setNotifSoundVariant: (notifSoundVariant) => set({ notifSoundVariant }),
       setNotifAnimEnabled: (notifAnimEnabled) => set({ notifAnimEnabled }),
+      setSmartActionIds: (ids) =>
+        set({
+          smartActionIds: [...new Set(ids)].slice(0, SMART_ACTIONS_MAX),
+        }),
+      toggleSmartActionId: (id) =>
+        set((s) => {
+          const has = s.smartActionIds.includes(id);
+          if (has) {
+            return {
+              smartActionIds: s.smartActionIds.filter((x) => x !== id),
+            };
+          }
+          if (s.smartActionIds.length >= SMART_ACTIONS_MAX) return s;
+          return { smartActionIds: [...s.smartActionIds, id] };
+        }),
       applyDensityToDom: writeDensityAttr,
       applySurfaceToDom: writeSurfaceAttr,
     }),
@@ -147,6 +173,14 @@ export const usePrefsStore = create<PrefsState>()(
           }
           if (typeof state.notifAnimEnabled !== "boolean") {
             state.notifAnimEnabled = true;
+          }
+          if (!Array.isArray(state.smartActionIds)) {
+            state.smartActionIds = [];
+          } else {
+            state.smartActionIds = [...new Set(state.smartActionIds)].slice(
+              0,
+              SMART_ACTIONS_MAX,
+            );
           }
         }
       },
