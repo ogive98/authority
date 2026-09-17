@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { softPanel } from "@/lib/soft-glass-ui";
+import { softPanel } from "@/lib/d294-ui";
 
 export type AContextPanelProps = {
   title?: string;

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { softPageBody } from "@/lib/soft-glass-ui";
+import { softPageBody } from "@/lib/d294-ui";
 
 export type APageBodyProps = {
   children: ReactNode;

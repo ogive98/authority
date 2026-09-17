@@ -1,6 +1,6 @@
 "use client";
 
-import { softChipClass, softUnderlineTabClass } from "@/lib/soft-glass-ui";
+import { softChipClass, softUnderlineTabClass } from "@/lib/d294-ui";
 import { useUiT } from "@/lib/i18n/route-labels";
 import { cn } from "@/lib/utils";
 

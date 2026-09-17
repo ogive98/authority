@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   ABadge,
@@ -62,6 +63,7 @@ function metaTone(
 }
 
 export default function ForgeMetadataPage() {
+  const router = useRouter();
   const [state, setState] = useState<Load>({ kind: "loading" });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -144,7 +146,7 @@ export default function ForgeMetadataPage() {
         title="Métadonnées"
         description={erpListDescription(
           state.kind === "ok" ? state.items.length : null,
-          "FrgMetadataDefinition — complète le catalog  · schemaJson.commandId pour le pont ⌘K",
+          "FrgMetadataDefinition — complète le catalog · schemaJson.commandId pour le pont ⌘K",
         )}
         primary={
           <AButton
@@ -164,23 +166,17 @@ export default function ForgeMetadataPage() {
               {
                 id: "overview",
                 label: "Vue d’ensemble",
-                onSelect: () => {
-                  window.location.href = "/forge";
-                },
+                onSelect: () => router.push("/forge"),
               },
               {
                 id: "extensions",
                 label: "Extensions",
-                onSelect: () => {
-                  window.location.href = "/forge/extensions";
-                },
+                onSelect: () => router.push("/forge/extensions"),
               },
               {
                 id: "requests",
                 label: "Demandes",
-                onSelect: () => {
-                  window.location.href = "/forge/feature-requests";
-                },
+                onSelect: () => router.push("/forge/feature-requests"),
               },
             ]}
           />

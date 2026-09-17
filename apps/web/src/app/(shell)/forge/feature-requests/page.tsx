@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   ABadge,
@@ -38,6 +39,7 @@ type Load =
   | { kind: "error"; message: string };
 
 export default function ForgeFeatureRequestsPage() {
+  const router = useRouter();
   const [state, setState] = useState<Load>({ kind: "loading" });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -113,23 +115,17 @@ export default function ForgeFeatureRequestsPage() {
               {
                 id: "overview",
                 label: "Vue d’ensemble",
-                onSelect: () => {
-                  window.location.href = "/forge";
-                },
+                onSelect: () => router.push("/forge"),
               },
               {
                 id: "ext",
                 label: "Extensions",
-                onSelect: () => {
-                  window.location.href = "/forge/extensions";
-                },
+                onSelect: () => router.push("/forge/extensions"),
               },
               {
                 id: "metadata",
                 label: "Métadonnées",
-                onSelect: () => {
-                  window.location.href = "/forge/metadata";
-                },
+                onSelect: () => router.push("/forge/metadata"),
               },
             ]}
           />
@@ -177,7 +173,7 @@ export default function ForgeFeatureRequestsPage() {
                   <ASoftTd>
                     <div className="font-medium">{fr.title}</div>
                     {fr.description ? (
-                      <div className="text-[length:var(--a-text-xs)] text-a-muted">
+                      <div className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                         {fr.description}
                       </div>
                     ) : null}
@@ -188,7 +184,7 @@ export default function ForgeFeatureRequestsPage() {
                     </ABadge>
                   </ASoftTd>
                   <ASoftTd numeric>{fr.priority}</ASoftTd>
-                  <ASoftTd className="a-mono tabular-nums text-a-muted">
+                  <ASoftTd className="a-mono a-tabular text-a-fg-muted">
                     {fr.createdAt.slice(0, 10)}
                   </ASoftTd>
                 </ASoftTr>
@@ -211,7 +207,7 @@ export default function ForgeFeatureRequestsPage() {
             </p>
           ) : null}
           <label className="block space-y-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-muted">
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Titre *
             </span>
             <AInput
@@ -221,7 +217,7 @@ export default function ForgeFeatureRequestsPage() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-muted">
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Description
             </span>
             <AInput

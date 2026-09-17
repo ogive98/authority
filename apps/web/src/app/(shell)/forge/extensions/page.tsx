@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   ABadge,
@@ -42,7 +43,17 @@ type Load =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
+const ADVANCE: Partial<
+  Record<ForgeExtensionStatus, ForgeExtensionStatus>
+> = {
+  DRAFT: "ANALYZING",
+  ANALYZING: "VALIDATING",
+  VALIDATING: "TESTING",
+  TESTING: "READY_FOR_REVIEW",
+};
+
 export default function ForgeExtensionsPage() {
+  const router = useRouter();
   const [state, setState] = useState<Load>({ kind: "loading" });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -160,23 +171,17 @@ export default function ForgeExtensionsPage() {
               {
                 id: "overview",
                 label: "Vue d’ensemble",
-                onSelect: () => {
-                  window.location.href = "/forge";
-                },
+                onSelect: () => router.push("/forge"),
               },
               {
                 id: "requests",
                 label: "Demandes",
-                onSelect: () => {
-                  window.location.href = "/forge/feature-requests";
-                },
+                onSelect: () => router.push("/forge/feature-requests"),
               },
               {
                 id: "metadata",
                 label: "Métadonnées",
-                onSelect: () => {
-                  window.location.href = "/forge/metadata";
-                },
+                onSelect: () => router.push("/forge/metadata"),
               },
             ]}
           />
@@ -229,7 +234,7 @@ export default function ForgeExtensionsPage() {
                 <ASoftTr key={ext.id}>
                   <ASoftTd className="a-mono">{ext.key}</ASoftTd>
                   <ASoftTd>{ext.name}</ASoftTd>
-                  <ASoftTd className="a-mono tabular-nums">
+                  <ASoftTd className="a-mono a-tabular">
                     {ext.manifestVersion}
                   </ASoftTd>
                   <ASoftTd>
@@ -239,35 +244,14 @@ export default function ForgeExtensionsPage() {
                   </ASoftTd>
                   <ASoftTd>
                     <div className="flex flex-wrap gap-2">
-                      {(
-                        {
-                          DRAFT: "ANALYZING",
-                          ANALYZING: "VALIDATING",
-                          VALIDATING: "TESTING",
-                          TESTING: "READY_FOR_REVIEW",
-                        } as Partial<
-                          Record<ForgeExtensionStatus, ForgeExtensionStatus>
-                        >
-                      )[ext.status] ? (
+                      {ADVANCE[ext.status] ? (
                         <AButton
                           type="button"
                           size="sm"
                           variant="ghost"
                           disabled={busy}
                           onClick={() => {
-                            const next = (
-                              {
-                                DRAFT: "ANALYZING",
-                                ANALYZING: "VALIDATING",
-                                VALIDATING: "TESTING",
-                                TESTING: "READY_FOR_REVIEW",
-                              } as Partial<
-                                Record<
-                                  ForgeExtensionStatus,
-                                  ForgeExtensionStatus
-                                >
-                              >
-                            )[ext.status];
+                            const next = ADVANCE[ext.status];
                             if (next) void onTransition(ext.id, next);
                           }}
                         >
@@ -316,7 +300,7 @@ export default function ForgeExtensionsPage() {
             </p>
           ) : null}
           <label className="block space-y-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-muted">
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Clé *
             </span>
             <AInput
@@ -327,7 +311,7 @@ export default function ForgeExtensionsPage() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-muted">
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Nom *
             </span>
             <AInput
@@ -337,7 +321,7 @@ export default function ForgeExtensionsPage() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-muted">
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Version manifeste *
             </span>
             <AInput
@@ -347,7 +331,7 @@ export default function ForgeExtensionsPage() {
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-[length:var(--a-text-xs)] text-a-muted">
+            <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
               Description
             </span>
             <AInput

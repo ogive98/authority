@@ -7,7 +7,7 @@ import type {
   ThHTMLAttributes,
 } from "react";
 import { cn } from "@/lib/utils";
-import { softTableWrap, softThead, softTr } from "@/lib/soft-glass-ui";
+import { softTableWrap, softThead, softTr } from "@/lib/d294-ui";
 
 export type ASoftTableProps = TableHTMLAttributes<HTMLTableElement> & {
   children: ReactNode;
