@@ -16,8 +16,11 @@ import {
   AScreenHeader,
   ASkeleton,
   ASoftTable,
+  ASoftTd,
+  ASoftTh,
   ASoftThead,
   ASoftTr,
+  erpListDescription,
 } from "@/components/a";
 import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
@@ -185,7 +188,7 @@ export default function TaxCatalogPage() {
       <AScreenHeader
         kicker="Fiscalité"
         title="Fiscalité Tunisie"
-        description="TVA (Tax Engine) + FODEC / timbre / RAS / TEJ via Préférences Expertise — consumers seulement si VALIDATED. Jamais de taux inventé."
+        description={erpListDescription(state.kind === "ok" ? state.items.length : null, "TVA Tax Engine · Prefs Expertise VALIDATED only")}
         primary={
           <AButton
             type="button"
@@ -242,35 +245,35 @@ export default function TaxCatalogPage() {
           ) : (
             <ASoftTable className="min-w-[44rem]">
               <ASoftThead>
-                <tr>
-                  <th className="a-table-cell font-medium">Étape</th>
-                  <th className="a-table-cell font-medium">Formule</th>
-                  <th className="a-table-cell font-medium">Statut Prefs</th>
-                  <th className="a-table-cell font-medium">Valeur</th>
-                  <th className="a-table-cell font-medium">Conso</th>
-                </tr>
+                <ASoftTr>
+                  <ASoftTh>Étape</ASoftTh>
+                  <ASoftTh>Formule</ASoftTh>
+                  <ASoftTh>Statut Prefs</ASoftTh>
+                  <ASoftTh>Valeur</ASoftTh>
+                  <ASoftTh>Conso</ASoftTh>
+                </ASoftTr>
               </ASoftThead>
               <tbody>
                 <ASoftTr>
-                  <td className="a-table-cell font-medium">HT</td>
-                  <td className="a-table-cell text-a-fg-muted">
+                  <ASoftTd className="font-medium">HT</ASoftTd>
+                  <ASoftTd className="text-a-fg-muted">
                     Σ lignes (qty × PU HT)
-                  </td>
-                  <td className="a-table-cell">
+                  </ASoftTd>
+                  <ASoftTd>
                     <ABadge tone="neutral">Base</ABadge>
-                  </td>
-                  <td className="a-table-cell text-a-fg-muted">—</td>
-                  <td className="a-table-cell text-a-fg-muted">AR / AP</td>
+                  </ASoftTd>
+                  <ASoftTd className="text-a-fg-muted">—</ASoftTd>
+                  <ASoftTd className="text-a-fg-muted">AR / AP</ASoftTd>
                 </ASoftTr>
                 {CALC_ROWS.map((row) => {
                   const slot = byKey.get(row.key);
                   return (
                     <ASoftTr key={row.key}>
-                      <td className="a-table-cell font-medium">{row.step}</td>
-                      <td className="a-table-cell text-a-fg-muted">
+                      <ASoftTd className="font-medium">{row.step}</ASoftTd>
+                      <ASoftTd className="text-a-fg-muted">
                         {row.formula}
-                      </td>
-                      <td className="a-table-cell">
+                      </ASoftTd>
+                      <ASoftTd>
                         {slot ? (
                           <ABadge tone={statusTone(slot.status)}>
                             {statusLabel(slot.status)}
@@ -278,31 +281,31 @@ export default function TaxCatalogPage() {
                         ) : (
                           <ABadge tone="warning">En attente expert</ABadge>
                         )}
-                      </td>
-                      <td className="a-mono a-table-cell tabular-nums">
+                      </ASoftTd>
+                      <ASoftTd className="a-mono a-tabular">
                         {slot?.valueSummary ?? "—"}
                         {slot?.lawRef ? (
                           <span className="ml-1 text-[length:var(--a-text-xs)] text-a-fg-muted">
                             · {slot.lawRef}
                           </span>
                         ) : null}
-                      </td>
-                      <td className="a-table-cell text-a-fg-muted">
+                      </ASoftTd>
+                      <ASoftTd className="text-a-fg-muted">
                         {row.applies}
-                      </td>
+                      </ASoftTd>
                     </ASoftTr>
                   );
                 })}
                 <ASoftTr>
-                  <td className="a-table-cell font-medium">TTC</td>
-                  <td className="a-table-cell text-a-fg-muted">
+                  <ASoftTd className="font-medium">TTC</ASoftTd>
+                  <ASoftTd className="text-a-fg-muted">
                     HT + TVA + FODEC + timbre (AR)
-                  </td>
-                  <td className="a-table-cell">
+                  </ASoftTd>
+                  <ASoftTd>
                     <ABadge tone="accent">Résultat</ABadge>
-                  </td>
-                  <td className="a-table-cell text-a-fg-muted">—</td>
-                  <td className="a-table-cell text-a-fg-muted">Factures AR</td>
+                  </ASoftTd>
+                  <ASoftTd className="text-a-fg-muted">—</ASoftTd>
+                  <ASoftTd className="text-a-fg-muted">Factures AR</ASoftTd>
                 </ASoftTr>
               </tbody>
             </ASoftTable>
@@ -381,30 +384,28 @@ export default function TaxCatalogPage() {
           ) : (
             <ASoftTable className="min-w-[40rem]">
               <ASoftThead>
-                <tr>
-                  <th className="a-table-cell font-medium">Période</th>
-                  <th className="a-table-cell font-medium">SHA-256</th>
-                  <th className="a-table-cell font-medium">Prefs</th>
-                  <th className="a-table-cell font-medium">Créé</th>
-                  <th className="a-table-cell font-medium">Action</th>
-                </tr>
+                <ASoftTr>
+                  <ASoftTh>Période</ASoftTh>
+                  <ASoftTh>SHA-256</ASoftTh>
+                  <ASoftTh>Prefs</ASoftTh>
+                  <ASoftTh>Créé</ASoftTh>
+                  <ASoftTh>Action</ASoftTh>
+                </ASoftTr>
               </ASoftThead>
               <tbody>
                 {tejItems.map((row) => (
                   <ASoftTr key={row.id}>
-                    <td className="a-table-cell font-medium">
-                      {row.periodLabel}
-                    </td>
-                    <td className="a-mono a-table-cell text-[length:var(--a-text-xs)]">
+                    <ASoftTd className="font-medium">{row.periodLabel}</ASoftTd>
+                    <ASoftTd className="a-mono text-[length:var(--a-text-xs)]">
                       {row.contentSha256.slice(0, 16)}…
-                    </td>
-                    <td className="a-table-cell text-a-fg-muted">
+                    </ASoftTd>
+                    <ASoftTd className="text-a-fg-muted">
                       {row.prefsValueLabel}
-                    </td>
-                    <td className="a-table-cell text-a-fg-muted">
+                    </ASoftTd>
+                    <ASoftTd className="text-a-fg-muted">
                       {new Date(row.createdAt).toLocaleString("fr-TN")}
-                    </td>
-                    <td className="a-table-cell">
+                    </ASoftTd>
+                    <ASoftTd>
                       <button
                         type="button"
                         className="text-a-accent underline-offset-2 hover:underline"
@@ -412,7 +413,7 @@ export default function TaxCatalogPage() {
                       >
                         Télécharger XML
                       </button>
-                    </td>
+                    </ASoftTd>
                   </ASoftTr>
                 ))}
               </tbody>
@@ -445,28 +446,28 @@ export default function TaxCatalogPage() {
           >
             <ASoftTable className="min-w-[40rem]">
               <ASoftThead>
-                <tr>
-                  <th className="a-table-cell font-medium">Code</th>
-                  <th className="a-table-cell font-medium">Libellé</th>
-                  <th className="a-table-cell font-medium">Taux</th>
-                  <th className="a-table-cell font-medium">Réf. légale</th>
-                  <th className="a-table-cell font-medium">Type</th>
-                </tr>
+                <ASoftTr>
+                  <ASoftTh>Code</ASoftTh>
+                  <ASoftTh>Libellé</ASoftTh>
+                  <ASoftTh numeric>Taux</ASoftTh>
+                  <ASoftTh>Réf. légale</ASoftTh>
+                  <ASoftTh>Type</ASoftTh>
+                </ASoftTr>
               </ASoftThead>
               <tbody>
                 {state.items.map((row) => (
                   <ASoftTr key={row.id}>
-                    <td className="a-mono a-table-cell">{row.code}</td>
-                    <td className="a-table-cell">{row.label}</td>
-                    <td className="a-mono a-table-cell tabular-nums">
+                    <ASoftTd className="a-mono">{row.code}</ASoftTd>
+                    <ASoftTd>{row.label}</ASoftTd>
+                    <ASoftTd numeric>
                       {formatRateBps(row.currentRateBps)}
-                    </td>
-                    <td className="a-table-cell text-a-fg-muted">
+                    </ASoftTd>
+                    <ASoftTd className="text-a-fg-muted">
                       {row.lawRef ?? "—"}
-                    </td>
-                    <td className="a-table-cell">
+                    </ASoftTd>
+                    <ASoftTd>
                       <ABadge tone="accent">{row.kind}</ABadge>
-                    </td>
+                    </ASoftTd>
                   </ASoftTr>
                 ))}
               </tbody>

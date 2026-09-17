@@ -4,14 +4,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  BookOpen,
-  CalendarRange,
-  FileText,
-  GitBranch,
-  Scale,
-  type LucideIcon,
-} from "lucide-react";
-import {
   ABadge,
   AButton,
   AEmptyState,
@@ -19,15 +11,19 @@ import {
   AFilterBar,
   AForbiddenState,
   AInput,
+  AListUtilities,
   AOverflowMenu,
   APageBody,
   APageSection,
   AScreenHeader,
   ASkeleton,
   ASoftTable,
+  ASoftTd,
+  ASoftTh,
   ASoftThead,
   ASoftTr,
   ATabs,
+  erpListDescription,
 } from "@/components/a";
 import {
   ENTRY_STATUS_FILTERS,
@@ -57,11 +53,19 @@ import { localizeUiString } from "@/lib/i18n/route-labels";
 import { useStatusLabel } from "@/hooks/use-status-label";
 import { useLocaleStore } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
-import { softSelect, softUnderlineTabClass } from "@/lib/soft-glass-ui";
+import { softSelect } from "@/lib/soft-glass-ui";
 import { usePrefsStore } from "@/stores/prefs-store";
 import { useShellStore } from "@/stores/shell-store";
 
 type Tab = "coa" | "trial" | "entries" | "periods" | "mapping";
+
+const ACCOUNTING_TABS: { id: Tab; label: string }[] = [
+  { id: "coa", label: "Plan comptable" },
+  { id: "trial", label: "Balance" },
+  { id: "entries", label: "Écritures" },
+  { id: "periods", label: "Périodes" },
+  { id: "mapping", label: "Mapping GL" },
+];
 
 type GlMapForm = {
   ar: string;
@@ -391,7 +395,18 @@ function AccountingPageInner() {
         description={
           partial
             ? "Mode ops — vue partielle (plan comptable seul). Préférences Admin : ops.*.accounting_partial."
-            : "Plan comptable, périodes (clôture), écritures, mapping Finance→GL. Période CLOSED bloque le pont Finance→GL."
+            : state.kind === "ok"
+              ? erpListDescription(
+                  tab === "coa"
+                    ? filteredAccounts.length
+                    : tab === "entries"
+                      ? state.entries.length
+                      : tab === "trial"
+                        ? state.trial.length
+                        : null,
+                  "Période CLOSED bloque le pont Finance→GL",
+                )
+              : "Plan comptable, périodes, écritures, mapping Finance→GL."
         }
         more={
           <AOverflowMenu
@@ -430,41 +445,15 @@ function AccountingPageInner() {
         ) : null}
         {state.kind === "ok" ? (
           <>
-            <div className="flex flex-wrap gap-5 border-b border-transparent">
-              {(
-                (
-                  [
-                    ["coa", "Plan comptable", BookOpen],
-                    ["trial", "Balance", Scale],
-                    ["entries", "Écritures", FileText],
-                    ["periods", "Périodes", CalendarRange],
-                    ["mapping", "Mapping GL", GitBranch],
-                  ] as const satisfies ReadonlyArray<
-                    readonly [Tab, string, LucideIcon]
-                  >
-                ).filter(([id]) => !partial || id === "coa")
-              ).map(([id, label, Icon]) => {
-                const active = tab === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    className={softUnderlineTabClass(active)}
-                    onClick={() => selectTab(id)}
-                  >
-                    <Icon
-                      className={cn(
-                        "h-4 w-4 shrink-0",
-                        active ? "text-white" : "text-white/55",
-                      )}
-                      strokeWidth={1.5}
-                      aria-hidden
-                    />
-                    <span>{localizeUiString(label, locale) ?? label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <ATabs
+              variant="underline"
+              ariaLabel="Sections comptabilité"
+              value={tab}
+              onValueChange={(id) => selectTab(id as Tab)}
+              items={ACCOUNTING_TABS.filter(
+                (t) => !partial || t.id === "coa",
+              )}
+            />
 
             {mapMsg ? (
               <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -475,7 +464,7 @@ function AccountingPageInner() {
             {tab === "coa" ? (
               <APageSection bare>
                 <AFilterBar
-                  filters={
+                  search={
                     <AInput
                       value={coaQ}
                       onChange={(e) => setCoaQ(e.target.value)}
@@ -483,6 +472,9 @@ function AccountingPageInner() {
                       className="min-w-[14rem] max-w-sm"
                       aria-label="Filtrer plan comptable"
                     />
+                  }
+                  utilities={
+                    <AListUtilities onFilter={() => void load()} />
                   }
                 />
                 {filteredAccounts.length === 0 ? (
@@ -497,26 +489,26 @@ function AccountingPageInner() {
                 ) : (
                   <ASoftTable>
                     <ASoftThead>
-                      <tr>
-                        <th className="a-table-cell font-medium">
+                      <ASoftTr>
+                        <ASoftTh>
                           {localizeUiString("Code", locale) ?? "Code"}
-                        </th>
-                        <th className="a-table-cell font-medium">
+                        </ASoftTh>
+                        <ASoftTh>
                           {localizeUiString("Nom", locale) ?? "Nom"}
-                        </th>
-                        <th className="a-table-cell font-medium">
+                        </ASoftTh>
+                        <ASoftTh>
                           {localizeUiString("Type", locale) ?? "Type"}
-                        </th>
-                      </tr>
+                        </ASoftTh>
+                      </ASoftTr>
                     </ASoftThead>
                     <tbody>
                       {filteredAccounts.map((a) => (
                         <ASoftTr key={a.id}>
-                          <td className="a-mono a-table-cell">{a.code}</td>
-                          <td className="a-table-cell">{a.name}</td>
-                          <td className="a-table-cell">
+                          <ASoftTd className="a-mono">{a.code}</ASoftTd>
+                          <ASoftTd>{a.name}</ASoftTd>
+                          <ASoftTd>
                             <ABadge tone="neutral">{a.type}</ABadge>
-                          </td>
+                          </ASoftTd>
                         </ASoftTr>
                       ))}
                     </tbody>
@@ -527,7 +519,12 @@ function AccountingPageInner() {
 
             {tab === "trial" ? (
               <APageSection bare>
-                <AFilterBar filters={periodSelect} />
+                <AFilterBar
+                  filters={periodSelect}
+                  utilities={
+                    <AListUtilities onFilter={() => void load()} />
+                  }
+                />
                 {state.trial.length === 0 ? (
                   <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
                     Aucune écriture POSTED pour cette période.
@@ -535,29 +532,21 @@ function AccountingPageInner() {
                 ) : (
                   <ASoftTable>
                     <ASoftThead>
-                      <tr>
-                        <th className="a-table-cell font-medium">Compte</th>
-                        <th className="a-table-cell font-medium text-right">
-                          Débit
-                        </th>
-                        <th className="a-table-cell font-medium text-right">
-                          Crédit
-                        </th>
-                      </tr>
+                      <ASoftTr>
+                        <ASoftTh>Compte</ASoftTh>
+                        <ASoftTh numeric>Débit</ASoftTh>
+                        <ASoftTh numeric>Crédit</ASoftTh>
+                      </ASoftTr>
                     </ASoftThead>
                     <tbody>
                       {state.trial.map((r) => (
                         <ASoftTr key={r.accountId}>
-                          <td className="a-table-cell">
+                          <ASoftTd>
                             <span className="a-mono">{r.accountCode}</span>{" "}
                             {r.accountName}
-                          </td>
-                          <td className="a-mono a-table-cell text-right tabular-nums">
-                            {r.debit}
-                          </td>
-                          <td className="a-mono a-table-cell text-right tabular-nums">
-                            {r.credit}
-                          </td>
+                          </ASoftTd>
+                          <ASoftTd numeric>{r.debit}</ASoftTd>
+                          <ASoftTd numeric>{r.credit}</ASoftTd>
                         </ASoftTr>
                       ))}
                     </tbody>
@@ -595,6 +584,9 @@ function AccountingPageInner() {
                       ) : null}
                     </>
                   }
+                  utilities={
+                    <AListUtilities onFilter={() => void load()} />
+                  }
                 />
                 {state.entries.length === 0 ? (
                   <AEmptyState
@@ -604,16 +596,14 @@ function AccountingPageInner() {
                 ) : (
                   <ASoftTable>
                     <ASoftThead>
-                      <tr>
-                        <th className="a-table-cell font-medium">N°</th>
-                        <th className="a-table-cell font-medium">Date</th>
-                        <th className="a-table-cell font-medium">Journal</th>
-                        <th className="a-table-cell font-medium">Statut</th>
-                        <th className="a-table-cell font-medium">Source</th>
-                        <th className="a-table-cell font-medium text-right">
-                          Action
-                        </th>
-                      </tr>
+                      <ASoftTr>
+                        <ASoftTh>N°</ASoftTh>
+                        <ASoftTh>Date</ASoftTh>
+                        <ASoftTh>Journal</ASoftTh>
+                        <ASoftTh>Statut</ASoftTh>
+                        <ASoftTh>Source</ASoftTh>
+                        <ASoftTh className="text-right">Action</ASoftTh>
+                      </ASoftTr>
                     </ASoftThead>
                     <tbody>
                       {state.entries.map((e) => (
@@ -623,7 +613,7 @@ function AccountingPageInner() {
                             router.push(`/accounting/entries/${e.id}`)
                           }
                         >
-                          <td className="a-mono a-table-cell">
+                          <ASoftTd className="a-mono">
                             <Link
                               href={`/accounting/entries/${e.id}`}
                               className="text-a-accent hover:underline"
@@ -631,22 +621,20 @@ function AccountingPageInner() {
                             >
                               {e.number}
                             </Link>
-                          </td>
-                          <td className="a-mono a-table-cell">
-                            {e.entryDate}
-                          </td>
-                          <td className="a-mono a-table-cell">
+                          </ASoftTd>
+                          <ASoftTd className="a-mono">{e.entryDate}</ASoftTd>
+                          <ASoftTd className="a-mono">
                             {e.journalCode ?? "—"}
-                          </td>
-                          <td className="a-table-cell">
+                          </ASoftTd>
+                          <ASoftTd>
                             <ABadge tone={entryBadgeTone(e.status)}>
                               {st(e.status)}
                             </ABadge>
-                          </td>
-                          <td className="a-mono a-table-cell text-a-fg-muted">
+                          </ASoftTd>
+                          <ASoftTd className="a-mono text-a-fg-muted">
                             {e.sourceType ?? "—"}
-                          </td>
-                          <td className="a-table-cell text-right">
+                          </ASoftTd>
+                          <ASoftTd className="text-right">
                             <div
                               className="flex flex-wrap justify-end gap-1"
                               onClick={(ev) => ev.stopPropagation()}
@@ -685,7 +673,7 @@ function AccountingPageInner() {
                                 Ouvrir
                               </AButton>
                             </div>
-                          </td>
+                          </ASoftTd>
                         </ASoftTr>
                       ))}
                     </tbody>
@@ -707,28 +695,26 @@ function AccountingPageInner() {
                 ) : (
                   <ASoftTable className="min-w-[640px]">
                     <ASoftThead>
-                      <tr>
-                        <th className="a-table-cell font-medium">Code</th>
-                        <th className="a-table-cell font-medium">Début</th>
-                        <th className="a-table-cell font-medium">Fin</th>
-                        <th className="a-table-cell font-medium">Statut</th>
-                        <th className="a-table-cell font-medium">Actions</th>
-                      </tr>
+                      <ASoftTr>
+                        <ASoftTh>Code</ASoftTh>
+                        <ASoftTh>Début</ASoftTh>
+                        <ASoftTh>Fin</ASoftTh>
+                        <ASoftTh>Statut</ASoftTh>
+                        <ASoftTh>Actions</ASoftTh>
+                      </ASoftTr>
                     </ASoftThead>
                     <tbody>
                       {state.periods.map((p) => (
                         <ASoftTr key={p.id}>
-                          <td className="a-mono a-table-cell">{p.code}</td>
-                          <td className="a-mono a-table-cell">
-                            {p.startDate}
-                          </td>
-                          <td className="a-mono a-table-cell">{p.endDate}</td>
-                          <td className="a-table-cell">
+                          <ASoftTd className="a-mono">{p.code}</ASoftTd>
+                          <ASoftTd className="a-mono">{p.startDate}</ASoftTd>
+                          <ASoftTd className="a-mono">{p.endDate}</ASoftTd>
+                          <ASoftTd>
                             <ABadge tone={periodTone(p.status)}>
                               {periodStatusLabel(p.status, locale)}
                             </ABadge>
-                          </td>
-                          <td className="a-table-cell">
+                          </ASoftTd>
+                          <ASoftTd>
                             <div className="flex flex-wrap gap-2">
                               {p.status === "OPEN" ? (
                                 <>
@@ -775,7 +761,7 @@ function AccountingPageInner() {
                                 </span>
                               ) : null}
                             </div>
-                          </td>
+                          </ASoftTd>
                         </ASoftTr>
                       ))}
                     </tbody>
