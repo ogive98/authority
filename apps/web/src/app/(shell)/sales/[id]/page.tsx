@@ -604,7 +604,7 @@ export default function SalesOrderFichePage() {
                 <dl className="space-y-3 text-[length:var(--a-text-sm)]">
                   <div>
                     <dt className="text-a-fg-muted">Total</dt>
-                    <dd className="a-mono tabular-nums text-[length:var(--a-text-base)] font-semibold">
+                    <dd className="a-mono a-tabular text-[length:var(--a-text-base)] font-medium">
                       {order.amountTotal} {order.currency}
                     </dd>
                   </div>

@@ -163,7 +163,7 @@ export default function HrBulletinPrintPage() {
                 <dl className="space-y-2 text-[length:var(--a-text-sm)]">
                   <div>
                     <dt className="text-a-fg-muted">Période</dt>
-                    <dd className="a-mono tabular-nums">{bulletin.periodYm}</dd>
+                    <dd className="a-mono a-tabular">{bulletin.periodYm}</dd>
                   </div>
                   <div>
                     <dt className="text-a-fg-muted">Employé</dt>
@@ -178,13 +178,13 @@ export default function HrBulletinPrintPage() {
                   </div>
                   <div>
                     <dt className="text-a-fg-muted">Base CNSS</dt>
-                    <dd className="a-mono tabular-nums">
+                    <dd className="a-mono a-tabular">
                       {bulletin.wageBase ?? "—"} {bulletin.currency}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-a-fg-muted">Net à payer</dt>
-                    <dd className="a-mono tabular-nums font-medium text-a-fg">
+                    <dd className="a-mono a-tabular font-medium text-a-fg">
                       {bulletin.netPay} {bulletin.currency}
                     </dd>
                   </div>

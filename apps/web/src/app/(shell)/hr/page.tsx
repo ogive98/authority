@@ -700,7 +700,7 @@ function HrWorkspace() {
             <section className={softPanel} aria-labelledby="hr-tpl-title">
               <h2
                 id="hr-tpl-title"
-                className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
+                className="text-[length:var(--a-text-md)] font-medium text-a-fg"
               >
                 Prefs contrat (squelette A)
               </h2>
@@ -736,7 +736,7 @@ function HrWorkspace() {
                     setPrintTpl((t) => ({ ...t, bodyHtml: e.target.value }))
                   }
                   rows={6}
-                  className="w-full rounded-md bg-a-surface-3 px-3 py-2 font-mono text-[length:var(--a-text-xs)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                  className="w-full rounded-md bg-a-surface-3 px-3 py-2 a-mono text-[length:var(--a-text-xs)] text-a-fg outline-none ring-a-accent focus:ring-2"
                 />
               </label>
               <label className="block space-y-1">
@@ -764,7 +764,7 @@ function HrWorkspace() {
             <section className={softPanel} aria-labelledby="hr-att-tpl-title">
               <h2
                 id="hr-att-tpl-title"
-                className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
+                className="text-[length:var(--a-text-md)] font-medium text-a-fg"
               >
                 Prefs attestation (squelette A)
               </h2>
@@ -799,7 +799,7 @@ function HrWorkspace() {
                     setAttestTpl((t) => ({ ...t, bodyHtml: e.target.value }))
                   }
                   rows={6}
-                  className="w-full rounded-md bg-a-surface-3 px-3 py-2 font-mono text-[length:var(--a-text-xs)] text-a-fg outline-none ring-a-accent focus:ring-2"
+                  className="w-full rounded-md bg-a-surface-3 px-3 py-2 a-mono text-[length:var(--a-text-xs)] text-a-fg outline-none ring-a-accent focus:ring-2"
                 />
               </label>
               <label className="block space-y-1">
@@ -827,7 +827,7 @@ function HrWorkspace() {
             <section className={softPanel} aria-labelledby="hr-cat-tpl-title">
               <h2
                 id="hr-cat-tpl-title"
-                className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
+                className="text-[length:var(--a-text-md)] font-medium text-a-fg"
               >
                 Catalogue société (B)
               </h2>
@@ -944,7 +944,7 @@ function HrWorkspace() {
                       {b.matricule ? `${b.matricule} · ` : ""}
                       {b.employeeName ?? "—"}
                     </ASoftTd>
-                    <ASoftTd className="a-mono tabular-nums">
+                    <ASoftTd className="a-mono a-tabular">
                       {b.netPay} {b.currency}
                     </ASoftTd>
                     <ASoftTd>
@@ -1242,7 +1242,7 @@ function HrWorkspace() {
           <div className="a-underlay w-full max-w-md space-y-4 rounded-[var(--a-radius-md)] bg-a-surface-2 p-[var(--a-space-5)]">
             <h2
               id="provision-title"
-              className="text-[length:var(--a-text-lg)] font-semibold text-a-fg"
+              className="text-[length:var(--a-text-lg)] font-medium text-a-fg"
             >
               Login provisoire (une seule fois)
             </h2>

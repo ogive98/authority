@@ -482,7 +482,7 @@ function SalesPageInner() {
                   <ASoftTd>
                     <Link
                       href={`/sales/${row.id}`}
-                      className="a-mono font-semibold text-a-accent hover:underline"
+                      className="a-mono font-medium text-a-accent hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {row.number}
@@ -501,7 +501,7 @@ function SalesPageInner() {
                       {st(row.status)}
                     </ABadge>
                   </ASoftTd>
-                  <ASoftTd numeric className="a-mono tabular-nums">
+                  <ASoftTd numeric className="a-mono a-tabular">
                     {row.amountTotal}{" "}
                     <span className="text-a-fg-subtle">{row.currency}</span>
                   </ASoftTd>

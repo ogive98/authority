@@ -21,7 +21,7 @@ export function HrUpcomingLots() {
       <div className="flex flex-wrap items-center gap-2">
         <h2
           id="hr-next-title"
-          className="text-[length:var(--a-text-md)] font-semibold text-a-fg"
+          className="text-[length:var(--a-text-md)] font-medium text-a-fg"
         >
           Prochains lots
         </h2>

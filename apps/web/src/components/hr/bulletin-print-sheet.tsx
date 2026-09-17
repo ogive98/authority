@@ -27,10 +27,10 @@ export function BulletinPrintSheet({ data }: { data: BulletinPrintModel }) {
   return (
     <div className="hr-bulletin-sheet rounded-[var(--a-radius-md)] bg-white px-6 py-5 text-black print:rounded-none print:px-0 print:py-0">
       <header className="mb-6 border-b border-black/10 pb-4">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-black/50">
+        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-black/50">
           AUTHORITY · RH
         </p>
-        <h1 className="mt-1 text-xl font-semibold tracking-tight">
+        <h1 className="mt-1 text-xl font-medium tracking-tight">
           Bulletin de paie
           {data.number ? (
             <span className="a-mono ml-2 text-base font-normal text-black/70">
@@ -77,7 +77,7 @@ export function BulletinPrintSheet({ data }: { data: BulletinPrintModel }) {
             <th className="py-2 text-right font-medium">Montant</th>
           </tr>
         </thead>
-        <tbody className="a-mono tabular-nums">
+        <tbody className="a-mono a-tabular">
           <tr className="border-b border-black/8">
             <td className="py-2">Base salariale</td>
             <td className="py-2 text-right">{data.wageBase}</td>
@@ -128,8 +128,8 @@ export function BulletinPrintSheet({ data }: { data: BulletinPrintModel }) {
             <td className="py-2 text-right">− {data.irppMonthly}</td>
           </tr>
           <tr>
-            <td className="py-3 text-base font-semibold">Net à payer</td>
-            <td className="py-3 text-right text-base font-semibold">
+            <td className="py-3 text-base font-medium">Net à payer</td>
+            <td className="py-3 text-right text-base font-medium">
               {data.netPay} {data.currency}
             </td>
           </tr>

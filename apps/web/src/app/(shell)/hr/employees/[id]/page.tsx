@@ -916,7 +916,7 @@ export default function HrEmployeeFichePage() {
                 }}
               />
               <div className="flex flex-wrap items-center gap-4">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-a-surface-3 text-[length:var(--a-text-lg)] font-semibold text-a-fg-muted">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-a-surface-3 text-[length:var(--a-text-lg)] font-medium text-a-fg-muted">
                   {employee.photoDocumentId ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -1300,7 +1300,7 @@ export default function HrEmployeeFichePage() {
                           {c.startDate}
                           {c.endDate ? ` → ${c.endDate}` : ""}
                         </ASoftTd>
-                        <ASoftTd className="a-mono tabular-nums">
+                        <ASoftTd className="a-mono a-tabular">
                           {c.wageBase ?? "—"}
                         </ASoftTd>
                         <ASoftTd>
@@ -1810,14 +1810,14 @@ export default function HrEmployeeFichePage() {
                 <div className="a-underlay space-y-2 rounded-md p-3 text-[length:var(--a-text-sm)]">
                   <p>
                     Assiette{" "}
-                    <span className="a-mono tabular-nums">
+                    <span className="a-mono a-tabular">
                       {cnssPreview.assiette.toFixed(3)}
                     </span>
                     {cnssPreview.ceilingApplied ? " · plafond appliqué" : ""}
                   </p>
                   <p>
                     Salarié{" "}
-                    <span className="a-mono tabular-nums">
+                    <span className="a-mono a-tabular">
                       {cnssPreview.employeeAmount != null
                         ? cnssPreview.employeeAmount.toFixed(3)
                         : "—"}
@@ -1825,7 +1825,7 @@ export default function HrEmployeeFichePage() {
                   </p>
                   <p>
                     Employeur{" "}
-                    <span className="a-mono tabular-nums">
+                    <span className="a-mono a-tabular">
                       {cnssPreview.employerAmount != null
                         ? cnssPreview.employerAmount.toFixed(3)
                         : "—"}
@@ -1845,7 +1845,7 @@ export default function HrEmployeeFichePage() {
                   </p>
                   <p>
                     TFP{" "}
-                    <span className="a-mono tabular-nums">
+                    <span className="a-mono a-tabular">
                       {levyPreview.tfp.amount != null
                         ? levyPreview.tfp.amount.toFixed(3)
                         : "—"}
@@ -1854,7 +1854,7 @@ export default function HrEmployeeFichePage() {
                   </p>
                   <p>
                     FOPROLOS{" "}
-                    <span className="a-mono tabular-nums">
+                    <span className="a-mono a-tabular">
                       {levyPreview.foprolos.amount != null
                         ? levyPreview.foprolos.amount.toFixed(3)
                         : "—"}
@@ -1907,7 +1907,7 @@ export default function HrEmployeeFichePage() {
                 <div className="a-underlay space-y-2 rounded-md p-3 text-[length:var(--a-text-sm)]">
                   <p>
                     IRPP mensuel{" "}
-                    <span className="a-mono tabular-nums">
+                    <span className="a-mono a-tabular">
                       {irppPreview.monthlyIrpp != null
                         ? irppPreview.monthlyIrpp.toFixed(3)
                         : "—"}
@@ -2006,7 +2006,7 @@ export default function HrEmployeeFichePage() {
                 <div className="a-underlay space-y-2 rounded-md p-3 text-[length:var(--a-text-sm)]">
                   <p>
                     Net{" "}
-                    <span className="a-mono tabular-nums font-medium">
+                    <span className="a-mono a-tabular font-medium">
                       {bulletinPreview.netPay?.toFixed(3) ?? "—"}
                     </span>{" "}
                     {bulletinPreview.currency}

@@ -124,7 +124,7 @@ export function HrTransferOrderPanel({ bulletinId }: { bulletinId: string }) {
     <section className={`${softPanel} print:hidden space-y-3 p-5`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-[length:var(--a-text-base)] font-semibold text-a-fg">
+          <h2 className="text-[length:var(--a-text-base)] font-medium text-a-fg">
             Ordre de virement
           </h2>
           <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -187,7 +187,7 @@ export function HrTransferOrderPanel({ bulletinId }: { bulletinId: string }) {
             </div>
             <div>
               <dt className="text-a-fg-muted">Montant</dt>
-              <dd className="a-mono tabular-nums">
+              <dd className="a-mono a-tabular">
                 {order.amount} {order.currency}
               </dd>
             </div>

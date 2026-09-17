@@ -370,7 +370,7 @@ export default function SalesWaInboxPage() {
                     <ABadge tone={statusTone(row.status)}>
                       {WA_INBOX_STATUS_LABELS[row.status]}
                     </ABadge>
-                    <span className="font-mono text-[length:var(--a-text-xs)] text-a-fg-muted tabular-nums">
+                    <span className="a-mono a-tabular text-[length:var(--a-text-xs)] text-a-fg-muted">
                       {row.fromPhone}
                     </span>
                     {row.profileName ? (
