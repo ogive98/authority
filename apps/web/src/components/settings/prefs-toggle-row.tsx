@@ -13,7 +13,7 @@ type PrefsToggleRowProps = {
 };
 
 /**
- * Soft Glass prefs row — visible title + hint + compact switch.
+ * Prefs row — visible title + hint + compact switch.
  * No border chrome; spacing so toggles never collide unlabeled.
  */
 export function PrefsToggleRow({

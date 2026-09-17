@@ -1,5 +1,5 @@
 /**
- * Action Registry (D161/D294) — single source for ⌘K, Smart Action Dock, shortcuts.
+ * Action Registry (D294) — single source for ⌘K, Smart Action Dock, shortcuts.
  * Catalog entries live in command-catalog; this module adds contexts + filtering
  * by active me-registry modules (never hardcode sidebar/dashboard actions).
  * Labels localized via locale overlay (D166).

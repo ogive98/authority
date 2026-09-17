@@ -9,7 +9,7 @@ export type APageBodyProps = {
   className?: string;
 };
 
-/** Standard main column body — Soft Glass spacing (D225). */
+/** Standard main column body — D294 / D225 spacing. */
 export function APageBody({ children, className }: APageBodyProps) {
   return <div className={cn(softPageBody, className)}>{children}</div>;
 }

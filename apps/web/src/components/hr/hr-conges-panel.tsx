@@ -39,7 +39,7 @@ type LoadState =
   | { kind: "forbidden"; message: string }
   | { kind: "error"; message: string };
 
-/** Soft Glass Congés panel — request/approve only, no quotas (D218). */
+/** Congés panel — request/approve only, no quotas (D218). */
 export function HrCongesPanel() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [filter, setFilter] = useState<AttAbsenceStatus | "">("");

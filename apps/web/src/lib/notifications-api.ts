@@ -1,4 +1,4 @@
-/** Client helpers for Soft Glass in-app inbox (`/api/v1/notifications`) — D247. */
+/** Client helpers for in-app inbox (`/api/v1/notifications`) — D247. */
 
 import type {
   NotificationItem,

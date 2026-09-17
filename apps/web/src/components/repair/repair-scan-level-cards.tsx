@@ -33,7 +33,7 @@ type Props = {
   onSelect: (id: ScanDepth) => void;
 };
 
-/** Depth picker — Soft Glass chips (no underline strip / frames). */
+/** Depth picker — D294 chips (no underline strip / frames). */
 export function RepairScanLevelCards({ levels, selected, onSelect }: Props) {
   return (
     <div

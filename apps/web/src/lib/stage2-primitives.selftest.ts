@@ -1,5 +1,5 @@
 /**
- * Stage 2 — Soft Glass canonical primitives smoke check.
+ * Stage 2 — D294 canonical primitives smoke check.
  * Run: npx tsx --tsconfig tsconfig.json src/lib/stage2-primitives.selftest.ts
  */
 import assert from "node:assert/strict";

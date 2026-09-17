@@ -1,4 +1,4 @@
-/** Soft Glass helpers for AUTHORITY X device pairing (D274). */
+/** Helpers for AUTHORITY X device pairing (D274). */
 
 export type AuthorityXDevice = {
   id: string;

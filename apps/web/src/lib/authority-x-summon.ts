@@ -1,5 +1,5 @@
 /**
- * Soft Glass → AUTHORITY X summon (loopback).
+ * Web shell → AUTHORITY X summon (loopback).
  * Requires Electron companion running (`npm run dev -w authority-x`).
  */
 export const AUTHORITY_X_SUMMON_URL = "http://127.0.0.1:17898/open";
@@ -10,7 +10,7 @@ export type SummonAuthorityXResult =
   | { ok: false; reason: "offline" | "blocked" };
 
 /**
- * Bring AUTHORITY X to the front. Soft Glass stays open underneath.
+ * Bring AUTHORITY X to the front. The web shell stays open underneath.
  */
 export async function summonAuthorityX(): Promise<SummonAuthorityXResult> {
   try {
@@ -21,7 +21,7 @@ export async function summonAuthorityX(): Promise<SummonAuthorityXResult> {
       headers: { Accept: "application/json" },
     });
     if (res.ok) {
-      // Soft Glass yields focus — X is alwaysOnTop
+      // Web shell yields focus — X is alwaysOnTop
       try {
         window.blur();
       } catch {

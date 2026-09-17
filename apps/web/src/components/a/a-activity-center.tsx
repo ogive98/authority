@@ -75,7 +75,7 @@ function formatWhen(iso: string, locale: "fr" | "it"): string {
 }
 
 /**
- * Soft Glass notifications inbox (D247–D249).
+ * Notifications inbox (D247–D249).
  * Mute prefs · enter animation · AUTHORITY audio handled by host.
  */
 export function AActivityCenter({

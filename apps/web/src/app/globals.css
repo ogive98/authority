@@ -1157,7 +1157,7 @@
     scroll-snap-align: start;
   }
 
-  /* D249 — Soft Glass alert enter (minimal / elegant) */
+  /* D249 — alert enter (minimal / elegant) */
   @keyframes a-notif-enter {
     from {
       opacity: 0;

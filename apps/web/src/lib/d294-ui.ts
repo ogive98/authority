@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils";
 
 /**
  * D294 shared UI class helpers — quiet chips, tables, panels (opaque surfaces).
- * Prefer this module over legacy `soft-glass-ui` (alias re-export).
  */
 export function softChipClass(active: boolean): string {
   return cn(

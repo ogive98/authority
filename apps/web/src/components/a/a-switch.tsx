@@ -15,7 +15,7 @@ export type ASwitchProps = {
 
 /**
  * iOS-like minimal toggle — used for theme, SPECTRE, PATCH, etc.
- * Soft Glass: no border chrome; default size sm for Prefs density.
+ * D294: no border chrome; default size sm for Prefs density.
  */
 export function ASwitch({
   checked,

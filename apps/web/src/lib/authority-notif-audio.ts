@@ -1,5 +1,5 @@
 /**
- * AUTHORITY Soft Glass notification tones (D249).
+ * AUTHORITY notification tones (D249).
  * Procedural Web Audio — no binary asset; teal-soft industrial chime.
  */
 
@@ -74,7 +74,7 @@ export async function playAuthorityNotifSound(opts: {
   }
 
   if (variant === "chime") {
-    // Descending Soft Glass chime — C5 · A4 · E4
+    // Descending AUTHORITY chime — C5 · A4 · E4
     tone(audio, 523.25, now, 0.22, peak);
     tone(audio, 440, now + 0.12, 0.24, peak * 0.85);
     tone(audio, 329.63, now + 0.26, 0.32, peak * 0.7);

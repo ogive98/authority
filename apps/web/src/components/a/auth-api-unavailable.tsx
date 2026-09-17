@@ -2,7 +2,7 @@
 
 import { AButton } from "@/components/a/a-button";
 
-/** Soft Glass — session may still be valid; API briefly unreachable (Nest restart). */
+/** Session may still be valid; API briefly unreachable (Nest restart). */
 export function AuthApiUnavailable({
   title = "API temporairement indisponible",
   message = "Le serveur AUTHORITY redémarre ou ne répond pas. Votre session n’a pas été annulée — réessayez.",

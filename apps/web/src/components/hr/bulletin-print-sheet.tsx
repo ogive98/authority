@@ -1,4 +1,4 @@
-/** Shared Soft Glass bulletin print sheet (D200/D202) — CSS print + abatement lines. */
+/** Shared bulletin print sheet (D200/D202) — CSS print + abatement lines. */
 
 export type BulletinPrintModel = {
   number?: string | null;

@@ -73,7 +73,7 @@ function dayClass(kind: AttCalendarKind | undefined): string {
 }
 
 /**
- * Soft Glass attendance calendar (D220).
+ * Attendance calendar (D220).
  * ADV: canAddPenalty. Portal: read-only via portal API.
  */
 export function AttendanceCalendarPanel({

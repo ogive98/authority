@@ -1,5 +1,5 @@
 /**
- * FeatureMetadata selftest (D278/D279) — Soft Glass Track A + FORGE bridge.
+ * FeatureMetadata selftest (D278/D279) — D294 Track A + FORGE bridge.
  * Run: npx tsx --tsconfig tsconfig.json src/lib/feature-metadata.selftest.ts
  */
 import assert from "node:assert/strict";

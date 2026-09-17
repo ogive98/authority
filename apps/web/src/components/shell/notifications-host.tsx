@@ -12,7 +12,7 @@ import { usePrefsStore } from "@/stores/prefs-store";
 const POLL_MS = 60_000;
 
 /**
- * Soft Glass host (D247–D249) — API sync, mute filter, AUTHORITY audio, enter anim.
+ * Notifications host (D247–D249) — API sync, mute filter, AUTHORITY audio, enter anim.
  */
 export function NotificationsHost() {
   const items = useNotificationsStore((s) => s.items);

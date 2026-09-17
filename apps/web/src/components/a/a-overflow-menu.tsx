@@ -28,7 +28,7 @@ export type AOverflowMenuProps = {
   align?: "start" | "end";
 };
 
-/** Tertiary actions — D225 `•••` overflow (Soft Glass underlay panel). */
+/** Tertiary actions — D225 `•••` overflow (opaque underlay panel). */
 export function AOverflowMenu({
   items,
   label = LAYOUT_ACTIONS.more,

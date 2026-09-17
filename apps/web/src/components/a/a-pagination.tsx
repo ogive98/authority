@@ -17,7 +17,7 @@ export type APaginationProps = {
 };
 
 /**
- * Soft Glass cursor / sequential pagination — quiet secondary actions.
+ * D294 cursor / sequential pagination — quiet secondary actions.
  * Prefer over inventing per-page Prev/Next stacks.
  */
 export function APagination({
