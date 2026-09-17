@@ -9,7 +9,7 @@ export type AKpiCardProps = {
   masked?: boolean;
 };
 
-/** KPI strip — Soft Glass underlay (no framed card); amounts solid tabular. */
+/** KPI strip — D294 opaque card; amounts mono tabular. */
 export function AKpiCard({
   label,
   value,
@@ -27,7 +27,7 @@ export function AKpiCard({
           : "text-a-fg-muted";
 
   return (
-    <article className="a-underlay relative overflow-hidden rounded-md p-[var(--a-space-5)]">
+    <article className="a-card relative overflow-hidden rounded-[var(--a-radius-md)] p-[var(--a-space-5)]">
       <div className="flex items-start justify-between gap-3">
         <p className="text-[length:var(--a-text-sm)] font-medium text-a-fg-muted">
           {label}
@@ -44,7 +44,7 @@ export function AKpiCard({
         ) : null}
       </div>
       <p
-        className="a-mono a-tabular mt-2 text-[length:var(--a-text-2xl)] font-semibold tracking-tight text-a-fg"
+        className="a-mono a-tabular mt-2 text-[length:var(--a-text-2xl)] font-medium tracking-tight text-a-fg"
         aria-label={masked ? `${label} masqué` : undefined}
       >
         {masked ? "••••" : value}

@@ -23,7 +23,7 @@ function featureHint(href: string): string {
   }
 }
 
-function SoftRing({ value }: { value: number }) {
+function AccentRing({ value }: { value: number }) {
   const pct = Math.max(0, Math.min(100, value));
   const r = 34;
   const c = 2 * Math.PI * r;
@@ -221,7 +221,7 @@ export function ModuleFeatureList({
 
         <aside className="hidden min-h-0 flex-col gap-3 md:flex">
           <div className="a-underlay a-stagger-in flex flex-col items-center gap-2 rounded-[var(--a-radius-lg)] px-4 py-5">
-            <SoftRing value={Math.min(100, Math.max(12, features.length * 12))} />
+            <AccentRing value={Math.min(100, Math.max(12, features.length * 12))} />
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-a-fg-subtle">
               Features registry
             </p>

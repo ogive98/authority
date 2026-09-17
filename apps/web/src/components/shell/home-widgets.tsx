@@ -38,7 +38,7 @@ function greetingForHour(
   return t("greetEvening");
 }
 
-/** Hero — identity from /me only (no fake KPI). ZIP denser greeting. */
+/** Hero — identity from /me only (no fake KPI). D294 greeting. */
 export function HeroContextWidget() {
   const { t } = useShellT();
   const [name, setName] = useState<string | null>(null);
@@ -71,7 +71,7 @@ export function HeroContextWidget() {
   return (
     <div className="a-card flex flex-wrap items-end justify-between gap-4 p-4 md:p-5">
       <div className="min-w-0">
-        <h2 className="text-[clamp(1.15rem,2vw,1.35rem)] font-semibold tracking-[-0.02em] text-a-fg">
+        <h2 className="text-[length:var(--a-text-xl)] font-medium tracking-[-0.02em] text-a-fg">
           {greet}, {display.split(" ")[0]}
         </h2>
         <p className="mt-1 text-[length:var(--a-text-sm)] text-a-fg-muted">
@@ -82,7 +82,7 @@ export function HeroContextWidget() {
       </div>
       <Link
         href="/account"
-        className="rounded-[var(--a-radius-md)] bg-a-accent-muted px-3 py-1.5 text-[length:var(--a-text-xs)] font-semibold text-a-accent transition-colors hover:bg-a-accent hover:text-a-accent-fg"
+        className="rounded-[var(--a-radius-sm)] bg-a-accent-muted px-3 py-1.5 text-[length:var(--a-text-xs)] font-medium text-a-accent transition-colors hover:bg-a-accent hover:text-a-accent-fg"
       >
         {t("controlCenter")}
       </Link>
@@ -112,7 +112,7 @@ export function ShellStatusWidget() {
         ["Jobs", `${s.jobs.running}/${s.jobs.pending}`],
       ].map(([k, v]) => (
         <div key={k}>
-          <dt className="text-[10px] font-semibold uppercase tracking-wider text-a-fg-subtle">
+          <dt className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
             {k}
           </dt>
           <dd className="a-mono mt-0.5 text-[length:var(--a-text-sm)] text-a-fg">
@@ -346,7 +346,7 @@ export function TreasuryWidget() {
       <dl className="grid grid-cols-2 gap-3">
         {cells.map((c) => (
           <div key={c.label}>
-            <dt className="text-[10px] font-semibold uppercase tracking-wider text-a-fg-subtle">
+            <dt className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-wider text-a-fg-subtle">
               {c.label}
             </dt>
             <dd className="a-mono mt-0.5 text-[length:var(--a-text-lg)] tabular-nums text-a-fg">
@@ -399,7 +399,7 @@ const KPI_LABEL_KEYS: Record<
   moduleFeatures: "kpiModuleFeatures",
 };
 
-/** Live KPI strip — scoped to selected module (D168). Titles in orange. */
+/** Live KPI strip — scoped to selected module (D168/D294). Live values only. */
 export function HomeKpiStrip() {
   const { t } = useShellT();
   const q = useHomeKpis();
@@ -410,7 +410,7 @@ export function HomeKpiStrip() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="a-glass flex min-h-[7.5rem] flex-col justify-between rounded-[var(--a-radius-lg)] p-4"
+            className="a-card flex min-h-[7.5rem] flex-col justify-between rounded-[var(--a-radius-md)] p-4"
           >
             <ASkeleton className="h-3 w-24" />
             <ASkeleton className="h-8 w-32" />
@@ -454,13 +454,13 @@ export function HomeKpiStrip() {
             href={card.href}
             className="a-card a-stagger-in flex min-h-[7.5rem] flex-col justify-between p-4 transition-colors hover:bg-a-surface-3/50"
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-a-fg-muted">
+            <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-[0.08em] text-a-fg-muted">
               {label}
             </p>
             <div>
               <p
                 className={cn(
-                  "a-mono text-[1.35rem] font-semibold tracking-tight tabular-nums",
+                  "a-mono a-tabular text-[length:var(--a-text-2xl)] font-medium tracking-tight",
                   muted ? "text-a-fg-subtle" : "text-a-fg",
                 )}
               >

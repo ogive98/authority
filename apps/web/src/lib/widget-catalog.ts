@@ -1,5 +1,5 @@
 /**
- * Widget Registry (D161+) — home Mission Control + /dev/dashboard shells.
+ * Widget Registry (D294) — home Mission Control + /dev/dashboard shells.
  * KPIs = live /home-kpis only (D165); never invent CA/€.
  */
 
