@@ -8,6 +8,7 @@ import { TaxModule } from '../tax/tax.module';
 import { SettingsModule } from '../settings/settings.module';
 import { AccountingModule } from '../accounting/accounting.module';
 import { MailModule } from '../mail/mail.module';
+import { DocumentsModule } from '../documents/documents.module';
 import { ApBillService } from './ap-bill.service';
 import { ApPaymentService } from './ap-payment.service';
 import { AllocationEngineService } from './allocation-engine.service';
@@ -19,6 +20,7 @@ import { DunningSettingsResolver } from './dunning-settings.resolver';
 import { DunningService } from './dunning.service';
 import { FinanceController } from './finance.controller';
 import { FinanceService } from './finance.service';
+import { InvoicePdfService } from './invoice-pdf.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentDeclarationService } from './payment-declaration.service';
 import { PaymentService } from './payment.service';
@@ -38,11 +40,13 @@ import { WaWebhookService } from './wa-webhook.service';
     SettingsModule,
     AccountingModule,
     MailModule,
+    DocumentsModule,
   ],
   controllers: [FinanceController, WaWebhookController],
   providers: [
     FinanceService,
     InvoiceService,
+    InvoicePdfService,
     CreditNoteService,
     PaymentService,
     ApPaymentService,
@@ -61,6 +65,7 @@ import { WaWebhookService } from './wa-webhook.service';
   exports: [
     FinanceService,
     InvoiceService,
+    InvoicePdfService,
     CreditNoteService,
     PaymentService,
     ApPaymentService,

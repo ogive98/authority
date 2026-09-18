@@ -346,14 +346,14 @@ export const HELP_MODULES: HelpModule[] = [
             "Cliquez « + Nouvelle commande ».",
             "Sélectionnez le client (autocomplete code / surnom).",
             "Choisissez l’entrepôt, date demandée, livreur souhaité si besoin.",
-            "Ajoutez des lignes produit + quantités + prix (suggestion tarif négocié si existant).",
+            "Ajoutez des lignes produit + quantités + prix + remise % (0–100) (suggestion tarif négocié si existant).",
             "Enregistrez en brouillon ou confirmez (crédit → prix → stock / réserve).",
           ],
           it: [
             "Clicca « + Nuovo ordine ».",
             "Seleziona il cliente (autocomplete codice / nickname).",
             "Scegli magazzino, data richiesta, corriere se serve.",
-            "Aggiungi righe prodotto + quantità + prezzo (tariffa negoziata se esiste).",
+            "Aggiungi righe prodotto + quantità + prezzo + sconto % (0–100) (tariffa negoziata se esiste).",
             "Salva in bozza o conferma (credito → prezzo → scorte / riserva).",
           ],
         },
@@ -364,21 +364,47 @@ export const HELP_MODULES: HelpModule[] = [
           it: "Scheda ordine",
         },
         when: {
-          fr: "Pour modifier un brouillon, confirmer, annuler, ou suivre le livré.",
-          it: "Per modificare una bozza, confermare, annullare o seguire il consegnato.",
+          fr: "Pour modifier un brouillon (y compris remises), confirmer, annuler, ou suivre le livré.",
+          it: "Per modificare una bozza (anche sconti), confermare, annullare o seguire il consegnato.",
         },
         steps: {
           fr: [
             "Ouvrez `/sales/[id]`.",
-            "Brouillon : Modifier → Enregistrer, ou Confirmer.",
+            "Brouillon : Modifier → lignes (Qté / PU / Remise %) → Enregistrer, ou Confirmer.",
             "Actions destructives via ••• (Annuler commande).",
             "Après confirmation : suivi fulfillment ; livraison via module Delivery.",
           ],
           it: [
             "Apri `/sales/[id]`.",
-            "Bozza: Modifica → Salva, oppure Conferma.",
+            "Bozza: Modifica → righe (Qtà / PU / Sconto %) → Salva, oppure Conferma.",
             "Azioni distruttive via ••• (Annulla ordine).",
             "Dopo conferma: tracking fulfillment; consegna via modulo Delivery.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Devis",
+          it: "Preventivi",
+        },
+        when: {
+          fr: "Avant commande — proposition commerciale sans réserve stock ni crédit.",
+          it: "Prima dell’ordine — proposta commerciale senza riserva scorte né credito.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/sales/quotes` (nav Devis).",
+            "Nouveau devis : client, entrepôt (requis pour convertir), lignes + remises %.",
+            "Sur la fiche : Envoyer (DRAFT → SENT).",
+            "PDF : Imprimer · Mail (mailto + PDF téléchargé) · WhatsApp (wa.me) · Portail (CUSTOMER_PORTAL).",
+            "••• ou barre d’actions — Convertir en commande → DRAFT (pas d’auto-confirm).",
+          ],
+          it: [
+            "Apri `/sales/quotes` (nav Preventivi).",
+            "Nuovo preventivo: cliente, magazzino (richiesto per convertire), righe + sconti %.",
+            "In scheda: Invia (DRAFT → SENT).",
+            "PDF: Stampa · Mail (mailto + PDF scaricato) · WhatsApp (wa.me) · Portale (CUSTOMER_PORTAL).",
+            "••• o barra azioni — Converti in ordine → DRAFT (niente auto-confirm).",
           ],
         },
       },
@@ -411,14 +437,91 @@ export const HELP_MODULES: HelpModule[] = [
     ],
     locks: {
       fr: [
-        "Pas de devis / remises inventées hors Prefs.",
-        "FEFO / lots : allocation à la confirmation si suivi lot.",
-        "WA→order = human-gated — suggestions assistées OK · pas d’auto-confirm · pas de CRM chat (D251/D252).",
+        "Devis = tables séparées (pas de réserve / crédit) — convert → commande DRAFT only (D316).",
+        "Remise % clamp 0–100 V0 — plafond Prefs = lot suivant.",
+        "PDF devis D318 : Imprimer · Mail · WhatsApp · Portail (CUSTOMER_PORTAL) · pattern facture D315.",
       ],
       it: [
-        "Nessun preventivo / sconto inventato fuori Prefs.",
-        "FEFO / lotti: allocazione in conferma se tracking lotto.",
-        "WA→order = human-gated — suggerimenti assistiti OK · niente auto-confirm · niente CRM chat (D251/D252).",
+        "Preventivo = tabelle separate (niente riserva / credito) — convert → ordine DRAFT only (D316).",
+        "Sconto % clamp 0–100 V0 — tetto Prefs = lotto successivo.",
+        "PDF preventivo D318: Stampa · Mail · WhatsApp · Portale (CUSTOMER_PORTAL) · pattern fattura D315.",
+      ],
+    },
+  },
+  {
+    id: "returns",
+    href: "/sales/returns",
+    title: { fr: "Retours (RMA)", it: "Resi (RMA)" },
+    summary: {
+      fr: "Sous-module Ventes — retour client lié à une livraison DELIVERED, restock/rebut, avoir DRAFT.",
+      it: "Sottomodulo Vendite — reso cliente legato a consegna DELIVERED, rientro/scarto, nota di credito DRAFT.",
+    },
+    when: {
+      fr: "Après livraison, quand le client renvoie tout ou partie des quantités livrées.",
+      it: "Dopo la consegna, quando il cliente restituisce tutto o parte delle quantità consegnate.",
+    },
+    features: [
+      {
+        name: {
+          fr: "Créer un RMA",
+          it: "Creare un RMA",
+        },
+        when: {
+          fr: "Depuis une livraison au statut DELIVERED.",
+          it: "Da una consegna in stato DELIVERED.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/sales/returns` (nav Ventes → Retours).",
+            "Choisissez la livraison DELIVERED.",
+            "Cochez les lignes, saisissez la qté (≤ livré restant) et disposition Restock / Rebut.",
+            "Créer → fiche brouillon.",
+          ],
+          it: [
+            "Apri `/sales/returns` (nav Vendite → Resi).",
+            "Scegli la consegna DELIVERED.",
+            "Seleziona le righe, qty (≤ consegnato residuo) e disposizione Rientro / Scarto.",
+            "Crea → scheda bozza.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Poster + avoir",
+          it: "Registra + nota di credito",
+        },
+        when: {
+          fr: "Quand le retour est validé (stock + finance).",
+          it: "Quando il reso è validato (scorte + finanza).",
+        },
+        steps: {
+          fr: [
+            "Sur `/sales/returns/[id]` : Poster.",
+            "Restock → +stock entrepôt · Rebut → pas de stock.",
+            "Si facture ISSUED liée à la livraison : avoir DRAFT auto.",
+            "Sinon (ou si échec auto) : CTA « Créer avoir » après POSTED.",
+            "Émettre l’avoir ensuite dans Finance (pas d’auto-issue).",
+          ],
+          it: [
+            "Su `/sales/returns/[id]`: Registra.",
+            "Rientro → +scorte magazzino · Scarto → niente stock.",
+            "Se fattura ISSUED legata alla consegna: nota di credito DRAFT auto.",
+            "Altrimenti (o se auto fallisce): CTA « Crea nota di credito » dopo POSTED.",
+            "Emetti la nota poi in Finanza (niente auto-issue).",
+          ],
+        },
+      },
+    ],
+    locks: {
+      fr: [
+        "Sous-module Sales (D317b) — pas de module `returns` autonome.",
+        "Lien livraison obligatoire — pas de RMA libre.",
+        "Supplier return / QC / PDF BR = DEFER · avoir = DRAFT only.",
+      ],
+      it: [
+        "Sottomodulo Sales (D317b) — niente modulo `returns` autonomo.",
+        "Link consegna obbligatorio — niente RMA libero.",
+        "Reso fornitore / QC / PDF BR = DEFER · nota = solo DRAFT.",
       ],
     },
   },
@@ -1155,6 +1258,8 @@ export const HELP_MODULES: HelpModule[] = [
             "Vous pouvez surcharger le code TVA manuellement ; hint « Stub » = à valider avec le comptable.",
             "Toggle Document : bon de livraison / facture — titre seulement.",
             "Sur la fiche : Émettre (DRAFT → ISSUED) ; Annuler / Avoir via overflow.",
+            "Livraison complète → facture auto avec lignes produit (qtés livrées) + TVA (D315).",
+            "Sur facture ISSUED : « Télécharger PDF » (persist Documents).",
             "FODEC/timbre : seulement si Prefs Expertise VALIDATED — pas inventés.",
           ],
           it: [
@@ -1164,7 +1269,33 @@ export const HELP_MODULES: HelpModule[] = [
             "Puoi sovrascrivere il codice IVA a mano ; hint « Stub » = da validare col commercialista.",
             "Toggle Documento: bolla / fattura — solo titolo.",
             "In scheda: Emetti (DRAFT → ISSUED); Annulla / Nota via overflow.",
+            "Consegna completa → fattura auto con righe prodotto (qty consegnate) + IVA (D315).",
+            "Su fattura ISSUED: « Scarica PDF » (persist Documents).",
             "FODEC/bollo: solo se Prefs Expertise VALIDATED — mai inventati.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Facture livraison + PDF (D315)",
+          it: "Fattura consegna + PDF (D315)",
+        },
+        when: {
+          fr: "Après livraison Delivery — facture ISSUED ligne à ligne puis impression.",
+          it: "Dopo consegna Delivery — fattura ISSUED riga per riga poi stampa.",
+        },
+        steps: {
+          fr: [
+            "Complétez un BL dans Livraisons (qtés livrées).",
+            "Finance crée une facture ISSUED liée au `shipmentId` avec lignes produit.",
+            "Ouvrez `/finance/invoices/[id]` → Télécharger PDF.",
+            "FODEC/timbre absents si Prefs non VALIDATED (montants 0).",
+          ],
+          it: [
+            "Completa una bolla in Consegne (qty consegnate).",
+            "Finance crea una fattura ISSUED legata allo `shipmentId` con righe prodotto.",
+            "Apri `/finance/invoices/[id]` → Scarica PDF.",
+            "FODEC/bollo assenti se Prefs non VALIDATED (importi 0).",
           ],
         },
       },

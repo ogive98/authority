@@ -261,8 +261,8 @@ export class FinanceService {
   }
 
   /**
-   * Idempotent AR open item for a delivered sales order (amount as-recorded).
-   * Issues commercial invoice + links/creates open item (D072).
+   * Idempotent AR open item for a delivered sales order.
+   * Prefers product lines (D315); falls back to amountTotal EXO lump.
    */
   async ensureArForSalesOrder(
     companyId: string,
@@ -274,6 +274,13 @@ export class FinanceService {
       currency?: string | null;
       shipmentId?: string | null;
       shipmentNumber?: string | null;
+      lines?: Array<{
+        description: string;
+        qty: number;
+        unitPriceHt: number;
+        productId?: string;
+        taxCodeId?: string;
+      }>;
     },
   ): Promise<{ outcome: 'created' | 'existing'; item: OpenItemDto }> {
     const { outcome, invoice } =

@@ -100,6 +100,7 @@ export type FinInvoice = {
   label: string | null;
   notes: string | null;
   openItemId: string | null;
+  pdfDocumentId?: string | null;
   expertiseApplied?: { fodec: boolean; timbre: boolean };
   /** D286 — TaxWithholding when client RAS on ISSUED. */
   taxWithholdingId?: string | null;
@@ -639,6 +640,34 @@ export async function cancelInvoice(
     });
     if (!res.ok) return parseFail(res);
     return { ok: true, data: (await res.json()) as FinInvoice };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+/** D315 — stream PDF (ISSUED only); triggers persist on server. */
+export async function downloadInvoicePdf(
+  id: string,
+): Promise<{ ok: true } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/finance/invoices/${encodeURIComponent(id)}/pdf`,
+      {
+        credentials: "include",
+      },
+    );
+    if (!res.ok) return parseFail(res);
+    const blob = await res.blob();
+    const cd = res.headers.get("Content-Disposition") ?? "";
+    const match = /filename="([^"]+)"/.exec(cd);
+    const filename = match?.[1] ?? `facture-${id.slice(0, 8)}.pdf`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { ok: true };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }

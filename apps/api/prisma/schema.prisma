@@ -1332,6 +1332,10 @@ enum DocLinkType {
   HR_ATTESTATION
   /** Salary transfer order PDF (D222). */
   HR_TRANSFER_ORDER
+  /** Commercial invoice PDF (D315). */
+  FIN_INVOICE
+  /** Sales quote PDF (D318). */
+  SAL_QUOTE
 }
 
 model DocDocument {
@@ -1742,6 +1746,67 @@ model SalOrderLine {
   @@map("sal_order_line")
 }
 
+/** D316 — Sales quotes (separate from SalOrder — no stock reserve / credit). */
+enum SalQuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  CANCELLED
+  EXPIRED
+}
+
+model SalQuote {
+  id               String         @id @default(uuid()) @db.Uuid
+  companyId        String         @map("company_id") @db.Uuid
+  number           String
+  customerId       String         @map("customer_id") @db.Uuid
+  warehouseId      String?        @map("warehouse_id") @db.Uuid
+  status           SalQuoteStatus @default(DRAFT)
+  validUntil       DateTime?      @map("valid_until") @db.Date
+  currency         String         @default("TND")
+  notes            String?
+  amountTotal      Decimal        @default(0) @map("amount_total") @db.Decimal(18, 3)
+  version          Int            @default(0)
+  convertedOrderId String?        @map("converted_order_id") @db.Uuid
+  /** Last generated quote PDF (Documents, link SAL_QUOTE) — D318. */
+  pdfDocumentId    String?        @map("pdf_document_id") @db.Uuid
+  acceptedAt       DateTime?      @map("accepted_at") @db.Timestamptz(6)
+  cancelledAt      DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  lines SalQuoteLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@index([companyId, customerId])
+  @@index([companyId, pdfDocumentId])
+  @@map("sal_quote")
+}
+
+model SalQuoteLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  quoteId     String   @map("quote_id") @db.Uuid
+  lineNo      Int      @map("line_no")
+  productId   String   @map("product_id") @db.Uuid
+  qty         Decimal  @db.Decimal(18, 3)
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(18, 3)
+  discountPct Decimal  @default(0) @map("discount_pct") @db.Decimal(5, 2)
+  lineTotal   Decimal  @map("line_total") @db.Decimal(18, 3)
+  version     Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  quote SalQuote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@unique([quoteId, lineNo])
+  @@index([companyId, quoteId])
+  @@map("sal_quote_line")
+}
+
 /** D251 — inbound WhatsApp message (human-gated → AUTHORITY draft order). Not a CRM chat SoT. */
 enum WaInboundStatus {
   OPEN
@@ -1840,6 +1905,70 @@ model DlvShipment {
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, status])
   @@map("dlv_shipment")
+}
+
+// --- ret_* Returns / RMA V0 (D317) — customer return linked to DELIVERED shipment ---
+
+enum RetRmaStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+enum RetDisposition {
+  RESTOCK
+  SCRAP
+}
+
+model RetRma {
+  id           String       @id @default(uuid()) @db.Uuid
+  companyId    String       @map("company_id") @db.Uuid
+  number       String
+  shipmentId   String       @map("shipment_id") @db.Uuid
+  orderId      String       @map("order_id") @db.Uuid
+  customerId   String       @map("customer_id") @db.Uuid
+  warehouseId  String       @map("warehouse_id") @db.Uuid
+  invoiceId    String?      @map("invoice_id") @db.Uuid
+  creditNoteId String?      @map("credit_note_id") @db.Uuid
+  status       RetRmaStatus @default(DRAFT)
+  notes        String?
+  version      Int          @default(0)
+  postedAt     DateTime?    @map("posted_at") @db.Timestamptz(6)
+  cancelledAt  DateTime?    @map("cancelled_at") @db.Timestamptz(6)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?    @map("deleted_at") @db.Timestamptz(6)
+
+  lines RetRmaLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@index([companyId, shipmentId])
+  @@index([companyId, customerId])
+  @@map("ret_rma")
+}
+
+model RetRmaLine {
+  id          String         @id @default(uuid()) @db.Uuid
+  companyId   String         @map("company_id") @db.Uuid
+  rmaId       String         @map("rma_id") @db.Uuid
+  lineNo      Int            @map("line_no")
+  orderLineId String         @map("order_line_id") @db.Uuid
+  productId   String         @map("product_id") @db.Uuid
+  qty         Decimal        @db.Decimal(18, 3)
+  disposition RetDisposition @default(RESTOCK)
+  unitPrice   Decimal        @map("unit_price") @db.Decimal(18, 3)
+  version     Int            @default(0)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  rma RetRma @relation(fields: [rmaId], references: [id], onDelete: Cascade)
+
+  @@unique([rmaId, lineNo])
+  @@index([companyId, rmaId])
+  @@index([companyId, orderLineId])
+  @@map("ret_rma_line")
 }
 
 // --- fin_* Finance (AR deepen D072 — Invoice / Payment / Allocation / Instruments) ---
@@ -1949,6 +2078,8 @@ model FinInvoice {
   issuedAt     DateTime?       @map("issued_at") @db.Timestamptz(6)
   label        String?
   notes        String?
+  /** Generated commercial invoice PDF document id (D315). */
+  pdfDocumentId String?        @map("pdf_document_id") @db.Uuid
   version      Int             @default(0)
   createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -1962,6 +2093,7 @@ model FinInvoice {
   @@index([companyId, createdAt(sort: Desc)])
   @@index([companyId, customerId, status])
   @@index([companyId, salesOrderId])
+  @@index([companyId, pdfDocumentId])
   @@map("fin_invoice")
 }
 

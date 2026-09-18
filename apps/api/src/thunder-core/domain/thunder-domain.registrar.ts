@@ -140,11 +140,35 @@ export class ThunderDomainRegistrar implements OnModuleInit {
       stringPayload(envelope.payload, 'orderId') ||
       stringPayload(envelope.payload, 'salesOrderId');
     const customerId = stringPayload(envelope.payload, 'customerId');
+    const shipmentId =
+      stringPayload(envelope.payload, 'shipmentId') ||
+      (envelope.aggregateType === 'dlv_shipment'
+        ? envelope.aggregateId
+        : undefined);
     if (!orderId || !customerId) {
       this.logger.warn(
         'finance.openItemFromDelivery: missing orderId/customerId in payload',
       );
       return;
+    }
+
+    // Sync Delivery.complete already creates shipment-scoped invoice (D315).
+    if (shipmentId) {
+      const existing = await this.prisma.finInvoice.findFirst({
+        where: {
+          companyId,
+          shipmentId,
+          deletedAt: null,
+          status: { not: 'CANCELLED' },
+        },
+        select: { id: true, number: true },
+      });
+      if (existing) {
+        this.logger.log(
+          `finance.openItemFromDelivery skip — invoice ${existing.number} already exists for shipment ${shipmentId}`,
+        );
+        return;
+      }
     }
 
     const order = await this.prisma.salOrder.findFirst({
@@ -164,17 +188,79 @@ export class ThunderDomainRegistrar implements OnModuleInit {
       return;
     }
 
-    const amount = Number(order.amountTotal.toString());
+    const payloadLines = Array.isArray(envelope.payload?.lines)
+      ? (envelope.payload.lines as Array<Record<string, unknown>>)
+      : [];
+    const qtyByLine = new Map<string, number>();
+    for (const row of payloadLines) {
+      const lineId =
+        typeof row.orderLineId === 'string' ? row.orderLineId : null;
+      const qty = typeof row.qty === 'number' ? row.qty : Number(row.qty);
+      if (lineId && Number.isFinite(qty) && qty > 0) {
+        qtyByLine.set(lineId, qty);
+      }
+    }
+
+    const lines: Array<{
+      description: string;
+      qty: number;
+      unitPriceHt: number;
+      productId: string;
+    }> = [];
+
+    const orderLines = await this.prisma.salOrderLine.findMany({
+      where: { orderId: order.id, companyId },
+      orderBy: { lineNo: 'asc' },
+    });
+    const productIds = [...new Set(orderLines.map((l) => l.productId))];
+    const products =
+      productIds.length > 0
+        ? await this.prisma.prdProduct.findMany({
+            where: { companyId, id: { in: productIds }, deletedAt: null },
+            select: { id: true, name: true, sku: true },
+          })
+        : [];
+    const nameById = new Map(
+      products.map((p) => [p.id, `${p.sku} — ${p.name}`] as const),
+    );
+
+    for (const line of orderLines) {
+      const qty =
+        qtyByLine.get(line.id) ??
+        (shipmentId ? 0 : Number(line.qty.toString()));
+      if (!Number.isFinite(qty) || qty <= 0) continue;
+      const discountFactor = 1 - Number(line.discountPct.toString()) / 100;
+      const unitPriceHt =
+        Math.round(Number(line.unitPrice.toString()) * discountFactor * 1000) /
+        1000;
+      lines.push({
+        description:
+          nameById.get(line.productId) ??
+          `Produit ${line.productId.slice(0, 8)}`,
+        qty,
+        unitPriceHt,
+        productId: line.productId,
+      });
+    }
+
+    const amount =
+      lines.length > 0
+        ? lines.reduce((s, l) => s + l.qty * l.unitPriceHt, 0)
+        : Number(order.amountTotal.toString());
     if (!Number.isFinite(amount) || amount <= 0) {
       return;
     }
 
+    const shipmentNumber = stringPayload(envelope.payload, 'number');
     const result = await this.finance.ensureArForSalesOrder(companyId, {
       customerId: order.customerId,
       salesOrderId: order.id,
       amountTotal: amount,
       orderNumber: order.number,
       currency: order.currency,
+      shipmentId: shipmentId ?? null,
+      shipmentNumber: shipmentNumber ?? null,
+      lines: lines.length > 0 ? lines : undefined,
     });
     this.logger.log(
       `finance.openItemFromDelivery ${result.outcome} ${result.item.number} order=${order.number}`,

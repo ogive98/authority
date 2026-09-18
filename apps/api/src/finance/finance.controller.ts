@@ -8,8 +8,11 @@ import {
   Patch,
   Post,
   Query,
+  Res,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { CurrentTenancy } from '../organization/organization.decorators';
 import type { TenancyContext } from '../organization/organization.constants';
 import { TenancyGuard } from '../organization/tenancy.guard';
@@ -47,6 +50,7 @@ import { BankingService } from './banking.service';
 import { CreditNoteService } from './credit-note.service';
 import { DunningService } from './dunning.service';
 import { FinanceService } from './finance.service';
+import { InvoicePdfService } from './invoice-pdf.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentDeclarationService } from './payment-declaration.service';
 import { PaymentService } from './payment.service';
@@ -62,6 +66,7 @@ export class FinanceController {
   constructor(
     private readonly financeService: FinanceService,
     private readonly invoiceService: InvoiceService,
+    private readonly invoicePdf: InvoicePdfService,
     private readonly creditNoteService: CreditNoteService,
     private readonly paymentService: PaymentService,
     private readonly apPaymentService: ApPaymentService,
@@ -229,6 +234,29 @@ export class FinanceController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.invoiceService.get(tenancy.companyId, id);
+  }
+
+  /** D315 — HTML→PDF stream + persist Documents (link FIN_INVOICE). */
+  @Get('invoices/:id/pdf')
+  @RequirePermission(PERMISSION_KEYS.financeArRead)
+  async getInvoicePdf(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() user: IamUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const result = await this.invoicePdf.generateAndPersist(
+      tenancy.companyId,
+      user.id,
+      id,
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${result.filename}"`,
+    );
+    res.setHeader('X-Authority-Document-Id', result.documentId);
+    return new StreamableFile(result.buffer);
   }
 
   @Post('invoices')

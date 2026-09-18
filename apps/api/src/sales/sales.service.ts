@@ -26,9 +26,12 @@ import {
 import { SalesException } from './sales.exception';
 import type {
   CreateSalesOrderDto,
-  SalesOrderLineInputDto,
   UpdateSalesOrderDto,
 } from './sales.dto';
+import {
+  normalizeSalesLines,
+  sumNormalizedLineTotals,
+} from './sales-lines.util';
 
 export type SalesOrderLineDto = {
   id: string;
@@ -248,13 +251,13 @@ export class SalesService {
 
     await this.assertCustomer(companyId, dto.customerId);
     await this.assertWarehouse(companyId, dto.warehouseId);
-    const lineInputs = this.normalizeLines(dto.lines);
+    const lineInputs = normalizeSalesLines(dto.lines);
     await this.assertProducts(
       companyId,
       lineInputs.map((l) => l.productId),
     );
 
-    const amountTotal = sumLineTotals(lineInputs);
+    const amountTotal = sumNormalizedLineTotals(lineInputs);
     const number = await this.nextOrderNumber(companyId);
     const currency =
       (dto.currency ?? settings.defaultCurrency).trim() || settings.defaultCurrency;
@@ -343,7 +346,7 @@ export class SalesService {
     await this.assertWarehouse(companyId, warehouseId);
 
     const lineInputs = dto.lines
-      ? this.normalizeLines(dto.lines)
+      ? normalizeSalesLines(dto.lines)
       : existing.lines.map((l) => ({
           productId: l.productId,
           qty: l.qty,
@@ -359,7 +362,7 @@ export class SalesService {
       );
     }
 
-    const amountTotal = sumLineTotals(lineInputs);
+    const amountTotal = sumNormalizedLineTotals(lineInputs);
 
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.salOrder.updateMany({
@@ -749,44 +752,6 @@ export class SalesService {
     }
   }
 
-  private normalizeLines(lines: SalesOrderLineInputDto[]): Array<{
-    productId: string;
-    qty: Prisma.Decimal;
-    unitPrice: Prisma.Decimal;
-    discountPct: Prisma.Decimal;
-    lineTotal: Prisma.Decimal;
-  }> {
-    if (!lines.length) {
-      throw new SalesException(
-        SALES_ERROR_CODES.EMPTY_LINES,
-        'At least one line is required.',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    return lines.map((l) => {
-      const qty = new Prisma.Decimal(l.qty);
-      const unitPrice = new Prisma.Decimal(l.unitPrice);
-      const discountPct = new Prisma.Decimal(l.discountPct ?? 0);
-      if (qty.lte(0) || unitPrice.lt(0) || discountPct.lt(0) || discountPct.gt(100)) {
-        throw new SalesException(
-          SALES_ERROR_CODES.INVALID_LINE,
-          'Invalid line quantity, price, or discount.',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-      const lineTotal = qty
-        .mul(unitPrice)
-        .mul(new Prisma.Decimal(1).sub(discountPct.div(100)));
-      return {
-        productId: l.productId,
-        qty,
-        unitPrice,
-        discountPct,
-        lineTotal,
-      };
-    });
-  }
-
   private async nextOrderNumber(companyId: string): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `SO-${year}-`;
@@ -842,15 +807,6 @@ export class SalesService {
     const [dto] = await this.enrichMany(companyId, [row]);
     return dto;
   }
-}
-
-function sumLineTotals(
-  lines: Array<{ lineTotal: Prisma.Decimal }>,
-): Prisma.Decimal {
-  return lines.reduce(
-    (acc, l) => acc.add(l.lineTotal),
-    new Prisma.Decimal(0),
-  );
 }
 
 function serializeOrder(

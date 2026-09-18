@@ -26,11 +26,13 @@ import { ExpertiseHintsStrip } from "@/components/expertise-hints-strip";
 import {
   INVOICE_STATUS_LABELS,
   cancelInvoice,
+  downloadInvoicePdf,
   fetchInvoice,
   invoiceBadgeTone,
   issueInvoice,
   type FinInvoice,
 } from "@/lib/finance";
+import { useUiT } from "@/lib/i18n/route-labels";
 import {
   downloadTejXml,
   generateTejInvoicePack,
@@ -45,6 +47,7 @@ type Load =
   | { kind: "error"; message: string };
 
 export default function FinanceInvoiceFichePage() {
+  const { t } = useUiT();
   const params = useParams();
   const router = useRouter();
   const id = typeof params.id === "string" ? params.id : "";
@@ -127,12 +130,29 @@ export default function FinanceInvoiceFichePage() {
     setState({ kind: "ok", data: res.data });
   }
 
+  async function onPdf() {
+    if (!id) return;
+    setBusy(true);
+    setActionError(null);
+    const res = await downloadInvoicePdf(id);
+    setBusy(false);
+    if (!res.ok) {
+      setActionError(res.message);
+    }
+  }
+
   const inv = state.kind === "ok" ? state.data : null;
 
   const overflowItems = useMemo((): AOverflowItem[] => {
     if (!inv) return [];
     const items: AOverflowItem[] = [];
     if (inv.status === "ISSUED") {
+      items.push({
+        id: "pdf",
+        label: t("Télécharger PDF"),
+        disabled: busy,
+        onSelect: () => void onPdf(),
+      });
       items.push({
         id: "credit-note",
         label: "Avoir",
@@ -198,6 +218,15 @@ export default function FinanceInvoiceFichePage() {
               onClick={() => void onIssue()}
             >
               Émettre
+            </AButton>
+          ) : inv?.status === "ISSUED" ? (
+            <AButton
+              type="button"
+              size="sm"
+              disabled={busy}
+              onClick={() => void onPdf()}
+            >
+              {t("Télécharger PDF")}
             </AButton>
           ) : undefined
         }

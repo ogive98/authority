@@ -30,6 +30,9 @@ const STATUS_I18N = {
     SUBMITTED: "Soumise",
     ACKNOWLEDGED: "Prise en compte",
     REJECTED: "Refusée",
+    SENT: "Envoyé",
+    ACCEPTED: "Accepté",
+    EXPIRED: "Expiré",
     ALL: "Tous",
   },
   it: {
@@ -56,6 +59,9 @@ const STATUS_I18N = {
     SUBMITTED: "Inviata",
     ACKNOWLEDGED: "Presa in carico",
     REJECTED: "Rifiutata",
+    SENT: "Inviato",
+    ACCEPTED: "Accettato",
+    EXPIRED: "Scaduto",
     ALL: "Tutti",
   },
 } as const;

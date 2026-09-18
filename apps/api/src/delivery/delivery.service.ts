@@ -811,6 +811,7 @@ export class DeliveryService {
       amountRounded,
       updated.id,
       updated.number,
+      thisShipmentByLine,
     );
     await this.maybeCloseRound(companyId, updated.roundId);
 
@@ -920,6 +921,7 @@ export class DeliveryService {
     amountTotal: number,
     shipmentId: string,
     shipmentNumber: string,
+    thisShipmentByLine: Map<string, number>,
   ): Promise<void> {
     const financeOn = await this.modules.isEnabled(companyId, 'finance');
     if (!financeOn) {
@@ -928,6 +930,52 @@ export class DeliveryService {
     if (!Number.isFinite(amountTotal) || amountTotal <= 0) {
       return;
     }
+
+    const productIds = [
+      ...new Set(
+        order.lines
+          .filter((l) => (thisShipmentByLine.get(l.id) ?? 0) > 0)
+          .map((l) => l.productId),
+      ),
+    ];
+    const products =
+      productIds.length > 0
+        ? await this.prisma.prdProduct.findMany({
+            where: {
+              companyId,
+              id: { in: productIds },
+              deletedAt: null,
+            },
+            select: { id: true, name: true, sku: true },
+          })
+        : [];
+    const nameById = new Map(
+      products.map((p) => [p.id, `${p.sku} — ${p.name}`] as const),
+    );
+
+    const lines: Array<{
+      description: string;
+      qty: number;
+      unitPriceHt: number;
+      productId: string;
+    }> = [];
+    for (const line of order.lines) {
+      const qty = round3(thisShipmentByLine.get(line.id) ?? 0);
+      if (qty <= 0) continue;
+      const discountFactor = new Prisma.Decimal(1).sub(
+        line.discountPct.div(100),
+      );
+      const unitPriceHt = round3(
+        Number(line.unitPrice.mul(discountFactor).toString()),
+      );
+      lines.push({
+        description: nameById.get(line.productId) ?? `Produit ${line.productId.slice(0, 8)}`,
+        qty,
+        unitPriceHt,
+        productId: line.productId,
+      });
+    }
+
     try {
       const result = await this.finance.ensureArForSalesOrder(companyId, {
         customerId: order.customerId,
@@ -937,6 +985,7 @@ export class DeliveryService {
         currency: order.currency,
         shipmentId,
         shipmentNumber,
+        lines: lines.length > 0 ? lines : undefined,
       });
       if (result.outcome === 'created') {
         this.logger.log(

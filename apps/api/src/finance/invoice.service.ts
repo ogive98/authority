@@ -58,6 +58,7 @@ export type InvoiceDto = {
   label: string | null;
   notes: string | null;
   openItemId: string | null;
+  pdfDocumentId: string | null;
   lines: InvoiceLineDto[];
   /** True when FODEC/timbre came from VALIDATED expertise (not invented). */
   expertiseApplied: {
@@ -462,6 +463,7 @@ export class InvoiceService {
    * Ensures an ISSUED invoice + AR open item for a delivered sales order.
    * With `shipmentId`: idempotent per shipment (multi-BL / D176).
    * Without: idempotent per salesOrderId (legacy).
+   * With `lines`: product lines + tax engine (D315); else EXO lump (back-compat).
    */
   async ensureIssuedForSalesOrder(
     companyId: string,
@@ -473,6 +475,7 @@ export class InvoiceService {
       currency?: string | null;
       shipmentId?: string | null;
       shipmentNumber?: string | null;
+      lines?: CreateInvoiceLineDto[];
     },
   ): Promise<{ outcome: 'created' | 'existing'; invoice: InvoiceDto }> {
     if (input.shipmentId) {
@@ -504,14 +507,19 @@ export class InvoiceService {
           : input.orderNumber
             ? `Facture ${input.orderNumber}`
             : 'Facture livraison';
+      const hasLines = Boolean(input.lines && input.lines.length > 0);
       const invoice = await this.create(companyId, {
         customerId: input.customerId,
         salesOrderId: input.salesOrderId,
         shipmentId: input.shipmentId,
-        amountTotal: input.amountTotal,
+        ...(hasLines
+          ? { lines: input.lines }
+          : { amountTotal: input.amountTotal }),
         currency: input.currency ?? 'TND',
         label,
-        notes: 'Auto-issued on delivery complete (amount as recorded).',
+        notes: hasLines
+          ? 'Auto-issued on delivery complete (product lines from shipment).'
+          : 'Auto-issued on delivery complete (amount as recorded).',
         issue: true,
       });
       return { outcome: 'created', invoice };
@@ -560,16 +568,21 @@ export class InvoiceService {
       };
     }
 
+    const hasLines = Boolean(input.lines && input.lines.length > 0);
     const invoice = await this.create(companyId, {
       customerId: input.customerId,
       salesOrderId: input.salesOrderId,
       shipmentId: input.shipmentId ?? undefined,
-      amountTotal: input.amountTotal,
+      ...(hasLines
+        ? { lines: input.lines }
+        : { amountTotal: input.amountTotal }),
       currency: input.currency ?? 'TND',
       label: input.orderNumber
         ? `Facture ${input.orderNumber}`
         : 'Facture livraison',
-      notes: 'Auto-issued on delivery complete (amount as recorded).',
+      notes: hasLines
+        ? 'Auto-issued on delivery complete (product lines from shipment).'
+        : 'Auto-issued on delivery complete (amount as recorded).',
       issue: true,
     });
     return { outcome: 'created', invoice };
@@ -1075,6 +1088,7 @@ function serializeInvoice(
     label: row.label,
     notes: row.notes,
     openItemId: row.openItems[0]?.id ?? null,
+    pdfDocumentId: row.pdfDocumentId ?? null,
     lines: (row.lines ?? []).map((l) => ({
       id: l.id,
       lineNo: l.lineNo,

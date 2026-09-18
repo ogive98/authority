@@ -43,6 +43,8 @@ export const FEATURE_LABELS_IT: Record<string, string> = {
   alerts: "Avvisi",
   orders: "Ordini",
   "sales-form": "Presa ordine",
+  quotes: "Preventivi",
+  returns: "Resi",
   "wa-inbox": "Inbox WhatsApp",
   customers: "Clienti",
   suppliers: "Fornitori",

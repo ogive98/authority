@@ -76,6 +76,7 @@ type LineDraft = {
   productLabel: string;
   qty: string;
   unitPrice: string;
+  discountPct: string;
 };
 
 export default function SalesOrderFichePage() {
@@ -133,6 +134,7 @@ export default function SalesOrderFichePage() {
             : l.productName ?? l.productSku ?? l.productId,
         qty: l.qty,
         unitPrice: l.unitPrice,
+        discountPct: l.discountPct ?? "0",
       })),
     );
     setEditing(false);
@@ -198,13 +200,31 @@ export default function SalesOrderFichePage() {
 
   async function onSaveDraft() {
     if (state.kind !== "ok" || state.data.status !== "DRAFT") return;
-    const lineInputs = lines
-      .filter((l) => l.productId)
-      .map((l) => ({
-        productId: l.productId!,
-        qty: Number(l.qty),
-        unitPrice: Number(l.unitPrice),
-      }));
+    const lineInputs = [];
+    for (const l of lines) {
+      if (!l.productId) continue;
+      const qty = Number(l.qty);
+      const unitPrice = Number(l.unitPrice);
+      const discountPct = Number(l.discountPct || "0");
+      if (!Number.isFinite(qty) || qty <= 0) {
+        setError("Quantité invalide sur une ligne.");
+        return;
+      }
+      if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+        setError("Prix invalide sur une ligne.");
+        return;
+      }
+      if (!Number.isFinite(discountPct) || discountPct < 0 || discountPct > 100) {
+        setError("Remise % invalide (0–100).");
+        return;
+      }
+      lineInputs.push({
+        productId: l.productId,
+        qty,
+        unitPrice,
+        discountPct,
+      });
+    }
     if (lineInputs.length === 0) {
       setError("Au moins une ligne produit.");
       return;
@@ -273,9 +293,15 @@ export default function SalesOrderFichePage() {
     <>
       <AScreenHeader
         breadcrumb={
-          <Link href="/sales" className="hover:text-a-fg">
-            Commandes
-          </Link>
+          <span className="inline-flex flex-wrap items-center gap-1">
+            <Link href="/" className="hover:text-a-fg">
+              Ventes
+            </Link>
+            <span aria-hidden>/</span>
+            <Link href="/sales" className="hover:text-a-fg">
+              Commandes
+            </Link>
+          </span>
         }
         kicker="Ventes"
         title={order ? order.number : "Commande"}
@@ -423,6 +449,7 @@ export default function SalesOrderFichePage() {
                               productLabel: "",
                               qty: "1",
                               unitPrice: "0",
+                              discountPct: "0",
                             },
                           ])
                         }
@@ -519,7 +546,7 @@ export default function SalesOrderFichePage() {
                             placeholder="SKU ou nom…"
                             emptyText="Aucun produit"
                           />
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-3 gap-2">
                             <div className="space-y-1">
                               <label className="text-[length:var(--a-text-xs)] text-a-fg-muted">
                                 Qté
@@ -555,6 +582,23 @@ export default function SalesOrderFichePage() {
                                 }
                               />
                             </div>
+                            <div className="space-y-1">
+                              <label className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                                Remise %
+                              </label>
+                              <AInput
+                                value={line.discountPct}
+                                onChange={(e) =>
+                                  setLines((prev) =>
+                                    prev.map((l) =>
+                                      l.key === line.key
+                                        ? { ...l, discountPct: e.target.value }
+                                        : l,
+                                    ),
+                                  )
+                                }
+                              />
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -569,6 +613,7 @@ export default function SalesOrderFichePage() {
                           <ASoftTh numeric>Livré</ASoftTh>
                           <ASoftTh numeric>Reste</ASoftTh>
                           <ASoftTh numeric>PU</ASoftTh>
+                          <ASoftTh numeric>Remise %</ASoftTh>
                           <ASoftTh numeric>Total</ASoftTh>
                         </ASoftTr>
                       </ASoftThead>
@@ -590,6 +635,7 @@ export default function SalesOrderFichePage() {
                               {l.remainingQty ?? l.qty}
                             </ASoftTd>
                             <ASoftTd numeric>{l.unitPrice}</ASoftTd>
+                            <ASoftTd numeric>{l.discountPct}</ASoftTd>
                             <ASoftTd numeric>{l.lineTotal}</ASoftTd>
                           </ASoftTr>
                         ))}

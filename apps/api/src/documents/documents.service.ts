@@ -766,6 +766,36 @@ export class DocumentsService {
       return null;
     }
 
+    if (linkType === DocLinkType.FIN_INVOICE) {
+      const invoice = await this.prisma.finInvoice.findFirst({
+        where: { id: linkId, companyId, deletedAt: null },
+        select: { customerId: true },
+      });
+      if (!invoice) {
+        throw new DocumentsException(
+          DOCUMENTS_ERROR_CODES.LINK_NOT_FOUND,
+          'Invoice not found for link.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      return invoice.customerId;
+    }
+
+    if (linkType === DocLinkType.SAL_QUOTE) {
+      const quote = await this.prisma.salQuote.findFirst({
+        where: { id: linkId, companyId, deletedAt: null },
+        select: { customerId: true },
+      });
+      if (!quote) {
+        throw new DocumentsException(
+          DOCUMENTS_ERROR_CODES.LINK_NOT_FOUND,
+          'Quote not found for link.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      return quote.customerId;
+    }
+
     throw new DocumentsException(
       DOCUMENTS_ERROR_CODES.INVALID_LINK,
       'Invalid document link type.',

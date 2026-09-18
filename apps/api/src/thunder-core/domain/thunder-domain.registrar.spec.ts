@@ -126,6 +126,7 @@ describe('ThunderDomainRegistrar', () => {
     };
     const modules = { isEnabled: jest.fn().mockResolvedValue(true) };
     const prisma = {
+      finInvoice: { findFirst: jest.fn().mockResolvedValue(null) },
       salOrder: {
         findFirst: jest.fn().mockResolvedValue({
           id: orderId,
@@ -134,6 +135,22 @@ describe('ThunderDomainRegistrar', () => {
           amountTotal: { toString: () => '50' },
           currency: 'TND',
         }),
+      },
+      salOrderLine: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'line-1',
+            productId,
+            unitPrice: { toString: () => '10' },
+            discountPct: { toString: () => '0' },
+            qty: { toString: () => '5' },
+          },
+        ]),
+      },
+      prdProduct: {
+        findMany: jest.fn().mockResolvedValue([
+          { id: productId, name: 'Fromage', sku: 'FR-1' },
+        ]),
       },
     };
     const registrar = new ThunderDomainRegistrar(
@@ -155,7 +172,13 @@ describe('ThunderDomainRegistrar', () => {
       correlationId: 'c2',
       aggregateType: 'dlv_shipment',
       aggregateId: 'ship-1',
-      payload: { orderId, customerId },
+      payload: {
+        orderId,
+        customerId,
+        shipmentId: 'ship-1',
+        number: 'SH-1',
+        lines: [{ orderLineId: 'line-1', productId, qty: 5 }],
+      },
     });
 
     expect(finance.ensureArForSalesOrder).toHaveBeenCalledWith(
@@ -163,9 +186,52 @@ describe('ThunderDomainRegistrar', () => {
       expect.objectContaining({
         salesOrderId: orderId,
         customerId,
-        amountTotal: 50,
+        shipmentId: 'ship-1',
+        lines: expect.arrayContaining([
+          expect.objectContaining({
+            productId,
+            qty: 5,
+            unitPriceHt: 10,
+          }),
+        ]),
       }),
     );
+  });
+
+  it('skips AR when shipment invoice already exists', async () => {
+    const finance = { ensureArForSalesOrder: jest.fn() };
+    const modules = { isEnabled: jest.fn().mockResolvedValue(true) };
+    const prisma = {
+      finInvoice: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'inv-1',
+          number: 'INV-1',
+        }),
+      },
+    };
+    const registrar = new ThunderDomainRegistrar(
+      { register: jest.fn() } as never,
+      modules as never,
+      prisma as never,
+      { reserve: jest.fn() } as never,
+      finance as never,
+      gl as never,
+    );
+
+    await registrar.onShipmentDeliveredAr({
+      eventId: 'e2b',
+      eventType: 'delivery.shipment.delivered.v1',
+      eventVersion: 1,
+      occurredAt: new Date().toISOString(),
+      source: 'delivery',
+      companyId,
+      correlationId: 'c2b',
+      aggregateType: 'dlv_shipment',
+      aggregateId: 'ship-1',
+      payload: { orderId, customerId, shipmentId: 'ship-1' },
+    });
+
+    expect(finance.ensureArForSalesOrder).not.toHaveBeenCalled();
   });
 
   it('skips finance consumer when module disabled', async () => {

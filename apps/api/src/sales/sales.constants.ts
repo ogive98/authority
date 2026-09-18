@@ -19,6 +19,12 @@ export const SALES_EVENT_TYPES = {
   CREATED: 'sales.order.created.v1',
   CONFIRMED: 'sales.order.confirmed.v1',
   CANCELLED: 'sales.order.cancelled.v1',
+  QUOTE_CREATED: 'sales.quote.created.v1',
+  QUOTE_SENT: 'sales.quote.sent.v1',
+  QUOTE_CONVERTED: 'sales.quote.converted.v1',
+  QUOTE_CANCELLED: 'sales.quote.cancelled.v1',
+  QUOTE_PDF_GENERATED: 'sales.quote.pdf_generated.v1',
+  QUOTE_PUBLISHED_PORTAL: 'sales.quote.published_portal.v1',
 } as const;
 
 export const SALES_RESERVE_REF_TYPE = 'sales.order';

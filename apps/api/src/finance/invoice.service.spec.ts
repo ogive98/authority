@@ -36,6 +36,9 @@ describe('InvoiceService expertise surcharges (D093)', () => {
       prdProduct: {
         findFirst: jest.fn().mockResolvedValue(null),
       },
+      taxWithholding: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
         fn(prisma),
       ),
@@ -371,6 +374,9 @@ describe('InvoiceService.cancel (D183)', () => {
       },
       cusCustomer: {
         findMany: jest.fn().mockResolvedValue([]),
+      },
+      taxWithholding: {
+        findFirst: jest.fn().mockResolvedValue(null),
       },
       $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
         fn(prisma),

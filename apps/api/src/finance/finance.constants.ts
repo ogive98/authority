@@ -68,6 +68,7 @@ export const FINANCE_EVENT_TYPES = {
   DUNNING_SENT: 'finance.dunning.sent.v1',
   DUNNING_SEND_FAILED: 'finance.dunning.send_failed.v1',
   DUNNING_WA_STATUS: 'finance.dunning.wa_status.v1',
+  INVOICE_PDF_GENERATED: 'finance.invoice.pdf_generated.v1',
 } as const;
 
 /** Company settings — credit exposure check on sales confirm (default off). */

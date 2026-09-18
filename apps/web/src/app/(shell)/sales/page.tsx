@@ -95,6 +95,7 @@ type LineDraft = {
   productLabel: string;
   qty: string;
   unitPrice: string;
+  discountPct: string;
 };
 
 type FormState = {
@@ -126,7 +127,16 @@ function newLine(): LineDraft {
     productLabel: "",
     qty: "1",
     unitPrice: "0",
+    discountPct: "0",
   };
+}
+
+function lineNetTotal(qty: string, unitPrice: string, discountPct: string): number {
+  const q = Number(qty.replace(",", "."));
+  const p = Number(unitPrice.replace(",", "."));
+  const d = Number(discountPct.replace(",", "."));
+  if (!Number.isFinite(q) || !Number.isFinite(p) || !Number.isFinite(d)) return 0;
+  return Math.round(q * p * (1 - Math.min(100, Math.max(0, d)) / 100) * 1000) / 1000;
 }
 
 function SalesPageInner() {
@@ -316,6 +326,7 @@ function SalesPageInner() {
       }
       const qty = Number(line.qty.replace(",", "."));
       const unitPrice = Number(line.unitPrice.replace(",", "."));
+      const discountPct = Number(line.discountPct.replace(",", ".") || "0");
       if (!Number.isFinite(qty) || qty <= 0) {
         setFormError("Quantité invalide sur une ligne.");
         return;
@@ -324,7 +335,16 @@ function SalesPageInner() {
         setFormError("Prix invalide sur une ligne.");
         return;
       }
-      lines.push({ productId: line.productId, qty, unitPrice });
+      if (!Number.isFinite(discountPct) || discountPct < 0 || discountPct > 100) {
+        setFormError("Remise % invalide (0–100) sur une ligne.");
+        return;
+      }
+      lines.push({
+        productId: line.productId,
+        qty,
+        unitPrice,
+        discountPct: discountPct || undefined,
+      });
     }
     if (lines.length === 0) {
       setFormError("Ajoutez au moins une ligne article.");
@@ -384,6 +404,11 @@ function SalesPageInner() {
   return (
     <>
       <AScreenHeader
+        breadcrumb={
+          <Link href="/" className="hover:text-a-fg">
+            Ventes
+          </Link>
+        }
         title="Commandes"
         description={erpListDescription(
           recordCount,
@@ -857,7 +882,7 @@ function SalesPageInner() {
                     placeholder="SKU ou nom…"
                     emptyText="Aucun produit — activez un article dans Catalogue"
                   />
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1">
                       <label className="a-field-label">Qté</label>
                       <AInput
@@ -891,7 +916,27 @@ function SalesPageInner() {
                         }
                       />
                     </div>
+                    <div className="space-y-1">
+                      <label className="a-field-label">Remise %</label>
+                      <AInput
+                        value={line.discountPct}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            lines: form.lines.map((l) =>
+                              l.key === line.key
+                                ? { ...l, discountPct: e.target.value }
+                                : l,
+                            ),
+                          })
+                        }
+                      />
+                    </div>
                   </div>
+                  <p className="a-mono text-[length:var(--a-text-xs)] text-a-fg-muted">
+                    Net ligne :{" "}
+                    {lineNetTotal(line.qty, line.unitPrice, line.discountPct).toFixed(3)}
+                  </p>
                 </div>
               ))}
             </AFormSection>

@@ -142,6 +142,15 @@ export const COMMAND_CATALOG: CommandItem[] = [
     permissionKey: "sales.read",
   },
   {
+    id: "nav-sales-quotes",
+    label: "Devis",
+    group: "navigation",
+    href: "/sales/quotes",
+    keywords: ["devis", "quote", "preventivo", "proposition", "vente"],
+    requiresModule: "sales",
+    permissionKey: "sales.read",
+  },
+  {
     id: "nav-delivery",
     label: "Livraisons",
     group: "navigation",
@@ -149,6 +158,15 @@ export const COMMAND_CATALOG: CommandItem[] = [
     keywords: ["livraison", "delivery", "shipment", "livreur"],
     requiresModule: "delivery",
     permissionKey: "delivery.read",
+  },
+  {
+    id: "nav-returns",
+    label: "Retours",
+    group: "navigation",
+    href: "/sales/returns",
+    keywords: ["retour", "rma", "return", "avoir", "restock"],
+    requiresModule: "sales",
+    permissionKey: "sales.read",
   },
   {
     id: "nav-finance",
