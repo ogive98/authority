@@ -23,6 +23,7 @@ import { portalsManifest } from './portals.manifest';
 import { productionManifest } from './production.manifest';
 import { productsManifest } from './products.manifest';
 import { repairManifest } from './repair.manifest';
+import { backupManifest } from './backup.manifest';
 import { salesManifest } from './sales.manifest';
 import { settingsManifest } from './settings.manifest';
 import { taxManifest } from './tax.manifest';
@@ -48,6 +49,7 @@ export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   attendanceManifest,
   taxManifest,
   repairManifest,
+  backupManifest,
   customersManifest,
   suppliersManifest,
   masterDataManifest,

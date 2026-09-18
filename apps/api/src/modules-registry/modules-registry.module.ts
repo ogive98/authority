@@ -9,7 +9,9 @@ import { CapabilityResolverService } from './catalog/capability-resolver.service
 import { ModuleCatalogService } from './catalog/module-catalog.service';
 import { ModuleHookRegistry } from './catalog/module-hook.registry';
 import { ModuleLifecycleService } from './catalog/module-lifecycle.service';
+import { AuthorityIndexService } from './catalog/authority-index.service';
 import { CapabilitiesController } from './capabilities.controller';
+import { CoreRegistryController } from './core-registry.controller';
 import { FeatureFlagService } from './feature-flag.service';
 import { FlagGuard } from './flag.guard';
 import { MeFieldAclService } from './me-field-acl.service';
@@ -32,12 +34,14 @@ import { SalesSurfaceController } from './sales-surface.controller';
   controllers: [
     ModulesController,
     CapabilitiesController,
+    CoreRegistryController,
     SalesSurfaceController,
     MeRegistryController,
   ],
   providers: [
     ModuleRegistryService,
     ModuleCatalogService,
+    AuthorityIndexService,
     ModuleLifecycleService,
     ModuleHookRegistry,
     ModuleActivationService,
@@ -52,6 +56,7 @@ import { SalesSurfaceController } from './sales-surface.controller';
   exports: [
     ModuleRegistryService,
     ModuleCatalogService,
+    AuthorityIndexService,
     ModuleLifecycleService,
     ModuleHookRegistry,
     ModuleActivationService,

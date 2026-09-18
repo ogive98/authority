@@ -155,6 +155,13 @@ assert.equal(
 );
 assert.equal(
   resolveRegistryRouteBlock(
+    { pathname: "/backup", search: "", hash: "" },
+    registry,
+  ),
+  null,
+);
+assert.equal(
+  resolveRegistryRouteBlock(
     { pathname: "/sales", search: "", hash: "" },
     { ...registry, companyId: null },
   ),

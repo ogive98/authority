@@ -12,7 +12,8 @@ export type PrefsCompartmentId =
   | "finance"
   | "comptabilite"
   | "ventes"
-  | "roles";
+  | "roles"
+  | "backup";
 
 export type PrefsCompartmentDef = {
   id: PrefsCompartmentId;
@@ -67,6 +68,12 @@ export const PREFS_COMPARTMENTS: readonly PrefsCompartmentDef[] = [
     id: "ventes",
     label: "Ventes & stock",
     subtitle: "Préférences modules ventes / inventaire",
+    adminOnly: true,
+  },
+  {
+    id: "backup",
+    label: "Sauvegarde",
+    subtitle: "Rétention, auto-backup Tunis, safety restore",
     adminOnly: true,
   },
   {

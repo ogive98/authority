@@ -43,7 +43,8 @@ export class RecoveryEngine {
         id: 'soc-db-file-backup',
         title: 'Backup DB + fichiers installable',
         status: 'DEFERRED',
-        reason: 'Backup SOC réel pas encore branché.',
+        reason:
+          'D304 = manifest LOCAL_FS only (restorable:false). Installable SOC backup = D305+.',
       },
       {
         id: 'github-live-reinstall',
@@ -97,7 +98,7 @@ export class RecoveryEngine {
       label: snap.label,
       companyId: snap.companyId,
       modules: moduleStates,
-      note: snap.note,
+      note: `${snap.note} Prefer POST /api/v1/backup/backups (D304).`,
       rejectedPaths: this.policies()
         .filter((p) => p.status === 'REJECTED')
         .map((p) => p.id),

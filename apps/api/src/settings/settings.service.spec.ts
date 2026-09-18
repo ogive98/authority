@@ -143,6 +143,126 @@ describe('SettingsService hierarchy', () => {
     expect(locale).toMatchObject({ value: 'fr-TN', source: SetLevel.SYSTEM });
   });
 
+  it('resolves SITE between COMPANY and ROLE (D302)', async () => {
+    prisma.setDef.findMany.mockResolvedValue([
+      {
+        key: 'ui.theme',
+        valueType: 'enum',
+        defaultJson: 'system',
+        description: 'theme',
+        isPrefOnly: true,
+      },
+    ]);
+    prisma.setValue.findMany.mockResolvedValue([
+      {
+        defKey: 'ui.theme',
+        scopeKey: 'company:company-demo',
+        valueJson: 'dark',
+        level: SetLevel.COMPANY,
+      },
+      {
+        defKey: 'ui.theme',
+        scopeKey: 'site:company-demo:site-1',
+        valueJson: 'light',
+        level: SetLevel.SITE,
+      },
+    ]);
+
+    const withSite = await service.getEffective({
+      userId: 'user-demo',
+      companyId: 'company-demo',
+      siteId: 'site-1',
+    });
+    expect(withSite.settings[0]).toMatchObject({
+      value: 'light',
+      source: SetLevel.SITE,
+    });
+
+    const withoutSite = await service.getEffective({
+      userId: 'user-demo',
+      companyId: 'company-demo',
+    });
+    expect(withoutSite.settings[0]).toMatchObject({
+      value: 'dark',
+      source: SetLevel.COMPANY,
+    });
+  });
+
+  it('rejects SITE write without tenancy siteId', async () => {
+    await expect(
+      service.upsertValue({
+        context: {
+          userId: 'user-demo',
+          companyId: 'company-demo',
+        },
+        key: 'ui.theme',
+        value: 'dark',
+        level: 'SITE',
+        actorUserId: 'user-demo',
+      }),
+    ).rejects.toMatchObject({ code: 'SET.SITE_REQUIRED' });
+  });
+
+  it('resolves DOCUMENT between SITE and ROLE (D303)', async () => {
+    prisma.setDef.findMany.mockResolvedValue([
+      {
+        key: 'ui.theme',
+        valueType: 'enum',
+        defaultJson: 'system',
+        description: 'theme',
+        isPrefOnly: true,
+      },
+    ]);
+    prisma.setValue.findMany.mockResolvedValue([
+      {
+        defKey: 'ui.theme',
+        scopeKey: 'company:company-demo',
+        valueJson: 'dark',
+        level: SetLevel.COMPANY,
+      },
+      {
+        defKey: 'ui.theme',
+        scopeKey: 'document:company-demo:sales.invoice',
+        valueJson: 'light',
+        level: SetLevel.DOCUMENT,
+      },
+    ]);
+
+    const withDoc = await service.getEffective({
+      userId: 'user-demo',
+      companyId: 'company-demo',
+      documentType: 'sales.invoice',
+    });
+    expect(withDoc.settings[0]).toMatchObject({
+      value: 'light',
+      source: SetLevel.DOCUMENT,
+    });
+
+    const withoutDoc = await service.getEffective({
+      userId: 'user-demo',
+      companyId: 'company-demo',
+    });
+    expect(withoutDoc.settings[0]).toMatchObject({
+      value: 'dark',
+      source: SetLevel.COMPANY,
+    });
+  });
+
+  it('rejects DOCUMENT write without documentType', async () => {
+    await expect(
+      service.upsertValue({
+        context: {
+          userId: 'user-demo',
+          companyId: 'company-demo',
+        },
+        key: 'ui.theme',
+        value: 'dark',
+        level: 'DOCUMENT',
+        actorUserId: 'user-demo',
+      }),
+    ).rejects.toMatchObject({ code: 'SET.DOCUMENT_TYPE_REQUIRED' });
+  });
+
   it('rejects permission keys as settings values', async () => {
     await expect(
       service.upsertValue({

@@ -7,6 +7,9 @@ export const THUNDER_JOB_TYPES = {
   criticalPing: 'thunder.critical.ping.v1',
   importBulk: 'thunder.import.bulk.v1',
   moduleGated: 'thunder.module-gated.v1',
+  backupRetentionRun: 'backup.retention.run.v1',
+  backupAutoCreate: 'backup.auto.create.v1',
+  backupSpecificFoldersCreate: 'backup.specificFolders.create.v1',
 } as const;
 
 export const THUNDER_DEPENDENCY_KEYS = {

@@ -26,6 +26,7 @@ import { DocumentsModule } from './documents/documents.module';
 import { AccountingModule } from './accounting/accounting.module';
 import { CustomerPortalModule } from './customer-portal/customer-portal.module';
 import { EmployeePortalModule } from './employee-portal/employee-portal.module';
+import { BackupModule } from './backup/backup.module';
 import { RepairModule } from './repair/repair.module';
 import { ProductionModule } from './production/production.module';
 import { TaxModule } from './tax/tax.module';
@@ -68,6 +69,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     CustomerPortalModule,
     EmployeePortalModule,
     RepairModule,
+    BackupModule,
     ProductionModule,
     AutomationModule,
     NotificationsModule,

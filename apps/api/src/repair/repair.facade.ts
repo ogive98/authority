@@ -1,4 +1,5 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Optional } from '@nestjs/common';
+import { BackupService } from '../backup/backup.service';
 import { AuthService } from '../identity/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { HealthCheckersService } from './checkers/health-checkers.service';
@@ -32,6 +33,7 @@ export class RepairFacade {
     private readonly maintenanceEngine: MaintenanceEngine,
     private readonly recoveryEngine: RecoveryEngine,
     private readonly executors: RepairExecutorsService,
+    @Optional() private readonly backupService?: BackupService,
   ) {}
 
   async dashboard(companyId?: string) {
@@ -257,7 +259,29 @@ export class RepairFacade {
     return this.resetEngine.execute(input);
   }
 
-  createSnapshot(input?: { companyId?: string; label?: string }) {
+  async createSnapshot(input?: {
+    companyId?: string;
+    label?: string;
+    actorUserId?: string;
+  }) {
+    if (input?.companyId && this.backupService) {
+      const created = await this.backupService.createBackup({
+        companyId: input.companyId,
+        actorUserId: input.actorUserId,
+        label: input.label ?? 'repair-pre-action',
+        scope: 'CONFIGURATION',
+      });
+      return {
+        ref: created.id,
+        kind: 'metadata-only' as const,
+        companyId: created.companyId,
+        label: created.label ?? undefined,
+        createdAt: created.createdAt,
+        restorable: false as const,
+        note: 'Delegated to Backup module (D304) — manifest-only, not installable.',
+        backupId: created.id,
+      };
+    }
     return this.snapshotEngine.create(input);
   }
 

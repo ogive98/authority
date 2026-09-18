@@ -6,6 +6,15 @@ export const SETTINGS_ERROR_CODES = {
   EXPERTISE_READONLY: 'SET.EXPERTISE_READONLY',
   EXPERTISE_REQUIRED: 'SET.EXPERTISE_REQUIRED',
   EXPERTISE_STUB_MARKER: 'SET.EXPERTISE_STUB_MARKER',
+  PLAN_NOT_FOUND: 'SET.PLAN_NOT_FOUND',
+  PLAN_INVALID: 'SET.PLAN_INVALID',
+  PLAN_STATE: 'SET.PLAN_STATE',
+  PLAN_APPROVAL_REQUIRED: 'SET.PLAN_APPROVAL_REQUIRED',
+  PLAN_SAME_APPROVER: 'SET.PLAN_SAME_APPROVER',
+  PLAN_DUAL_CONTROL_REQUIRED: 'SET.PLAN_DUAL_CONTROL_REQUIRED',
+  PLAN_ROLLBACK_UNAVAILABLE: 'SET.PLAN_ROLLBACK_UNAVAILABLE',
+  SITE_REQUIRED: 'SET.SITE_REQUIRED',
+  DOCUMENT_TYPE_REQUIRED: 'SET.DOCUMENT_TYPE_REQUIRED',
 } as const;
 
 export type SettingsErrorCode =
@@ -27,8 +36,10 @@ export function isStubUntilExpert(
 export const SETTING_LEVEL_PRIORITY: Record<SetLevel, number> = {
   SYSTEM: 0,
   COMPANY: 1,
-  ROLE: 2,
-  USER: 3,
+  SITE: 2,
+  DOCUMENT: 3,
+  ROLE: 4,
+  USER: 5,
 };
 
 export const SETTINGS_AUDIT_ACTIONS = {
@@ -98,6 +109,38 @@ export const COMPANY_ONLY_SETTING_KEYS = [
   'hr.attestation.letterhead',
   'hr.attestation.body_html',
   'hr.attestation.footer',
+  'backup.enabled',
+  'backup.defaultType',
+  'backup.preActionSnapshot.enabled',
+  'backup.destination.primary',
+  'backup.restore.requireElevatedPermission',
+  'backup.retention.enabled',
+  'backup.retention.keepDays',
+  'backup.retention.lockedNeverDelete',
+  'backup.schedule.enabled',
+  'backup.schedule.hourTunis',
+  'backup.restore.safetyBackup.required',
+  'backup.autoBackup.enabled',
+  'backup.autoBackup.hourTunis',
+  'backup.autoBackup.scope',
+  'backup.specificFolders.enabled',
+  'backup.specificFolders.defaultSelection',
+  'backup.specificFolders.allowUserSelection',
+  'backup.specificFolders.followSymlinks',
+  'backup.specificFolders.includePatterns',
+  'backup.specificFolders.excludePatterns',
+  'backup.specificFolders.maxSize',
+  'backup.specificFolders.verifyAfterBackup',
+  'backup.specificFolders.auto.enabled',
+  'backup.specificFolders.auto.hourTunis',
+  'backup.destination.allowDownload',
+  'backup.destination.allowLocalDisk',
+  'backup.destination.localSubpath',
+  'backup.destination.allowExternalDisk',
+  'backup.destination.allowNAS',
+  'backup.destination.allowNetworkShare',
+  'backup.destination.allowObjectStorage',
+  'backup.destination.allowRemoteServer',
 ] as const;
 
 export function isCompanyOnlySettingKey(key: string): boolean {
@@ -162,6 +205,10 @@ export function buildScopeKey(
       return SETTINGS_SCOPE.system;
     case SetLevel.COMPANY:
       return `company:${params.companyId}`;
+    case SetLevel.SITE:
+      return `site:${params.companyId}:${params.subjectId}`;
+    case SetLevel.DOCUMENT:
+      return `document:${params.companyId}:${params.subjectId}`;
     case SetLevel.ROLE:
       return `role:${params.companyId}:${params.subjectId}`;
     case SetLevel.USER:
@@ -383,3 +430,211 @@ export function isExpertiseWritableKey(
 ): key is ExpertiseWritableKey {
   return (EXPERTISE_WRITABLE_KEYS as readonly string[]).includes(key);
 }
+
+/** D304–D308 Backup module prefs — company-scoped. */
+export const BACKUP_SETTING_KEYS = [
+  'backup.enabled',
+  'backup.defaultType',
+  'backup.preActionSnapshot.enabled',
+  'backup.destination.primary',
+  'backup.restore.requireElevatedPermission',
+  'backup.retention.enabled',
+  'backup.retention.keepDays',
+  'backup.retention.lockedNeverDelete',
+  'backup.schedule.enabled',
+  'backup.schedule.hourTunis',
+  'backup.restore.safetyBackup.required',
+  'backup.autoBackup.enabled',
+  'backup.autoBackup.hourTunis',
+  'backup.autoBackup.scope',
+  'backup.specificFolders.enabled',
+  'backup.specificFolders.defaultSelection',
+  'backup.specificFolders.allowUserSelection',
+  'backup.specificFolders.followSymlinks',
+  'backup.specificFolders.includePatterns',
+  'backup.specificFolders.excludePatterns',
+  'backup.specificFolders.maxSize',
+  'backup.specificFolders.verifyAfterBackup',
+  'backup.specificFolders.auto.enabled',
+  'backup.specificFolders.auto.hourTunis',
+  'backup.destination.allowDownload',
+  'backup.destination.allowLocalDisk',
+  'backup.destination.localSubpath',
+  'backup.destination.allowExternalDisk',
+  'backup.destination.allowNAS',
+  'backup.destination.allowNetworkShare',
+  'backup.destination.allowObjectStorage',
+  'backup.destination.allowRemoteServer',
+] as const;
+
+export type BackupSettingKey = (typeof BACKUP_SETTING_KEYS)[number];
+
+export const BACKUP_SETTING_DEFAULTS: Record<BackupSettingKey, unknown> = {
+  'backup.enabled': true,
+  'backup.defaultType': 'FULL',
+  'backup.preActionSnapshot.enabled': true,
+  'backup.destination.primary': '',
+  'backup.restore.requireElevatedPermission': true,
+  'backup.retention.enabled': false,
+  'backup.retention.keepDays': 30,
+  'backup.retention.lockedNeverDelete': true,
+  'backup.schedule.enabled': false,
+  'backup.schedule.hourTunis': 3,
+  'backup.restore.safetyBackup.required': true,
+  'backup.autoBackup.enabled': false,
+  'backup.autoBackup.hourTunis': 2,
+  'backup.autoBackup.scope': 'DATABASE',
+  'backup.specificFolders.enabled': false,
+  'backup.specificFolders.defaultSelection': [],
+  'backup.specificFolders.allowUserSelection': true,
+  'backup.specificFolders.followSymlinks': false,
+  'backup.specificFolders.includePatterns': [],
+  'backup.specificFolders.excludePatterns': ['*.tmp', '*.cache', 'node_modules', 'temp', 'logs'],
+  'backup.specificFolders.maxSize': 10_737_418_240,
+  'backup.specificFolders.verifyAfterBackup': true,
+  'backup.specificFolders.auto.enabled': false,
+  'backup.specificFolders.auto.hourTunis': 23,
+  'backup.destination.allowDownload': true,
+  'backup.destination.allowLocalDisk': true,
+  'backup.destination.localSubpath': '',
+  'backup.destination.allowExternalDisk': false,
+  'backup.destination.allowNAS': false,
+  'backup.destination.allowNetworkShare': false,
+  'backup.destination.allowObjectStorage': false,
+  'backup.destination.allowRemoteServer': false,
+};
+
+export const BACKUP_SETTING_META: Record<
+  BackupSettingKey,
+  { valueType: string; description: string }
+> = {
+  'backup.enabled': {
+    valueType: 'boolean',
+    description: 'Enable Backup module operations (D304)',
+  },
+  'backup.defaultType': {
+    valueType: 'string',
+    description: 'Default backup type (FULL)',
+  },
+  'backup.preActionSnapshot.enabled': {
+    valueType: 'boolean',
+    description: 'Repair may request pre-action Backup create',
+  },
+  'backup.destination.primary': {
+    valueType: 'string',
+    description: 'Primary destination id reference (not a secret path)',
+  },
+  'backup.restore.requireElevatedPermission': {
+    valueType: 'boolean',
+    description: 'Restore requires elevated permission (D305+)',
+  },
+  'backup.retention.enabled': {
+    valueType: 'boolean',
+    description: 'Enable automatic retention purge (D306)',
+  },
+  'backup.retention.keepDays': {
+    valueType: 'number',
+    description: 'Keep unlocked backups for N days before soft-delete',
+  },
+  'backup.retention.lockedNeverDelete': {
+    valueType: 'boolean',
+    description: 'Locked backups are never auto-purged by retention',
+  },
+  'backup.schedule.enabled': {
+    valueType: 'boolean',
+    description: 'Enable Tunis-hour retention scheduler tick (D306)',
+  },
+  'backup.schedule.hourTunis': {
+    valueType: 'number',
+    description: 'Hour (0–23) Africa/Tunis to enqueue retention job',
+  },
+  'backup.restore.safetyBackup.required': {
+    valueType: 'boolean',
+    description: 'Create safety DATABASE backup before live restore apply (D307)',
+  },
+  'backup.autoBackup.enabled': {
+    valueType: 'boolean',
+    description: 'Enable Tunis-hour automatic backup create (D308)',
+  },
+  'backup.autoBackup.hourTunis': {
+    valueType: 'number',
+    description: 'Hour (0–23) Africa/Tunis to create scheduled backup',
+  },
+  'backup.autoBackup.scope': {
+    valueType: 'enum',
+    description: 'Scheduled backup scope: CONFIGURATION | DATABASE',
+  },
+  'backup.specificFolders.enabled': {
+    valueType: 'boolean',
+    description: 'Enable specific folder backup feature (D313)',
+  },
+  'backup.specificFolders.defaultSelection': {
+    valueType: 'json',
+    description: 'Default relative folder paths under company sandbox',
+  },
+  'backup.specificFolders.allowUserSelection': {
+    valueType: 'boolean',
+    description: 'Allow operators to pick folders beyond defaults',
+  },
+  'backup.specificFolders.followSymlinks': {
+    valueType: 'boolean',
+    description: 'Follow symlinks inside sandbox (default false — security)',
+  },
+  'backup.specificFolders.includePatterns': {
+    valueType: 'json',
+    description: 'Glob include patterns (empty = all)',
+  },
+  'backup.specificFolders.excludePatterns': {
+    valueType: 'json',
+    description: 'Glob exclude patterns',
+  },
+  'backup.specificFolders.maxSize': {
+    valueType: 'number',
+    description: 'Max uncompressed selection size in bytes',
+  },
+  'backup.specificFolders.verifyAfterBackup': {
+    valueType: 'boolean',
+    description: 'Verify ZIP checksum after create',
+  },
+  'backup.specificFolders.auto.enabled': {
+    valueType: 'boolean',
+    description: 'Enable Tunis-hour auto specific-folder backup',
+  },
+  'backup.specificFolders.auto.hourTunis': {
+    valueType: 'number',
+    description: 'Hour (0–23) Africa/Tunis for specific-folder auto backup',
+  },
+  'backup.destination.allowDownload': {
+    valueType: 'boolean',
+    description: 'Allow DOWNLOAD_EXPORT destination (D313)',
+  },
+  'backup.destination.allowLocalDisk': {
+    valueType: 'boolean',
+    description: 'Allow LOCAL_DISK destination (D313)',
+  },
+  'backup.destination.localSubpath': {
+    valueType: 'string',
+    description:
+      'Relative subpath under data/backups/{companyId}/ for LOCAL_DISK artifacts (D314)',
+  },
+  'backup.destination.allowExternalDisk': {
+    valueType: 'boolean',
+    description: 'Allow EXTERNAL_DISK — unsupported until later lot',
+  },
+  'backup.destination.allowNAS': {
+    valueType: 'boolean',
+    description: 'Allow NAS — unsupported until later lot',
+  },
+  'backup.destination.allowNetworkShare': {
+    valueType: 'boolean',
+    description: 'Allow NETWORK_SHARE — unsupported until later lot',
+  },
+  'backup.destination.allowObjectStorage': {
+    valueType: 'boolean',
+    description: 'Allow OBJECT_STORAGE — unsupported until later lot',
+  },
+  'backup.destination.allowRemoteServer': {
+    valueType: 'boolean',
+    description: 'Allow REMOTE_SERVER — unsupported until later lot',
+  },
+};

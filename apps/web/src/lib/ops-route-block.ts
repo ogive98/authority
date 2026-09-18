@@ -155,6 +155,7 @@ const REGISTRY_GATE_ALLOWLIST = [
   "/search",
   "/thunder",
   "/repair",
+  "/backup",
 ] as const;
 
 function isRegistryGateAllowlisted(pathname: string): boolean {

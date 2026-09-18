@@ -1,22 +1,66 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { tipsForPage } from "@/lib/tips-catalog";
 import { useShellStore } from "@/stores/shell-store";
 import { useMeRegistry } from "@/hooks/use-me-registry";
 import { useShellT } from "@/stores/locale-store";
 import { cn } from "@/lib/utils";
-import {
-  ActivityWidget,
-  AiPanelWidget,
-  HeroContextWidget,
-  HomeKpiStrip,
-  ModuleShortcutsWidget,
-  ShellStatusWidget,
-  TasksWidget,
-  TreasuryWidget,
-} from "./home-widgets";
+import { ALazySlot } from "@/components/a/a-lazy-slot";
+import { ASkeleton } from "@/components/a/a-skeleton";
+import { HeroContextWidget, HomeKpiStrip } from "./home-widgets";
 import { ModuleFeatureList } from "./module-feature-list";
+
+const DeferredShellStatus = dynamic(
+  () =>
+    import("./home-widgets-deferred").then((m) => ({
+      default: m.ShellStatusWidget,
+    })),
+  { ssr: false, loading: () => <ASkeleton lines={4} /> },
+);
+const DeferredTasks = dynamic(
+  () =>
+    import("./home-widgets-deferred").then((m) => ({
+      default: m.TasksWidget,
+    })),
+  { ssr: false, loading: () => <ASkeleton lines={2} /> },
+);
+const DeferredActivity = dynamic(
+  () =>
+    import("./home-widgets-deferred").then((m) => ({
+      default: m.ActivityWidget,
+    })),
+  { ssr: false, loading: () => <ASkeleton lines={4} /> },
+);
+const DeferredShortcuts = dynamic(
+  () =>
+    import("./home-widgets-deferred").then((m) => ({
+      default: m.ModuleShortcutsWidget,
+    })),
+  { ssr: false, loading: () => <ASkeleton lines={4} /> },
+);
+const DeferredAi = dynamic(
+  () =>
+    import("./home-widgets-deferred").then((m) => ({
+      default: m.AiPanelWidget,
+    })),
+  { ssr: false, loading: () => <ASkeleton lines={3} /> },
+);
+const DeferredTreasury = dynamic(
+  () =>
+    import("./home-widgets-deferred").then((m) => ({
+      default: m.TreasuryWidget,
+    })),
+  { ssr: false, loading: () => <ASkeleton lines={4} /> },
+);
+const DeferredBackup = dynamic(
+  () =>
+    import("./home-widgets-deferred").then((m) => ({
+      default: m.BackupStatusWidget,
+    })),
+  { ssr: false, loading: () => <ASkeleton lines={4} /> },
+);
 
 function WidgetChrome({
   title,
@@ -50,6 +94,7 @@ function WidgetChrome({
 
 /**
  * Mission Control — D294 layout (live KPIs only; registry-driven modules).
+ * D296: hero + KPI immediate; below-fold widgets viewport + dynamic chunk.
  */
 export function MissionControl({ className }: { className?: string }) {
   const { t } = useShellT();
@@ -60,7 +105,9 @@ export function MissionControl({ className }: { className?: string }) {
     registry.modules.find((m) => m.key === selectedModuleId) ??
     registry.modules[0];
   const financeOn = registry.modules.some((m) => m.key === "finance");
+  const backupOn = registry.modules.some((m) => m.key === "backup");
   const showTreasury = financeOn && selectedModuleId === "finance";
+  const showBackup = backupOn && selectedModuleId === "backup";
 
   return (
     <div
@@ -86,29 +133,53 @@ export function MissionControl({ className }: { className?: string }) {
         <div className="flex flex-col gap-4 lg:col-span-7 lg:gap-5">
           {showTreasury ? (
             <WidgetChrome title={t("widgetTreasury")}>
-              <TreasuryWidget />
+              <ALazySlot name={t("widgetTreasury")} strategy="viewport">
+                <DeferredTreasury />
+              </ALazySlot>
+            </WidgetChrome>
+          ) : null}
+
+          {showBackup ? (
+            <WidgetChrome title={t("widgetBackup")}>
+              <ALazySlot name={t("widgetBackup")} strategy="viewport">
+                <DeferredBackup />
+              </ALazySlot>
             </WidgetChrome>
           ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <WidgetChrome title={t("widgetShellStatus")}>
-              <ShellStatusWidget />
+              <ALazySlot name={t("widgetShellStatus")} strategy="viewport">
+                <DeferredShellStatus />
+              </ALazySlot>
             </WidgetChrome>
             <WidgetChrome title={t("widgetTasks")}>
-              <TasksWidget />
+              <ALazySlot
+                name={t("widgetTasks")}
+                strategy="viewport"
+                skeletonLines={2}
+              >
+                <DeferredTasks />
+              </ALazySlot>
             </WidgetChrome>
           </div>
 
           <WidgetChrome title={t("widgetActivity")}>
-            <ActivityWidget />
+            <ALazySlot name={t("widgetActivity")} strategy="viewport">
+              <DeferredActivity />
+            </ALazySlot>
           </WidgetChrome>
 
           <WidgetChrome title={t("widgetShortcuts")}>
-            <ModuleShortcutsWidget />
+            <ALazySlot name={t("widgetShortcuts")} strategy="viewport">
+              <DeferredShortcuts />
+            </ALazySlot>
           </WidgetChrome>
 
           <WidgetChrome title={t("widgetAi")} accent>
-            <AiPanelWidget />
+            <ALazySlot name={t("widgetAi")} strategy="viewport" skeletonLines={3}>
+              <DeferredAi />
+            </ALazySlot>
           </WidgetChrome>
 
           {tip ? (

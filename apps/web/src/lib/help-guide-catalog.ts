@@ -2281,6 +2281,232 @@ export const HELP_MODULES: HelpModule[] = [
     ],
   },
   {
+    id: "backup",
+    href: "/backup",
+    title: {
+      fr: "Sauvegardes (Backup & Recovery)",
+      it: "Backup e ripristino",
+    },
+    summary: {
+      fr: "Politiques et artefacts — manifeste CONFIGURATION, dump DATABASE installable, rétention, verrouillage.",
+      it: "Politiche e artefatti — manifesto CONFIGURATION, dump DATABASE installabile, retention, blocco.",
+    },
+    when: {
+      fr: "Avant une opération à risque, ou pour vérifier / verrouiller des artefacts existants.",
+      it: "Prima di un’operazione a rischio, o per verificare / bloccare artefatti esistenti.",
+    },
+    features: [
+      {
+        name: {
+          fr: "Créer une sauvegarde",
+          it: "Creare un backup",
+        },
+        when: {
+          fr: "Module backup activé + permission `backup.create`.",
+          it: "Modulo backup attivo + permesso `backup.create`.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/backup`.",
+            "Choisissez la portée : CONFIGURATION (manifeste seul) ou DATABASE (dump installable).",
+            "Cliquez Créer — le compteur et la liste se rafraîchissent.",
+            "CONFIGURATION reste non restaurable ; DATABASE peut être restorable après vérif.",
+          ],
+          it: [
+            "Apri `/backup`.",
+            "Scegli l’ambito: CONFIGURATION (solo manifesto) o DATABASE (dump installabile).",
+            "Clicca Crea — contatori e lista si aggiornano.",
+            "CONFIGURATION resta non ripristinabile; DATABASE può essere ripristinabile dopo verifica.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Vérifier / verrouiller / rétention",
+          it: "Verificare / bloccare / retention",
+        },
+        when: {
+          fr: "Après création, ou selon politique de rétention société.",
+          it: "Dopo la creazione, o secondo la politica di retention società.",
+        },
+        steps: {
+          fr: [
+            "Vérifier : recalcule le checksum de l’artefact.",
+            "Verrouiller : empêche la purge rétention (si `lockedNeverDelete`).",
+            "Lancer rétention : soft-delete hors fenêtre keepDays — les verrouillées sont conservées.",
+          ],
+          it: [
+            "Verifica: ricalcola il checksum dell’artefatto.",
+            "Blocca: impedisce la purge retention (se `lockedNeverDelete`).",
+            "Avvia retention: soft-delete fuori keepDays — i bloccati restano.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Restore live (wizard UI)",
+          it: "Restore live (wizard UI)",
+        },
+        when: {
+          fr: "Incident recovery — dual-contrôle + phrase RESTORE depuis `/backup`.",
+          it: "Incident recovery — dual-controllo + frase RESTORE da `/backup`.",
+        },
+        steps: {
+          fr: [
+            "Onglet Sauvegardes → Restore sur un artefact restorable (mot de passe).",
+            "Onglet Restauration → Approuver avec un second opérateur distinct (dry-validate).",
+            "Appliquer + taper RESTORE — safety backup puis apply logique société.",
+            "Cluster pg_restore reste bloqué (D307).",
+          ],
+          it: [
+            "Scheda Backup → Restore su un artefatto ripristinabile (password).",
+            "Scheda Ripristino → Approva con un secondo operatore distinto (dry-validate).",
+            "Applica + digita RESTORE — safety backup poi apply logico società.",
+            "Cluster pg_restore resta bloccato (D307).",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Prefs Backup (rétention / auto)",
+          it: "Prefs Backup (retention / auto)",
+        },
+        when: {
+          fr: "Admin société — `/settings#backup`.",
+          it: "Admin società — `/settings#backup`.",
+        },
+        steps: {
+          fr: [
+            "Préférences → compartiment Sauvegarde.",
+            "Activez auto-backup + heure Tunis + scope DATABASE/CONFIGURATION.",
+            "Configurez rétention keepDays + planning Thunder retention.",
+            "Ops `/backup` affiche les valeurs effectives (DEFAULT vs COMPANY).",
+          ],
+          it: [
+            "Preferenze → compartimento Backup.",
+            "Attiva auto-backup + ora Tunis + scope DATABASE/CONFIGURATION.",
+            "Configura retention keepDays + planning Thunder retention.",
+            "Ops `/backup` mostra i valori effettivi (DEFAULT vs COMPANY).",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Ops (jobs / destinations / politiques)",
+          it: "Ops (job / destinazioni / politiche)",
+        },
+        when: {
+          fr: "Lecture seule des artefacts ops du module.",
+          it: "Sola lettura degli artefatti ops del modulo.",
+        },
+        steps: {
+          fr: [
+            "Onglet Ops → jobs Thunder/rétention, destinations LOCAL_FS, politiques.",
+            "Pas de KPI inventés (stockage libre, RPO) — compteurs réels seulement.",
+          ],
+          it: [
+            "Scheda Ops → job Thunder/retention, destinazioni LOCAL_FS, politiche.",
+            "Niente KPI inventati (spazio libero, RPO) — solo contatori reali.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Dossiers spécifiques (D313)",
+          it: "Cartelle specifiche (D313)",
+        },
+        when: {
+          fr: "Prefs `backup.specificFolders.enabled` + permission `backup.specific_folder.create`.",
+          it: "Prefs `backup.specificFolders.enabled` + permesso `backup.specific_folder.create`.",
+        },
+        steps: {
+          fr: [
+            "Préférences → Sauvegarde → activer dossiers spécifiques.",
+            "Ouvrez `/backup#folders` — sélectionnez des chemins relatifs au sandbox société.",
+            "Destination LOCAL_DISK ou Téléchargement — NAS/cloud/chiffrement = Non supporté.",
+            "Aperçu puis Lancer — job Thunder + archive .tar.gz streaming + checksum.",
+          ],
+          it: [
+            "Preferenze → Backup → attiva cartelle specifiche.",
+            "Apri `/backup#folders` — seleziona percorsi relativi al sandbox società.",
+            "Destinazione LOCAL_DISK o Download — NAS/cloud/cifratura = Non supportato.",
+            "Anteprima poi Avvia — job Thunder + archivio .tar.gz streaming + checksum.",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Fichiers société & LOCAL_DISK (D314)",
+          it: "File società e LOCAL_DISK (D314)",
+        },
+        when: {
+          fr: "Permissions `backup.specific_folder.*` / `backup.destination.local_disk`.",
+          it: "Permessi `backup.specific_folder.*` / `backup.destination.local_disk`.",
+        },
+        steps: {
+          fr: [
+            "Ouvrez `/backup#files` — naviguez le sandbox, créez des dossiers (templates compta/finance/banque).",
+            "Prefs → sous-chemin LOCAL_DISK relatif (`backup.destination.localSubpath`).",
+            "Téléchargement = archives dossiers métier uniquement — pas CONFIGURATION/DATABASE.",
+            "L’onglet Fichiers sert toutes les fonctionnalités du module (création / sélection).",
+          ],
+          it: [
+            "Apri `/backup#files` — naviga il sandbox, crea cartelle (template contabilità/finanza/banca).",
+            "Prefs → sottopercorso LOCAL_DISK relativo (`backup.destination.localSubpath`).",
+            "Download = solo archivi cartelle business — non CONFIGURATION/DATABASE.",
+            "La scheda File serve tutte le funzionalità del modulo (creazione / selezione).",
+          ],
+        },
+      },
+      {
+        name: {
+          fr: "Mission Control — KPIs + widget Backup",
+          it: "Mission Control — KPI + widget Backup",
+        },
+        when: {
+          fr: "Module backup activé — sélectionnez Sauvegarde sur `/`.",
+          it: "Modulo backup attivo — seleziona Backup su `/`.",
+        },
+        steps: {
+          fr: [
+            "Mission Control → sélectionnez le module Sauvegarde dans la liste modules.",
+            "Bandeau KPI : total / restaurables / restores ouverts / échouées (API dashboard).",
+            "Widget Sauvegarde : dernière, restores ouverts, planning auto Tunis.",
+            "Lien « Ouvrir Sauvegardes » → `/backup` (hash `#restore` pour l’onglet Restauration).",
+          ],
+          it: [
+            "Mission Control → seleziona il modulo Backup nella lista moduli.",
+            "Striscia KPI: totale / ripristinabili / restore aperti / falliti (API dashboard).",
+            "Widget Backup: ultimo, restore aperti, planning auto Tunis.",
+            "Link « Apri Backup » → `/backup` (hash `#restore` per la scheda Ripristino).",
+          ],
+        },
+      },
+    ],
+    locks: {
+      fr: [
+        "pg_restore cluster = BLOCKED — jamais de restore DB global via UI.",
+        "Prefs backup.* consumers seulement si VALIDATED.",
+        "Restore live : dual-contrôle + confirmation phrase — pas de bypass SPECTRE.",
+        "Mission Control : pas de RPO / espace disque inventés — compteurs dashboard seulement.",
+        "Dossiers spécifiques : sandbox `data/company-files/{companyId}` uniquement — pas de chemins absolus.",
+        "Téléchargement limité aux archives dossiers métier (SPECIFIC_FOLDERS) — pas les dumps système.",
+        "LOCAL_DISK : sous-chemin Prefs relatif sous `data/backups/{companyId}/` (D314).",
+        "NAS / USB / cloud / chiffrement / incrémental = Non supporté (DEFER).",
+      ],
+      it: [
+        "pg_restore cluster = BLOCKED — mai restore DB globale via UI.",
+        "Prefs backup.* consumer solo se VALIDATED.",
+        "Restore live: dual-controllo + frase di conferma — nessun bypass SPECTRE.",
+        "Mission Control: niente RPO / spazio disco inventati — solo contatori dashboard.",
+        "Cartelle specifiche: solo sandbox `data/company-files/{companyId}` — niente path assoluti.",
+        "Download limitato agli archivi cartelle business (SPECIFIC_FOLDERS) — non dump di sistema.",
+        "LOCAL_DISK: sottopercorso Prefs relativo sotto `data/backups/{companyId}/` (D314).",
+        "NAS / USB / cloud / cifratura / incrementale = Non supportato (DEFER).",
+      ],
+    },
+  },
+  {
     id: "portals",
     href: "/employee-portal",
     title: {

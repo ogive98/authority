@@ -9,6 +9,7 @@ import { ExpertiseResolverService } from './expertise-resolver.service';
 import { OpsVisibilityResolver } from './ops-visibility.resolver';
 import { SettingsController } from './settings.controller';
 import { SettingsService } from './settings.service';
+import { ConfigurationPlanService } from './configuration-plan.service';
 
 @Module({
   imports: [
@@ -24,11 +25,13 @@ import { SettingsService } from './settings.service';
     SettingsService,
     ExpertiseResolverService,
     OpsVisibilityResolver,
+    ConfigurationPlanService,
   ],
   exports: [
     SettingsService,
     ExpertiseResolverService,
     OpsVisibilityResolver,
+    ConfigurationPlanService,
   ],
 })
 export class SettingsModule {}

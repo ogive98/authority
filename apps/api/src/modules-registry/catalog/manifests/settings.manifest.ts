@@ -22,6 +22,12 @@ export const settingsManifest: ModuleManifest = {
   publishedEvents: [
     'settings.value.updated.v1',
     'settings.expertise.validated.v1',
+    'settings.plan.created.v1',
+    'settings.plan.approved.v1',
+    'settings.plan.second_approved.v1',
+    'settings.plan.rejected.v1',
+    'settings.plan.applied.v1',
+    'settings.plan.rolled_back.v1',
   ],
   navigationEntries: [
     {

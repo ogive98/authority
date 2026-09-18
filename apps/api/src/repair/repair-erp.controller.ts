@@ -191,10 +191,12 @@ export class RepairErpController {
   async createSnapshot(
     @Body() body: SnapshotDto,
     @CurrentTenancy() tenancy: TenancyContext,
+    @Req() req: AuthenticatedRequest,
   ) {
     const snap = await this.facade.createSnapshot({
       companyId: tenancy.companyId,
       label: body.label,
+      actorUserId: req.user?.id,
     });
     return {
       id: snap.ref,

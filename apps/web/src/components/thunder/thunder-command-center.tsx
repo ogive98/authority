@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   globalWidgetRegistry,
   GRID,
@@ -29,31 +30,23 @@ import {
   sleepThunderCc,
 } from "@/lib/thunder/thunder-cc-boot";
 import { AButton, APageBody, AScreenHeader } from "@/components/a";
+import { ALazySlot } from "@/components/a/a-lazy-slot";
+import { ASkeleton } from "@/components/a/a-skeleton";
 import { cn } from "@/lib/utils";
 import type { WidgetLoadState } from "@/lib/dashboard-engine";
 import { ThunderCcLayoutSync } from "./thunder-cc-layout-sync";
-import {
-  ActivityFeedWidget,
-  AlertsWidget,
-  ApiPerfWidget,
-  AutomationFlowWidget,
-  CoreRuntimeWidget,
-  EventBusWidget,
-  IncidentsWidget,
-  IntegrationsWidget,
-  OutboxWidget,
-  PostgresWidget,
-  QueuesWidget,
-  RedisWidget,
-  ResourcesWidget,
-  SchedulerPlaceholderWidget,
-  ThroughputWidget,
-  ThunderHealthWidget,
-  WorkersWidget,
-} from "./thunder-widgets";
 import type { MonitorSnapshot } from "@/hooks/use-monitor-snapshot";
+import type { ThunderWidgetBodyProps } from "./thunder-widget-body";
 
 ensureThunderWidgetsRegistered();
+
+const LazyThunderWidgetBody = dynamic(
+  () =>
+    import("./thunder-widget-body").then((m) => ({
+      default: m.ThunderWidgetBody,
+    })),
+  { ssr: false, loading: () => <ASkeleton lines={4} /> },
+);
 
 function WidgetRenderer({
   instance,
@@ -90,186 +83,22 @@ function WidgetRenderer({
   const def = globalWidgetRegistry.find(instance.widgetDefinitionId);
   const title = def?.name ?? instance.widgetDefinitionId;
 
-  let body: ReactNode = null;
-  switch (instance.widgetDefinitionId) {
-    case "thunder.health":
-      body = (
-        <ThunderHealthWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-          thresholds={thresholds}
-        />
-      );
-      break;
-    case "thunder.runtime":
-      body = (
-        <CoreRuntimeWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.incidents":
-      body = (
-        <IncidentsWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.event-bus":
-      body = (
-        <EventBusWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.workers":
-      body = (
-        <WorkersWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.queues":
-      body = (
-        <QueuesWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.automation-flow":
-      body = (
-        <AutomationFlowWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.throughput":
-      body = (
-        <ThroughputWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-          epsHistory={epsHistory}
-        />
-      );
-      break;
-    case "thunder.api":
-      body = (
-        <ApiPerfWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.postgres":
-      body = (
-        <PostgresWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.redis":
-      body = (
-        <RedisWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.outbox":
-      body = (
-        <OutboxWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.scheduler":
-      body = (
-        <SchedulerPlaceholderWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.resources":
-      body = (
-        <ResourcesWidget
-          snap={snap}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.alerts":
-      body = (
-        <AlertsWidget
-          snap={snap}
-          thresholds={thresholds}
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.activity":
-      body = (
-        <ActivityFeedWidget
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    case "thunder.integrations":
-      body = (
-        <IntegrationsWidget
-          loadState={loadState}
-          asOf={asOf ?? undefined}
-          onRefresh={refresh}
-        />
-      );
-      break;
-    default:
-      body = (
-        <div className="a-card p-3 text-[length:var(--a-text-sm)] text-a-fg-muted">
-          Widget inconnu: {title}
-        </div>
-      );
-  }
+  const bodyProps: ThunderWidgetBodyProps = {
+    widgetDefinitionId: instance.widgetDefinitionId,
+    title,
+    snap,
+    loadState,
+    asOf,
+    onRefresh: refresh,
+    epsHistory,
+    thresholds,
+  };
+
+  const body: ReactNode = (
+    <ALazySlot name={title} strategy="viewport" skeletonLines={4}>
+      <LazyThunderWidgetBody {...bodyProps} />
+    </ALazySlot>
+  );
 
   return (
     <div

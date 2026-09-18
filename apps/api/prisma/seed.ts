@@ -153,6 +153,7 @@ async function main() {
     'documents',
     'accounting',
     'repair',
+    'backup',
     'automation',
     'forge',
     'analytics',
@@ -174,6 +175,7 @@ async function main() {
       moduleKey === 'documents' ||
       moduleKey === 'accounting' ||
       moduleKey === 'repair' ||
+      moduleKey === 'backup' ||
       moduleKey === 'production' ||
       moduleKey === 'tax' ||
       moduleKey === 'hr' ||
@@ -715,6 +717,66 @@ async function main() {
   });
   await upsertGrant({
     permissionKey: 'repair.reset',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'backup.view',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'backup.create',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'backup.verify',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'backup.manage_settings',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'backup.restore',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'backup.specific_folder.view',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'backup.specific_folder.create',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'backup.specific_folder.configure',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'backup.destination.download',
+    subjectType: IamGrantSubject.USER,
+    subjectId: demoUser.id,
+    companyId: company.id,
+  });
+  await upsertGrant({
+    permissionKey: 'backup.destination.local_disk',
     subjectType: IamGrantSubject.USER,
     subjectId: demoUser.id,
     companyId: company.id,

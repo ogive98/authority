@@ -1,5 +1,6 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { BackupModule } from '../backup/backup.module';
 import { IdentityModule } from '../identity/identity.module';
 import { InfrastructureModule } from '../infrastructure/infrastructure.module';
 import { ModulesRegistryModule } from '../modules-registry/modules-registry.module';
@@ -34,6 +35,7 @@ import { RepairFacade } from './repair.facade';
     ModulesRegistryModule,
     ThunderModule,
     SuperAdminModule,
+    forwardRef(() => BackupModule),
   ],
   controllers: [RepairErpController, RepairController],
   providers: [

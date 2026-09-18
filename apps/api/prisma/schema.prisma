@@ -493,6 +493,8 @@ model ModFlag {
 enum SetLevel {
   SYSTEM
   COMPANY
+  SITE
+  DOCUMENT
   ROLE
   USER
 }
@@ -557,6 +559,58 @@ model SetExpertise {
   @@unique([companyId, slotKey])
   @@index([companyId, slotKey])
   @@map("set_expertise")
+}
+
+/**
+ * Configuration Plan persistence (D298).
+ * Validate/simulate was D297 (ephemeral). Persist enables human approve → apply.
+ * Secrets may live in patchesJson at rest (same class as set_value) — never echoed in API.
+ */
+enum SetConfigPlanStatus {
+  DRAFT
+  PENDING_SECOND_APPROVAL
+  APPROVED
+  REJECTED
+  APPLIED
+  ROLLED_BACK
+  CANCELLED
+}
+
+model SetConfigPlan {
+  id                     String              @id @default(uuid()) @db.Uuid
+  companyId              String              @map("company_id") @db.Uuid
+  status                 SetConfigPlanStatus @default(DRAFT)
+  riskMax                String              @map("risk_max")
+  reason                 String?
+  /** Apply payload — may include secret values; never return raw in API. */
+  patchesJson            Json                @map("patches_json")
+  /** Redacted plan snapshot for display (changes/summary/projected). */
+  resultJson             Json                @map("result_json")
+  /**
+   * D300 — N-1 snapshot captured at apply time (secrets at rest, never echoed).
+   * Shape: { key, level, roleCode?, absent, value? }
+   */
+  beforePatchesJson      Json?               @map("before_patches_json")
+  createdByUserId        String              @map("created_by_user_id") @db.Uuid
+  approvedByUserId       String?             @map("approved_by_user_id") @db.Uuid
+  approvedAt             DateTime?           @map("approved_at") @db.Timestamptz(6)
+  /** D299 — second approver for CRITICAL dual-control. */
+  secondApprovedByUserId String?             @map("second_approved_by_user_id") @db.Uuid
+  secondApprovedAt       DateTime?           @map("second_approved_at") @db.Timestamptz(6)
+  rejectedByUserId       String?             @map("rejected_by_user_id") @db.Uuid
+  rejectedAt             DateTime?           @map("rejected_at") @db.Timestamptz(6)
+  rejectReason           String?             @map("reject_reason")
+  appliedByUserId        String?             @map("applied_by_user_id") @db.Uuid
+  appliedAt              DateTime?           @map("applied_at") @db.Timestamptz(6)
+  rolledBackByUserId     String?             @map("rolled_back_by_user_id") @db.Uuid
+  rolledBackAt           DateTime?           @map("rolled_back_at") @db.Timestamptz(6)
+  version                Int                 @default(0)
+  createdAt              DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt              DateTime?           @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@map("set_config_plan")
 }
 
 // --- aud_* immutable audit ---
@@ -4014,4 +4068,202 @@ model FrgMetadataDefinition {
   @@index([companyId, moduleKey])
   @@index([companyId, extensionId])
   @@map("frg_metadata_definition")
+}
+
+// --- bck_* Backup & Recovery (D304 foundation · D305 installable) ---
+
+enum BckDestinationType {
+  LOCAL_FS
+}
+
+enum BckDestinationHealth {
+  UNKNOWN
+  HEALTHY
+  DEGRADED
+  UNAVAILABLE
+}
+
+enum BckBackupType {
+  FULL
+}
+
+enum BckBackupScope {
+  CONFIGURATION
+  DATABASE
+  /** Company-sandbox folder archive (D313). */
+  SPECIFIC_FOLDERS
+}
+
+enum BckBackupStatus {
+  REQUESTED
+  QUEUED
+  RUNNING
+  VERIFYING
+  VERIFIED
+  FAILED
+  CORRUPTED
+  LOCKED
+}
+
+enum BckJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum BckRestoreStatus {
+  REQUESTED
+  PENDING_SECOND_APPROVAL
+  AUTHORIZED
+  DRY_VALIDATED
+  APPLYING
+  APPLIED
+  HEALTH_FAILED
+  FAILED
+  CANCELLED
+}
+
+model BckDestination {
+  id            String               @id @default(uuid()) @db.Uuid
+  companyId     String               @map("company_id") @db.Uuid
+  type          BckDestinationType   @default(LOCAL_FS)
+  name          String
+  /** Relative path under data root — never a credential. */
+  pathRef       String               @map("path_ref")
+  healthStatus  BckDestinationHealth @default(UNKNOWN) @map("health_status")
+  enabled       Boolean              @default(true)
+  version       Int                  @default(0)
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime?            @map("deleted_at") @db.Timestamptz(6)
+
+  backups BckBackup[]
+
+  @@index([companyId, enabled])
+  @@map("bck_destination")
+}
+
+model BckPolicy {
+  id                   String         @id @default(uuid()) @db.Uuid
+  companyId            String         @map("company_id") @db.Uuid
+  name                 String
+  scope                BckBackupScope @default(CONFIGURATION)
+  type                 BckBackupType  @default(FULL)
+  scheduleEnabled      Boolean        @default(false) @map("schedule_enabled")
+  scheduleCron         String?        @map("schedule_cron")
+  verificationRequired Boolean        @default(true) @map("verification_required")
+  enabled              Boolean        @default(true)
+  version              Int            @default(0)
+  createdAt            DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt            DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([companyId, enabled])
+  @@map("bck_policy")
+}
+
+model BckBackup {
+  id              String          @id @default(uuid()) @db.Uuid
+  companyId       String          @map("company_id") @db.Uuid
+  siteId          String?         @map("site_id") @db.Uuid
+  type            BckBackupType   @default(FULL)
+  scope           BckBackupScope  @default(CONFIGURATION)
+  status          BckBackupStatus @default(REQUESTED)
+  /** true only when verified installable dump artifact exists (D305). */
+  restorable      Boolean         @default(false)
+  locked          Boolean         @default(false)
+  label           String?
+  sizeBytes       BigInt?         @map("size_bytes")
+  checksumSha256  String?         @map("checksum_sha256")
+  artifactPath    String?         @map("artifact_path")
+  destinationId   String?         @map("destination_id") @db.Uuid
+  createdByUserId String?         @map("created_by_user_id") @db.Uuid
+  errorCode       String?         @map("error_code")
+  errorMessage    String?         @map("error_message")
+  startedAt       DateTime?       @map("started_at") @db.Timestamptz(6)
+  completedAt     DateTime?       @map("completed_at") @db.Timestamptz(6)
+  version         Int             @default(0)
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?       @map("deleted_at") @db.Timestamptz(6)
+
+  destination     BckDestination?     @relation(fields: [destinationId], references: [id], onDelete: SetNull)
+  manifest        BckManifest?
+  jobs            BckJob[]
+  restoreRequests BckRestoreRequest[]
+
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@index([companyId, destinationId])
+  @@map("bck_backup")
+}
+
+model BckManifest {
+  id                 String   @id @default(uuid()) @db.Uuid
+  backupId           String   @unique @map("backup_id") @db.Uuid
+  applicationVersion String   @map("application_version")
+  schemaVersion      String   @map("schema_version")
+  moduleVersionsJson Json     @default("{}") @map("module_versions_json")
+  scopeMetadataJson  Json     @default("{}") @map("scope_metadata_json")
+  checksumAlgorithm  String   @default("sha256") @map("checksum_algorithm")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  backup BckBackup @relation(fields: [backupId], references: [id], onDelete: Cascade)
+
+  @@map("bck_manifest")
+}
+
+model BckJob {
+  id              String       @id @default(uuid()) @db.Uuid
+  companyId       String       @map("company_id") @db.Uuid
+  backupId        String       @map("backup_id") @db.Uuid
+  thunderJobId    String?      @map("thunder_job_id")
+  status          BckJobStatus @default(PENDING)
+  progress        Int          @default(0)
+  attempts        Int          @default(0)
+  errorCode       String?      @map("error_code")
+  errorMessage    String?      @map("error_message")
+  startedAt       DateTime?    @map("started_at") @db.Timestamptz(6)
+  completedAt     DateTime?    @map("completed_at") @db.Timestamptz(6)
+  version         Int          @default(0)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  backup BckBackup @relation(fields: [backupId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@index([backupId])
+  @@map("bck_job")
+}
+
+/** D305 dual-control + D307 live apply wizard. */
+model BckRestoreRequest {
+  id                     String           @id @default(uuid()) @db.Uuid
+  companyId              String           @map("company_id") @db.Uuid
+  backupId               String           @map("backup_id") @db.Uuid
+  status                 BckRestoreStatus @default(REQUESTED)
+  requestedByUserId      String           @map("requested_by_user_id") @db.Uuid
+  approvedByUserId       String?          @map("approved_by_user_id") @db.Uuid
+  secondApprovedByUserId String?          @map("second_approved_by_user_id") @db.Uuid
+  requestedAt            DateTime         @default(now()) @map("requested_at") @db.Timestamptz(6)
+  approvedAt             DateTime?        @map("approved_at") @db.Timestamptz(6)
+  secondApprovedAt       DateTime?        @map("second_approved_at") @db.Timestamptz(6)
+  dryValidatedAt         DateTime?        @map("dry_validated_at") @db.Timestamptz(6)
+  /** Set true after successful D307 logical apply. */
+  applied                Boolean          @default(false)
+  appliedAt              DateTime?        @map("applied_at") @db.Timestamptz(6)
+  safetyBackupId         String?          @map("safety_backup_id") @db.Uuid
+  healthReportJson       Json?            @map("health_report_json")
+  errorCode              String?          @map("error_code")
+  errorMessage           String?          @map("error_message")
+  version                Int              @default(0)
+  createdAt              DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  backup BckBackup @relation(fields: [backupId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status, createdAt(sort: Desc)])
+  @@index([backupId])
+  @@map("bck_restore_request")
 }

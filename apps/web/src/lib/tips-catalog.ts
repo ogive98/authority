@@ -334,6 +334,30 @@ export const USAGE_TIPS: UsageTip[] = [
     action: { kind: "link", href: "/repair", label: "Repair" },
   },
 
+  // —— Backup ——
+  {
+    id: "backup-scopes",
+    routes: ["/backup"],
+    modules: ["backup"],
+    title: "CONFIGURATION vs DATABASE",
+    body: "Manifeste = non restaurable. Dump DATABASE = installable ; restore cluster reste bloqué.",
+    category: "ops",
+    action: {
+      kind: "link",
+      href: "/help/guide#backup",
+      label: "Guide Backup",
+    },
+  },
+  {
+    id: "backup-mission",
+    routes: ["/"],
+    modules: ["backup"],
+    title: "Backup sur Mission Control",
+    body: "Sélectionnez le module Sauvegarde — KPIs réels + widget statut (pas de RPO inventé).",
+    category: "ops",
+    action: { kind: "link", href: "/backup", label: "Sauvegardes" },
+  },
+
   // —— Settings / a11y ——
   {
     id: "settings-expertise",

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { FinanceModule } from '../finance/finance.module';
@@ -13,6 +13,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { BackupModule } from '../backup/backup.module';
 import { AdapterRegistryService } from './adapters/adapter.registry';
 import { ThunderAdaptersRegistrar } from './adapters/thunder-adapters.registrar';
 import { ThunderAutomationRegistrar } from './automation/thunder-automation.registrar';
@@ -70,6 +71,7 @@ import { IntentPrepareService } from './intent/intent-prepare.service';
     AccountingModule,
     AutomationModule,
     NotificationsModule,
+    forwardRef(() => BackupModule),
   ],
   controllers: [ThunderController],
   providers: [

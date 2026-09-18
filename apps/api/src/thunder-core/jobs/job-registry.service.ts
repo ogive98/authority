@@ -22,6 +22,9 @@ import {
   executeImportBulkJob,
   executeModuleGatedJob,
 } from './processors/resource.processor';
+import { executeBackupRetentionJob } from '../../backup/backup-retention.runner';
+import { executeBackupAutoCreateJob } from '../../backup/backup-auto.runner';
+import { executeBackupSpecificFoldersJob } from '../../backup/backup-specific-folders.runner';
 
 @Injectable()
 export class JobRegistryService {
@@ -51,6 +54,24 @@ export class JobRegistryService {
     this.register(THUNDER_JOB_TYPES.moduleGated, 'ops', executeModuleGatedJob, {
       moduleKey: 'inventory',
     });
+    this.register(
+      THUNDER_JOB_TYPES.backupRetentionRun,
+      'ops',
+      executeBackupRetentionJob,
+      { moduleKey: 'backup' },
+    );
+    this.register(
+      THUNDER_JOB_TYPES.backupAutoCreate,
+      'ops',
+      executeBackupAutoCreateJob,
+      { moduleKey: 'backup' },
+    );
+    this.register(
+      THUNDER_JOB_TYPES.backupSpecificFoldersCreate,
+      'ops',
+      executeBackupSpecificFoldersJob,
+      { moduleKey: 'backup' },
+    );
   }
 
   register(

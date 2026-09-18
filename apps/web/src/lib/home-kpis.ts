@@ -50,6 +50,10 @@ export type HomeKpiId =
   | "shipmentsActive"
   | "shipmentsReady"
   | "shipmentsOut"
+  | "backupTotal"
+  | "backupRestorable"
+  | "backupOpenRestores"
+  | "backupFailed"
   | "moduleFeatures";
 
 export type HomeKpiCard = {
@@ -245,6 +249,57 @@ async function deliveryCards(): Promise<HomeKpiCard[]> {
   ];
 }
 
+type BackupHomeDash = {
+  counts: {
+    total: number;
+    verified: number;
+    failed: number;
+    locked: number;
+    restorable: number;
+  };
+  openRestoreRequests?: number;
+};
+
+async function backupCards(): Promise<HomeKpiCard[]> {
+  const dash = await getJson<BackupHomeDash>("/api/v1/backup/dashboard");
+  if (!dash.ok) {
+    const st = failState(dash);
+    return [
+      { id: "backupTotal", href: "/backup", state: st, value: "—" },
+      { id: "backupRestorable", href: "/backup", state: st, value: "—" },
+      { id: "backupOpenRestores", href: "/backup", state: st, value: "—" },
+      { id: "backupFailed", href: "/backup", state: st, value: "—" },
+    ];
+  }
+  return [
+    {
+      id: "backupTotal",
+      href: "/backup",
+      state: "ok",
+      value: String(dash.data.counts.total),
+      meta: { verified: dash.data.counts.verified },
+    },
+    {
+      id: "backupRestorable",
+      href: "/backup",
+      state: "ok",
+      value: String(dash.data.counts.restorable),
+    },
+    {
+      id: "backupOpenRestores",
+      href: "/backup#restore",
+      state: "ok",
+      value: String(dash.data.openRestoreRequests ?? 0),
+    },
+    {
+      id: "backupFailed",
+      href: "/backup",
+      state: "ok",
+      value: String(dash.data.counts.failed),
+    },
+  ];
+}
+
 /** Overview home: one card per domain that is ENABLED (still real APIs). */
 async function homeOverviewCards(
   enabled: Set<string>,
@@ -411,6 +466,18 @@ export async function loadHomeKpiCards(
       ];
     }
     return deliveryCards();
+  }
+
+  if (mod === "backup") {
+    if (!enabledModules.has("backup")) {
+      return [
+        offCard("backupTotal", "/backup"),
+        offCard("backupRestorable", "/backup"),
+        offCard("backupOpenRestores", "/backup"),
+        offCard("backupFailed", "/backup"),
+      ];
+    }
+    return backupCards();
   }
 
   // Other modules: honest empty — no cross-module figures.

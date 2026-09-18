@@ -209,6 +209,22 @@ export const COMMAND_CATALOG: CommandItem[] = [
     permissionKey: "system_monitoring.view",
   },
   {
+    id: "nav-backup",
+    label: "Sauvegardes",
+    group: "navigation",
+    href: "/backup",
+    keywords: [
+      "backup",
+      "sauvegarde",
+      "restore",
+      "rétention",
+      "recovery",
+      "dump",
+    ],
+    requiresModule: "backup",
+    permissionKey: "backup.view",
+  },
+  {
     id: "nav-suppliers",
     label: "Fournisseurs",
     group: "navigation",
@@ -363,6 +379,11 @@ export const DEMO_PERMISSION_GRANTS = new Set([
   "settings.read",
   "system_monitoring.view",
   "thunder.intel.read",
+  "backup.view",
+  "backup.create",
+  "backup.verify",
+  "backup.restore",
+  "backup.manage_settings",
 ]);
 
 /** Demo enabled modules — payroll OFF so related commands hide. */
@@ -379,6 +400,7 @@ export const DEMO_ENABLED_MODULES = new Set([
   "hr",
   "tax",
   "repair",
+  "backup",
   "finance",
   "documents",
   "accounting",

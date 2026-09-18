@@ -108,5 +108,19 @@ export class ThunderModuleHooksRegistrar implements OnModuleInit {
           'accounting.postFromFinance on finance invoice/payment/instrument events',
       },
     });
+
+    this.hooks.register('backup', {
+      contribution: {
+        moduleKey: 'backup',
+        jobTypes: [
+          THUNDER_JOB_TYPES.backupRetentionRun,
+          THUNDER_JOB_TYPES.backupAutoCreate,
+          THUNDER_JOB_TYPES.backupSpecificFoldersCreate,
+        ],
+        healthCheckIds: ['backup.kernel'],
+        description:
+          'Backup retention + auto-create + specific-folders Thunder jobs (D306–D313)',
+      },
+    });
   }
 }

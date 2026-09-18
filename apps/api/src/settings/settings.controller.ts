@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -27,6 +28,11 @@ import { PermissionService } from '../permissions/permission.service';
 import { SettingsService } from './settings.service';
 import { UpdateSettingDto } from './update-setting.dto';
 import { UpsertExpertiseDto } from './upsert-expertise.dto';
+import { ConfigurationPlanService } from './configuration-plan.service';
+import {
+  ConfigurationPlanDto,
+  ConfigurationPlanRejectDto,
+} from './configuration-plan.dto';
 
 @Controller('api/v1/settings')
 @UseGuards(SessionGuard, ModuleGuard)
@@ -35,6 +41,7 @@ export class SettingsController {
   constructor(
     private readonly settingsService: SettingsService,
     private readonly permissionService: PermissionService,
+    private readonly configurationPlanService: ConfigurationPlanService,
   ) {}
 
   @Get('effective')
@@ -42,6 +49,7 @@ export class SettingsController {
   async effective(
     @CurrentUser() user: { id: string },
     @CurrentTenancy() tenancy: TenancyContext,
+    @Query('documentType') documentType?: string,
   ) {
     await this.assertPermission(
       user.id,
@@ -58,6 +66,8 @@ export class SettingsController {
       userId: user.id,
       companyId: tenancy.companyId,
       roleCode,
+      siteId: tenancy.siteId,
+      documentType: documentType?.trim() || undefined,
     });
   }
 
@@ -154,6 +164,214 @@ export class SettingsController {
     );
   }
 
+  /**
+   * D297/D298 — Configuration Plan validate+simulate.
+   * persist=true stores DRAFT when valid (approve/apply later).
+   */
+  @Post('configuration-plan')
+  @HttpCode(200)
+  @UseGuards(TenancyGuard)
+  async createConfigurationPlan(
+    @CurrentUser() user: { id: string },
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Body() dto: ConfigurationPlanDto,
+    @Req() req: Request,
+  ) {
+    const needsCompanyWrite =
+      dto.persist === true ||
+      dto.changes.some((change) => {
+        const level = change.level ?? 'USER';
+        return (
+          level === 'COMPANY' ||
+          level === 'ROLE' ||
+          level === 'SITE' ||
+          level === 'DOCUMENT'
+        );
+      });
+    await this.assertPermission(
+      user.id,
+      needsCompanyWrite
+        ? PERMISSION_KEYS.settingsCompanyWrite
+        : PERMISSION_KEYS.settingsSelf,
+      tenancy.companyId,
+    );
+
+    const roleCode = await this.settingsService.resolveRoleCode(
+      user.id,
+      tenancy.companyId,
+    );
+
+    const correlation =
+      req.headers['x-authority-correlation-id'] ??
+      req.headers['x-correlation-id'];
+
+    return this.configurationPlanService.buildPlan({
+      userId: user.id,
+      companyId: tenancy.companyId,
+      roleCode,
+      siteId: tenancy.siteId,
+      changes: dto.changes,
+      reason: dto.reason,
+      persist: dto.persist === true,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: typeof correlation === 'string' ? correlation : undefined,
+    });
+  }
+
+  @Get('configuration-plan')
+  @UseGuards(TenancyGuard)
+  async listConfigurationPlans(
+    @CurrentUser() user: { id: string },
+    @CurrentTenancy() tenancy: TenancyContext,
+  ) {
+    await this.assertPermission(
+      user.id,
+      PERMISSION_KEYS.settingsCompanyWrite,
+      tenancy.companyId,
+    );
+    return {
+      plans: await this.configurationPlanService.listPlans(tenancy.companyId),
+    };
+  }
+
+  @Get('configuration-plan/:planId')
+  @UseGuards(TenancyGuard)
+  async getConfigurationPlan(
+    @CurrentUser() user: { id: string },
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('planId') planId: string,
+  ) {
+    await this.assertPermission(
+      user.id,
+      PERMISSION_KEYS.settingsCompanyWrite,
+      tenancy.companyId,
+    );
+    return this.configurationPlanService.getPlan(tenancy.companyId, planId);
+  }
+
+  @Post('configuration-plan/:planId/approve')
+  @HttpCode(200)
+  @UseGuards(TenancyGuard)
+  async approveConfigurationPlan(
+    @CurrentUser() user: { id: string },
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('planId') planId: string,
+    @Req() req: Request,
+  ) {
+    await this.assertPermission(
+      user.id,
+      PERMISSION_KEYS.settingsCompanyWrite,
+      tenancy.companyId,
+    );
+    const correlation =
+      req.headers['x-authority-correlation-id'] ??
+      req.headers['x-correlation-id'];
+    return this.configurationPlanService.approve({
+      companyId: tenancy.companyId,
+      planId,
+      actorUserId: user.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: typeof correlation === 'string' ? correlation : undefined,
+    });
+  }
+
+  @Post('configuration-plan/:planId/reject')
+  @HttpCode(200)
+  @UseGuards(TenancyGuard)
+  async rejectConfigurationPlan(
+    @CurrentUser() user: { id: string },
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('planId') planId: string,
+    @Body() dto: ConfigurationPlanRejectDto,
+    @Req() req: Request,
+  ) {
+    await this.assertPermission(
+      user.id,
+      PERMISSION_KEYS.settingsCompanyWrite,
+      tenancy.companyId,
+    );
+    const correlation =
+      req.headers['x-authority-correlation-id'] ??
+      req.headers['x-correlation-id'];
+    return this.configurationPlanService.reject({
+      companyId: tenancy.companyId,
+      planId,
+      actorUserId: user.id,
+      reason: dto.reason,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: typeof correlation === 'string' ? correlation : undefined,
+    });
+  }
+
+  @Post('configuration-plan/:planId/apply')
+  @HttpCode(200)
+  @UseGuards(TenancyGuard)
+  async applyConfigurationPlan(
+    @CurrentUser() user: { id: string },
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('planId') planId: string,
+    @Req() req: Request,
+  ) {
+    await this.assertPermission(
+      user.id,
+      PERMISSION_KEYS.settingsCompanyWrite,
+      tenancy.companyId,
+    );
+    const roleCode = await this.settingsService.resolveRoleCode(
+      user.id,
+      tenancy.companyId,
+    );
+    const correlation =
+      req.headers['x-authority-correlation-id'] ??
+      req.headers['x-correlation-id'];
+    return this.configurationPlanService.apply({
+      companyId: tenancy.companyId,
+      planId,
+      actorUserId: user.id,
+      roleCode,
+      siteId: tenancy.siteId,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: typeof correlation === 'string' ? correlation : undefined,
+    });
+  }
+
+  @Post('configuration-plan/:planId/rollback')
+  @HttpCode(200)
+  @UseGuards(TenancyGuard)
+  async rollbackConfigurationPlan(
+    @CurrentUser() user: { id: string },
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('planId') planId: string,
+    @Req() req: Request,
+  ) {
+    await this.assertPermission(
+      user.id,
+      PERMISSION_KEYS.settingsCompanyWrite,
+      tenancy.companyId,
+    );
+    const roleCode = await this.settingsService.resolveRoleCode(
+      user.id,
+      tenancy.companyId,
+    );
+    const correlation =
+      req.headers['x-authority-correlation-id'] ??
+      req.headers['x-correlation-id'];
+    return this.configurationPlanService.rollback({
+      companyId: tenancy.companyId,
+      planId,
+      actorUserId: user.id,
+      roleCode,
+      siteId: tenancy.siteId,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: typeof correlation === 'string' ? correlation : undefined,
+    });
+  }
+
   @Put()
   @HttpCode(200)
   @UseGuards(TenancyGuard)
@@ -165,7 +383,10 @@ export class SettingsController {
   ) {
     const level = dto.level ?? 'USER';
     const permissionKey =
-      level === 'COMPANY' || level === 'ROLE'
+      level === 'COMPANY' ||
+      level === 'ROLE' ||
+      level === 'SITE' ||
+      level === 'DOCUMENT'
         ? PERMISSION_KEYS.settingsCompanyWrite
         : PERMISSION_KEYS.settingsSelf;
 
@@ -185,11 +406,14 @@ export class SettingsController {
         userId: user.id,
         companyId: tenancy.companyId,
         roleCode,
+        siteId: tenancy.siteId,
+        documentType: dto.documentType,
       },
       key: dto.key,
       value: dto.value,
       level,
       roleCode: dto.roleCode,
+      documentType: dto.documentType,
       actorUserId: user.id,
       ip: req.ip,
       userAgent: req.headers['user-agent'],

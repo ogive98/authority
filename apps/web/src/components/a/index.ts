@@ -29,6 +29,7 @@ export {
 export { ACommandPalette } from "./a-command-palette";
 export { AActivityCenter } from "./a-activity-center";
 export { AWidgetHost } from "./a-widget-host";
+export { ALazySlot } from "./a-lazy-slot";
 export { AScreenHeader } from "./a-screen-header";
 export { APageBody } from "./a-page-body";
 export { AOverflowMenu, type AOverflowItem } from "./a-overflow-menu";

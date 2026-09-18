@@ -15,6 +15,7 @@ import {
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { PrefsModesOpsPanel } from "@/components/settings/prefs-modes-ops-panel";
+import { PrefsBackupPanel } from "@/components/settings/prefs-backup-panel";
 import { PrefsToggleRow } from "@/components/settings/prefs-toggle-row";
 import { NotifPrefsPanel } from "@/components/settings/notif-prefs-panel";
 import { AuthorityXPairPanel } from "@/components/settings/authority-x-pair-panel";
@@ -61,6 +62,7 @@ const HASH_COMPARTMENTS = new Set<PrefsCompartmentId>([
   "comptabilite",
   "roles",
   "poste",
+  "backup",
 ]);
 
 const SURFACE_LABELS: Record<SurfaceMode, string> = {
@@ -972,7 +974,7 @@ export default function SettingsPage() {
         title="Préférences"
         description={
           canCompanyWrite
-            ? "Rail compartiments (D203) — poste, société, modes ops, expertise, envois, finance, compta, ventes, rôles. Une préférence n’outrepasse jamais une permission."
+            ? "Rail compartiments (D203) — poste, société, modes ops, expertise, envois, finance, compta, ventes, sauvegarde, rôles. Une préférence n’outrepasse jamais une permission."
             : "Rail compartiments (D203) — réglages de votre poste. Les compartiments société sont réservés à l’administrateur."
         }
         status={
@@ -1232,6 +1234,10 @@ export default function SettingsPage() {
                 unlockError={unlockError}
                 onSaveUnlockCode={() => void onSaveUnlockCode()}
               />
+            ) : null}
+
+            {compartment === "backup" && canCompanyWrite ? (
+              <PrefsBackupPanel />
             ) : null}
 
             {compartment === "finance" && canCompanyWrite ? (
