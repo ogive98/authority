@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ABadge,
@@ -52,6 +52,7 @@ import {
   type FulfillmentDoc,
 } from "@/lib/customers";
 import { useStatusLabel } from "@/hooks/use-status-label";
+import { matchesFolded } from "@/lib/utils";
 import { ATabs } from "@/components/a/a-tabs";
 
 const STATUS_FILTERS: { id: "" | SalesOrderStatus; label: string }[] = [
@@ -229,9 +230,12 @@ function SalesPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  const customerReqSeq = useRef(0);
   const refreshCustomers = useCallback((qText: string) => {
+    const seq = ++customerReqSeq.current;
     setCustomerLoading(true);
     void searchCustomers(qText).then((res) => {
+      if (seq !== customerReqSeq.current) return; // stale response
       setCustomerLoading(false);
       if (!res.ok) {
         setCustomerOpts([]);
@@ -256,9 +260,13 @@ function SalesPageInner() {
     return () => window.clearTimeout(t);
   }, [form?.customerLabel, form != null, refreshCustomers]);
 
+  const productReqSeq = useRef<Record<string, number>>({});
   function searchProductForLine(lineKey: string, text: string) {
+    const seq = (productReqSeq.current[lineKey] ?? 0) + 1;
+    productReqSeq.current[lineKey] = seq;
     setProductLoadingKey(lineKey);
     void searchProducts(text).then((res) => {
+      if (productReqSeq.current[lineKey] !== seq) return; // stale response
       setProductLoadingKey((k) => (k === lineKey ? null : k));
       if (!res.ok) {
         setProductOptsByKey((m) => ({ ...m, [lineKey]: [] }));
@@ -713,15 +721,10 @@ function SalesPageInner() {
                   warehouseLabel: text,
                   warehouseId: null,
                 });
-                const q = text.trim().toLowerCase();
+                const q = text.trim();
                 setWarehouseOpts(
                   warehouses
-                    .filter(
-                      (w) =>
-                        !q ||
-                        w.code.toLowerCase().includes(q) ||
-                        w.name.toLowerCase().includes(q),
-                    )
+                    .filter((w) => matchesFolded(q, w.code, w.name))
                     .map((w) => ({
                       id: w.id,
                       label: `${w.code} — ${w.name}`,

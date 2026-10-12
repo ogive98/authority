@@ -130,10 +130,27 @@ export function App() {
           expandFromOrb();
         }),
       );
+      unsubs.push(
+        window.authorityX.onClosed(() => {
+          collapseToIdle();
+        }),
+      );
+      // Pull visibility: covers the race where main sent "opened" before
+      // this page was loaded (first dev launch) and the overlay is stuck
+      // showing the idle bar while capturing clicks.
+      const vis = await window.authorityX.isVisible();
+      if (vis?.visible) {
+        setAppeared(true);
+        expandFromOrb();
+      }
     }
     void boot();
     return () => unsubs.forEach((u) => u());
   }, []);
+
+  useEffect(() => {
+    void window.authorityX?.setInteractive(phase !== "idle");
+  }, [phase]);
 
   useEffect(() => {
     setActive(0);
@@ -174,8 +191,10 @@ export function App() {
 
   useEffect(() => {
     if (phase === "input" || phase === "suggestions" || phase === "ambiguous") {
-      const t = window.setTimeout(() => inputRef.current?.focus(), 280);
-      return () => clearTimeout(t);
+      // rAF, not a timer: a summon that focuses 280ms late drops the first
+      // keystrokes, which reads as "typing does nothing".
+      const id = window.requestAnimationFrame(() => inputRef.current?.focus());
+      return () => window.cancelAnimationFrame(id);
     }
   }, [phase]);
 

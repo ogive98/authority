@@ -101,3 +101,15 @@ export function thunderEventPublisherEnabled(): boolean {
 export function thunderConsumersEnabled(): boolean {
   return thunderEventPublisherEnabled();
 }
+
+/**
+ * Worker cadence. Ticks were hardcoded at 2s, so four background loops kept
+ * the API busy on dev boxes with no way to slow them down.
+ */
+export function thunderTickMs(envVar: string, fallbackMs: number): number {
+  const n = Number(process.env[envVar]);
+  if (!Number.isFinite(n) || n <= 0) {
+    return fallbackMs;
+  }
+  return Math.floor(n);
+}

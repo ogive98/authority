@@ -823,7 +823,11 @@ export class AccountingService {
       }
     }
 
-    const lines = await this.prisma.accJournalLine.findMany({
+    // Aggregate in the database instead of loading every journal line into
+    // memory (this table is the largest in the ERP — full-company loads were
+    // spiking RAM and latency). One grouped row per account, not per entry.
+    const grouped = await this.prisma.accJournalLine.groupBy({
+      by: ['accountId'],
       where: {
         companyId,
         entry: {
@@ -833,24 +837,32 @@ export class AccountingService {
           ...(opts?.periodId ? { periodId: opts.periodId } : {}),
         },
       },
-      include: { account: true },
+      _sum: { debit: true, credit: true },
     });
+
+    const accountIds = grouped
+      .map((g) => g.accountId)
+      .filter((id): id is string => Boolean(id));
+    const accounts = accountIds.length
+      ? await this.prisma.accAccount.findMany({
+          where: { id: { in: accountIds }, deletedAt: null },
+        })
+      : [];
+    const accountById = new Map(accounts.map((a) => [a.id, a]));
 
     const byAccount = new Map<
       string,
       { account: AccAccount; debit: number; credit: number }
     >();
 
-    for (const line of lines) {
-      if (line.account.deletedAt) continue;
-      const cur = byAccount.get(line.accountId) ?? {
-        account: line.account,
-        debit: 0,
-        credit: 0,
-      };
-      cur.debit = round3(cur.debit + Number(line.debit));
-      cur.credit = round3(cur.credit + Number(line.credit));
-      byAccount.set(line.accountId, cur);
+    for (const g of grouped) {
+      const account = accountById.get(g.accountId);
+      if (!account) continue;
+      byAccount.set(g.accountId, {
+        account,
+        debit: round3(Number(g._sum.debit ?? 0)),
+        credit: round3(Number(g._sum.credit ?? 0)),
+      });
     }
 
     const items = [...byAccount.values()]

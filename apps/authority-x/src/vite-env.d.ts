@@ -2,17 +2,18 @@ export type AuthorityXBridge = {
   getShortcutState: () => Promise<{
     shortcut: string;
     enabled: boolean;
-    cutSafe?: boolean;
     conflict?: boolean;
     lastConflict?: string | null;
-    lastCutHold?: string | null;
-    result?: unknown;
+    message?: string;
   }>;
   setShortcutEnabled: (enabled: boolean) => Promise<unknown>;
-  setCutSafe: (enabled: boolean) => Promise<unknown>;
   setShortcut: (accelerator: string) => Promise<unknown>;
   hide: () => Promise<{ ok: boolean }>;
   show: () => Promise<{ ok: boolean }>;
+  setInteractive: (
+    interactive: boolean,
+  ) => Promise<{ ok: boolean }>;
+  isVisible: () => Promise<{ visible: boolean }>;
   connectionStub: () => Promise<{ state: string; note: string; paired?: boolean }>;
   getDeviceAuth: () => Promise<{
     token: string;

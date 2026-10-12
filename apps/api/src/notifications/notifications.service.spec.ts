@@ -57,6 +57,7 @@ describe('NotificationsService', () => {
       finDunningDraft: { findMany: jest.fn().mockResolvedValue([]) },
       thuSignal: { findMany: jest.fn().mockResolvedValue([]) },
       atmRunLog: { findMany: jest.fn().mockResolvedValue([]) },
+      waInboundMessage: { findMany: jest.fn().mockResolvedValue([]) },
       cusCustomer: {
         findMany: jest.fn().mockResolvedValue([
           {
@@ -67,19 +68,10 @@ describe('NotificationsService', () => {
         ]),
       },
       coreInAppNotification: {
-        findUnique: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
-        create: jest.fn().mockImplementation(({ data }) => {
-          created.push(data);
-          return Promise.resolve({
-            id: `id-${created.length}`,
-            companyId,
-            ...data,
-            readAt: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            userId: null,
-          });
+        createMany: jest.fn().mockImplementation(({ data }) => {
+          created.push(...data);
+          return Promise.resolve({ count: data.length });
         }),
         count: jest.fn().mockResolvedValue(0),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -111,12 +103,18 @@ describe('NotificationsService', () => {
       finDunningDraft: { findMany: jest.fn().mockResolvedValue([]) },
       thuSignal: { findMany: jest.fn().mockResolvedValue([]) },
       atmRunLog: { findMany: jest.fn().mockResolvedValue([]) },
+      waInboundMessage: { findMany: jest.fn().mockResolvedValue([]) },
       cusCustomer: { findMany: jest.fn().mockResolvedValue([]) },
       coreInAppNotification: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        create: jest.fn(),
+        createMany: jest
+          .fn()
+          .mockImplementation(({ data }) =>
+            Promise.resolve({ count: data.length }),
+          ),
+        // 1) known rows by dedupeKey, 2) unread rows to reconcile, 3) list()
         findMany: jest
           .fn()
+          .mockResolvedValueOnce([])
           .mockResolvedValueOnce([
             { id: 'stale-1', dedupeKey: 'ptl_decl:gone' },
             { id: 'keep-ras', dedupeKey: `ras_pending:${companyId}` },

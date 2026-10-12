@@ -115,34 +115,22 @@ export class NotificationsService {
     const candidates = await this.collectCandidates(companyId);
     const activeKeys = new Set(candidates.map((c) => c.dedupeKey));
     let upserted = 0;
-    for (const c of candidates) {
-      const existing = await this.prisma.coreInAppNotification.findUnique({
-        where: {
-          companyId_dedupeKey: { companyId, dedupeKey: c.dedupeKey },
-        },
-      });
-      if (existing) {
-        if (
-          existing.readAt == null &&
-          (existing.title !== c.title ||
-            existing.body !== c.body ||
-            existing.href !== c.href)
-        ) {
-          await this.prisma.coreInAppNotification.update({
-            where: { id: existing.id },
-            data: {
-              title: c.title,
-              body: c.body,
-              href: c.href,
-              type: c.type,
-              priority: c.priority,
-            },
-          });
-        }
-        continue;
-      }
-      await this.prisma.coreInAppNotification.create({
-        data: {
+    // Batch reads: one findMany instead of N findUnique, then createMany +
+    // targeted updates. (Was ~2 queries per candidate every client poll.)
+    const existingByKey = new Map(
+      (
+        await this.prisma.coreInAppNotification.findMany({
+          where: {
+            companyId,
+            dedupeKey: { in: candidates.map((c) => c.dedupeKey) },
+          },
+        })
+      ).map((r) => [r.dedupeKey, r]),
+    );
+    const fresh = candidates.filter((c) => !existingByKey.has(c.dedupeKey));
+    if (fresh.length > 0) {
+      await this.prisma.coreInAppNotification.createMany({
+        data: fresh.map((c) => ({
           companyId,
           source: c.source,
           sourceRefId: c.sourceRefId,
@@ -152,9 +140,41 @@ export class NotificationsService {
           title: c.title,
           body: c.body,
           href: c.href,
-        },
+        })),
+        skipDuplicates: true,
       });
-      upserted += 1;
+      upserted = fresh.length;
+    }
+    const changed = candidates
+      .map((c) => ({ c, existing: existingByKey.get(c.dedupeKey) }))
+      .filter(
+        (
+          e,
+        ): e is {
+          c: UpsertCandidate;
+          existing: NonNullable<typeof e.existing>;
+        } =>
+          Boolean(e.existing) &&
+          e.existing!.readAt == null &&
+          (e.existing!.title !== e.c.title ||
+            e.existing!.body !== e.c.body ||
+            e.existing!.href !== e.c.href),
+      );
+    if (changed.length > 0) {
+      await this.prisma.$transaction(
+        changed.map(({ c, existing }) =>
+          this.prisma.coreInAppNotification.update({
+            where: { id: existing.id },
+            data: {
+              title: c.title,
+              body: c.body,
+              href: c.href,
+              type: c.type,
+              priority: c.priority,
+            },
+          }),
+        ),
+      );
     }
 
     const stale = await this.prisma.coreInAppNotification.findMany({

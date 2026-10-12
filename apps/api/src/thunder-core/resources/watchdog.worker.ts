@@ -4,10 +4,10 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { thunderWorkersEnabled } from '../thunder.constants';
+import { thunderTickMs, thunderWorkersEnabled } from '../thunder.constants';
 import { WatchdogService } from './watchdog.service';
 
-const TICK_MS = 10_000;
+const TICK_MS = thunderTickMs('THUNDER_WATCHDOG_TICK_MS', 30_000);
 
 @Injectable()
 export class WatchdogWorker implements OnModuleInit, OnModuleDestroy {

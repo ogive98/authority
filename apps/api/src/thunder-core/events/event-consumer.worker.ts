@@ -4,11 +4,14 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { thunderConsumersEnabled } from '../thunder.constants';
+import {
+  thunderConsumersEnabled,
+  thunderTickMs,
+} from '../thunder.constants';
 import { EventConsumerHost } from './event-consumer.host';
 import { ProcessedEventService } from './processed-event.service';
 
-const TICK_MS = 2_000;
+const TICK_MS = thunderTickMs('THUNDER_EVENT_TICK_MS', 5_000);
 const DEFAULT_PRUNE_EVERY_MS = 60_000;
 
 @Injectable()
@@ -30,6 +33,7 @@ export class EventConsumerWorker implements OnModuleInit, OnModuleDestroy {
     this.timer = setInterval(() => {
       void this.tick();
     }, TICK_MS);
+    this.timer.unref?.();
     this.logger.log('Event consumer worker started');
   }
 
@@ -54,8 +58,8 @@ export class EventConsumerWorker implements OnModuleInit, OnModuleDestroy {
     if (process.env.THUNDER_PROCESSED_EVENT_PRUNE === 'false') {
       return;
     }
-    const everyMs = readPositiveInt(
-      process.env.THUNDER_PROCESSED_EVENT_PRUNE_EVERY_MS,
+    const everyMs = thunderTickMs(
+      'THUNDER_PROCESSED_EVENT_PRUNE_EVERY_MS',
       DEFAULT_PRUNE_EVERY_MS,
     );
     const now = Date.now();
@@ -78,12 +82,4 @@ export class EventConsumerWorker implements OnModuleInit, OnModuleDestroy {
       );
     }
   }
-}
-
-function readPositiveInt(raw: string | undefined, fallback: number): number {
-  const n = Number(raw);
-  if (!Number.isFinite(n) || n <= 0) {
-    return fallback;
-  }
-  return Math.floor(n);
 }

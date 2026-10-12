@@ -36,9 +36,11 @@ import { AutomationModule } from './automation/automation.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ForgeModule } from './forge/forge.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { PdfRendererModule } from './common/pdf-renderer.module';
 
 @Module({
   imports: [
+    PdfRendererModule,
     PrismaModule,
     HealthModule,
     AuditModule,

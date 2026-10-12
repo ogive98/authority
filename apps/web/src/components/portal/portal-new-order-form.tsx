@@ -11,6 +11,7 @@ import {
   PORTAL_ORDERS_PATH,
   type PortalCatalogItem,
 } from "@/lib/customer-portal";
+import { matchesFolded } from "@/lib/utils";
 
 type CartLine = {
   productId: string;
@@ -37,13 +38,8 @@ export function PortalNewOrderForm({
   const [busy, setBusy] = useState(false);
 
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    if (!needle) return catalog;
-    return catalog.filter(
-      (p) =>
-        p.sku.toLowerCase().includes(needle) ||
-        p.name.toLowerCase().includes(needle),
-    );
+    if (!q.trim()) return catalog;
+    return catalog.filter((p) => matchesFolded(q, p.sku, p.name));
   }, [catalog, q]);
 
   function addProduct(item: PortalCatalogItem) {

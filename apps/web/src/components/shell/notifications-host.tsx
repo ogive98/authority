@@ -38,9 +38,19 @@ export function NotificationsHost() {
     void hydrateFromApi();
     if (isShellLight()) return;
     const t = window.setInterval(() => {
+      // /notifications/sync materializes rows: a hidden tab must not keep
+      // paying for it on top of every other open window.
+      if (document.hidden) return;
       void hydrateFromApi();
     }, POLL_MS);
-    return () => window.clearInterval(t);
+    const onVisible = () => {
+      if (!document.hidden) void hydrateFromApi();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [hydrateFromApi]);
 
   useEffect(() => {

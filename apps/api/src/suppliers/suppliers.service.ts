@@ -9,6 +9,7 @@ import {
   SupSupplierStatus,
 } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
+import { listWithAccentFallback } from '../common/accent-search';
 import { MasterDataService } from '../master-data/master-data.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -89,8 +90,9 @@ export class SuppliersService {
     if (opts.status && SUPPLIER_STATUSES.includes(opts.status as never)) {
       where.status = opts.status as SupSupplierStatus;
     }
-    if (opts.q?.trim()) {
-      const q = opts.q.trim();
+    const scanWhere: Prisma.SupSupplierWhereInput = { ...where };
+    const q = opts.q?.trim();
+    if (q) {
       where.OR = [
         { code: { contains: q, mode: 'insensitive' } },
         { party: { legalName: { contains: q, mode: 'insensitive' } } },
@@ -98,17 +100,36 @@ export class SuppliersService {
       ];
     }
 
-    const rows = await this.prisma.supSupplier.findMany({
-      where,
-      include: { party: true },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: limit + 1,
-      ...(opts.cursor
-        ? {
-            cursor: { id: opts.cursor },
-            skip: 1,
-          }
-        : {}),
+    const orderBy: Prisma.SupSupplierOrderByWithRelationInput[] = [
+      { createdAt: 'desc' },
+      { id: 'desc' },
+    ];
+    const include = { party: true } satisfies Prisma.SupSupplierInclude;
+    const rows = await listWithAccentFallback({
+      needle: q ?? '',
+      limit,
+      hasCursor: Boolean(opts.cursor),
+      strict: () =>
+        this.prisma.supSupplier.findMany({
+          where,
+          include,
+          orderBy,
+          take: limit + 1,
+          ...(opts.cursor
+            ? {
+                cursor: { id: opts.cursor },
+                skip: 1,
+              }
+            : {}),
+        }),
+      scanAll: (take) =>
+        this.prisma.supSupplier.findMany({
+          where: scanWhere,
+          include,
+          orderBy,
+          take,
+        }),
+      fields: (r) => [r.code, r.party?.legalName, r.paymentTerms],
     });
 
     const page = rows.slice(0, limit);

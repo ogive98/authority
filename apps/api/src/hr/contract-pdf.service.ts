@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { DocumentsService } from '../documents/documents.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PdfRendererService } from '../common/pdf-renderer.service';
 import { OutboxService } from '../audit/outbox.service';
 import { HR_ERROR_CODES, HR_EVENT_TYPES } from './hr.constants';
 import { HrException } from './hr.exception';
@@ -35,6 +36,7 @@ export class ContractPdfService {
     private readonly outbox: OutboxService,
     private readonly printSettings: ContractPrintSettingsResolver,
     private readonly printTemplates: PrintTemplateService,
+    private readonly pdfRenderer: PdfRendererService,
   ) {}
 
   async generateAndPersist(
@@ -177,45 +179,16 @@ export class ContractPdfService {
   }
 
   private async htmlToPdf(html: string): Promise<Buffer> {
-    let playwright: typeof import('playwright');
     try {
-      playwright = await import('playwright');
-    } catch {
-      throw new HrException(
-        HR_ERROR_CODES.CONTRACT_PDF_UNAVAILABLE,
-        'Playwright is not installed — run npm install in apps/api.',
-        HttpStatus.SERVICE_UNAVAILABLE,
-      );
-    }
-
-    let browser;
-    try {
-      browser = await playwright.chromium.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      });
+      return await this.pdfRenderer.render(html);
     } catch (error) {
-      const msg =
-        error instanceof Error ? error.message : 'Chromium launch failed';
-      this.logger.warn(`Contract PDF Chromium unavailable: ${msg}`);
+      const msg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`pdf render failed: ${msg}`);
       throw new HrException(
         HR_ERROR_CODES.CONTRACT_PDF_UNAVAILABLE,
-        'Chromium unavailable for PDF — run npx playwright install chromium.',
+        msg,
         HttpStatus.SERVICE_UNAVAILABLE,
       );
-    }
-
-    try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle' });
-      const pdf = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: { top: '16mm', right: '14mm', bottom: '16mm', left: '14mm' },
-      });
-      return Buffer.from(pdf);
-    } finally {
-      await browser.close().catch(() => undefined);
     }
   }
 }

@@ -5,11 +5,11 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { JobProcessorHost } from '../jobs/job-processor.host';
-import { thunderWorkersEnabled } from '../thunder.constants';
+import { thunderTickMs, thunderWorkersEnabled } from '../thunder.constants';
 import { createProcessCpuProbe, sampleRamUsageRatio } from './live-metrics';
 import { ResourceManagerService } from './resource-manager.service';
 
-const TICK_MS = 2_000;
+const TICK_MS = thunderTickMs('THUNDER_CAPACITY_TICK_MS', 5_000);
 
 /**
  * Closed loop: sample process CPU/RAM → ResourceManager → pause P4 lanes.

@@ -46,6 +46,13 @@ input {
   font: inherit;
 }
 
+/* Global user-select:none above breaks caret/selection/IME in editable
+   fields under Chromium — inputs must opt back in. */
+input {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .ax-stage {
   width: 100%;
   height: 100%;

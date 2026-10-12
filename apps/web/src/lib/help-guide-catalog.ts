@@ -216,14 +216,14 @@ export const HELP_MODULES: HelpModule[] = [
           fr: [
             "Cliquez l’orbe « X » accent dans la topbar (à gauche des notifications).",
             "Le companion AUTHORITY X passe au premier plan — AUTHORITY reste ouvert derrière.",
-            "Sinon : raccourci CTRL+X si le tray Electron tourne.",
+            "Sinon : Ctrl+Alt+X si le tray Electron tourne (CTRL+X reste à Couper).",
             "Appairage : Préférences → Poste → Générer un code, coller dans X (jeton keyring, D274).",
             "Si hors ligne : lancez `npm run dev -w authority-x` (tray).",
           ],
           it: [
             "Clicca l’orbe « X » accent nella topbar (a sinistra delle notifiche).",
             "Il companion AUTHORITY X passa in primo piano — AUTHORITY resta aperto sotto.",
-            "Altrimenti: scorciatoia CTRL+X se il tray Electron è attivo.",
+            "Altrimenti: scorciatoia Ctrl+Alt+X se il tray Electron è attivo (CTRL+X resta per Taglia).",
             "Associazione: Preferenze → Postazione → Genera un codice, incolla in X (token keyring, D274).",
             "Se offline: avvia `npm run dev -w authority-x` (tray).",
           ],
@@ -1204,14 +1204,14 @@ export const HELP_MODULES: HelpModule[] = [
         },
         steps: {
           fr: [
-            "AUTHORITY X (CTRL+X) : saisir la commande → choisir l’entité si ambiguë.",
+            "AUTHORITY X (Ctrl+Alt+X) : saisir la commande → choisir l’entité si ambiguë.",
             "Assisted : valider → AUTHORITY ouvre `/finance/ap-bills` avec tiroir prérempli.",
             "Hotlink : ouverture directe AUTHORITY après le live log.",
             "Vérifier fournisseur / montant → Enregistrer (jamais d’écriture silencieuse).",
             "Pas de virement Treasury inventé — Transfer pending si workflow absent.",
           ],
           it: [
-            "AUTHORITY X (CTRL+X): digita il comando → scegli l’entità se ambigua.",
+            "AUTHORITY X (Ctrl+Alt+X): digita il comando → scegli l’entità se ambigua.",
             "Assisted: conferma → AUTHORITY apre `/finance/ap-bills` con drawer precompilato.",
             "Hotlink: apertura diretta AUTHORITY dopo il live log.",
             "Verifica fornitore / importo → Salva (mai scrittura silenziosa).",

@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useId, useRef, useState } from "react";
 import { AInput } from "./a-input";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +26,11 @@ type AComboboxProps = {
 };
 
 /**
- * Typeahead with portaled list (z-toast) so drawer fields never cover suggestions.
+ * Typeahead combobox. The listbox is rendered inline (absolute below the
+ * field) on purpose: portaling to document.body breaks pointer-events inside
+ * Radix modal dialogs (body gets pointer-events:none), and a fixed popup
+ * inside Dialog.Content breaks under backdrop-filter ancestors. Inline keeps
+ * clicks, focus-scope and dismiss behaviour correct everywhere.
  */
 export function ACombobox({
   label,
@@ -52,37 +48,8 @@ export function ACombobox({
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{
-    top: number;
-    left: number;
-    width: number;
-  } | null>(null);
-
-  const updateCoords = useCallback(() => {
-    const el = inputRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const gap = 4;
-    const spaceBelow = window.innerHeight - r.bottom;
-    const preferUp = spaceBelow < 220 && r.top > 220;
-    setCoords({
-      top: preferUp ? r.top - gap : r.bottom + gap,
-      left: r.left,
-      width: Math.max(r.width, 200),
-    });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    updateCoords();
-    const onScroll = () => updateCoords();
-    window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", onScroll);
-    return () => {
-      window.removeEventListener("scroll", onScroll, true);
-      window.removeEventListener("resize", onScroll);
-    };
-  }, [open, updateCoords, options.length, displayValue, loading]);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const showList = open;
 
   useEffect(() => {
     if (!open) return;
@@ -97,7 +64,10 @@ export function ACombobox({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open, listId]);
 
-  const showList = open;
+  const openList = () => {
+    setOpen(true);
+    setActiveIndex(-1);
+  };
 
   return (
     <div className="relative z-10 space-y-1">
@@ -115,77 +85,103 @@ export function ACombobox({
         aria-expanded={showList}
         aria-controls={listId}
         aria-autocomplete="list"
+        aria-activedescendant={
+          showList && activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined
+        }
         onFocus={() => {
-          setOpen(true);
-          updateCoords();
+          openList();
           onOpen?.();
         }}
         onChange={(e) => {
           onDisplayChange(e.target.value);
-          setOpen(true);
+          if (!open) openList();
+          setActiveIndex(-1);
           onOpen?.();
         }}
         onKeyDown={(e) => {
-          if (e.key === "Escape") setOpen(false);
-          if (e.key === "Enter" && options[0]) {
-            e.preventDefault();
-            onSelect(options[0]);
+          if (e.key === "Escape") {
             setOpen(false);
+            return;
+          }
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            if (options.length === 0) return;
+            e.preventDefault();
+            if (!open) openList();
+            setActiveIndex((i) =>
+              e.key === "ArrowDown"
+                ? (i + 1) % options.length
+                : i <= 0
+                  ? options.length - 1
+                  : i - 1,
+            );
+            return;
+          }
+          if (e.key === "Enter") {
+            const target =
+              activeIndex >= 0 && activeIndex < options.length
+                ? options[activeIndex]
+                : options.length === 1
+                  ? options[0]
+                  : undefined;
+            if (target) {
+              e.preventDefault();
+              onSelect(target);
+              setOpen(false);
+              return;
+            }
+            if (open && options.length > 0) {
+              // Nothing highlighted and ambiguous list: just close the
+              // suggestions. Never overwrite the typed text silently.
+              e.preventDefault();
+              setOpen(false);
+            }
           }
         }}
         className={cn(valueId ? "border-a-accent/40" : undefined)}
       />
-      {showList && coords && typeof document !== "undefined"
-        ? createPortal(
-            <ul
-              id={listId}
-              role="listbox"
-              className="a-glass-strong fixed max-h-56 overflow-auto rounded-[var(--a-radius-md)] py-1 text-[length:var(--a-text-sm)] shadow-[var(--a-shadow-panel)]"
-              style={{
-                top: coords.top,
-                left: coords.left,
-                width: coords.width,
-                zIndex: 520,
-                transform:
-                  coords.top < (inputRef.current?.getBoundingClientRect().top ?? 0)
-                    ? "translateY(-100%)"
-                    : undefined,
-              }}
-            >
-              {loading ? (
-                <li className="px-3 py-2 text-a-fg-muted">Recherche…</li>
-              ) : options.length === 0 ? (
-                <li className="px-3 py-2 text-a-fg-muted">{emptyText}</li>
-              ) : (
-                options.map((opt) => (
-                  <li
-                    key={opt.id}
-                    role="option"
-                    aria-selected={opt.id === valueId}
-                  >
-                    <button
-                      type="button"
-                      className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-a-surface-3"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => {
-                        onSelect(opt);
-                        setOpen(false);
-                      }}
-                    >
-                      <span className="text-a-fg">{opt.label}</span>
-                      {opt.hint ? (
-                        <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
-                          {opt.hint}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>,
-            document.body,
-          )
-        : null}
+      {showList ? (
+        <ul
+          id={listId}
+          role="listbox"
+          className="a-glass-strong absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-auto rounded-[var(--a-radius-md)] py-1 text-[length:var(--a-text-sm)] shadow-[var(--a-shadow-panel)]"
+        >
+          {loading ? (
+            <li className="px-3 py-2 text-a-fg-muted">Recherche…</li>
+          ) : options.length === 0 ? (
+            <li className="px-3 py-2 text-a-fg-muted">{emptyText}</li>
+          ) : (
+            options.map((opt, i) => (
+              <li
+                key={opt.id}
+                id={`${listId}-${i}`}
+                role="option"
+                aria-selected={i === activeIndex || opt.id === valueId}
+              >
+                <button
+                  type="button"
+                  className={cn(
+                    "flex w-full flex-col items-start px-3 py-2 text-left hover:bg-a-surface-3",
+                    i === activeIndex && "bg-a-surface-3",
+                  )}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onClick={() => {
+                    onSelect(opt);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="text-a-fg">{opt.label}</span>
+                  {opt.hint ? (
+                    <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                      {opt.hint}
+                    </span>
+                  ) : null}
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      ) : null}
     </div>
   );
 }

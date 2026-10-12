@@ -204,20 +204,17 @@ async function main() {
   await seedTunisiaVatCatalog(prisma, company.id);
   await seedExpertiseOperationalStubs(prisma, company.id);
 
-  await prisma.modFlag.upsert({
-    where: {
-      companyId_flagKey: {
-        companyId: company.id,
-        flagKey: 'platform.search',
-      },
-    },
-    update: { enabled: false },
-    create: {
-      companyId: company.id,
-      flagKey: 'platform.search',
-      enabled: false,
-    },
+  // Seed default is OFF, but never overwrite an operator's choice: re-running
+  // the seed used to silently re-disable platform search after each `db seed`.
+  const searchFlag = await prisma.modFlag.findFirst({
+    where: { companyId: company.id, flagKey: 'platform.search' },
+    select: { id: true },
   });
+  if (!searchFlag) {
+    await prisma.modFlag.create({
+      data: { companyId: company.id, flagKey: 'platform.search', enabled: false },
+    });
+  }
 
   const passwordHash = await argon2.hash(DEMO_USER_PASSWORD, {
     type: argon2.argon2id,

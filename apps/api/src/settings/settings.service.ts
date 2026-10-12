@@ -118,15 +118,28 @@ export class SettingsService {
     private readonly opsVisibility: OpsVisibilityResolver,
   ) {}
 
+  private definitionsEnsured: Promise<void> | null = null;
+
+  /** Global `setDef` rows registered by upsert — once per process, not per request. */
+  private async ensureDefinitionsOnce(): Promise<void> {
+    this.definitionsEnsured ??= (async () => {
+      await this.ensureOpsUnlockDefinition();
+      await this.opsVisibility.ensureDefinitions();
+      await this.ensureCollectionRemindDefinition();
+      await this.ensureCreditWarnDefinition();
+      await this.ensureAllDunningDefinitions();
+      await this.ensureAllBackupDefinitions();
+    })().catch((error: unknown) => {
+      this.definitionsEnsured = null;
+      throw error;
+    });
+    return this.definitionsEnsured;
+  }
+
   async getEffective(
     context: ResolveContext,
   ): Promise<EffectiveSettingsResponse> {
-    await this.ensureOpsUnlockDefinition();
-    await this.opsVisibility.ensureDefinitions();
-    await this.ensureCollectionRemindDefinition();
-    await this.ensureCreditWarnDefinition();
-    await this.ensureAllDunningDefinitions();
-    await this.ensureAllBackupDefinitions();
+    await this.ensureDefinitionsOnce();
 
     const definitions = await this.prisma.setDef.findMany({
       orderBy: { key: 'asc' },
@@ -399,21 +412,37 @@ export class SettingsService {
 
     const asOf = new Date();
     asOf.setUTCHours(0, 0, 0, 0);
+    // One range query instead of one findFirst per VAT code: this runs on every
+    // settings/effective call, so the old loop cost len(codes) round trips.
+    const rates = await this.prisma.taxRate.findMany({
+      where: {
+        companyId,
+        deletedAt: null,
+        taxCodeId: { in: codes.map((c) => c.id) },
+        validFrom: { lte: asOf },
+        OR: [{ validTo: null }, { validTo: { gte: asOf } }],
+      },
+      orderBy: { validFrom: 'desc' },
+      select: {
+        taxCodeId: true,
+        rateBps: true,
+        lawRef: true,
+        expertValidatedAt: true,
+      },
+    });
+    const latestByCode = new Map<string, (typeof rates)[number]>();
+    for (const rate of rates) {
+      if (!latestByCode.has(rate.taxCodeId)) {
+        latestByCode.set(rate.taxCodeId, rate);
+      }
+    }
+
     const summaries: string[] = [];
     let anyValidated: Date | null = null;
     let lawRef: string | null = null;
 
     for (const code of codes) {
-      const rate = await this.prisma.taxRate.findFirst({
-        where: {
-          companyId,
-          taxCodeId: code.id,
-          deletedAt: null,
-          validFrom: { lte: asOf },
-          OR: [{ validTo: null }, { validTo: { gte: asOf } }],
-        },
-        orderBy: { validFrom: 'desc' },
-      });
+      const rate = latestByCode.get(code.id);
       if (!rate) continue;
       summaries.push(`${code.code} ${(rate.rateBps / 100).toFixed(0)}%`);
       if (rate.lawRef && !lawRef) lawRef = rate.lawRef;

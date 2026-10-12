@@ -4,10 +4,13 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { thunderEventPublisherEnabled } from '../thunder.constants';
+import {
+  thunderEventPublisherEnabled,
+  thunderTickMs,
+} from '../thunder.constants';
 import { OutboxPublisherService } from './outbox-publisher.service';
 
-const TICK_MS = 5_000;
+const TICK_MS = thunderTickMs('THUNDER_OUTBOX_TICK_MS', 10_000);
 
 @Injectable()
 export class OutboxPublisherWorker implements OnModuleInit, OnModuleDestroy {
@@ -24,6 +27,7 @@ export class OutboxPublisherWorker implements OnModuleInit, OnModuleDestroy {
     this.timer = setInterval(() => {
       void this.tick();
     }, TICK_MS);
+    this.timer.unref?.();
     this.logger.log('Outbox publisher worker started');
   }
 

@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, PrdProduct, PrdProductStatus } from '@prisma/client';
+import { listWithAccentFallback } from '../common/accent-search';
 import { MasterDataService } from '../master-data/master-data.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PRODUCTS_ERROR_CODES } from './products.constants';
@@ -41,24 +42,41 @@ export class ProductsService {
       companyId,
       deletedAt: null,
     };
-    if (opts.q?.trim()) {
-      const q = opts.q.trim();
+    const q = opts.q?.trim();
+    if (q) {
       where.OR = [
         { sku: { contains: q, mode: 'insensitive' } },
         { name: { contains: q, mode: 'insensitive' } },
       ];
     }
 
-    const rows = await this.prisma.prdProduct.findMany({
-      where,
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: limit + 1,
-      ...(opts.cursor
-        ? {
-            cursor: { id: opts.cursor },
-            skip: 1,
-          }
-        : {}),
+    const orderBy: Prisma.PrdProductOrderByWithRelationInput[] = [
+      { createdAt: 'desc' },
+      { id: 'desc' },
+    ];
+    const rows = await listWithAccentFallback({
+      needle: q ?? '',
+      limit,
+      hasCursor: Boolean(opts.cursor),
+      strict: () =>
+        this.prisma.prdProduct.findMany({
+          where,
+          orderBy,
+          take: limit + 1,
+          ...(opts.cursor
+            ? {
+                cursor: { id: opts.cursor },
+                skip: 1,
+              }
+            : {}),
+        }),
+      scanAll: (take) =>
+        this.prisma.prdProduct.findMany({
+          where: { companyId, deletedAt: null },
+          orderBy,
+          take,
+        }),
+      fields: (r) => [r.sku, r.name],
     });
 
     const page = rows.slice(0, limit);

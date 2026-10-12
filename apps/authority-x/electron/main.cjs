@@ -1,6 +1,7 @@
 /**
  * AUTHORITY X — Electron main (Phase 2 Desktop Shell)
- * Default global shortcut: Control+X (configurable, disableable).
+ * Default global shortcut: Control+Alt+X (configurable, disableable).
+ * Never a plain editing combo: a system-wide hotkey shadows Cut in every app.
  * Never invent ERP workflows here — companion shell only.
  */
 const {
@@ -30,14 +31,14 @@ let tray = null;
 /** Guard — blur must not fight openExternal */
 let openingAuthority = false;
 
+/** Renderer has an editable surface on screen → may hold OS focus. */
+let overlayInteractive = false;
+
 const prefs = {
-  /** Product default — do not replace with another combo as default. */
-  shortcut: "CommandOrControl+X",
+  /** Editing-free default: Ctrl+X would swallow Cut in every other app. */
+  shortcut: "CommandOrControl+Alt+X",
   shortcutEnabled: true,
-  /** D-X1 — do not steal Cut when foreground is a text edit control */
-  cutSafe: true,
   lastConflict: null,
-  lastCutHold: null,
 };
 
 function createTrayIcon() {
@@ -155,19 +156,50 @@ function createWindow() {
 
   mainWindow.on("closed", () => {
     mainWindow = null;
+    overlayInteractive = false;
   });
+}
+
+/**
+ * Single source of truth for "may this window eat OS input?".
+ * Non-interactive = click-through AND keyboard-through: a focusable,
+ * always-on-top, click-through window is the trap that makes typing die
+ * everywhere (clicks forward to the page below, keystrokes stay here).
+ */
+function applyInteractivity(interactive) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  overlayInteractive = interactive;
+  mainWindow.setIgnoreMouseEvents(!interactive, { forward: !interactive });
+  if (mainWindow.isFocusable() !== interactive) {
+    mainWindow.setFocusable(interactive);
+  }
+  if (interactive) {
+    if (prefs.shortcutEnabled) unregisterShortcut();
+    mainWindow.focus();
+  } else {
+    if (mainWindow.isFocused()) mainWindow.blur();
+    // X gave up the keyboard → the global summon answers again.
+    if (prefs.shortcutEnabled) registerShortcut();
+  }
 }
 
 function showOverlay() {
   if (!mainWindow) createWindow();
   if (!mainWindow) return;
+  // Summon = intent to type into X.
   mainWindow.setBounds(getOverlayBounds());
+  applyInteractivity(true);
+  // Top-most panel rank: a plain alwaysOnTop window summoned from a loopback
+  // request never wins activation, so X showed up but stayed deaf to keys.
+  mainWindow.setAlwaysOnTop(true, "screen-saver");
+  app.focus({ steal: true });
   mainWindow.show();
   mainWindow.focus();
   mainWindow.webContents.send("authority-x:opened");
 }
 
 function hideOverlay() {
+  if (mainWindow && !mainWindow.isDestroyed()) applyInteractivity(false);
   if (mainWindow && mainWindow.isVisible()) {
     mainWindow.hide();
     mainWindow.webContents.send("authority-x:closed");
@@ -187,56 +219,58 @@ function unregisterShortcut() {
   prefs.lastConflict = null;
 }
 
-function isForegroundTextEdit() {
-  if (process.platform !== "win32") return false;
-  try {
-    const { execFileSync } = require("child_process");
-    const script = `
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-using System.Text;
-public class AxFg {
-  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-  [DllImport("user32.dll")] public static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+/**
+ * A system-wide hotkey is consumed before the target app ever sees the key,
+ * so X must never register an editing combo (Cut/Copy/Paste/Undo/Select-all):
+ * that is how the shell silently kills typing in every other window.
+ */
+const FORBIDDEN_SHORTCUTS = new Set([
+  "commandorcontrol+x",
+  "commandorcontrol+c",
+  "commandorcontrol+v",
+  "commandorcontrol+z",
+  "commandorcontrol+a",
+  "commandorcontrol+f",
+  "control+x",
+  "control+c",
+  "control+v",
+  "control+z",
+  "control+a",
+  "alt+space",
+]);
+
+function isForbiddenShortcut(accelerator) {
+  return FORBIDDEN_SHORTCUTS.has(accelerator.toLowerCase().replace(/\s+/g, ""));
 }
-"@
-$hwnd = [AxFg]::GetForegroundWindow()
-$sb = New-Object System.Text.StringBuilder 256
-[void][AxFg]::GetClassName($hwnd, $sb, 256)
-Write-Output $sb.ToString()
-`;
-    const cls = execFileSync(
-      "powershell.exe",
-      ["-NoProfile", "-NonInteractive", "-Command", script],
-      { encoding: "utf8", timeout: 900, windowsHide: true },
-    )
-      .trim()
-      .split(/\r?\n/)
-      .pop();
-    if (!cls) return false;
-    // Classic Win32 edit surfaces where Cut (CTRL+X) must win
-    return /Edit|RichEdit|Scintilla|Notepad|TextBox|Chrome_RenderWidgetHostHWND/i.test(
-      cls,
-    );
-  } catch {
-    return false;
-  }
+
+function shortcutState() {
+  return {
+    shortcut: prefs.shortcut,
+    enabled: prefs.shortcutEnabled,
+    conflict: Boolean(prefs.lastConflict),
+    lastConflict: prefs.lastConflict,
+  };
 }
 
 function registerShortcut() {
   unregisterShortcut();
   if (!prefs.shortcutEnabled) {
-    return { ok: true, enabled: false, shortcut: prefs.shortcut, cutSafe: prefs.cutSafe };
+    return { ok: true, enabled: false, shortcut: prefs.shortcut };
   }
 
-  const ok = globalShortcut.register(prefs.shortcut, () => {
-    if (prefs.cutSafe && isForegroundTextEdit()) {
-      prefs.lastCutHold = new Date().toISOString();
-      return;
-    }
-    toggleOverlay();
-  });
+  if (isForbiddenShortcut(prefs.shortcut)) {
+    prefs.lastConflict = prefs.shortcut;
+    return {
+      ok: false,
+      enabled: true,
+      shortcut: prefs.shortcut,
+      conflict: true,
+      message:
+        "Raccourci refusé : Couper/Coller/Sélection restent à l'édition. Choisissez Alt ou Maj dans la combinaison.",
+    };
+  }
+
+  const ok = globalShortcut.register(prefs.shortcut, () => toggleOverlay());
 
   if (!ok) {
     prefs.lastConflict = prefs.shortcut;
@@ -244,7 +278,6 @@ function registerShortcut() {
       ok: false,
       enabled: true,
       shortcut: prefs.shortcut,
-      cutSafe: prefs.cutSafe,
       conflict: true,
       message:
         "Raccourci global indisponible (conflit OS/autre app). Désactivez ou changez via le tray.",
@@ -256,7 +289,6 @@ function registerShortcut() {
     ok: true,
     enabled: true,
     shortcut: prefs.shortcut,
-    cutSafe: prefs.cutSafe,
     conflict: false,
   };
 }
@@ -280,19 +312,6 @@ function buildTrayMenu() {
         : "Activer raccourci global",
       click: () => {
         prefs.shortcutEnabled = !prefs.shortcutEnabled;
-        const result = registerShortcut();
-        if (mainWindow) {
-          mainWindow.webContents.send("authority-x:shortcut-state", result);
-        }
-        tray?.setContextMenu(buildTrayMenu());
-      },
-    },
-    {
-      label: prefs.cutSafe
-        ? "Anti-Cut: ON (Edit = Couper)"
-        : "Anti-Cut: OFF",
-      click: () => {
-        prefs.cutSafe = !prefs.cutSafe;
         const result = registerShortcut();
         if (mainWindow) {
           mainWindow.webContents.send("authority-x:shortcut-state", result);
@@ -372,29 +391,18 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   startSummonServer();
-  const result = registerShortcut();
-  // Start hidden in tray
+  // Start hidden in tray — this also releases OS input and arms the summon.
   hideOverlay();
+  console.log(
+    `[authority-x] summon ${prefs.shortcut} · enabled=${prefs.shortcutEnabled} · conflict=${Boolean(
+      prefs.lastConflict,
+    )}`,
+  );
 
-  ipcMain.handle("authority-x:get-shortcut-state", () => ({
-    shortcut: prefs.shortcut,
-    enabled: prefs.shortcutEnabled,
-    cutSafe: prefs.cutSafe,
-    conflict: Boolean(prefs.lastConflict),
-    lastConflict: prefs.lastConflict,
-    lastCutHold: prefs.lastCutHold,
-    result,
-  }));
+  ipcMain.handle("authority-x:get-shortcut-state", () => shortcutState());
 
   ipcMain.handle("authority-x:set-shortcut-enabled", (_e, enabled) => {
     prefs.shortcutEnabled = Boolean(enabled);
-    const next = registerShortcut();
-    tray?.setContextMenu(buildTrayMenu());
-    return next;
-  });
-
-  ipcMain.handle("authority-x:set-cut-safe", (_e, enabled) => {
-    prefs.cutSafe = Boolean(enabled);
     const next = registerShortcut();
     tray?.setContextMenu(buildTrayMenu());
     return next;
@@ -413,6 +421,20 @@ app.whenReady().then(() => {
     hideOverlay();
     return { ok: true };
   });
+
+  // Renderer idle (orb only) → pass mouse AND keyboard through, so the
+  // overlay can never hold OS focus without an editable surface.
+  // Expanded → interactive, and the global summon yields to X's own input.
+  ipcMain.handle("authority-x:set-interactive", (_e, interactive) => {
+    applyInteractivity(Boolean(interactive));
+    return { ok: true };
+  });
+
+  // Renderer pulls visibility on mount: covers the race where showOverlay()
+  // fires "opened" before the page (vite first load) has registered it.
+  ipcMain.handle("authority-x:is-visible", () => ({
+    visible: Boolean(mainWindow && mainWindow.isVisible()),
+  }));
 
   ipcMain.handle("authority-x:show", () => {
     showOverlay();

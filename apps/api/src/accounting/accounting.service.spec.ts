@@ -217,6 +217,22 @@ describe('AccountingService', () => {
         }),
       },
       accJournalLine: {
+        groupBy: jest.fn().mockResolvedValue([
+          {
+            accountId: accountBankId,
+            _sum: {
+              debit: new Prisma.Decimal(100),
+              credit: new Prisma.Decimal(0),
+            },
+          },
+          {
+            accountId: accountSalesId,
+            _sum: {
+              debit: new Prisma.Decimal(0),
+              credit: new Prisma.Decimal(100),
+            },
+          },
+        ]),
         findMany: jest.fn().mockResolvedValue([
           {
             accountId: accountBankId,

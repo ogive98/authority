@@ -4,11 +4,13 @@ contextBridge.exposeInMainWorld("authorityX", {
   getShortcutState: () => ipcRenderer.invoke("authority-x:get-shortcut-state"),
   setShortcutEnabled: (enabled) =>
     ipcRenderer.invoke("authority-x:set-shortcut-enabled", enabled),
-  setCutSafe: (enabled) => ipcRenderer.invoke("authority-x:set-cut-safe", enabled),
   setShortcut: (accelerator) =>
     ipcRenderer.invoke("authority-x:set-shortcut", accelerator),
   hide: () => ipcRenderer.invoke("authority-x:hide"),
   show: () => ipcRenderer.invoke("authority-x:show"),
+  setInteractive: (interactive) =>
+    ipcRenderer.invoke("authority-x:set-interactive", interactive),
+  isVisible: () => ipcRenderer.invoke("authority-x:is-visible"),
   connectionStub: () => ipcRenderer.invoke("authority-x:connection-stub"),
   getDeviceAuth: () => ipcRenderer.invoke("authority-x:get-device-auth"),
   setDeviceAuth: (auth) => ipcRenderer.invoke("authority-x:set-device-auth", auth),

@@ -2,6 +2,7 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { DocLinkType, DocVisibility, FinInvoiceStatus } from '@prisma/client';
 import { DocumentsService } from '../documents/documents.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PdfRendererService } from '../common/pdf-renderer.service';
 import { OutboxService } from '../audit/outbox.service';
 import { FINANCE_ERROR_CODES, FINANCE_EVENT_TYPES } from './finance.constants';
 import { FinanceException } from './finance.exception';
@@ -44,6 +45,7 @@ export class InvoicePdfService {
     private readonly prisma: PrismaService,
     private readonly documents: DocumentsService,
     private readonly outbox: OutboxService,
+    private readonly pdfRenderer: PdfRendererService,
   ) {}
 
   async generateAndPersist(
@@ -161,45 +163,16 @@ export class InvoicePdfService {
   }
 
   private async htmlToPdf(html: string): Promise<Buffer> {
-    let playwright: typeof import('playwright');
     try {
-      playwright = await import('playwright');
+      return await this.pdfRenderer.render(html);
     } catch (error) {
-      this.logger.error(
-        `playwright import failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      const msg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`pdf render failed: ${msg}`);
       throw new FinanceException(
         FINANCE_ERROR_CODES.INVALID_STATUS,
-        'PDF engine unavailable.',
+        msg,
         HttpStatus.SERVICE_UNAVAILABLE,
       );
-    }
-    let browser;
-    try {
-      browser = await playwright.chromium.launch({
-        headless: true,
-      });
-    } catch (error) {
-      this.logger.error(
-        `chromium launch failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      throw new FinanceException(
-        FINANCE_ERROR_CODES.INVALID_STATUS,
-        'Chromium unavailable for PDF — run npx playwright install chromium.',
-        HttpStatus.SERVICE_UNAVAILABLE,
-      );
-    }
-    try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle' });
-      const pdf = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: { top: '16mm', bottom: '16mm', left: '14mm', right: '14mm' },
-      });
-      return Buffer.from(pdf);
-    } finally {
-      await browser.close();
     }
   }
 }

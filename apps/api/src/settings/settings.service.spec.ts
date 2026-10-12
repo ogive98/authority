@@ -20,7 +20,7 @@ describe('SettingsService hierarchy', () => {
     };
     orgUserAssignment: { findFirst: jest.Mock };
     taxCode: { findMany: jest.Mock };
-    taxRate: { findFirst: jest.Mock };
+    taxRate: { findMany: jest.Mock };
     $transaction: jest.Mock;
   };
   let auditService: { append: jest.Mock };
@@ -55,7 +55,7 @@ describe('SettingsService hierarchy', () => {
       },
       orgUserAssignment: { findFirst: jest.fn() },
       taxCode: { findMany: jest.fn().mockResolvedValue([]) },
-      taxRate: { findFirst: jest.fn().mockResolvedValue(null) },
+      taxRate: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((callback: (tx: unknown) => unknown) =>
         Promise.resolve(callback(prisma)),
       ),
@@ -329,17 +329,20 @@ describe('SettingsService hierarchy', () => {
       { id: 'c1', code: 'TVA19' },
       { id: 'c2', code: 'TVA7' },
     ]);
-    prisma.taxRate.findFirst
-      .mockResolvedValueOnce({
+    prisma.taxRate.findMany.mockResolvedValue([
+      {
+        taxCodeId: 'c1',
         rateBps: 1900,
         lawRef: 'Code TVA art.7',
         expertValidatedAt: new Date('2026-09-08T00:00:00.000Z'),
-      })
-      .mockResolvedValueOnce({
+      },
+      {
+        taxCodeId: 'c2',
         rateBps: 700,
         lawRef: 'LF2018 art.43',
         expertValidatedAt: new Date('2026-09-08T00:00:00.000Z'),
-      });
+      },
+    ]);
 
     const catalog = await service.listExpertise('company-demo');
     const vat = catalog.items.find((i) => i.key === 'tax.vat');

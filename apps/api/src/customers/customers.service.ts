@@ -10,6 +10,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { OutboxService } from '../audit/outbox.service';
+import { listWithAccentFallback } from '../common/accent-search';
 import { MasterDataService } from '../master-data/master-data.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -160,8 +161,8 @@ export class CustomersService {
       companyId,
       deletedAt: null,
     };
-    if (opts.q?.trim()) {
-      const q = opts.q.trim();
+    const q = opts.q?.trim();
+    if (q) {
       where.OR = [
         { code: { contains: q, mode: 'insensitive' } },
         { nickname: { contains: q, mode: 'insensitive' } },
@@ -170,17 +171,36 @@ export class CustomersService {
       ];
     }
 
-    const rows = await this.prisma.cusCustomer.findMany({
-      where,
-      include: { party: true, zone: true },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: limit + 1,
-      ...(opts.cursor
-        ? {
-            cursor: { id: opts.cursor },
-            skip: 1,
-          }
-        : {}),
+    const orderBy: Prisma.CusCustomerOrderByWithRelationInput[] = [
+      { createdAt: 'desc' },
+      { id: 'desc' },
+    ];
+    const include = { party: true, zone: true } satisfies Prisma.CusCustomerInclude;
+    const rows = await listWithAccentFallback({
+      needle: q ?? '',
+      limit,
+      hasCursor: Boolean(opts.cursor),
+      strict: () =>
+        this.prisma.cusCustomer.findMany({
+          where,
+          include,
+          orderBy,
+          take: limit + 1,
+          ...(opts.cursor
+            ? {
+                cursor: { id: opts.cursor },
+                skip: 1,
+              }
+            : {}),
+        }),
+      scanAll: (take) =>
+        this.prisma.cusCustomer.findMany({
+          where: { companyId, deletedAt: null },
+          include,
+          orderBy,
+          take,
+        }),
+      fields: (r) => [r.code, r.nickname, r.party?.legalName, r.salesRep],
     });
 
     const page = rows.slice(0, limit);

@@ -6,6 +6,7 @@ import {
   MdRefKind,
   Prisma,
 } from '@prisma/client';
+import { listWithAccentFallback } from '../common/accent-search';
 import { PRODUCTS_ERROR_CODES } from '../products/products.constants';
 import { ProductsException } from '../products/products.exception';
 import { PrismaService } from '../prisma/prisma.service';
@@ -170,13 +171,24 @@ export class MasterDataService {
       deletedAt: null,
       ...(opts.type ? { type: opts.type } : {}),
     };
-    if (opts.q?.trim()) {
-      where.legalName = { contains: opts.q.trim(), mode: 'insensitive' };
+    const scanWhere: Prisma.MdPartyWhereInput = { ...where };
+    const q = opts.q?.trim();
+    if (q) {
+      where.legalName = { contains: q, mode: 'insensitive' };
     }
-    const rows = await this.prisma.mdParty.findMany({
-      where,
-      orderBy: [{ legalName: 'asc' }, { id: 'asc' }],
-      take: limit,
+    const orderBy: Prisma.MdPartyOrderByWithRelationInput[] = [
+      { legalName: 'asc' },
+      { id: 'asc' },
+    ];
+
+    const rows = await listWithAccentFallback({
+      needle: q ?? '',
+      limit,
+      hasCursor: false,
+      strict: () => this.prisma.mdParty.findMany({ where, orderBy, take: limit }),
+      scanAll: (take) =>
+        this.prisma.mdParty.findMany({ where: scanWhere, orderBy, take }),
+      fields: (r) => [r.legalName],
     });
     return { items: rows.map(serializeParty) };
   }
