@@ -211,6 +211,7 @@ export function ShellSidebar() {
             href={href}
             title={label}
             className={className}
+            prefetch={false}
             onClick={() => {
               setMobileNavOpen(false);
               onClick?.();

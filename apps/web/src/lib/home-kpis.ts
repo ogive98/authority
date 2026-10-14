@@ -304,112 +304,15 @@ async function backupCards(): Promise<HomeKpiCard[]> {
 async function homeOverviewCards(
   enabled: Set<string>,
 ): Promise<HomeKpiCard[]> {
-  const tasks: Promise<HomeKpiCard | null>[] = [];
+  const tasks: Promise<HomeKpiCard[]>[] = [];
 
-  if (enabled.has("finance")) {
-    tasks.push(
-      getJson<FinanceHomeKpis>("/api/v1/finance/home-kpis").then((fin) =>
-        !fin.ok
-          ? {
-              id: "arOpen" as const,
-              href: "/finance",
-              state: failState(fin),
-              value: "—",
-            }
-          : {
-              id: "arOpen" as const,
-              href: "/finance",
-              state: "ok" as const,
-              value: `${formatTnd(fin.data.outstandingOpen)} ${fin.data.currency}`,
-              meta: { openCount: fin.data.openCount },
-            },
-      ),
-    );
-  }
-  if (enabled.has("sales")) {
-    tasks.push(
-      getJson<SalesHomeKpis>("/api/v1/sales/home-kpis").then((sales) =>
-        !sales.ok
-          ? {
-              id: "ordersActive" as const,
-              href: "/sales",
-              state: failState(sales),
-              value: "—",
-            }
-          : {
-              id: "ordersActive" as const,
-              href: "/sales",
-              state: "ok" as const,
-              value: String(sales.data.activeCount),
-              meta: { activeCount: sales.data.activeCount },
-            },
-      ),
-    );
-  }
-  if (enabled.has("inventory")) {
-    tasks.push(
-      getJson<InventoryHomeKpis>("/api/v1/inventory/home-kpis").then((inv) =>
-        !inv.ok
-          ? {
-              id: "stockLines" as const,
-              href: "/inventory",
-              state: failState(inv),
-              value: "—",
-            }
-          : {
-              id: "stockLines" as const,
-              href: "/inventory",
-              state: "ok" as const,
-              value: String(inv.data.positiveAvailableLines),
-              meta: { positive: inv.data.positiveAvailableLines },
-            },
-      ),
-    );
-  }
-  if (enabled.has("delivery")) {
-    tasks.push(
-      getJson<DeliveryHomeKpis>("/api/v1/delivery/home-kpis").then((dlv) =>
-        !dlv.ok
-          ? {
-              id: "shipmentsActive" as const,
-              href: "/delivery",
-              state: failState(dlv),
-              value: "—",
-            }
-          : {
-              id: "shipmentsActive" as const,
-              href: "/delivery",
-              state: "ok" as const,
-              value: String(dlv.data.activeCount),
-              meta: { activeCount: dlv.data.activeCount },
-            },
-      ),
-    );
-  } else if (enabled.has("finance")) {
-    tasks.push(
-      getJson<FinanceHomeKpis>("/api/v1/finance/home-kpis").then((fin) =>
-        !fin.ok
-          ? {
-              id: "overdue" as const,
-              href: "/finance",
-              state: failState(fin),
-              value: "—",
-            }
-          : {
-              id: "overdue" as const,
-              href: "/finance",
-              state: "ok" as const,
-              value: String(fin.data.overdueCount),
-              meta: { overdueCount: fin.data.overdueCount },
-            },
-      ),
-    );
-  }
+  if (enabled.has("finance")) tasks.push(financeCards());
+  if (enabled.has("sales")) tasks.push(salesCards());
+  if (enabled.has("inventory")) tasks.push(inventoryCards());
+  if (enabled.has("delivery")) tasks.push(deliveryCards());
 
-  const cards = (await Promise.all(tasks)).filter(
-    (c): c is HomeKpiCard => c != null,
-  );
-  return cards.slice(0, 4);
+  const all = (await Promise.all(tasks)).flat();
+  return all.slice(0, 4);
 }
 
 /**

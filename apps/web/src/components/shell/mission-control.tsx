@@ -200,6 +200,7 @@ export function MissionControl({ className }: { className?: string }) {
             </h3>
             <Link
               href="/settings"
+              prefetch={false}
               className="text-[length:var(--a-text-xs)] text-a-accent hover:underline"
             >
               {t("preferences")}

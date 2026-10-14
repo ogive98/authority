@@ -178,10 +178,16 @@ export async function logoutBusiness(): Promise<void> {
   }
 }
 
+let _meCache: { at: number; data: BusinessMe } | null = null;
+const ME_CACHE_MS = 30_000;
+
 export async function fetchBusinessMeClient(): Promise<
   | { ok: true; data: BusinessMe }
   | { ok: false; status: number; message: string }
 > {
+  if (_meCache && Date.now() - _meCache.at < ME_CACHE_MS) {
+    return { ok: true, data: _meCache.data };
+  }
   try {
     const res = await fetch(BUSINESS_API.me, {
       credentials: "include",
@@ -195,7 +201,9 @@ export async function fetchBusinessMeClient(): Promise<
         message: res.status === 401 ? "Session expirée." : `HTTP ${res.status}`,
       };
     }
-    return { ok: true, data: (await res.json()) as BusinessMe };
+    const data = (await res.json()) as BusinessMe;
+    _meCache = { at: Date.now(), data };
+    return { ok: true, data };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
@@ -231,6 +239,7 @@ export async function updateBusinessMe(input: {
       else if (typeof body.message === "string") message = body.message;
       return { ok: false, status: res.status, message };
     }
+    _meCache = { at: Date.now(), data: body };
     return { ok: true, data: body };
   } catch {
     return { ok: false, status: 0, message: "Réseau indisponible." };

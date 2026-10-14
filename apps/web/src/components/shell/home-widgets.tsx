@@ -68,6 +68,7 @@ export function HeroContextWidget() {
       </div>
       <Link
         href="/account"
+        prefetch={false}
         className="rounded-[var(--a-radius-sm)] bg-a-accent-muted px-3 py-1.5 text-[length:var(--a-text-xs)] font-medium text-a-accent transition-colors hover:bg-a-accent hover:text-a-accent-fg"
       >
         {t("controlCenter")}
@@ -151,6 +152,7 @@ export function HomeKpiStrip() {
           <Link
             key={card.id}
             href={card.href}
+            prefetch={false}
             className="a-card a-stagger-in flex min-h-[7.5rem] flex-col justify-between p-4 transition-colors hover:bg-a-surface-3/50"
           >
             <p className="text-[length:var(--a-text-xs)] font-medium uppercase tracking-[0.08em] text-a-fg-muted">

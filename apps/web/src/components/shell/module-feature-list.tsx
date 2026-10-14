@@ -113,6 +113,7 @@ export function ModuleFeatureList({
               >
                 <Link
                   href={f.href}
+                  prefetch={false}
                   className={cn(
                     "group a-card flex items-center gap-3 rounded-[var(--a-radius-md)] px-3.5 py-3",
                     "transition-colors duration-200 hover:bg-a-surface-3",
@@ -225,6 +226,7 @@ export function ModuleFeatureList({
                 <Link
                   key={href}
                   href={href}
+                  prefetch={false}
                   className="a-underlay rounded-[var(--a-radius-md)] px-3 py-2 text-[length:var(--a-text-sm)] font-medium text-a-fg transition-colors hover:bg-a-surface-3"
                 >
                   {label}

@@ -210,6 +210,7 @@ function ActionTile({
     return (
       <Link
         href={action.href}
+        prefetch={false}
         title={action.label}
         className="a-nav-row inline-flex h-10 w-10 items-center justify-center rounded-[var(--a-radius-sm)] text-a-accent"
       >
@@ -225,6 +226,7 @@ function ActionTile({
   return (
     <Link
       href={action.href}
+      prefetch={false}
       className="a-nav-row group flex w-full items-center gap-2.5 rounded-[var(--a-radius-sm)] px-1.5 py-1.5 text-left"
     >
       <Icon

@@ -120,6 +120,7 @@ export function FeatureMenu() {
               <li key={f.id}>
                 <Link
                   href={f.href}
+                  prefetch={false}
                   onClick={() => setFeatureMenuOpen(false)}
                   className={cn(
                     "flex items-center gap-2.5 rounded-[var(--a-radius-sm)] px-2 py-2 text-[length:var(--a-text-sm)] transition-colors",

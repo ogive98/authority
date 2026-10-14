@@ -27,6 +27,7 @@ export function MobileBottomNav() {
           <Link
             key={item.href}
             href={item.href}
+            prefetch={item.href === "/" ? undefined : false}
             className={cn(
               "flex flex-1 items-center justify-center text-[length:var(--a-text-sm)]",
               active ? "font-medium text-a-accent" : "text-a-fg-muted",

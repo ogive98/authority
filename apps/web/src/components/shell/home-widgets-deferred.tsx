@@ -97,6 +97,7 @@ export function ModuleShortcutsWidget({ className }: { className?: string }) {
             <li key={f.id}>
               <Link
                 href={f.href}
+                prefetch={false}
                 className="group flex items-center gap-2.5 rounded-[var(--a-radius-md)] px-2 py-2 text-[length:var(--a-text-sm)] text-a-fg transition-colors hover:bg-a-surface-3"
               >
                 <span
@@ -179,6 +180,7 @@ export function ActivityWidget() {
             <li key={n.id}>
               <Link
                 href={href}
+                prefetch={false}
                 onClick={() => markItemRead(n.id)}
                 className="flex min-w-0 items-start gap-2.5 rounded-xl px-0.5 py-0.5 transition-opacity hover:opacity-90"
               >
@@ -226,6 +228,7 @@ export function AiPanelWidget() {
             <li key={row.kind}>
               <Link
                 href={row.href}
+                prefetch={false}
                 className="flex items-center gap-2.5 rounded-xl bg-a-surface-3/50 px-2 py-1.5 transition-opacity hover:opacity-95"
               >
                 <FeedGlyph def={feed} size={13} />
@@ -315,6 +318,7 @@ export function TreasuryWidget() {
       )}
       <Link
         href="/finance/banking"
+        prefetch={false}
         className="inline-flex text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
       >
         {t("treasuryOpenBanking")}
@@ -419,6 +423,7 @@ export function BackupStatusWidget() {
       </p>
       <Link
         href="/backup"
+        prefetch={false}
         className="inline-flex text-[length:var(--a-text-xs)] font-medium text-a-accent hover:underline"
       >
         {t("backupOpenModule")}

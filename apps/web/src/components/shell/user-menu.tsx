@@ -179,6 +179,7 @@ export function UserMenu({ user: userProp }: UserMenuProps) {
             <li role="none">
               <Link
                 href="/account"
+                prefetch={false}
                 role="menuitem"
                 className="flex w-full items-center gap-2 rounded-[var(--a-radius-sm)] px-2.5 py-2 text-[length:var(--a-text-sm)] text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
                 onClick={() => setOpen(false)}
@@ -190,6 +191,7 @@ export function UserMenu({ user: userProp }: UserMenuProps) {
             <li role="none">
               <Link
                 href="/settings"
+                prefetch={false}
                 role="menuitem"
                 className="flex w-full items-center gap-2 rounded-[var(--a-radius-sm)] px-2.5 py-2 text-[length:var(--a-text-sm)] text-a-fg-muted hover:bg-a-surface-3 hover:text-a-fg"
                 onClick={() => setOpen(false)}

@@ -66,6 +66,7 @@ export function PageTips({ className }: { className?: string }) {
             </p>
             <Link
               href={helpHref(tip)}
+              prefetch={false}
               className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-a-accent hover:underline"
             >
               Continuer dans l’aide
@@ -76,12 +77,13 @@ export function PageTips({ className }: { className?: string }) {
       </ul>
 
       <p className="mt-10 text-center text-[12px] text-a-fg-subtle">
-        <Link href="/help" className="font-medium text-a-accent hover:underline">
+        <Link href="/help" prefetch={false} className="font-medium text-a-accent hover:underline">
           Centre d’aide
         </Link>
         {" · "}
         <Link
           href="/help/guide"
+          prefetch={false}
           className="font-medium text-a-accent hover:underline"
         >
           User Guide

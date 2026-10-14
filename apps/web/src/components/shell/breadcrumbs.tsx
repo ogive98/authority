@@ -71,7 +71,7 @@ export function ShellBreadcrumbs() {
                 {c.label}
               </span>
             ) : (
-              <Link href={c.href} className="hover:text-a-accent">
+              <Link href={c.href} prefetch={false} className="hover:text-a-accent">
                 {c.label}
               </Link>
             )}
