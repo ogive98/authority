@@ -103,7 +103,7 @@ describe('AuthorityIndexService', () => {
     expect(summary.companyId).toBe('company-a');
     expect(summary.engines.workflowEngine).toBe('deferred');
     expect(summary.engines.aiGateway).toBe('stub');
-    expect(summary.counts.modules).toBe(28);
+    expect(summary.counts.modules).toBe(50);
   });
 
   it('does not treat catalog presence as tenant enablement', async () => {

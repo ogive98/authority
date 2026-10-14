@@ -88,7 +88,8 @@ export function ACommandPalette({
       if (byId.has(m.id)) continue;
       const hit = catalog.find((c) => c.id === m.id);
       if (!hit) continue;
-      if (hit.permissionKey && !grants.has(hit.permissionKey)) continue;
+      if (hit.permissionKey && grants != null && !grants.has(hit.permissionKey))
+        continue;
       if (
         hit.requiresModule &&
         !enabledModules.has(hit.requiresModule)

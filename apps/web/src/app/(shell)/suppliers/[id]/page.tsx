@@ -31,6 +31,7 @@ import {
   type Supplier,
   type SupplierCategory,
   type SupplierStatus,
+  type SupplierSummary,
   type SupplierTimelineItem,
 } from "@/lib/suppliers";
 
@@ -646,6 +647,7 @@ export default function SupplierDetailPage() {
             </Field>
             <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
               <ASwitch
+                label="Fournisseur préféré"
                 checked={editForm.preferred}
                 onCheckedChange={(v) =>
                   setEditForm({ ...editForm, preferred: v })
@@ -731,6 +733,7 @@ export default function SupplierDetailPage() {
           </Field>
           <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
             <ASwitch
+              label="Contact principal"
               checked={contactForm.isPrimary}
               onCheckedChange={(v) =>
                 setContactForm({ ...contactForm, isPrimary: v })

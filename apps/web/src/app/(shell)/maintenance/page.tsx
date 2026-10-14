@@ -164,7 +164,8 @@ export default function MaintenancePage() {
       }),
     ]);
     if (!aRes.ok || !wRes.ok) {
-      const fail = !aRes.ok ? aRes : wRes;
+      const fail = !aRes.ok ? aRes : !wRes.ok ? wRes : null;
+      if (!fail) return;
       if (fail.status === 403) {
         setWoState("forbidden");
         setWoError(fail.message);

@@ -374,6 +374,7 @@ export default function SuppliersPage() {
               </AField>
               <label className="flex items-center gap-2 text-[length:var(--a-text-sm)]">
                 <ASwitch
+                  label="Fournisseur préféré"
                   checked={form.preferred}
                   onCheckedChange={(v) =>
                     setForm({ ...form, preferred: v })

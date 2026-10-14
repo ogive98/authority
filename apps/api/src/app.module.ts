@@ -36,6 +36,13 @@ import { AutomationModule } from './automation/automation.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ForgeModule } from './forge/forge.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { ProcurementModule } from './procurement/procurement.module';
+import { BomModule } from './bom/bom.module';
+import { CostingModule } from './costing/costing.module';
+import { QualityModule } from './quality/quality.module';
+import { HaccpModule } from './haccp/haccp.module';
+import { TraceabilityModule } from './traceability/traceability.module';
+import { LabelsModule } from './labels/labels.module';
 import { PdfRendererModule } from './common/pdf-renderer.module';
 
 @Module({
@@ -77,6 +84,13 @@ import { PdfRendererModule } from './common/pdf-renderer.module';
     NotificationsModule,
     ForgeModule,
     AnalyticsModule,
+    ProcurementModule,
+    BomModule,
+    CostingModule,
+    QualityModule,
+    HaccpModule,
+    TraceabilityModule,
+    LabelsModule,
   ],
 })
 export class AppModule {}

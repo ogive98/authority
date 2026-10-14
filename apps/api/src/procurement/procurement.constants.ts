@@ -1,0 +1,47 @@
+export const PROCUREMENT_ERROR_CODES = {
+  NOT_FOUND: 'PROC.NOT_FOUND',
+  VERSION_CONFLICT: 'PROC.VERSION_CONFLICT',
+  INVALID_STATUS: 'PROC.INVALID_STATUS',
+  INVALID_REASON: 'PROC.INVALID_REASON',
+  INVALID_QTY: 'PROC.INVALID_QTY',
+  EMPTY_LINES: 'PROC.EMPTY_LINES',
+  SUPPLIER_NOT_FOUND: 'PROC.SUPPLIER_NOT_FOUND',
+  SUPPLIER_BLOCKED: 'PROC.SUPPLIER_BLOCKED',
+  PRODUCT_NOT_FOUND: 'PROC.PRODUCT_NOT_FOUND',
+  PO_LINE_NOT_FOUND: 'PROC.PO_LINE_NOT_FOUND',
+  QTY_EXCEEDS_ORDERED: 'PROC.QTY_EXCEEDS_ORDERED',
+  RECEIPT_NOT_DRAFT: 'PROC.RECEIPT_NOT_DRAFT',
+  POLICY_NOT_FOUND: 'PROC.POLICY_NOT_FOUND',
+} as const;
+
+export type ProcurementErrorCode =
+  (typeof PROCUREMENT_ERROR_CODES)[keyof typeof PROCUREMENT_ERROR_CODES];
+
+export const PROCUREMENT_EVENT_TYPES = {
+  SUGGESTION_CREATED: 'procurement.suggestion.created.v1',
+  PO_SENT: 'procurement.po.sent.v1',
+  PO_CONFIRMED: 'procurement.po.confirmed.v1',
+  RECEIPT_POSTED: 'procurement.receipt.posted.v1',
+  PO_RETURNED: 'procurement.po.returned.v1',
+} as const;
+
+export const PROCUREMENT_SUGGESTION_REASONS = [
+  'MIN',
+  'SAFETY',
+  'FORECAST',
+  'MANUAL',
+] as const;
+
+export type ProcurementSuggestionReason =
+  (typeof PROCUREMENT_SUGGESTION_REASONS)[number];
+
+export const PROCUREMENT_MESSAGE_CHANNELS = ['WHATSAPP', 'EMAIL'] as const;
+
+export type ProcurementMessageChannel =
+  (typeof PROCUREMENT_MESSAGE_CHANNELS)[number];
+
+export const PROCUREMENT_DOC_TYPES = {
+  SUGGESTION: 'SUG',
+  PO: 'PO',
+  RECEIPT: 'REC',
+} as const;

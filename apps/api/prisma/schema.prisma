@@ -4399,3 +4399,561 @@ model BckRestoreRequest {
   @@index([backupId])
   @@map("bck_restore_request")
 }
+
+// --- Procurement / Achats (E2 · D324) : suggestions, BC fournisseur, réceptions, messages ---
+
+enum ProcSuggestionReason {
+  MIN
+  SAFETY
+  FORECAST
+  MANUAL
+}
+
+enum ProcSuggestionStatus {
+  OPEN
+  APPROVED
+  REJECTED
+  CONVERTED
+}
+
+enum ProcPoStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  SENT
+  CONFIRMED
+  PARTIAL
+  RECEIVED
+  CANCELLED
+}
+
+enum ProcPoLineStatus {
+  OPEN
+  CLOSED
+}
+
+enum ProcReceiptKind {
+  RECEIPT
+  RETURN
+}
+
+enum ProcReceiptStatus {
+  DRAFT
+  POSTED
+}
+
+enum ProcMessageChannel {
+  WHATSAPP
+  EMAIL
+}
+
+enum ProcMessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+}
+
+model ProcSuggestion {
+  id        String               @id @default(uuid()) @db.Uuid
+  companyId String               @map("company_id") @db.Uuid
+  number    String
+  productId String               @map("product_id") @db.Uuid
+  siteId    String?              @map("site_id") @db.Uuid
+  qty       Decimal              @db.Decimal(18, 3)
+  reason    ProcSuggestionReason
+  status    ProcSuggestionStatus @default(OPEN)
+  poId      String?              @map("po_id") @db.Uuid
+  version   Int                  @default(0)
+  createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime?            @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@map("proc_suggestion")
+}
+
+model ProcPo {
+  id           String        @id @default(uuid()) @db.Uuid
+  companyId    String        @map("company_id") @db.Uuid
+  number       String
+  supplierId   String        @map("supplier_id") @db.Uuid
+  siteId       String?       @map("site_id") @db.Uuid
+  warehouseId  String?       @map("warehouse_id") @db.Uuid
+  status       ProcPoStatus  @default(DRAFT)
+  expectedDate DateTime?     @map("expected_date") @db.Date
+  currency     String        @default("TND")
+  notes        String?
+  amountTotal  Decimal       @default(0) @map("amount_total") @db.Decimal(18, 3)
+  submittedAt  DateTime?     @map("submitted_at") @db.Timestamptz(6)
+  approvedAt   DateTime?     @map("approved_at") @db.Timestamptz(6)
+  sentAt       DateTime?     @map("sent_at") @db.Timestamptz(6)
+  confirmedAt  DateTime?     @map("confirmed_at") @db.Timestamptz(6)
+  cancelledAt  DateTime?     @map("cancelled_at") @db.Timestamptz(6)
+  version      Int           @default(0)
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?     @map("deleted_at") @db.Timestamptz(6)
+
+  lines ProcPoLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@index([companyId, supplierId])
+  @@map("proc_po")
+}
+
+model ProcPoLine {
+  id          String           @id @default(uuid()) @db.Uuid
+  companyId   String           @map("company_id") @db.Uuid
+  poId        String           @map("po_id") @db.Uuid
+  lineNo      Int              @map("line_no")
+  productId   String           @map("product_id") @db.Uuid
+  qtyOrdered  Decimal          @map("qty_ordered") @db.Decimal(18, 3)
+  qtyReceived Decimal          @default(0) @map("qty_received") @db.Decimal(18, 3)
+  unitPrice   Decimal          @map("unit_price") @db.Decimal(18, 3)
+  lineTotal   Decimal          @map("line_total") @db.Decimal(18, 3)
+  moq         Decimal?         @db.Decimal(18, 3)
+  pack        Decimal?         @db.Decimal(18, 3)
+  status      ProcPoLineStatus @default(OPEN)
+  version     Int              @default(0)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  po ProcPo @relation(fields: [poId], references: [id], onDelete: Cascade)
+
+  @@unique([poId, lineNo])
+  @@index([companyId, poId])
+  @@map("proc_po_line")
+}
+
+model ProcReceipt {
+  id          String            @id @default(uuid()) @db.Uuid
+  companyId   String            @map("company_id") @db.Uuid
+  number      String
+  poId        String            @map("po_id") @db.Uuid
+  warehouseId String            @map("warehouse_id") @db.Uuid
+  kind        ProcReceiptKind   @default(RECEIPT)
+  status      ProcReceiptStatus @default(DRAFT)
+  qcStatus    String?           @map("qc_status")
+  apBillId    String?           @map("ap_bill_id") @db.Uuid
+  postedAt    DateTime?         @map("posted_at") @db.Timestamptz(6)
+  version     Int               @default(0)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  lines ProcReceiptLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, poId])
+  @@map("proc_receipt")
+}
+
+model ProcReceiptLine {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  receiptId String   @map("receipt_id") @db.Uuid
+  lineNo    Int      @map("line_no")
+  poLineId  String   @map("po_line_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  qty       Decimal  @db.Decimal(18, 3)
+  lotCode   String?  @map("lot_code")
+  dlc       DateTime? @db.Date
+  unitPrice Decimal  @map("unit_price") @db.Decimal(18, 3)
+  version   Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  receipt ProcReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  @@unique([receiptId, lineNo])
+  @@index([companyId, receiptId])
+  @@map("proc_receipt_line")
+}
+
+model ProcMessageLog {
+  id          String            @id @default(uuid()) @db.Uuid
+  companyId   String            @map("company_id") @db.Uuid
+  poId        String            @map("po_id") @db.Uuid
+  channel     ProcMessageChannel
+  toAddress   String            @map("to_address")
+  templateKey String            @map("template_key")
+  bodyPreview String?           @map("body_preview")
+  status      ProcMessageStatus @default(QUEUED)
+  externalRef String?           @map("external_ref")
+  sentAt      DateTime?         @map("sent_at") @db.Timestamptz(6)
+  deliveredAt DateTime?         @map("delivered_at") @db.Timestamptz(6)
+  failedAt    DateTime?         @map("failed_at") @db.Timestamptz(6)
+  error       String?
+  version     Int               @default(0)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, poId])
+  @@map("proc_message_log")
+}
+
+model ProcStockPolicy {
+  id        String    @id @default(uuid()) @db.Uuid
+  companyId String    @map("company_id") @db.Uuid
+  productId String    @map("product_id") @db.Uuid
+  siteId    String    @map("site_id") @db.Uuid
+  minQty    Decimal   @map("min_qty") @db.Decimal(18, 3)
+  safetyQty Decimal   @default(0) @map("safety_qty") @db.Decimal(18, 3)
+  version   Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([companyId, productId, siteId])
+  @@index([companyId, siteId])
+  @@map("proc_stock_policy")
+}
+
+// ─── BOM / Recettes (D325) ───────────────────────────────────────────────────
+
+enum BomRecipeStatus {
+  DRAFT
+  ACTIVE
+  OBSOLETE
+}
+
+model BomRecipe {
+  id        String          @id @default(uuid()) @db.Uuid
+  companyId String          @map("company_id") @db.Uuid
+  number    String
+  productId String          @map("product_id") @db.Uuid
+  version   Int
+  status    BomRecipeStatus @default(DRAFT)
+  yield     Decimal         @default(1) @db.Decimal(18, 3)
+  notes     String?
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime?       @map("deleted_at") @db.Timestamptz(6)
+
+  lines BomLine[]
+
+  @@unique([companyId, number])
+  @@unique([companyId, productId, version])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@map("bom_recipe")
+}
+
+model BomLine {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  recipeId   String   @map("recipe_id") @db.Uuid
+  productId  String   @map("product_id") @db.Uuid
+  qty        Decimal  @db.Decimal(18, 3)
+  uom        String
+  scrapPct   Decimal  @default(0) @map("scrap_pct") @db.Decimal(5, 2)
+  step       Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  recipe BomRecipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, recipeId])
+  @@map("bom_line")
+}
+
+// ─── Costing (D325) ──────────────────────────────────────────────────────────
+
+model CstRoll {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  period    String
+  stdCost   Decimal  @map("std_cost") @db.Decimal(18, 3)
+  postedAt  DateTime @map("posted_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, productId, period])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("cst_roll")
+}
+
+model CstLot {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  lotId      String   @map("lot_id") @db.Uuid
+  unitCost   Decimal  @map("unit_cost") @db.Decimal(18, 3)
+  totalCost  Decimal  @map("total_cost") @db.Decimal(18, 3)
+  calculatedAt DateTime @map("calculated_at") @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, lotId])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("cst_lot")
+}
+
+// ─── Quality (D326) ──────────────────────────────────────────────────────────
+
+enum QuaCheckResult {
+  PENDING
+  PASSED
+  FAILED
+}
+
+enum QuaCheckTarget {
+  RECEIPT
+  PRODUCTION
+}
+
+model QuaCheck {
+  id         String          @id @default(uuid()) @db.Uuid
+  companyId  String          @map("company_id") @db.Uuid
+  number     String
+  target     QuaCheckTarget
+  targetId   String          @map("target_id") @db.Uuid
+  lotId      String?         @map("lot_id") @db.Uuid
+  result     QuaCheckResult  @default(PENDING)
+  measures   Json?
+  notes      String?
+  checkedBy  String?         @map("checked_by") @db.Uuid
+  checkedAt  DateTime?       @map("checked_at") @db.Timestamptz(6)
+  version    Int             @default(0)
+  createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, lotId])
+  @@map("qua_check")
+}
+
+enum QuaNcrSeverity {
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum QuaNcrStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+model QuaNcr {
+  id          String         @id @default(uuid()) @db.Uuid
+  companyId   String         @map("company_id") @db.Uuid
+  number      String
+  severity    QuaNcrSeverity
+  status      QuaNcrStatus   @default(OPEN)
+  description String
+  disposition String?
+  lotId       String?        @map("lot_id") @db.Uuid
+  checkId     String?        @map("check_id") @db.Uuid
+  openedBy    String?        @map("opened_by") @db.Uuid
+  closedBy    String?        @map("closed_by") @db.Uuid
+  closedAt    DateTime?      @map("closed_at") @db.Timestamptz(6)
+  version     Int            @default(0)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, status])
+  @@map("qua_ncr")
+}
+
+model QuaLotHold {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  lotId     String   @map("lot_id") @db.Uuid
+  reason    String
+  heldBy    String   @map("held_by") @db.Uuid
+  heldAt    DateTime @map("held_at") @db.Timestamptz(6)
+  releasedBy String? @map("released_by") @db.Uuid
+  releasedAt DateTime? @map("released_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, lotId])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("qua_lot_hold")
+}
+
+// ─── HACCP (D326) ────────────────────────────────────────────────────────────
+
+model HcpCcp {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  code        String
+  name        String
+  criticalLimit String @map("critical_limit")
+  unit        String
+  siteId      String?  @map("site_id") @db.Uuid
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, code])
+  @@index([companyId, active])
+  @@map("hcp_ccp")
+}
+
+model HcpRecord {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  ccpId      String   @map("ccp_id") @db.Uuid
+  value      Decimal  @db.Decimal(18, 3)
+  inSpec     Boolean  @map("in_spec")
+  recordedBy String   @map("recorded_by") @db.Uuid
+  recordedAt DateTime @map("recorded_at") @db.Timestamptz(6)
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([companyId, ccpId, recordedAt(sort: Desc)])
+  @@map("hcp_record")
+}
+
+model HcpAudit {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  number      String
+  auditDate   DateTime @map("audit_date") @db.Date
+  auditor     String
+  findings    Json?
+  status      String   @default("PLANNED")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, number])
+  @@index([companyId, auditDate(sort: Desc)])
+  @@map("hcp_audit")
+}
+
+// ─── Traceability (D326) ─────────────────────────────────────────────────────
+
+model TrcLot {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  lotCode     String   @map("lot_code")
+  productId   String   @map("product_id") @db.Uuid
+  productionDate DateTime? @map("production_date") @db.Date
+  expiryDate  DateTime? @map("expiry_date") @db.Date
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, lotCode])
+  @@index([companyId, productId])
+  @@map("trc_lot")
+}
+
+model TrcLink {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  parentLotId String  @map("parent_lot_id") @db.Uuid
+  childLotId String   @map("child_lot_id") @db.Uuid
+  qty        Decimal  @db.Decimal(18, 3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([companyId, parentLotId, childLotId])
+  @@index([companyId, parentLotId])
+  @@index([companyId, childLotId])
+  @@map("trc_link")
+}
+
+enum TrcRecallStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model TrcRecall {
+  id          String         @id @default(uuid()) @db.Uuid
+  companyId   String         @map("company_id") @db.Uuid
+  number      String
+  lotId       String         @map("lot_id") @db.Uuid
+  reason      String
+  status      TrcRecallStatus @default(PLANNED)
+  initiatedBy String         @map("initiated_by") @db.Uuid
+  initiatedAt DateTime       @map("initiated_at") @db.Timestamptz(6)
+  completedAt DateTime?      @map("completed_at") @db.Timestamptz(6)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("trc_recall")
+}
+
+// ─── Label Engine (D327) ─────────────────────────────────────────────────────
+
+model LblTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  code        String
+  name        String
+  zpl         String
+  widthMm     Int      @map("width_mm")
+  heightMm    Int      @map("height_mm")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, code])
+  @@index([companyId, active])
+  @@map("lbl_template")
+}
+
+model LblPrintLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  templateId  String   @map("template_id") @db.Uuid
+  lotId       String?  @map("lot_id") @db.Uuid
+  data        Json
+  status      String   @default("QUEUED")
+  printedAt   DateTime? @map("printed_at") @db.Timestamptz(6)
+  printerName String?  @map("printer_name")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("lbl_print_log")
+}
+
+// ─── Cash Collection (D328) ──────────────────────────────────────────────────
+
+model CshCollection {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  number      String
+  driverId    String   @map("driver_id") @db.Uuid
+  amount      Decimal  @db.Decimal(18, 3)
+  collectedAt DateTime @map("collected_at") @db.Timestamptz(6)
+  status      String   @default("DRAFT")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("csh_collection")
+}
+
+model CshClose {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  number       String
+  cashierId    String   @map("cashier_id") @db.Uuid
+  expectedAmt  Decimal  @map("expected_amt") @db.Decimal(18, 3)
+  actualAmt    Decimal  @map("actual_amt") @db.Decimal(18, 3)
+  variance     Decimal  @db.Decimal(18, 3)
+  closedAt     DateTime @map("closed_at") @db.Timestamptz(6)
+  status       String   @default("DRAFT")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([companyId, number])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("csh_close")
+}

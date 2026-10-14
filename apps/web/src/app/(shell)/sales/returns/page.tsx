@@ -311,7 +311,7 @@ function ReturnsPageInner() {
 
       <ADrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onOpenChange={setDrawerOpen}
         title="Nouveau retour"
         description="Lien livraison DELIVERED — plafond = qté livrée restante"
         footer={

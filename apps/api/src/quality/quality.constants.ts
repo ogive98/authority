@@ -1,0 +1,4 @@
+export const QUALITY_ERROR_CODES = {
+  NOT_FOUND: 'QUA.NOT_FOUND',
+  LOT_ON_HOLD: 'QUA.LOT_ON_HOLD',
+} as const;

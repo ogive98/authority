@@ -5,7 +5,7 @@ import type { ThunderMonitorSnapshot } from "@/lib/thunder/monitor-types";
 import type { WidgetLoadState } from "@/lib/dashboard-engine";
 
 const TIMEOUT_MS = 5_000;
-const DEFAULT_POLL_MS = 15_000;
+const DEFAULT_POLL_MS = 30_000;
 const EPS_HISTORY_MAX = 24;
 
 type Listener = () => void;
@@ -28,7 +28,7 @@ let state: MonitorBusState = {
 };
 
 const listeners = new Set<Listener>();
-let pollTimer: ReturnType<typeof setInterval> | null = null;
+let pollTimer: number | null = null;
 let refCount = 0;
 let pollMs = DEFAULT_POLL_MS;
 let pullGen = 0;
@@ -92,6 +92,8 @@ function ensurePolling(intervalMs: number) {
   }
   if (refCount <= 0) return;
   pollTimer = window.setInterval(() => {
+    // Pause polling when tab is hidden to save RAM and bandwidth
+    if (document.hidden) return;
     void pullOnce();
   }, pollMs);
 }

@@ -42,28 +42,31 @@ export class ModuleActivationService {
 
   async listForCompany(companyId: string) {
     await this.assertCompany(companyId);
-    const states = await this.prisma.modModuleState.findMany({
-      where: { companyId },
-      orderBy: { moduleKey: 'asc' },
-    });
+    const [states, manifests] = await Promise.all([
+      this.prisma.modModuleState.findMany({
+        where: { companyId },
+      }),
+      Promise.resolve(this.catalog.list()),
+    ]);
+    const stateByKey = new Map(states.map((row) => [row.moduleKey, row]));
 
     return Promise.all(
-      states.map(async (row) => {
+      manifests.map(async (manifest) => {
+        const row = stateByKey.get(manifest.id);
         const health = await this.lifecycle.evaluateCompanyHealth(
           companyId,
-          row.moduleKey,
+          manifest.id,
         );
-        const manifest = this.catalog.getByKey(row.moduleKey);
         return {
-          key: row.moduleKey,
-          status: row.status,
-          name: manifest?.name ?? null,
+          key: manifest.id,
+          status: row?.status ?? ModModuleStatus.DISABLED,
+          name: manifest.name,
           lifecycle: health.processState,
           health: health.health,
           missingRequiredDependencies: health.missingRequiredDependencies,
         };
       }),
-    );
+    ).then((rows) => rows.sort((a, b) => a.key.localeCompare(b.key)));
   }
 
   async enable(

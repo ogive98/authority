@@ -574,7 +574,7 @@ export default function MaintenanceAssetPage() {
                 disabled={busy || !woForm.title.trim()}
                 onClick={() => void onSaveWo()}
               >
-                {LAYOUT_ACTIONS.create}
+                {LAYOUT_ACTIONS.save}
               </AButton>
             </div>
           </div>

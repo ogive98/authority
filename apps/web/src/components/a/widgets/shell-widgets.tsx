@@ -101,3 +101,17 @@ export function JobsWidgetBody() {
     </ul>
   );
 }
+
+/** Card gate: `/dev/dashboard` asserts one failing card cannot crash the shell. */
+export function BoomWidgetBody(): never {
+  throw new Error("boom widget (expected — gates AWidgetBoundary)");
+}
+
+/** Placeholder until the audit module ships (D296). */
+export function AuditWidgetBody() {
+  return (
+    <p className="text-[length:var(--a-text-sm)] text-a-fg-muted">
+      Activité récente — module audit non livré.
+    </p>
+  );
+}

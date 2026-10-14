@@ -199,7 +199,7 @@ export default function ForgeOverviewPage() {
             </APageSection>
           </div>
         ) : null}
-        {state.kind === "ok" && data.extensions.total === 0 ? (
+        {data && data.extensions.total === 0 ? (
           <AEmptyState
             title="Aucune extension"
             description="Enregistrez un manifeste DRAFT — pas d’exécution de code en Phase 1."

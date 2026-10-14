@@ -386,7 +386,7 @@ function QuotesPageInner() {
 
       <ADrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onOpenChange={setDrawerOpen}
         title="Nouveau devis"
         description="Pas de réserve stock — conversion → commande DRAFT"
         footer={

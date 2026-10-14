@@ -168,7 +168,8 @@ export default function FleetPage() {
       fetchVehicles({ status: "ACTIVE" }),
     ]);
     if (!rRes.ok || !aRes.ok || !vRes.ok) {
-      const fail = !rRes.ok ? rRes : !aRes.ok ? aRes : vRes;
+      const fail = !rRes.ok ? rRes : !aRes.ok ? aRes : !vRes.ok ? vRes : null;
+      if (!fail) return;
       if (fail.status === 403) {
         setPlanState("forbidden");
         setPlanError(fail.message);

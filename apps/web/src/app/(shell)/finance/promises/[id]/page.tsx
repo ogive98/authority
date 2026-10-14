@@ -211,7 +211,7 @@ export default function FinancePromiseFichePage() {
                 </dl>
               </APageSection>
             }
-            secondary={
+            context={
               <AContextPanel title="Montant">
                 <dl className="space-y-3 text-[length:var(--a-text-sm)]">
                   <div className="flex justify-between gap-4">

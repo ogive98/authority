@@ -18,17 +18,28 @@ import { masterDataManifest } from './master-data.manifest';
 import { monitoringManifest } from './monitoring.manifest';
 import { organizationManifest } from './organization.manifest';
 import { payrollManifest } from './payroll.manifest';
+import { PENDING_MODULE_MANIFESTS } from './pending.manifests';
 import { platformManifest } from './platform.manifest';
+import { procurementManifest } from './procurement.manifest';
 import { portalsManifest } from './portals.manifest';
 import { productionManifest } from './production.manifest';
 import { productsManifest } from './products.manifest';
 import { repairManifest } from './repair.manifest';
 import { backupManifest } from './backup.manifest';
+import { bomManifest } from './bom.manifest';
+import { costingManifest } from './costing.manifest';
+import { qualityManifest } from './quality.manifest';
+import { haccpManifest } from './haccp.manifest';
+import { traceabilityManifest } from './traceability.manifest';
+import { labelsManifest } from './labels.manifest';
 import { salesManifest } from './sales.manifest';
 import { settingsManifest } from './settings.manifest';
 import { taxManifest } from './tax.manifest';
 
-/** Static catalog — exactly the seeded runtime module keys. */
+/**
+ * Static catalog — exactly `KERNEL_MODULE_KEYS` + `BUSINESS_MODULE_KEYS`.
+ * Mismatch makes `ModuleCatalogService.load()` throw at boot.
+ */
 export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   platformManifest,
   identityManifest,
@@ -58,4 +69,12 @@ export const STATIC_MODULE_MANIFESTS: readonly ModuleManifest[] = [
   automationManifest,
   forgeManifest,
   analyticsManifest,
+  procurementManifest,
+  bomManifest,
+  costingManifest,
+  qualityManifest,
+  haccpManifest,
+  traceabilityManifest,
+  labelsManifest,
+  ...PENDING_MODULE_MANIFESTS,
 ] as const;

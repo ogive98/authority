@@ -270,7 +270,7 @@ export default function FinanceCreditNoteFichePage() {
                 </APageSection>
               </>
             }
-            secondary={
+            context={
               <AContextPanel title="Montants">
                 <dl className="space-y-3 text-[length:var(--a-text-sm)]">
                   <div className="flex justify-between gap-4">

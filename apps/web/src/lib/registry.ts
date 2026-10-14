@@ -57,6 +57,13 @@ export const FALLBACK_REGISTRY: MeRegistry = {
       ],
     },
     {
+      key: "procurement",
+      name: "Achats",
+      features: [
+        { id: "procurement", label: "Achats", href: "/procurement" },
+      ],
+    },
+    {
       key: "inventory",
       name: "Stock",
       features: [

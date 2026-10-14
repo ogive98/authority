@@ -15,7 +15,7 @@ describe('CAP-01 catalog stress simulations', () => {
       assertModuleManifest({ ...m }),
     );
     expect(() => assertCatalogIntegrity(manifests)).not.toThrow();
-    expect(manifests).toHaveLength(28);
+    expect(manifests).toHaveLength(50);
   });
 
   it('rejects injecting an extra module without dropping coverage rule', () => {
@@ -40,7 +40,7 @@ describe('CAP-01 catalog stress simulations', () => {
           ],
         },
       ]),
-    ).toThrow(/exactly 28/);
+    ).toThrow(/exactly 50/);
   });
 
   it('detects dependency cycle candidates among the catalog (none expected)', () => {

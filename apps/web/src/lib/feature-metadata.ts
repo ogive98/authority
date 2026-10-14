@@ -220,6 +220,19 @@ export const FEATURE_METADATA_ENRICHMENTS: Record<
     },
     ai: { discoverable: true, executable: true },
   },
+  "nav-procurement": {
+    module: "procurement",
+    entity: "proc_po",
+    tags: ["procurement", "po", "supplier", "ap"],
+    icon: "procurement.nav",
+    aliases: ["achats", "bon de commande", "bc", "approvisionnement", "acquisti"],
+    relatedEntities: ["proc_suggestion", "proc_receipt", "ap_bill", "inv_movement"],
+    description: {
+      fr: "Suggestions → BC fournisseur → réception stock + dette AP",
+      it: "Suggerimenti → ordine fornitore → ricezione scorte + debito AP",
+    },
+    ai: { discoverable: true, executable: true },
+  },
   "nav-tax": {
     module: "tax",
     entity: "tax_code",

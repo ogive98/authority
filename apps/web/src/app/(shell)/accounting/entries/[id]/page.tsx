@@ -169,7 +169,7 @@ export default function AccountingEntryFichePage() {
             </ABadge>
           ) : undefined
         }
-        primaryAction={
+        primary={
           entry?.status === "DRAFT" ? (
             <AButton
               type="button"
@@ -196,10 +196,10 @@ export default function AccountingEntryFichePage() {
           <ASkeleton className="h-40 w-full" />
         ) : null}
         {state.kind === "forbidden" ? (
-          <AForbiddenState description={state.message} />
+          <AForbiddenState message={state.message} />
         ) : null}
         {state.kind === "error" ? (
-          <AErrorState description={state.message} onRetry={() => void load()} />
+          <AErrorState message={state.message ?? "Chargement impossible."} onRetry={() => void load()} />
         ) : null}
         {actionError ? (
           <p className="text-[length:var(--a-text-sm)] text-a-danger">
@@ -208,7 +208,7 @@ export default function AccountingEntryFichePage() {
         ) : null}
         {entry ? (
           <ADetailGrid
-            main={
+            primary={
               <>
                 <APageSection title="Identité">
                   <dl className="grid gap-3 text-[length:var(--a-text-sm)] sm:grid-cols-2">
