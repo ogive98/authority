@@ -14,7 +14,7 @@ import { RedisService } from '../src/infrastructure/redis.service';
 import { resetThunderEventStream } from './thunder-event-stream.util';
 
 const SA_EMAIL = 'superadmin@authority.local';
-const SA_PASSWORD = 'SuperAdminPass123!';
+const SA_PASSWORD = process.env.AUTHORITY_SUPER_ADMIN_PASSWORD || 'SuperAdminPass123!';
 
 describe('Thunder rules (e2e)', () => {
   let app: INestApplication<App>;

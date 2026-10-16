@@ -19,9 +19,11 @@ import { InviteSettingsResolver } from './invite-settings.resolver';
 import {
   BUSINESS_ROLE_CATALOGUE,
   BUSINESS_ROLE_CODES,
+  type BusinessRoleCode,
 } from './business-roles';
 import type {
   CreateCompanyUserDto,
+  SetRoleGrantsDto,
   SetUserGrantsDto,
   UpdateCompanyUserDto,
 } from './users.dto';
@@ -34,6 +36,9 @@ const PROTECTED_USER_KEYS = new Set([
   'identity.self.read',
   'identity.session.revoke',
 ]);
+
+/** Rôles : toujours autorisés, sinon les utilisateurs du rôle ne peuvent plus se connecter / se déconnecter. */
+const PROTECTED_ROLE_KEYS = PROTECTED_USER_KEYS;
 
 export type CompanyUserDto = {
   id: string;
@@ -451,6 +456,140 @@ export class UsersService {
     });
 
     return this.getGrants(companyId, userId);
+  }
+
+  private assertRoleCode(roleCode: string): BusinessRoleCode {
+    if (!(BUSINESS_ROLE_CODES as readonly string[]).includes(roleCode)) {
+      throw new IdentityException(
+        IDENTITY_ERROR_CODES.VALIDATION,
+        'Invalid roleCode.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return roleCode as BusinessRoleCode;
+  }
+
+  async getRoleGrants(companyId: string, roleCode: string) {
+    const code = this.assertRoleCode(roleCode);
+    const meta = BUSINESS_ROLE_CATALOGUE.find((r) => r.code === code)!;
+
+    const rows = await this.prisma.iamGrant.findMany({
+      where: {
+        subjectType: IamGrantSubject.ROLE,
+        subjectId: code,
+        status: IamLifecycleStatus.ACTIVE,
+        OR: [{ companyId }, { companyId: null }],
+      },
+      orderBy: [{ permissionKey: 'asc' }],
+    });
+
+    const globalAllow = rows
+      .filter((r) => r.companyId === null && r.effect === IamGrantEffect.ALLOW)
+      .map((r) => r.permissionKey);
+    const companyAllow = rows
+      .filter(
+        (r) => r.companyId === companyId && r.effect === IamGrantEffect.ALLOW,
+      )
+      .map((r) => r.permissionKey);
+    const companyDeny = rows
+      .filter(
+        (r) => r.companyId === companyId && r.effect === IamGrantEffect.DENY,
+      )
+      .map((r) => r.permissionKey);
+
+    const base = new Set([...globalAllow, ...companyAllow]);
+    for (const key of companyDeny) base.delete(key);
+
+    return {
+      roleCode: code,
+      label: meta.label,
+      description: meta.description,
+      catalog: [...PERMISSION_CATALOGUE],
+      globalAllow,
+      companyAllow,
+      companyDeny,
+      effectiveAllow: [...base].sort(),
+      protectedKeys: [...PROTECTED_ROLE_KEYS],
+    };
+  }
+
+  /**
+   * Écrit le pack effectif du rôle pour la société : ALLOW société pour les
+   * ajouts, DENY société pour retirer une clé présente dans le pack global.
+   */
+  async setRoleGrants(
+    companyId: string,
+    roleCode: string,
+    dto: SetRoleGrantsDto,
+    actorUserId?: string,
+  ) {
+    const code = this.assertRoleCode(roleCode);
+
+    const desired = new Set<string>(
+      (dto.allowKeys ?? []).filter((k) => isCataloguedPermission(k)),
+    );
+    for (const key of PROTECTED_ROLE_KEYS) desired.add(key);
+
+    await this.prisma.$transaction(async (tx) => {
+      const globalRows = await tx.iamGrant.findMany({
+        where: {
+          subjectType: IamGrantSubject.ROLE,
+          subjectId: code,
+          status: IamLifecycleStatus.ACTIVE,
+          effect: IamGrantEffect.ALLOW,
+          companyId: null,
+        },
+      });
+      const globalAllow = new Set(globalRows.map((r) => r.permissionKey));
+
+      await tx.iamGrant.deleteMany({
+        where: {
+          subjectType: IamGrantSubject.ROLE,
+          subjectId: code,
+          companyId,
+        },
+      });
+
+      const creates: Prisma.IamGrantCreateManyInput[] = [];
+      for (const key of PERMISSION_CATALOGUE) {
+        if (desired.has(key) && !globalAllow.has(key)) {
+          creates.push({
+            permissionKey: key,
+            effect: IamGrantEffect.ALLOW,
+            subjectType: IamGrantSubject.ROLE,
+            subjectId: code,
+            companyId,
+            status: IamLifecycleStatus.ACTIVE,
+          });
+        } else if (!desired.has(key) && globalAllow.has(key)) {
+          creates.push({
+            permissionKey: key,
+            effect: IamGrantEffect.DENY,
+            subjectType: IamGrantSubject.ROLE,
+            subjectId: code,
+            companyId,
+            status: IamLifecycleStatus.ACTIVE,
+          });
+        }
+      }
+      if (creates.length > 0) {
+        await tx.iamGrant.createMany({ data: creates });
+      }
+
+      await this.audit.append(tx, {
+        companyId,
+        actorUserId,
+        action: AUDIT_ACTIONS.identityRoleGrantsUpdate,
+        entityType: AUDIT_ENTITY_TYPES.iamGrant,
+        entityId: `${companyId}:${code}`,
+        afterJson: {
+          roleCode: code,
+          allowKeys: [...desired].sort(),
+        },
+      });
+    });
+
+    return this.getRoleGrants(companyId, code);
   }
 
   private toDto(row: {

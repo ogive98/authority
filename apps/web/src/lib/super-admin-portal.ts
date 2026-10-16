@@ -37,4 +37,5 @@ export const SA_NAV = [
   { href: "/super-admin/flags", label: "Flags", icon: "flags" },
   { href: "/super-admin/license", label: "Licence", icon: "license" },
   { href: "/super-admin/jobs", label: "Jobs / DLQ", icon: "jobs" },
+  { href: "/super-admin/roles", label: "Rôles", icon: "roles" },
 ] as const;

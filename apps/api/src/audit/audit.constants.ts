@@ -9,6 +9,7 @@ export const AUDIT_ACTIONS = {
   identityDevicePair: 'identity.device.pair',
   identityDeviceClaim: 'identity.device.claim',
   identityDeviceRevoke: 'identity.device.revoke',
+  identityRoleGrantsUpdate: 'identity.role.grants_update',
   organizationSiteCreate: 'organization.site.create',
   settingsValueUpdate: 'settings.value.update',
   settingsExpertiseValidate: 'settings.expertise.validate',
@@ -82,6 +83,7 @@ export const OUTBOX_EVENT_TYPES = {
 
 export const AUDIT_ENTITY_TYPES = {
   iamUser: 'iam_user',
+  iamGrant: 'iam_grant',
   iamDevice: 'iam_device',
   orgSite: 'org_site',
   setValue: 'set_value',

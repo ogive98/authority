@@ -8,6 +8,7 @@ import { SuperAdminAuthService } from './super-admin-auth.service';
 import { SuperAdminSessionGuard } from './super-admin-session.guard';
 import { SuperAdminController } from './super-admin.controller';
 import { SuperAdminModulesController } from './super-admin-modules.controller';
+import { SuperAdminRolesController } from './super-admin-roles.controller';
 import { SuperAdminThunderController } from './super-admin-thunder.controller';
 import { SuperAdminIndustryPacksController } from './super-admin-industry-packs.controller';
 import { TotpService } from './totp.service';
@@ -27,6 +28,7 @@ import { MasterDataModule } from '../master-data/master-data.module';
     SuperAdminThunderController,
     SuperAdminModulesController,
     SuperAdminIndustryPacksController,
+    SuperAdminRolesController,
   ],
   providers: [SuperAdminAuthService, SuperAdminSessionGuard, TotpService],
   exports: [SuperAdminAuthService, SuperAdminSessionGuard],

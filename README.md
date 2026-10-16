@@ -86,7 +86,7 @@ Realm distinct du métier (cookie `authority_super_admin_session`, sessions `SUP
 - `POST http://localhost:3001/api/super-admin/v1/auth/mfa/verify`
 - `GET http://localhost:3001/api/super-admin/v1/health`
 
-Seed (dev) : `superadmin@authority.local` / `SuperAdminPass123!`  
+Seed (dev) : super admin **hors application** — définissez `AUTHORITY_SUPER_ADMIN_PASSWORD` / `AUTHORITY_SUPER_ADMIN_TOTP_SECRET` dans `.env` avant `prisma db seed`, sinon un mot de passe aléatoire est généré et imprimé **une seule fois** en console. L'écran `/super-admin/login` n'affiche plus aucun identifiant.  
 TOTP enforced in production; opt-in via `AUTHORITY_SUPER_ADMIN_MFA_ENFORCED=true`. Membership table `iam_super_admin_membership` — never `is_super_admin`.
 
 ## Modules + flags (SOC-07)

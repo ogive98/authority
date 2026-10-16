@@ -23,7 +23,7 @@ import { resetThunderEventStream } from './thunder-event-stream.util';
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
 const SA_EMAIL = 'superadmin@authority.local';
-const SA_PASSWORD = 'SuperAdminPass123!';
+const SA_PASSWORD = process.env.AUTHORITY_SUPER_ADMIN_PASSWORD || 'SuperAdminPass123!';
 
 interface HelloJobResponse {
   jobId?: string;

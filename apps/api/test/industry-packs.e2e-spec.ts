@@ -11,7 +11,7 @@ import { PRODUCTS_ERROR_CODES } from '../src/products/products.constants';
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
 const SUPER_ADMIN_EMAIL = 'superadmin@authority.local';
-const SUPER_ADMIN_PASSWORD = 'SuperAdminPass123!';
+const SUPER_ADMIN_PASSWORD = process.env.AUTHORITY_SUPER_ADMIN_PASSWORD || 'SuperAdminPass123!';
 
 describe('Industry packs POLY-01 (e2e)', () => {
   let app: INestApplication<App>;

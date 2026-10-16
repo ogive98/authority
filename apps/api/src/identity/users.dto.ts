@@ -92,3 +92,10 @@ export class SetUserGrantsDto {
   allowKeys!: string[];
 }
 
+/** Company-scoped ROLE pack (admin) or global pack (super admin). */
+export class SetRoleGrantsDto {
+  @IsArray()
+  @IsString({ each: true })
+  allowKeys!: string[];
+}
+

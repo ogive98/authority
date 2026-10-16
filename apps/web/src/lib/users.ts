@@ -256,3 +256,58 @@ export async function putUserGrants(
     return { ok: false, status: 0, message: "Réseau indisponible." };
   }
 }
+
+export type RoleGrants = {
+  roleCode: string;
+  label: string;
+  description: string;
+  catalog: string[];
+  globalAllow: string[];
+  companyAllow: string[];
+  companyDeny: string[];
+  effectiveAllow: string[];
+  protectedKeys: string[];
+};
+
+export async function fetchRoleGrants(
+  roleCode: string,
+): Promise<{ ok: true; data: RoleGrants } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/identity/users/roles/${encodeURIComponent(roleCode)}/grants`,
+      {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as RoleGrants };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}
+
+export async function putRoleGrants(
+  roleCode: string,
+  allowKeys: string[],
+): Promise<{ ok: true; data: RoleGrants } | ApiFail> {
+  try {
+    const res = await fetch(
+      `/api/v1/identity/users/roles/${encodeURIComponent(roleCode)}/grants`,
+      {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ allowKeys }),
+      },
+    );
+    if (!res.ok) return parseError(res);
+    return { ok: true, data: (await res.json()) as RoleGrants };
+  } catch {
+    return { ok: false, status: 0, message: "Réseau indisponible." };
+  }
+}

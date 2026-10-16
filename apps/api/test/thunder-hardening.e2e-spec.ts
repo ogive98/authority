@@ -16,7 +16,7 @@ import { PayloadTooLargeError } from '../src/common/json-safety';
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
 const SA_EMAIL = 'superadmin@authority.local';
-const SA_PASSWORD = 'SuperAdminPass123!';
+const SA_PASSWORD = process.env.AUTHORITY_SUPER_ADMIN_PASSWORD || 'SuperAdminPass123!';
 
 /**
  * THU-HARD-04…06 e2e gates: metrics, outbox DLQ, payload size, tracing, SSE tick.

@@ -17,7 +17,7 @@ function SuperAdminLoginForm() {
     () => safeSuperAdminNext(searchParams.get("next") ?? SA_REPAIR_PATH),
     [searchParams],
   );
-  const [email, setEmail] = useState("superadmin@authority.local");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [code, setCode] = useState("");
@@ -173,10 +173,7 @@ function SuperAdminLoginForm() {
         </AButton>
       </form>
       <p className="text-center text-[length:var(--a-text-xs)] text-a-fg-subtle">
-        Démo locale :{" "}
-        <span className="a-mono">superadmin@authority.local</span>
-        {" · "}
-        <span className="a-mono">SuperAdminPass123!</span>
+        Accès réservé · identifiants hors application (MFA obligatoire).
         <br />
         Après connexion →{" "}
         <span className="a-mono text-a-accent">{SA_REPAIR_PATH}</span>

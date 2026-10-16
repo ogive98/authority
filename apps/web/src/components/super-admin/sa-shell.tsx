@@ -10,6 +10,7 @@ import {
   KeyRound,
   LayoutGrid,
   Radar,
+  ShieldCheck,
   Workflow,
 } from "lucide-react";
 import { ASkipLink } from "@/components/a/a-skip-link";
@@ -23,6 +24,7 @@ const NAV_ICONS: Record<(typeof SA_NAV)[number]["icon"], LucideIcon> = {
   flags: Flag,
   license: KeyRound,
   jobs: Workflow,
+  roles: ShieldCheck,
 };
 
 export function SuperAdminShell({ children }: { children: ReactNode }) {

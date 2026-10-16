@@ -11,7 +11,7 @@ import { AUDIT_ACTIONS } from '../src/audit/audit.constants';
 const DEMO_EMAIL = 'demo@authority.local';
 const DEMO_PASSWORD = 'DemoPass123!';
 const SA_EMAIL = 'superadmin@authority.local';
-const SA_PASSWORD = 'SuperAdminPass123!';
+const SA_PASSWORD = process.env.AUTHORITY_SUPER_ADMIN_PASSWORD || 'SuperAdminPass123!';
 
 interface ErrorBody {
   code?: string;

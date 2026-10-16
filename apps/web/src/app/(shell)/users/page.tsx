@@ -26,6 +26,7 @@ import {
 } from "@/components/a";
 import { softSelect } from "@/lib/d294-ui";
 import { ATabs } from "@/components/a/a-tabs";
+import { groupPermissionsByModule } from "@/lib/permission-groups";
 import {
   STATUS_LABELS,
   createCompanyUser,
@@ -809,47 +810,70 @@ export default function UsersPage() {
             {editing ? (
               <AFormSection
                 title="Droits société (USER)"
-                description={`Les droits du rôle (${roleLabel(form.roleCode)}) s’ajoutent automatiquement. Cases = droits directs sur cette société.`}
+                description={`Les droits du rôle (${roleLabel(form.roleCode)}) s’ajoutent automatiquement. Cases = droits directs sur cette société, groupés par fonctionnalité.`}
               >
                 {grantsLoading ? <ASkeleton className="h-24 w-full" /> : null}
                 {!grantsLoading && grantsMeta ? (
-                  <ul className="max-h-[40vh] space-y-1 overflow-y-auto">
-                    {grantsMeta.catalog.map((key) => {
-                      const protectedKey =
-                        grantsMeta.protectedKeys.includes(key);
-                      const viaRole = grantsMeta.roleAllow.includes(key);
-                      const checked = grantKeys.has(key) || protectedKey;
-                      return (
-                        <li
-                          key={key}
-                          className="flex items-center justify-between gap-2 rounded-[8px] px-2 py-1.5 hover:bg-a-surface-3"
-                        >
-                          <span className="min-w-0">
-                            <span className="a-mono block text-[12px] text-a-fg">
-                              {key}
-                            </span>
-                            {viaRole ? (
-                              <span className="text-[10px] text-a-fg-subtle">
-                                via rôle
+                  <div className="max-h-[40vh] space-y-2 overflow-y-auto pr-1">
+                    {groupPermissionsByModule(grantsMeta.catalog).map(
+                      (group) => {
+                        const activeCount = group.keys.filter(
+                          (k) => grantKeys.has(k),
+                        ).length;
+                        return (
+                          <details
+                            key={group.moduleKey}
+                            className="rounded-[var(--a-radius-md)] bg-a-surface-2"
+                          >
+                            <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-[length:var(--a-text-sm)] font-medium text-a-fg hover:bg-a-surface-3">
+                              <span>{group.label}</span>
+                              <span className="a-mono text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                                {activeCount}/{group.keys.length}
                               </span>
-                            ) : null}
-                            {protectedKey ? (
-                              <span className="text-[10px] text-a-fg-subtle">
-                                protégé
-                              </span>
-                            ) : null}
-                          </span>
-                          <ASwitch
-                            size="sm"
-                            label={key}
-                            checked={checked}
-                            disabled={protectedKey || busy}
-                            onCheckedChange={(on) => toggleGrant(key, on)}
-                          />
-                        </li>
-                      );
-                    })}
-                  </ul>
+                            </summary>
+                            <ul className="space-y-1 px-3 pb-2">
+                              {group.keys.map((key) => {
+                                const protectedKey =
+                                  grantsMeta.protectedKeys.includes(key);
+                                const viaRole =
+                                  grantsMeta.roleAllow.includes(key);
+                                const checked = grantKeys.has(key) || protectedKey;
+                                return (
+                                  <li
+                                    key={key}
+                                    className="flex items-center justify-between gap-2 rounded-[8px] px-2 py-1.5 hover:bg-a-surface-3"
+                                  >
+                                    <span className="min-w-0">
+                                      <span className="a-mono block text-[12px] text-a-fg">
+                                        {key}
+                                      </span>
+                                      {viaRole ? (
+                                        <span className="text-[10px] text-a-fg-subtle">
+                                          via rôle
+                                        </span>
+                                      ) : null}
+                                      {protectedKey ? (
+                                        <span className="text-[10px] text-a-fg-subtle">
+                                          protégé
+                                        </span>
+                                      ) : null}
+                                    </span>
+                                    <ASwitch
+                                      size="sm"
+                                      label={key}
+                                      checked={checked}
+                                      disabled={protectedKey || busy}
+                                      onCheckedChange={(on) => toggleGrant(key, on)}
+                                    />
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </details>
+                        );
+                      },
+                    )}
+                  </div>
                 ) : null}
               </AFormSection>
             ) : null}

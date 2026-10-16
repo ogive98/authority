@@ -23,6 +23,7 @@ import { PERMISSION_KEYS } from '../permissions/permission.constants';
 import {
   CreateCompanyUserDto,
   InviteCompanyUserDto,
+  SetRoleGrantsDto,
   SetUserGrantsDto,
   UpdateCompanyUserDto,
 } from './users.dto';
@@ -46,6 +47,32 @@ export class UsersController {
   @RequirePermission(PERMISSION_KEYS.identityUserManage)
   roles() {
     return this.usersService.listRoles();
+  }
+
+  @Get('roles/:code/grants')
+  @RequirePermission(PERMISSION_KEYS.identityUserManage)
+  getRoleGrants(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @Param('code') code: string,
+  ) {
+    return this.usersService.getRoleGrants(tenancy.companyId, code);
+  }
+
+  @Put('roles/:code/grants')
+  @HttpCode(200)
+  @RequirePermission(PERMISSION_KEYS.identityUserManage)
+  setRoleGrants(
+    @CurrentTenancy() tenancy: TenancyContext,
+    @CurrentUser() actor: IamUser,
+    @Param('code') code: string,
+    @Body() dto: SetRoleGrantsDto,
+  ) {
+    return this.usersService.setRoleGrants(
+      tenancy.companyId,
+      code,
+      dto,
+      actor.id,
+    );
   }
 
   @Get('mail-status')

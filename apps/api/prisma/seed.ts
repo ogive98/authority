@@ -1,4 +1,5 @@
 import { config } from 'dotenv';
+import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
 import * as argon2 from 'argon2';
 import { PrismaClient } from '@prisma/client';
@@ -26,14 +27,33 @@ import { isCataloguedPermission } from '../src/permissions/permission.constants'
 
 const DEMO_USER_EMAIL = 'demo@authority.local';
 const DEMO_USER_PASSWORD = 'DemoPass123!';
-const SUPER_ADMIN_EMAIL = 'superadmin@authority.local';
-const SUPER_ADMIN_PASSWORD = 'SuperAdminPass123!';
-/** Dev/test TOTP seed only — never use in production. */
-const SUPER_ADMIN_TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
+/**
+ * Super Admin — identifiants HORS application : env obligatoire en pratique,
+ * sinon générés aléatoirement et imprimés UNE FOIS en console (jamais en dur).
+ */
+const SUPER_ADMIN_EMAIL =
+  process.env.AUTHORITY_SUPER_ADMIN_EMAIL?.trim() || 'superadmin@authority.local';
+const SUPER_ADMIN_PASSWORD_ENV = process.env.AUTHORITY_SUPER_ADMIN_PASSWORD?.trim();
 const LIMITED_USER_EMAIL = 'limited@authority.local';
 const LIMITED_USER_PASSWORD = 'LimitedPass123!';
 const ACCOUNTANT_USER_EMAIL = 'comptable@authority.local';
 const ACCOUNTANT_USER_PASSWORD = 'AccountantPass123!';
+
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+function generateSuperAdminPassword(): string {
+  return randomBytes(18).toString('base64url');
+}
+
+function generateTotpSecret(): string {
+  const bytes = randomBytes(16);
+  let secret = '';
+  for (const byte of bytes) secret += BASE32_ALPHABET[byte % 32];
+  return secret;
+}
+
+/** Générée au démarrage ; remplacée par env/env-var si fournie. */
+let SUPER_ADMIN_TOTP_SECRET = process.env.AUTHORITY_SUPER_ADMIN_TOTP_SECRET?.trim() || '';
 
 async function main() {
   if (process.env.NODE_ENV === 'production') {
@@ -1027,7 +1047,21 @@ async function main() {
 
   await clearLicenseCache();
 
-  const superAdminPasswordHash = await argon2.hash(SUPER_ADMIN_PASSWORD, {
+  const superAdminPassword = SUPER_ADMIN_PASSWORD_ENV || generateSuperAdminPassword();
+  if (!SUPER_ADMIN_PASSWORD_ENV) {
+    console.log('');
+    console.log('======================================================================');
+    console.log(' SUPER ADMIN — identifiants générés (affichés UNE SEULE FOIS) :');
+    console.log(`   URL      : /super-admin/login`);
+    console.log(`   E-mail   : ${SUPER_ADMIN_EMAIL}`);
+    console.log(`   Password : ${superAdminPassword}`);
+    console.log(' Conservez-les hors de l\'application. Pour un mot de passe fixe :');
+    console.log(' définissez AUTHORITY_SUPER_ADMIN_PASSWORD dans .env avant le seed.');
+    console.log('======================================================================');
+    console.log('');
+  }
+
+  const superAdminPasswordHash = await argon2.hash(superAdminPassword, {
     type: argon2.argon2id,
   });
 
@@ -1064,6 +1098,16 @@ async function main() {
       status: IamLifecycleStatus.ACTIVE,
     },
   });
+
+  if (!SUPER_ADMIN_TOTP_SECRET) {
+    SUPER_ADMIN_TOTP_SECRET = generateTotpSecret();
+    console.log(' SUPER ADMIN — MFA : ajoutez ce secret dans votre app TOTP :');
+    console.log(
+      `   otpauth://totp/AUTHORITY:${encodeURIComponent(SUPER_ADMIN_EMAIL)}?secret=${SUPER_ADMIN_TOTP_SECRET}&issuer=AUTHORITY`,
+    );
+    console.log(' (fixe possible via AUTHORITY_SUPER_ADMIN_TOTP_SECRET dans .env)');
+    console.log('');
+  }
 
   if (!existingSaMfa) {
     await prisma.iamMfaDevice.create({

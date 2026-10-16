@@ -12,6 +12,7 @@ import {
   APageBody,
   AScreenHeader,
   ASkeleton,
+  ASwitch,
 } from "@/components/a";
 import { LAYOUT_ACTIONS } from "@/lib/layout-actions";
 import { PrefsModesOpsPanel } from "@/components/settings/prefs-modes-ops-panel";
@@ -52,6 +53,8 @@ import {
 } from "@/lib/hr";
 import { softPanel, softSelect } from "@/lib/d294-ui";
 import { fetchMailStatus, type MailStatus } from "@/lib/users";
+import { fetchRoleGrants, putRoleGrants, type RoleGrants } from "@/lib/users";
+import { groupPermissionsByModule } from "@/lib/permission-groups";
 import { usePrefsStore, type Density, type SurfaceMode } from "@/stores/prefs-store";
 
 const HASH_COMPARTMENTS = new Set<PrefsCompartmentId>([
@@ -273,6 +276,13 @@ export default function SettingsPage() {
   const [roleBusy, setRoleBusy] = useState(false);
   const [roleMsg, setRoleMsg] = useState<string | null>(null);
   const [roleError, setRoleError] = useState<string | null>(null);
+
+  const [roleGrants, setRoleGrants] = useState<RoleGrants | null>(null);
+  const [roleGrantKeys, setRoleGrantKeys] = useState<Set<string>>(new Set());
+  const [roleGrantsLoading, setRoleGrantsLoading] = useState(false);
+  const [roleGrantsBusy, setRoleGrantsBusy] = useState(false);
+  const [roleGrantsMsg, setRoleGrantsMsg] = useState<string | null>(null);
+  const [roleGrantsError, setRoleGrantsError] = useState<string | null>(null);
 
   const [salesReserve, setSalesReserve] = useState(true);
   const [salesAutoConfirm, setSalesAutoConfirm] = useState(false);
@@ -599,6 +609,62 @@ export default function SettingsPage() {
       setSelectedRole((prev) => prev || res.data.roles[0] || "");
     })();
   }, [compartment, canCompanyWrite]);
+
+  useEffect(() => {
+    if (compartment !== "roles" || !canCompanyWrite) return;
+    if (!selectedRole) return;
+    let cancelled = false;
+    void (async () => {
+      setRoleGrantsLoading(true);
+      setRoleGrantsError(null);
+      setRoleGrantsMsg(null);
+      const res = await fetchRoleGrants(selectedRole);
+      if (cancelled) return;
+      if (!res.ok) {
+        setRoleGrants(null);
+        setRoleGrantKeys(new Set());
+        setRoleGrantsError(res.message);
+      } else {
+        setRoleGrants(res.data);
+        setRoleGrantKeys(new Set(res.data.effectiveAllow));
+      }
+      setRoleGrantsLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [compartment, canCompanyWrite, selectedRole]);
+
+  function toggleRoleGrant(key: string, on: boolean) {
+    if (!roleGrants) return;
+    if (roleGrants.protectedKeys.includes(key)) return;
+    setRoleGrantsMsg(null);
+    setRoleGrantsError(null);
+    setRoleGrantKeys((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
+
+  async function onSaveRoleGrants() {
+    if (!roleGrants || !selectedRole || roleGrantsBusy) return;
+    setRoleGrantsBusy(true);
+    setRoleGrantsMsg(null);
+    setRoleGrantsError(null);
+    const res = await putRoleGrants(selectedRole, [...roleGrantKeys]);
+    if (!res.ok) {
+      setRoleGrantsError(res.message);
+    } else {
+      setRoleGrants(res.data);
+      setRoleGrantKeys(new Set(res.data.effectiveAllow));
+      setRoleGrantsMsg(
+        `Pack « ${res.data.label} » enregistré (${res.data.effectiveAllow.length} permissions).`,
+      );
+    }
+    setRoleGrantsBusy(false);
+  }
 
   useEffect(() => {
     if (compartment !== "ventes" || !canCompanyWrite) return;
@@ -1478,6 +1544,149 @@ export default function SettingsPage() {
                     </p>
                   ) : null}
                 </div>
+              </section>
+            ) : null}
+
+            {compartment === "roles" && canCompanyWrite ? (
+              <section className={`${softPanel} max-w-3xl`}>
+                <h2 className="text-[length:var(--a-text-md)] font-medium text-a-accent">
+                  Permissions par fonctionnalité
+                </h2>
+                <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                  Pack effectif du rôle pour cette société. Retirer une clé
+                  présente dans le pack global crée un déni société (le global
+                  reste la base). Les clés protégées (login / session) ne sont
+                  jamais retirables.
+                </p>
+                {roleCapsError ? (
+                  <AErrorState message={roleCapsError} />
+                ) : null}
+                {!roleCaps ? (
+                  <ASkeleton className="h-24 w-full" />
+                ) : (
+                  <div className="space-y-3">
+                    <label className="block max-w-xs space-y-1">
+                      <span className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                        Rôle
+                      </span>
+                      <select
+                        className={softSelect}
+                        value={selectedRole}
+                        onChange={(e) => setSelectedRole(e.target.value)}
+                      >
+                        {roleCaps.roles.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {roleGrantsLoading ? (
+                      <ASkeleton className="h-40 w-full" />
+                    ) : roleGrantsError ? (
+                      <AErrorState message={roleGrantsError} />
+                    ) : roleGrants ? (
+                      <>
+                        <p className="text-[length:var(--a-text-xs)] text-a-fg-muted">
+                          {roleGrants.description} ·{" "}
+                          <span className="a-mono">
+                            {roleGrantKeys.size}/{roleGrants.catalog.length}
+                          </span>{" "}
+                          permissions actives
+                        </p>
+                        <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+                          {groupPermissionsByModule(roleGrants.catalog).map(
+                            (group) => {
+                              const activeCount = group.keys.filter((k) =>
+                                roleGrantKeys.has(k),
+                              ).length;
+                              return (
+                                <details
+                                  key={group.moduleKey}
+                                  className="rounded-[var(--a-radius-md)] bg-a-surface-2"
+                                >
+                                  <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-[length:var(--a-text-sm)] font-medium text-a-fg hover:bg-a-surface-3">
+                                    <span>{group.label}</span>
+                                    <span className="a-mono text-[length:var(--a-text-xs)] text-a-fg-subtle">
+                                      {activeCount}/{group.keys.length}
+                                    </span>
+                                  </summary>
+                                  <ul className="space-y-1 px-3 pb-2">
+                                    {group.keys.map((key) => {
+                                      const protectedKey =
+                                        roleGrants.protectedKeys.includes(key);
+                                      const inGlobal =
+                                        roleGrants.globalAllow.includes(key);
+                                      const inCompany =
+                                        roleGrants.companyAllow.includes(key);
+                                      const checked =
+                                        roleGrantKeys.has(key) || protectedKey;
+                                      return (
+                                        <li
+                                          key={key}
+                                          className="flex items-center justify-between gap-2 rounded-[8px] px-2 py-1.5 hover:bg-a-surface-3"
+                                        >
+                                          <span className="min-w-0">
+                                            <span className="a-mono block text-[12px] text-a-fg">
+                                              {key}
+                                            </span>
+                                            {protectedKey ? (
+                                              <span className="text-[10px] text-a-fg-subtle">
+                                                protégé
+                                              </span>
+                                            ) : inGlobal ? (
+                                              <span className="text-[10px] text-a-fg-subtle">
+                                                pack global{checked ? "" : " — déni société"}
+                                              </span>
+                                            ) : inCompany ? (
+                                              <span className="text-[10px] text-a-fg-subtle">
+                                                ajout société
+                                              </span>
+                                            ) : null}
+                                          </span>
+                                          <ASwitch
+                                            size="sm"
+                                            label={key}
+                                            checked={checked}
+                                            disabled={protectedKey || roleGrantsBusy}
+                                            onCheckedChange={(on) =>
+                                              toggleRoleGrant(key, on)
+                                            }
+                                          />
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </details>
+                              );
+                            },
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <AButton
+                            onClick={() => void onSaveRoleGrants()}
+                            disabled={roleGrantsBusy || roleGrantsLoading}
+                          >
+                            {roleGrantsBusy
+                              ? "Enregistrement…"
+                              : "Enregistrer le pack"}
+                          </AButton>
+                          {roleGrantsMsg ? (
+                            <p className="text-[length:var(--a-text-xs)] text-a-success">
+                              {roleGrantsMsg}
+                            </p>
+                          ) : null}
+                          {roleGrantsError ? (
+                            <p className="text-[length:var(--a-text-xs)] text-a-danger">
+                              {roleGrantsError}
+                            </p>
+                          ) : null}
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                )}
               </section>
             ) : null}
 
